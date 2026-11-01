@@ -388,7 +388,8 @@ class VerificationTests(unittest.TestCase):
                         'criteria': [{'id': 'bounds', 'status': 'passed', 'evidence': 'Regression rejects invalid dimensions'}],
                         'independent_review': attestation,
                         'human_signoff': dict(attestation, reviewer='human')}
-            self.assertTrue(core.verify(task, evidence, tmp, client)['upstream_submission_ready'])
+            result = core.verify(task, evidence, tmp, client)
+            self.assertTrue(result['upstream_submission_ready'], result['evidence_errors'])
             artifact_evidence = copy.deepcopy(evidence)
             artifact_evidence['artifacts'] = [{'path': 'src/thumb.rs', 'sha256': hashlib.sha256(b'safe implementation').hexdigest()}]
             self.assertTrue(core.verify(task, artifact_evidence, tmp, client)['evidence_valid'])
@@ -456,11 +457,29 @@ class VerificationTests(unittest.TestCase):
             task, client, evidence, git = evidence_checkout(tmp)
             client.commit = 'c' * 40
             client.compare_status = 'behind'
-            self.assertTrue(core.verify(task, evidence, tmp, client)['evidence_valid'])
+            result = core.verify(task, evidence, tmp, client)
+            self.assertTrue(result['evidence_valid'], result['evidence_errors'])
             expected = 'repos/acme/photos/compare/' + 'c' * 40 + '...' + evidence['base_commit']
             self.assertIn(expected, client.calls)
             client.failed.add('/compare/')
             self.assertFalse(core.verify(task, evidence, tmp, client)['evidence_valid'])
+
+    def test_git_commit_utc_z_timestamp_preserves_evidence_readiness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, git = evidence_checkout(tmp)
+            commit_time = dt.datetime.fromisoformat(git('show', '-s', '--format=%cI', 'HEAD').replace('Z', '+00:00'))
+            utc_timestamp = commit_time.astimezone(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            original_git_read = core.git_read
+
+            def read_git(directory, *args):
+                if args == ('show', '-s', '--format=%cI', 'HEAD'):
+                    return utc_timestamp
+                return original_git_read(directory, *args)
+
+            with patch.object(core, 'git_read', side_effect=read_git):
+                result = core.verify(task, evidence, tmp, client)
+            self.assertTrue(result['evidence_valid'], result['evidence_errors'])
+            self.assertTrue(result['upstream_submission_ready'], result['evidence_errors'])
 
     def test_gitlinks_cannot_hide_outside_scope_or_run_submodule_commands(self):
         with tempfile.TemporaryDirectory() as tmp:

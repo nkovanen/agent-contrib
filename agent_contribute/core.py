@@ -676,7 +676,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
                     targets.add(match.group(1).casefold())
         if task['execution']['target_repository'].casefold() not in targets:
             errors.append('Checkout has no GitHub remote matching the authorized target')
-        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', 'HEAD'))
+        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', 'HEAD').replace('Z', '+00:00'))
         if dirty or head != evidence['git_head'] or tree != evidence['git_tree']:
             errors.append('Current checkout is dirty or differs from evidence HEAD/tree')
     except (ProtocolError, ValueError) as exc:
