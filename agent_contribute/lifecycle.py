@@ -16,8 +16,7 @@ def prepare_v2(inspected, client):
         raise core.ProtocolError('refresh_incomplete', 'Cannot bind a new task to incomplete source reads')
     meta = authorization.repository_identity(source['repository'], client)
     issue = authorization.issue_identity(source['repository'], source['issue'], client)
-    if (core.issue_hash(issue) != source['issue_sha256'] or issue['html_url'] != source['issue_url'] or
-            issue['updated_at'] != source['issue_updated_at']):
+    if core.issue_hash(issue) != source['issue_sha256'] or issue['html_url'] != source['issue_url']:
         raise core.ProtocolError('source_changed', 'Issue changed while preparing task; inspect again')
     task = copy.deepcopy(core.prepare(inspected))
     task['schema_version'] = '0.2'
@@ -176,9 +175,11 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         if not current['complete']:
             errors.append('Live discovery is incomplete')
             errors.extend(current['errors'])
+        if current['approval']['status'] == 'unknown':
+            errors.append('Repository approval policy is unresolved')
         if current['exclusions']:
             errors.append('Live issue is excluded: ' + ', '.join(current['exclusions']))
-        for key in ('issue_sha256', 'issue_updated_at', 'instructions_sha256', 'default_branch', 'repository', 'issue_url'):
+        for key in ('issue_sha256', 'instructions_sha256', 'default_branch', 'repository', 'issue_url'):
             if source[key] != current['source'][key]:
                 errors.append('Source changed; refresh and review contract: ' + key)
         if source['policy_sha256'] != authorization.policy_hash(current['provenance']):

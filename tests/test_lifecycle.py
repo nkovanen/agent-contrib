@@ -371,3 +371,28 @@ class IntegratedLifecycleTests(unittest.TestCase):
             self.assertFalse(result['completion_ready'])
             self.assertFalse(result['publication']['verified'])
             self.assertEqual(result['human_signoff']['status'], 'invalid')
+
+    def test_timestamp_only_issue_updates_preserve_readiness_and_publication(self):
+        inspected = core.inspect_issue('acme/photos#12', self.client)
+        issue = self.client.request('repos/acme/photos/issues/12')
+        self.client.overrides['repos/acme/photos/issues/12'] = dict(issue, updated_at='2030-01-01T11:59:00Z')
+        prepared = core.prepare(inspected, schema_version='0.2', client=self.client)
+        self.assertEqual(prepared['source']['issue_updated_at'], inspected['source']['issue_updated_at'])
+        self.assertTrue(self.verify()['implementation_ready'])
+        self.publish()
+        self.assertTrue(self.verify()['publication']['verified'])
+        self.client.overrides['repos/acme/photos/issues/12']['title'] = 'Semantically different task'
+        self.assertFalse(self.verify()['publication']['verified'])
+
+    def test_unknown_policy_cannot_pass_even_with_complete_reads_and_matching_pin(self):
+        self.client.policy = {'schema_version': '999'}
+        current = core.inspect_issue('acme/photos#12', self.client)
+        self.assertEqual(current['approval']['status'], 'unknown')
+        self.task['source']['policy_sha256'] = lifecycle.authorization.policy_hash(current['provenance'])
+        self.rebind()
+        current['complete'] = True
+        current['errors'] = []
+        with patch.object(core, 'inspect_issue', return_value=current):
+            result = self.verify()
+        self.assertFalse(result['implementation_ready'])
+        self.assertFalse(result['draft_create_ready'])
