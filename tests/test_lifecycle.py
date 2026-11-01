@@ -396,3 +396,142 @@ class IntegratedLifecycleTests(unittest.TestCase):
             result = self.verify()
         self.assertFalse(result['implementation_ready'])
         self.assertFalse(result['draft_create_ready'])
+
+    def test_publication_claim_cannot_replace_validated_evidence_head(self):
+        self.publish()
+        for record in (self.client.history[0], self.client.details[30]):
+            record['head']['sha'] = 'f' * 40
+        self.context['publication']['head_sha'] = 'f' * 40
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'])
+        self.assertTrue(result['independent_review']['valid'])
+        self.assertFalse(result['publication']['verified'])
+
+    def test_unrelated_overlap_blocks_draft_creation_with_valid_evidence(self):
+        self.client.prs = [{'id': 3101, 'number': 31, 'title': 'Other', 'body': 'Fixes #12',
+                            'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'other'}}]
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'])
+        self.assertTrue(result['independent_review']['valid'])
+        self.assertTrue(result['publication']['creation_clear'])
+        self.assertFalse(result['draft_create_ready'])
+
+    def test_create_draft_only_mandate_cannot_authorize_implementation(self):
+        self.context['mandate']['actions'] = ['create_draft']
+        self.context['mandate']['event']['binding_sha256'] = event_binding(self.context['mandate'])
+        result = self.verify(evidence=False)
+        self.assertTrue(result['user_authorization']['authorized'])
+        self.assertFalse(result['user_authorization']['implement'])
+        self.assertFalse(result['implementation_ready'])
+
+    def test_implementer_cannot_supply_the_independent_review(self):
+        self.evidence['independent_review']['reviewer'] = self.evidence['implementer']
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'])
+        self.assertFalse(result['independent_review']['valid'])
+        self.assertFalse(result['draft_create_ready'])
+
+    def test_review_for_another_contract_cannot_prepare_a_draft(self):
+        self.evidence['independent_review']['contract_sha256'] = 'e' * 64
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'])
+        self.assertFalse(result['independent_review']['valid'])
+        self.assertFalse(result['draft_create_ready'])
+
+    def test_review_must_follow_final_validation_results(self):
+        self.evidence['independent_review']['reviewed_at'] = (NOW - dt.timedelta(minutes=25)).isoformat()
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'])
+        self.assertFalse(result['independent_review']['valid'])
+        self.assertFalse(result['draft_create_ready'])
+
+    def test_review_cannot_be_dated_in_the_future(self):
+        self.evidence['independent_review']['reviewed_at'] = (NOW + dt.timedelta(minutes=5)).isoformat()
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'])
+        self.assertFalse(result['independent_review']['valid'])
+        self.assertFalse(result['draft_create_ready'])
+
+    def test_signoff_cannot_reuse_any_original_mandate_event_identity(self):
+        self.publish()
+        mandate = self.context['mandate']
+        for field in ('id', 'nonce', 'reference'):
+            with self.subTest(field=field):
+                record = signoff(self.task, self.context, self.evidence)
+                if field == 'reference':
+                    record['event'][field] = mandate['event'][field]
+                else:
+                    record[field] = mandate[field]
+                record['event']['binding_sha256'] = event_binding(record)
+                self.context['final_signoff'] = record
+                result = self.verify()
+                self.assertTrue(result['publication']['verified'])
+                self.assertEqual(result['human_signoff']['status'], 'invalid')
+                self.assertFalse(result['completion_ready'])
+
+    def test_signoff_after_review_must_still_follow_publication(self):
+        self.evidence['independent_review']['reviewed_at'] = (NOW - dt.timedelta(minutes=18)).isoformat()
+        self.publish()
+        for record in (self.client.history[0], self.client.details[30], self.client.prs[0]):
+            record['created_at'] = (NOW - dt.timedelta(minutes=8)).isoformat()
+        record = signoff(self.task, self.context, self.evidence)
+        record['issued_at'] = (NOW - dt.timedelta(minutes=12)).isoformat()
+        record['event']['binding_sha256'] = event_binding(record)
+        self.context['final_signoff'] = record
+        result = self.verify()
+        self.assertTrue(result['independent_review']['valid'])
+        self.assertTrue(result['publication']['verified'])
+        self.assertFalse(result['completion_ready'])
+
+    def test_signoff_after_publication_must_still_follow_review(self):
+        self.publish()
+        self.evidence['independent_review']['reviewed_at'] = (NOW - dt.timedelta(minutes=2)).isoformat()
+        self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)
+        result = self.verify()
+        self.assertTrue(result['independent_review']['valid'])
+        self.assertTrue(result['publication']['verified'])
+        self.assertFalse(result['completion_ready'])
+
+    def test_signoff_event_binding_must_match_the_final_record(self):
+        self.publish()
+        self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)
+        self.context['final_signoff']['event']['binding_sha256'] = 'd' * 64
+        result = self.verify()
+        self.assertTrue(result['publication']['verified'])
+        self.assertFalse(result['completion_ready'])
+
+    def test_matching_mandate_does_not_replace_reviewed_contract_status(self):
+        for status, questions in [('draft', []), ('reviewed', ['Unanswered question'])]:
+            with self.subTest(status=status, questions=questions):
+                self.task.update(status=status, questions=questions)
+                self.rebind()
+                result = self.verify(evidence=False)
+                self.assertTrue(result['user_authorization']['authorized'])
+                self.assertFalse(result['implementation_ready'])
+
+    def test_new_policy_requires_review_even_without_a_matching_approval_label(self):
+        self.client.policy = {'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
+                              'label_authority': 'repository-label-permission'}
+        result = self.verify(evidence=False)
+        self.assertTrue(result['live_complete'])
+        self.assertTrue(result['user_authorization']['authorized'])
+        self.assertEqual(result['repository_approval']['status'], 'candidate')
+        self.assertFalse(result['implementation_ready'])
+
+    def test_issue_prepared_with_exclusion_is_blocked_even_when_semantically_fresh(self):
+        issue = self.client.request('repos/acme/photos/issues/12')
+        issue['labels'].append({'name': 'wontfix'})
+        self.client.overrides['repos/acme/photos/issues/12'] = issue
+        self.task['source']['issue_sha256'] = core.issue_hash(issue)
+        self.rebind()
+        result = self.verify(evidence=False)
+        self.assertTrue(result['live_complete'])
+        self.assertTrue(result['user_authorization']['authorized'])
+        self.assertFalse(result['implementation_ready'])
+
+    def test_bot_credential_cannot_authorize_work_even_with_a_matching_permission_user(self):
+        self.client.actor['type'] = 'Bot'
+        self.client.permission['user']['type'] = 'Bot'
+        result = self.verify(evidence=False)
+        self.assertFalse(result['user_authorization']['authorized'])
+        self.assertFalse(result['implementation_ready'])

@@ -206,6 +206,55 @@ class AuthorizationTests(unittest.TestCase):
         self.assertIn('Candidate base ref must match the source default branch', result['errors'])
 
 
+    def test_matching_mandate_cannot_authorize_a_cross_repository_route(self):
+        task, client = candidate_task()
+        task['execution'].update(target_repository='acme/other', head_repository='acme/other')
+        result = self.check(task, client, host_context(task))
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['historical_valid'])
+
+    def test_matching_mandate_cannot_authorize_pending_execution(self):
+        task, client = candidate_task()
+        task['execution']['mode'] = 'pending'
+        result = self.check(task, client, host_context(task))
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['historical_valid'])
+
+    def test_matching_mandate_cannot_use_the_default_branch_as_its_head(self):
+        task, client = candidate_task()
+        task['execution']['head_ref'] = 'main'
+        result = self.check(task, client, host_context(task))
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['historical_valid'])
+
+    def test_matching_mandate_cannot_authorize_an_invalid_head_ref(self):
+        task, client = candidate_task()
+        task['execution']['head_ref'] = 'bad..ref'
+        result = self.check(task, client, host_context(task))
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['historical_valid'])
+
+    def test_live_issue_id_change_cannot_keep_the_old_issue_authority(self):
+        task, client = candidate_task()
+        issue = client.request('repos/acme/photos/issues/12')
+        client.overrides['repos/acme/photos/issues/12'] = dict(issue, id=9999)
+        result = self.check(task, client, host_context(task))
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['historical_valid'])
+
+    def test_mandate_expires_at_the_exact_expiry_boundary(self):
+        task, client = candidate_task()
+        context = host_context(task)
+        context['mandate'].update(issued_at=(NOW - dt.timedelta(hours=2)).isoformat(),
+                                  expires_at=NOW.isoformat())
+        context['mandate']['event']['binding_sha256'] = event_binding(context['mandate'])
+        result = self.check(task, client, context)
+        self.assertTrue(result['historical_valid'])
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['implement'])
+        self.assertFalse(result['create_draft'])
+
+
 class TimestampTests(unittest.TestCase):
     def test_explicit_timestamp_dialect_has_no_normalized_invalid_offsets(self):
         from agent_contribute.authorization import timestamp
