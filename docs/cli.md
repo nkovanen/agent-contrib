@@ -8,6 +8,7 @@ errors. An exit code is not authorization.
 | Command | Result |
 | --- | --- |
 | `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
+| `agent-contrib discover owner/a owner/b ... [--repositories-file FILE]` | Two to 20 repositories in one run, each with its own result, plus a merged candidate order |
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
 | `agent-contrib audit owner/repo [--print-policy]` | Read-only maintainer report: policy validity, labels, instruction coverage, issue-quality and overlap counts, non-binding suggestions |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
@@ -319,3 +320,22 @@ when the budget is unknown or below N, before any command read. The CLI does not
 estimate a command's cost; choose N yourself. Offline commands reject the flag.
 Without the flag, no rate-limit read happens and output is unchanged. Response
 caching is a deferred design.
+
+## Several repositories
+
+`discover` accepts several repositories as arguments and/or
+`--repositories-file FILE` (UTF-8, at most 64 KiB, one `owner/repo` per line,
+blank lines and `#` comments ignored). With exactly one repository the output is
+the unchanged single-repository result. With 2 to 20 distinct repositories it
+returns `repositories` (each repository's complete single-repository result, in
+input order), `candidates` (every issue with its repository, reference and the
+ordering facts), `errors` prefixed with the repository name, and top-level
+`complete`, true only if every repository is complete. A failing repository
+never aborts the others or marks them complete. All identifiers are validated
+before any read. The merged order is exclusions, overlaps, low likelihood,
+higher signal score with `--signals`, then repository and issue number.
+
+Reads cost the sum of the single-repository runs; combine with
+`--report-budget --min-remaining N` on large lists. A display cap such as the
+proposed `discover --limit` (#1) would apply per repository. Deriving
+repositories from a dependency graph is out of scope.

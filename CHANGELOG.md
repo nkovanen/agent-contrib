@@ -25,6 +25,8 @@
   combined status for the exact evidence head; gates and exit codes unchanged.
 - Add opt-in `--report-budget` and `--min-remaining` (#27, part): rate-limit
   snapshots around a command; the response cache is deferred.
+- Add multi-repository `discover` (#13) for 2 to 20 repositories with isolated
+  per-repository results and a merged candidate order; one repository is unchanged.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 

@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, budget, ci, core, drift, feedback, ownership, prbody, workspace, __version__
+from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -63,9 +63,10 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='command', required=True)
     for command in ('discover', 'inspect', 'prepare'):
         sub = commands.add_parser(command)
-        sub.add_argument('reference')
+        sub.add_argument('reference', nargs='*' if command == 'discover' else None)
         if command == 'discover':
             sub.add_argument('--signals', action='store_true')
+            sub.add_argument('--repositories-file')
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true')
             sub.add_argument('--ai-policy', action='store_true')
@@ -188,7 +189,11 @@ def main(argv=None):
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
-            result = core.discover(args.reference, signals=True) if args.signals else core.discover(args.reference)
+            names = args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else [])
+            if len(names) == 1:
+                result = core.discover(names[0], signals=True) if args.signals else core.discover(names[0])
+            else:
+                result = multi.discover_many(names, signals=args.signals)
             code = 0 if result['complete'] else 1
         elif args.command in ('inspect', 'prepare'):
             result = core.inspect_issue(args.reference)
