@@ -8,37 +8,46 @@ Refs acme/photos#12
 
 ## Acceptance criteria
 
-- bounds: Malformed dimensions return an error (passed: Regression rejects 0x0)
+Supplied evidence did not pass `verify`; its statuses below are unverified claims.
+
+- bounds: Malformed dimensions return an error (unverified claim: passed: Regression rejects 0x0)
 
 ## Validation
 
-- unit (tests): python3 -m unittest; status passed, exit 0, tests run 7, skipped 0
+- unit (tests): argv ` ["python3", "-m", "unittest"] `; unverified claim: status passed, exit 0, tests run 7, skipped 0
 
 Evidence is self-attested by the contributor; the verifier does not prove that tests ran.
 
 ## Review and sign-off
 
-- Independent review: passed by independent
-- Human signoff: pending
+- Independent review: unverified claim: passed by independent
+- Human signoff: unverified claim: pending
 
 ## Verification gates
 
-`agent-contrib verify` reported:
+`agent-contrib verify` reported (text neutralized, none omitted):
 
 - `execution_ready`: yes
 - `evidence_valid`: no
 - `upstream_submission_ready`: no
 - `fork_completion_ready`: no
 
-Pending gates:
+Pending gates (1):
 - evidence: human\_signoff is missing, failed, pending or stale
 
 ## Overlap scan
 
-Live open-PR scan complete: yes. Overlapping PRs: 0.
+Live refresh complete: yes. Overlapping PRs: 0.
+- Source open PRs (acme/photos): complete yes, pages 1, errors 0
+
+Only open PRs are scanned; PRs that are no longer open, timeline claims and file-level conflicts are not checked.
 
 ## AI assistance disclosure
 
 Prepared with Agent Contrib CLI 0.3.0. Contract SHA-256: `b673ee6e2a4f664683592e7b545978d2a23ce5359cad86df1c280b1b6249f05c`.
 
-<!-- If the repository has a pull request template, merge these sections into it. Rendering is not publication authority. -->
+## Pull request template
+
+No pull request template exists at the pinned commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.
+
+<!-- Rendering is not publication authority. -->

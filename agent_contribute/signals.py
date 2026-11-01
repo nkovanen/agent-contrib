@@ -70,8 +70,9 @@ def activity(issue, now):
 
 def maintainer_signal(issue):
     association = issue.get('author_association')
-    value = ('maintainer' if association in MAINTAINER_ASSOCIATIONS else
-             'other' if isinstance(association, str) else 'unknown')
+    # Type first: remote lists/objects are unhashable and must degrade to unknown, not crash.
+    value = ('unknown' if not isinstance(association, str) else
+             'maintainer' if association in MAINTAINER_ASSOCIATIONS else 'other')
     return {'value': value, 'explanation': 'Issue author association is ' +
             (core.safe_text(association, 40) if isinstance(association, str) else 'not reported')}
 

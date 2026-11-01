@@ -12,7 +12,7 @@ Refs acme/photos#12
 
 ## Validation
 
-- unit (tests): python3 -m unittest; status passed, exit 0, tests run 7, skipped 0
+- unit (tests): argv ` ["python3", "-m", "unittest"] `; status passed, exit 0, tests run 7, skipped 0
 
 Evidence is self-attested by the contributor; the verifier does not prove that tests ran.
 
@@ -23,7 +23,7 @@ Evidence is self-attested by the contributor; the verifier does not prove that t
 
 ## Verification gates
 
-`agent-contrib verify` reported:
+`agent-contrib verify` reported (text neutralized, none omitted):
 
 - `execution_ready`: yes
 - `evidence_valid`: yes
@@ -34,11 +34,19 @@ No pending gates were reported.
 
 ## Overlap scan
 
-Live open-PR scan complete: yes. Overlapping PRs: 0.
+Live refresh complete: yes. Overlapping PRs: 0.
+- Source open PRs (acme/photos): complete yes, pages 1, errors 0
+
+Only open PRs are scanned; PRs that are no longer open, timeline claims and file-level conflicts are not checked.
 
 ## AI assistance disclosure
 
 Prepared with Agent Contrib CLI 0.3.0. Contract SHA-256: `b673ee6e2a4f664683592e7b545978d2a23ce5359cad86df1c280b1b6249f05c`.
 Host-reported assistant: Claude Opus 5.5.
 
-<!-- If the repository has a pull request template, merge these sections into it. Rendering is not publication authority. -->
+## Pull request template
+
+Merge these sections into the repository template at the pinned commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`:
+- ` ".github/pull_request_template.md" ` (blob `eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee`)
+
+<!-- Rendering is not publication authority. -->

@@ -106,6 +106,30 @@ class DiscoverSignalTests(unittest.TestCase):
                                          'html_url': 'https://github.com/acme/photos/pull/9'}])
         self.assertEqual([i['number'] for i in core.discover('acme/photos', overlapping, signals=True)['issues']], [3, 12])
 
+    def test_malformed_remote_signal_fields_degrade_through_cli(self):
+        for malformed in ([], {}, None, -7):
+            with self.subTest(malformed=malformed):
+                client = SignalGitHub()
+                original = client.request
+                def request(endpoint, original=original, malformed=malformed):
+                    value = original(endpoint)
+                    if endpoint.startswith('repos/acme/photos/issues?'):
+                        # updated_at is a required issue field validated by issue_data; leave it intact.
+                        value = [dict(item, author_association=malformed, created_at=malformed,
+                                      comments=malformed, reactions=malformed) for item in value]
+                    return value
+                client.request = request
+                output = io.StringIO()
+                with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
+                    code = cli.main(['discover', 'acme/photos', '--signals'])
+                result = json.loads(output.getvalue())
+                self.assertEqual(code, 0, result)
+                for issue in result['issues']:
+                    self.assertEqual(issue['signals']['maintainer']['value'], 'unknown')
+                    activity = issue['signals']['activity']['value']
+                    self.assertEqual({activity[k] for k in ('age_days', 'comments', 'reactions')}, {None})
+                    self.assertNotEqual(issue['approval']['status'], 'approved')
+
     def test_cli_flag_is_opt_in(self):
         client = SignalGitHub()
         for argv, expected in [(['discover', 'acme/photos'], False), (['discover', 'acme/photos', '--signals'], True)]:

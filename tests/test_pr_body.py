@@ -16,6 +16,7 @@ from tests.test_protocol import FakeGitHub, evidence_checkout, ready_contract
 from tests.test_schema_compatibility import FrozenClock
 
 GOLDEN = pathlib.Path(__file__).parent / 'fixtures' / 'pr_body'
+SCANNED = {'pulls': {'complete': True, 'pages': 1, 'errors': []}}
 
 
 def fixed_evidence(task, signoff='passed'):
@@ -56,18 +57,21 @@ class PRBodyTests(unittest.TestCase):
         verification = {'schema_valid': True, 'execution_ready': True, 'evidence_valid': True,
                         'upstream_submission_ready': True, 'fork_completion_ready': False, 'errors': [],
                         'evidence_errors': [], 'live_complete': True, 'duplicates': [],
-                        'contract_sha256': core.canonical_hash(task)}
-        self.assertGolden('full.md', prbody.render(task, verification, fixed_evidence(task), assistant='Claude Opus 5.5'))
+                        'contract_sha256': core.canonical_hash(task), 'live_provenance': SCANNED}
+        template = {'state': 'found', 'templates': [{'path': '.github/pull_request_template.md', 'sha': 'e' * 40}]}
+        self.assertGolden('full.md', prbody.render(task, verification, fixed_evidence(task), assistant='Claude Opus 5.5',
+                                                   template=template))
 
     def test_pending_signoff_golden(self):
         task, _ = ready_contract()
         verification = {'schema_valid': True, 'execution_ready': True, 'evidence_valid': False,
                         'upstream_submission_ready': False, 'fork_completion_ready': False, 'errors': [],
                         'evidence_errors': ['human_signoff is missing, failed, pending or stale'],
-                        'live_complete': True, 'duplicates': [], 'contract_sha256': core.canonical_hash(task)}
-        body = prbody.render(task, verification, fixed_evidence(task, 'pending'))
+                        'live_complete': True, 'duplicates': [], 'contract_sha256': core.canonical_hash(task),
+                        'live_provenance': SCANNED}
+        body = prbody.render(task, verification, fixed_evidence(task, 'pending'), template={'state': 'none', 'templates': []})
         self.assertGolden('pending_signoff.md', body)
-        self.assertIn('- Human signoff: pending\n', body)
+        self.assertIn('- Human signoff: unverified claim: pending\n', body)
         self.assertIn('- evidence: human\\_signoff is missing, failed, pending or stale', body)
 
     def test_untrusted_text_is_inert(self):
@@ -104,6 +108,58 @@ class PRBodyTests(unittest.TestCase):
         for line in ['- `implementation_ready`: yes', '- `draft_create_ready`: no', '- `next_action`: implement',
                      '- draft: Independent review is pending', '- completion: Final human signoff is pending or invalid']:
             self.assertIn(line + '\n', body)
+
+    def test_argv_is_exact_unambiguous_data(self):
+        task, _ = ready_contract()
+        task['validation'][0]['argv'] = ['python3', '-c', 'print("hello world")', 'a`b``c', '\n@x #1']
+        body = prbody.render(task, {'schema_valid': True})
+        self.assertIn('argv ``` ["python3", "-c", "print(\\"hello world\\")", "a`b``c", "\\n@x #1"] ```;', body)
+
+    def test_every_blocker_and_overlap_is_rendered_without_silent_caps(self):
+        task, _ = ready_contract()
+        errors = ['blocker %03d ' % i + 'x' * 3000 for i in range(250)]
+        duplicates = [{'url': 'dup%d' % i, 'reason': 'r'} for i in range(80)]
+        body = prbody.render(task, {'errors': errors, 'evidence_errors': [], 'duplicates': duplicates})
+        self.assertIn('Pending gates (250):', body)
+        self.assertEqual(body.count('- execution: blocker'), 250)
+        self.assertIn('blocker 249 ' + 'x' * 3000, body)
+        self.assertEqual(sum(line.startswith('- dup') for line in body.splitlines()), 80)
+
+    def test_invalid_evidence_is_labelled_as_unverified_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, _ = evidence_checkout(tmp)
+            evidence['git_head'] = 'f' * 40  # schema-valid, wrong head
+            body, verification = prbody.pr_body(task, evidence, tmp, client)
+            self.assertFalse(verification['evidence_valid'])
+            self.assertIn('Supplied evidence did not pass `verify`; its statuses below are unverified claims.', body)
+            self.assertIn('(unverified claim: passed: Bounds verified)', body)
+            self.assertIn('unverified claim: status passed', body)
+            self.assertIn('- Independent review: unverified claim: passed by independent', body)
+
+    def test_template_pointer_and_scan_provenance(self):
+        task, client = ready_contract()
+        original = client.request
+        def with_template(endpoint):
+            value = original(endpoint)
+            if '/git/trees/' in endpoint:
+                value['tree'] += [{'path': '.github/PULL_REQUEST_TEMPLATE.md', 'type': 'blob', 'sha': 'e' * 40},
+                                  {'path': 'docs/pull_request_template/bug.md', 'type': 'blob', 'sha': 'nothex'},
+                                  {'path': 'src/pull_request_template.md', 'type': 'blob'}]
+            return value
+        client.request = with_template
+        body, _ = prbody.pr_body(task, client=client)
+        self.assertIn('- ` ".github/PULL_REQUEST_TEMPLATE.md" ` (blob `' + 'e' * 40 + '`)', body)
+        self.assertIn('- ` "docs/pull_request_template/bug.md" `\n', body)
+        self.assertNotIn('src/pull_request_template.md', body)
+        self.assertIn('repos/acme/photos/git/trees/' + task['source']['commit'] + '?recursive=1', client.calls)
+        self.assertIn('- Source open PRs (acme/photos): complete yes, pages 1, errors 0', body)
+        client.request = original
+        self.assertIn('No pull request template exists at the pinned commit', prbody.pr_body(task, client=client)[0])
+        client.failed.add('/git/trees/' + task['source']['commit'])
+        self.assertEqual(prbody.template_pointer(task, client), {'state': 'unknown', 'templates': []})
+        truncated = FakeGitHub()
+        truncated.request = lambda endpoint: {'truncated': True, 'tree': []}
+        self.assertEqual(prbody.template_pointer(task, truncated)['state'], 'unknown')
 
     def test_closing_keyword_only_when_requested(self):
         task, client = ready_contract()

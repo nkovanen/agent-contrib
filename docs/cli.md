@@ -120,19 +120,31 @@ would invalidate the evidence. A dirty worktree is recorded as observed
 
 `pr-body` runs the same read-only `verify` and renders Markdown: the issue
 reference (`Refs` by default, `Closes` only with `--closes`), objective, scope,
-criteria with their evidence status, validation argv with recorded status, exit
-code, test and skip counts, review and sign-off status, every verify blocker
-verbatim, the open-PR overlap scan, and an AI-assistance disclosure with the CLI
-version and contract hash. `--assistant` adds host-reported model text.
+criteria with their evidence status, each validation `argv` as an exact JSON
+code span with the recorded status, exit code, test and skip counts, review and
+sign-off status, the count and full neutralized text of every verify blocker,
+the open-PR scan provenance (completeness, pages, error count per scanned
+repository) with every overlapping PR, and an AI-assistance disclosure with the
+CLI version and contract hash. `--assistant` adds host-reported model text.
 
-All quoted text is neutralized: whitespace collapses to one line, HTML is
+When supplied evidence does not pass `verify`, its statuses are labelled
+`unverified claim`. Evidence that fails its schema is not quoted at all; its
+errors appear among the gates. For schema 0.2, review and sign-off states come
+from `verify`.
+
+One extra bounded read of the tree at the contract's pinned `source.commit`
+finds pull request templates (`pull_request_template.md` or a
+`pull_request_template/` directory at the root, `.github/` or `docs/`,
+case-insensitive). The body names each path and blob SHA, or says that none
+exists, or that presence is unknown when the read fails or is truncated.
+Template contents are not read and the CLI does not fill the template.
+
+All quoted prose is neutralized: whitespace collapses to one line, HTML is
 escaped, Markdown link/image/emphasis/code characters are backslash-escaped,
 and zero-width space entities break `@` mentions, `#` references, `://` URLs
-and closing keywords (close, fix, resolve and their forms). Evidence that fails
-its schema is not quoted; its errors appear among the gates. The output file is
-created exclusively. Rendering never writes to GitHub and is not publication
-authority. The CLI does not fill repository PR templates; merge the sections
-into one when the repository has it.
+and closing keywords (close, fix, resolve and their forms). Data shown in code
+spans (argv, template paths) is exact JSON. The output file is created
+exclusively. Rendering never writes to GitHub and is not publication authority.
 
 ## Opt-in ranking signals
 
