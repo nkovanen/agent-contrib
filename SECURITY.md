@@ -34,6 +34,11 @@ security maintenance commitment.
 - Exact-head recognition checks live repository/PR/author/ref identities and the
   tested commit. It exempts no unrelated overlap, performs no update/reopen and
   does not make GitHub snapshots atomic. Single-use limits require host enforcement.
+- Current-head verification cannot detect a past update when evidence, review
+  and the worker publication claim are all regenerated. The CLI retains no
+  publication-time head. The host must prevent updates and retain its creation
+  head for the acceptance audit; regenerated records do not prove an original
+  publication. See [host authorization](docs/host-authorization.md).
 - Evidence is self-attested consistency data, not signed proof. Independent
   review and real human authorization remain necessary outside the verifier.
 - Local Git reads disable hooks, fsmonitor, replacement objects and external

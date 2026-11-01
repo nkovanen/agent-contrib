@@ -34,7 +34,9 @@ GETs check `/user`, repository/owner and issue identities, and the collaborator'
 exact `admin` or `maintain` role. `authority: owner` additionally requires the
 credential actor ID to equal the repository owner ID. Organization maintainers
 use `maintainer`. Bots, delegated identities, custom roles, missing permissions
-and mismatched identities fail closed. This verifies the credential, not the
+and mismatched identities fail closed. Enterprise-managed login forms containing
+underscores are currently unsupported. Use canonical repository spelling from
+discovery; case-variant schema 0.2 preparation can be refused conservatively. This verifies the credential, not the
 human who supplied it.
 
 ## Three separately sourced records
@@ -125,6 +127,9 @@ agent-contrib verify task.json --stage implementation \
   --host-context-stdin < /host-controlled/context.json
 ```
 
+Issue the record before starting the verifier: a pipeline that waits for a human
+to decide will exceed the five-second input deadline.
+
 The path above is illustrative, not an automatic discovery convention. The CLI
 accepts a bounded UTF-8 JSON stream, not a path option. No input is read implicitly.
 Record the actual exit code and all returned gates; an exit code is not a new
@@ -149,11 +154,20 @@ it does not authorize a second PR.
 
 Final completion uses the same inputs with `--stage completion` after the human
 issues the later sign-off. Draft readiness can pass while completion stays false.
-Do not update or reopen a recognized PR through this route; a moved head fails.
+Do not update or reopen a recognized PR through this route; a moved head fails
+against the original evidence and publication claim.
 Current open/draft state is checked, but historical close-and-reopen events are
 not fully reconstructed. GitHub reads are separate snapshots, so reverify after
 publication and treat races as unresolved. Mandate single use and the actual
 human event are host responsibilities, not guarantees from a stateless CLI.
+
+Verification compares the PR's current head with the evidence currently supplied;
+the CLI keeps no record of the head at publication. If a branch is updated and
+evidence, review and the publication claim are regenerated, it cannot distinguish
+that sequence from an original publication. Preventing updates is the host's
+responsibility, and an updated run does not satisfy v0.3 acceptance. Retain the
+head SHA from the host's creation event and compare it with the live PR head and
+`GET repos/{repo}/pulls/{n}/commits` during the acceptance audit.
 
 Schema 0.1 remains the default and keeps its original behavior, including its
 own-draft overlap blocker. It rejects host context and explicit lifecycle stages.

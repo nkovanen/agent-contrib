@@ -153,7 +153,9 @@ are heuristics.
   Existing fork and policy-approved routes retain schema 0.1 behavior.
 - Exact-head recognition exempts only the verified contribution's own open draft
   in the new post-publication stage. Other overlaps still block. Draft updates,
-  force-push adoption and reopening are not supported by this route.
+  force-push adoption and reopening are not supported by this route. It cannot
+  detect past updates if all worker records are regenerated; the host must retain
+  and audit the original publication head.
 - Human mandates and sign-off are host-asserted; test and reviewer evidence is
   self-reported. Hashes bind records but do not prove consent or test execution.
 - Missing permissions, stale identities/commits and incomplete reads fail closed.

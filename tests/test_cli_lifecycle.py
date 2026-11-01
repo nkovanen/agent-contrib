@@ -117,3 +117,45 @@ class LifecycleCLITests(unittest.TestCase):
                 if proc.poll() is None:
                     proc.kill(); proc.wait()
                 proc.stdin.close(); proc.stdout.close(); proc.stderr.close()
+
+    def test_closed_stdin_returns_a_structured_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task = Path(tmp) / 'task.json'
+            task.write_text('{"schema_version":"0.2"}')
+            # Re-exec after closing fd 0 so Python starts with sys.stdin=None.
+            code = 'import os,sys; os.close(0); os.execv(sys.executable,[sys.executable,"-m","agent_contribute",*sys.argv[1:]])'
+            result = subprocess.run([sys.executable, '-c', code, 'verify', str(task),
+                                     '--host-context-stdin'], capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 1)
+            self.assertNotIn(b'Traceback', result.stderr)
+            self.assertEqual(json.loads(result.stdout)['error']['code'], 'host_context_input')
+
+    def test_terminal_host_input_is_rejected_before_reading(self):
+        class Terminal:
+            def isatty(self):
+                return True
+            def fileno(self):
+                raise AssertionError('A terminal must never be read for host context')
+        with patch('sys.stdin', Terminal()):
+            with self.assertRaises(core.ProtocolError) as raised:
+                cli.read_host_context_stdin()
+        self.assertEqual(raised.exception.code, 'host_context_input')
+
+    def test_exact_host_input_size_bound_and_valid_prefix_with_trailing_bytes(self):
+        accepted = b'"' + b'x' * (core.MAX_BYTES - 2) + b'"'
+        # Without the explicit size guard, the next zero-length os.read would
+        # look like EOF after a valid MAX_BYTES+1 prefix, losing the trailing data.
+        rejected = b'"' + b'x' * (core.MAX_BYTES - 1) + b'"trailing data'
+        with tempfile.TemporaryFile() as stream:
+            stream.write(accepted)
+            stream.seek(0)
+            with patch('sys.stdin', stream):
+                self.assertEqual(len(cli.read_host_context_stdin()), core.MAX_BYTES - 2)
+        with tempfile.TemporaryFile() as stream:
+            stream.write(rejected)
+            stream.seek(0)
+            with patch('sys.stdin', stream):
+                with self.assertRaises(core.ProtocolError) as raised:
+                    cli.read_host_context_stdin()
+            self.assertEqual(raised.exception.code, 'host_context_input')
+            self.assertNotIn('5 seconds', str(raised.exception))

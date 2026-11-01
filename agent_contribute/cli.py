@@ -18,7 +18,7 @@ HOST_INPUT_TIMEOUT = 5.0
 def read_host_context_stdin():
     """Bounded explicit input. The transport never authenticates a human mandate."""
     try:
-        if sys.stdin.isatty():
+        if sys.stdin is None or sys.stdin.isatty():
             raise OSError('An explicit piped host context is required')
         descriptor = sys.stdin.fileno()
         deadline = time.monotonic() + HOST_INPUT_TIMEOUT
@@ -37,7 +37,7 @@ def read_host_context_stdin():
         return core.strict_json(b''.join(chunks).decode('utf-8'))
     except (OSError, ValueError, UnicodeError) as exc:
         raise core.ProtocolError('host_context_input',
-                                 'Cannot read bounded UTF-8 host context from stdin within 5 seconds') from exc
+                                 'Cannot read explicit bounded UTF-8 host context from stdin') from exc
 
 
 class Parser(argparse.ArgumentParser):

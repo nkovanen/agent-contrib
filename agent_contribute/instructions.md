@@ -67,6 +67,9 @@ Host context schema `0.1` has three independently hashed sections:
   exact final head, contract, mandate and independent-review hash. It has its
   own event, nonce, interval and hash. The original approval is not final sign-off.
 
+The host must issue the record before starting the verifier; do not wait for a
+human decision inside its five-second input window.
+
 Pass the explicit document using `verify task.json --host-context-stdin` with
 stdin supplied by the human/host. Stdin is bounded to 8 MiB and five seconds; no
 terminal prompt is opened. Nothing is auto-loaded from a repository, environment
@@ -138,11 +141,19 @@ It retains that PR in output and excludes only that entry from post-publication
 blockers. Every unrelated overlap still blocks, even from the same author.
 
 No updates, ancestor-only exemption, force-push adoption or reopening are
-supported in this route. A moved head invalidates verification. A recognized
+supported in this route. A moved head invalidates the original evidence and publication claim. A recognized
 existing draft is reported without creating another. Closed, merged, ready,
 ambiguous or partially read history blocks creation. Reopened-PR history is not
 fully inspected; the current exact state is verified. GitHub reads are snapshots,
 not an atomic publication lock; races require re-verification.
+
+Verification compares the PR's current head with the evidence currently supplied;
+the CLI keeps no record of the head at publication. If a branch is updated and
+evidence, review and the publication claim are regenerated, it cannot distinguish
+that sequence from an original publication. Preventing updates is the host's
+responsibility, and an updated run does not satisfy v0.3 acceptance. Retain the
+head SHA from the host's creation event and compare it with the live PR head and
+`GET repos/{repo}/pulls/{n}/commits` during the acceptance audit.
 
 Mandate expiry blocks new actions but does not erase an existing authorized
 publication: its creation timestamp must lie in the mandate interval. Current
