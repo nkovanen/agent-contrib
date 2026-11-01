@@ -7,7 +7,7 @@ errors. An exit code is not authorization.
 
 | Command | Result |
 | --- | --- |
-| `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
+| `agent-contrib discover owner/repo [--limit N]` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
@@ -15,6 +15,20 @@ errors. An exit code is not authorization.
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
+
+`discover --limit N` accepts ASCII decimal integers from 1 through 1000.
+Zero, negative, malformed and larger values return a structured `invalid_limit`
+JSON error (exit 1), before GitHub access. A missing option value is a structured
+usage error (exit 2). The limit applies after the existing ranking, so every
+issue and PR scan, pagination step and fork resolution still runs.
+
+Limited responses add `display` with `requested_limit`,
+`total_issues_considered` (issues successfully inspected in this scan),
+`returned` and `truncated` (whether the observed ranked list exceeded the limit).
+These are display counts, not a claim of a complete repository scan: check
+`complete`, `errors` and provenance independently. Even failed resolution has
+zero-count display metadata. With no `--limit`, the response is unchanged and
+has no `display` field.
 
 `discover`, `inspect` and `prepare` wrap their results with
 `requested_repository`, `issue_source_repository`, `proposed_target_repository`

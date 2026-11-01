@@ -30,6 +30,8 @@ def main(argv=None):
     for command in ('discover', 'inspect', 'prepare'):
         sub = commands.add_parser(command)
         sub.add_argument('reference')
+        if command == 'discover':
+            sub.add_argument('--limit', help='Display at most N ranked issues (1-1000); all scans still run')
         if command == 'prepare':
             sub.add_argument('--output', required=True)
     commands.add_parser('instructions')
@@ -59,7 +61,7 @@ def main(argv=None):
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
         elif args.command == 'discover':
-            result = core.discover(args.reference)
+            result = core.discover(args.reference, limit=args.limit)
             code = 0 if result['complete'] else 1
         elif args.command in ('inspect', 'prepare'):
             result = core.inspect_issue(args.reference)
