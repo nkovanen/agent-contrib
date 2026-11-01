@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import core, prbody, workspace, __version__
+from . import audit, core, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -85,6 +85,9 @@ def main(argv=None):
     sub.add_argument('--repo-dir', required=True)
     sub.add_argument('--base', required=True)
     sub.add_argument('--output', required=True)
+    sub = commands.add_parser('audit')
+    sub.add_argument('repository')
+    sub.add_argument('--print-policy', action='store_true')
     sub = commands.add_parser('pr-body')
     sub.add_argument('contract')
     sub.add_argument('--evidence')
@@ -141,6 +144,9 @@ def main(argv=None):
                       'contract_sha256': verification.get('contract_sha256'),
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
+        elif args.command == 'audit':
+            result = audit.audit(args.repository, print_policy=args.print_policy)
+            code = 0 if result['complete'] else 1
         elif args.command == 'discover':
             result = core.discover(args.reference, signals=True) if args.signals else core.discover(args.reference)
             code = 0 if result['complete'] else 1

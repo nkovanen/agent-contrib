@@ -34,6 +34,20 @@ contributor's local execution, open a PR, replace human review or promise
 acceptance. User authorization must independently cover the implementation and
 publication target. Resolving a fork's parent never grants either permission.
 
+## See what an agent sees
+
+`agent-contrib audit owner/repo` is a read-only report that uses exactly the
+reads `discover` makes. It shows the policy state and why a policy is invalid
+or unknown, approval labels the policy names but the repository lacks, generic
+labels used as approval labels, instruction files found and the expected kinds
+that are missing (contributing guide, AGENTS.md/CLAUDE.md, pull request
+template, architecture/spec index), the 60-file instruction cap and whether the
+tree read was complete. It also counts open issues by ambiguity and approval
+state, excluded and overlapping issues, open PRs and overlap density, and shows
+fork/tracker resolution. Suggestions are non-binding. `--print-policy` adds a
+valid policy template to the JSON output; nothing is written to the repository.
+Exit 1 means some read was incomplete.
+
 ## Practical guidance
 
 Keep contribution policy and agent instructions consistent. State permitted

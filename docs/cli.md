@@ -9,6 +9,7 @@ errors. An exit code is not authorization.
 | --- | --- |
 | `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
+| `agent-contrib audit owner/repo [--print-policy]` | Read-only maintainer report: policy validity, labels, instruction coverage, issue-quality and overlap counts, non-binding suggestions |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
@@ -130,7 +131,9 @@ CLI version and contract hash. `--assistant` adds host-reported model text.
 When supplied evidence does not pass `verify`, its statuses are labelled
 `unverified claim`. Evidence that fails its schema is not quoted at all; its
 errors appear among the gates. For schema 0.2, review and sign-off states come
-from `verify`.
+from `verify`. `pr-body` takes no host context, so 0.2 mandate, publication and
+sign-off states always reflect its absence; the body does not reproduce an
+authorized `verify --host-context-stdin` run.
 
 One extra bounded read of the tree at the contract's pinned `source.commit`
 finds pull request templates (`pull_request_template.md` or a
