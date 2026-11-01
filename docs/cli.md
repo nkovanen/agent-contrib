@@ -17,6 +17,7 @@ errors. An exit code is not authorization.
 | `agent-contrib scope-check task.json --repo-dir checkout [--base SHA]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base SHA --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
+| `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -172,3 +173,20 @@ only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue. The optional repository-responsiveness read from #12 is not
 implemented.
+
+## PR feedback
+
+`feedback` reads one PR, its reviews, review comments, issue comments and the
+check runs for its current head. It reports the latest review per reviewer,
+whether a non-bot OWNER/MEMBER/COLLABORATOR currently requests changes, review
+comments with path, line and an `outdated` flag (no diff position, or made on
+another commit), bot versus human authors, and failing (failure, timed out,
+cancelled, action required, startup failure, stale) and pending check runs for
+the exact head SHA. `--expected-head` (for example the evidence `git_head` of
+the recognized draft) adds `head_moved`. Logs are not read.
+
+All text fields are `untrusted_*` data with terminal controls removed. Feedback
+never widens scope or grants authority; a requested change outside the reviewed
+contract needs contract re-review. Pagination is complete or the result is
+`complete: false` with errors (exit 1). For check runs, the collected count
+must match GitHub's `total_count`.

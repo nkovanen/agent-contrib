@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import audit, core, prbody, workspace, __version__
+from . import audit, core, feedback, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -88,6 +88,9 @@ def main(argv=None):
     sub = commands.add_parser('audit')
     sub.add_argument('repository')
     sub.add_argument('--print-policy', action='store_true')
+    sub = commands.add_parser('feedback')
+    sub.add_argument('reference')
+    sub.add_argument('--expected-head')
     sub = commands.add_parser('pr-body')
     sub.add_argument('contract')
     sub.add_argument('--evidence')
@@ -146,6 +149,9 @@ def main(argv=None):
             code = 0
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
+            code = 0 if result['complete'] else 1
+        elif args.command == 'feedback':
+            result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
             result = core.discover(args.reference, signals=True) if args.signals else core.discover(args.reference)

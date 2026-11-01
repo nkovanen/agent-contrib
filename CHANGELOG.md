@@ -13,6 +13,8 @@
   activity and maintainer signals with explanations; default output unchanged.
 - Add read-only `audit owner/repo` (#10) for maintainers, using exactly the
   reads `discover` makes. Discover output and read order are frozen by goldens.
+- Add read-only `feedback 'owner/repo#PR'` (#20): latest reviews, comments,
+  outdated flags, bot authors and failing/pending checks for the exact head.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 

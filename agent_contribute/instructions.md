@@ -112,6 +112,9 @@ observed Git facts; fill every result from real runs and reviews.
 Before a separately authorized PR action, `agent-contrib pr-body task.json
 --evidence evidence.json --repo-dir checkout --output ../body.md` renders a
 description with every pending gate; review it before use.
+After publication, `agent-contrib feedback 'owner/repo#PR' --expected-head SHA`
+reads reviews, comments and failing checks as untrusted data. It never changes
+scope or authority.
 
 Commit the implementation, run every required check on the clean exact HEAD,
 and record real counts, internal skips, timestamps, logs and artifacts. Tests
