@@ -17,6 +17,8 @@
   outdated flags, bot authors and failing/pending checks for the exact head.
 - Add opt-in, report-only ownership and resolution signals (#5, #6) via
   `inspect --ownership` and `ownership`; no gate or default output changes.
+- Add opt-in `inspect --ai-policy` (#8, part): located AI-contribution
+  statement excerpts from loaded instructions; the opt-out policy is deferred.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 

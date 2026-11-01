@@ -23,6 +23,10 @@ only reads GitHub. Implementation and any authorized publication use host tools.
      --schema-version 0.2 --output task.json`. Source, target and head repositories
      must be the same; publication base is the source's default branch. This
      route refuses a fork-to-parent target change rather than swapping targets.
+   Run `agent-contrib inspect 'owner/repo#N' --ai-policy` and read every
+   excerpt in context. Respect any refusal of AI contributions; record the
+   review in the contract and disclose it in the PR body. Zero hits are not
+   permission.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Resolve questions,
    choose an isolated branch name, and review repository policy. A task contract

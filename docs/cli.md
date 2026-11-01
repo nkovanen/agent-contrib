@@ -19,6 +19,7 @@ errors. An exit code is not authorization.
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
+| `agent-contrib inspect 'owner/repo#123' --ai-policy` | Adds located excerpts of AI-contribution statements from the loaded instruction files |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -232,3 +233,21 @@ the same parser as overlap detection.
 Any failed, malformed or partial read makes the signals `complete: false` and
 `resolution_signals.status: unknown`; an unknown is never "not fixed". With
 `--ownership`, exit 1 also covers incomplete signals.
+
+## AI-contribution statements (opt-in)
+
+`inspect --ai-policy` adds `ai_policy` without changing any other field. It
+scans the instruction files `inspect` already loaded, line by line, for a fixed
+set of patterns (AI-generated, AI-assisted, LLM, large language model,
+generative AI, artificial intelligence, Copilot, ChatGPT, machine-generated, "no
+AI", AI tools/agents/contributions/code). Each hit gives the path, line number,
+the file's SHA-256, the matched patterns and a one-line `untrusted_excerpt` of
+at most 300 characters. At most 200 excerpts are returned (`truncated: true`
+beyond that).
+
+`ai_policy_review` is always `required`. `coverage` is `incomplete` when any
+instruction read failed, the 60-file cap was hit or the excerpts were
+truncated. The CLI does not interpret the prose: a hit is a signal to read the
+file in context, and zero hits do not mean AI contributions are welcome. A
+machine-readable maintainer opt-out (a new policy version) is a separate,
+not-yet-implemented design.

@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import audit, core, feedback, ownership, prbody, workspace, __version__
+from . import aipolicy, audit, core, feedback, ownership, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -66,6 +66,7 @@ def main(argv=None):
             sub.add_argument('--signals', action='store_true')
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true')
+            sub.add_argument('--ai-policy', action='store_true')
         if command == 'prepare':
             sub.add_argument('--output', required=True)
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1')
@@ -154,13 +155,16 @@ def main(argv=None):
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
-        elif args.command == 'inspect' and args.ownership:
+        elif args.command == 'inspect' and (args.ownership or args.ai_policy):
             client = core.GitHub()
             result = core.inspect_issue(args.reference, client)
-            if 'source' in result:
+            code = 0 if result['complete'] and 'source' in result else 1
+            if 'source' in result and args.ownership:
                 result['ownership_signals'] = ownership.ownership_signals(
                     result['issue_source_repository'], result['source']['issue'], client)
-            code = 0 if result['complete'] and result.get('ownership_signals', {}).get('complete') else 1
+                code = code or (0 if result['ownership_signals']['complete'] else 1)
+            if 'source' in result and args.ai_policy:
+                result['ai_policy'] = aipolicy.ai_policy_excerpts(result)
         elif args.command == 'ownership':
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1

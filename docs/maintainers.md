@@ -50,6 +50,15 @@ fork/tracker resolution. Suggestions are non-binding. `--print-policy` adds a
 valid policy template to the JSON output; nothing is written to the repository.
 Exit 1 means some read was incomplete.
 
+## AI-contribution statements
+
+If your CONTRIBUTING, code of conduct or agent instructions say how you treat
+AI-generated contributions, agents running `inspect --ai-policy` get those
+lines as located excerpts and are told to review them, record the result in the
+contract and disclose it in the PR. Plain, explicit sentences are easiest to
+find. A machine-readable opt-out in `.agent-contrib.json` is not supported yet;
+until it is, state refusals clearly in CONTRIBUTING.md.
+
 ## Practical guidance
 
 Keep contribution policy and agent instructions consistent. State permitted
