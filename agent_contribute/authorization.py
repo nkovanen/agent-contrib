@@ -26,7 +26,7 @@ def timestamp(value):
 
 
 def valid_ref(value):
-    return (isinstance(value, str) and 0 < len(value) <= 200 and value != 'HEAD' and
+    return (isinstance(value, str) and 0 < len(value) <= 200 and value not in ('HEAD', '@') and
             not value.startswith(('-', '/')) and not value.endswith(('/', '.')) and
             not any(part in value for part in ('..', '@{', '//')) and
             not re.search(r'[\x00-\x20\x7f~^:?*\[\\]', value) and

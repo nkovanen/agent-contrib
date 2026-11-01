@@ -211,6 +211,6 @@ class TimestampTests(unittest.TestCase):
     def test_invalid_git_refs_do_not_become_publication_scope(self):
         from agent_contribute.authorization import valid_ref
         for value in ('bad ref', '-option', '../escape', 'a..b', 'a@{b', 'a\\b', 'a:b', 'a?b',
-                      'a[b', 'a//b', 'a.lock', '.hidden', 'a/', 'a.', 'HEAD', 'x&state=closed:evil'):
+                      'a[b', 'a//b', 'a.lock', '.hidden', 'a/', 'a.', '@', 'HEAD', 'x&state=closed:evil'):
             self.assertFalse(valid_ref(value), value)
         self.assertTrue(valid_ref('agent/bounds'))
