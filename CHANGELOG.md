@@ -23,6 +23,8 @@
   the pinned commit, issue, branch, policy and overlap changes; never rewrites.
 - Add opt-in `verify --observe-ci` (#17, part): report-only check runs and
   combined status for the exact evidence head; gates and exit codes unchanged.
+- Add opt-in `--report-budget` and `--min-remaining` (#27, part): rate-limit
+  snapshots around a command; the response cache is deferred.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 

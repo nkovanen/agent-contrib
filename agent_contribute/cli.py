@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, ci, core, drift, feedback, ownership, prbody, workspace, __version__
+from . import aipolicy, audit, budget, ci, core, drift, feedback, ownership, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -58,6 +58,8 @@ def write_new_json(path, value):
 def main(argv=None):
     parser = Parser(prog='agent-contrib', description='Read-only GitHub agent contribution protocol (JSON output)')
     parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument('--report-budget', action='store_true')
+    parser.add_argument('--min-remaining', type=int)
     commands = parser.add_subparsers(dest='command', required=True)
     for command in ('discover', 'inspect', 'prepare'):
         sub = commands.add_parser(command)
@@ -108,6 +110,14 @@ def main(argv=None):
     sub.add_argument('--output', required=True)
     try:
         args = parser.parse_args(argv)
+        if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
+            raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
+        if args.report_budget:
+            if args.command in ('instructions', 'skill', 'scope-check', 'evidence'):
+                raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
+            before = budget.snapshot()
+            if args.min_remaining is not None:
+                budget.require_remaining(before, args.min_remaining)
         if args.command == 'instructions':
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
                       'supported_host_context_versions': ['0.1'],
@@ -210,6 +220,8 @@ def main(argv=None):
                 code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
             if args.observe_ci and result.get('schema_valid') is True:
                 result['ci_observation'] = ci.observe(task, evidence)  # report only; code is already decided
+        if args.report_budget:
+            result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:
         result = {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1
