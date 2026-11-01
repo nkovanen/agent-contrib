@@ -19,6 +19,8 @@
   `inspect --ownership` and `ownership`; no gate or default output changes.
 - Add opt-in `inspect --ai-policy` (#8, part): located AI-contribution
   statement excerpts from loaded instructions; the opt-out policy is deferred.
+- Add read-only `drift task.json` (#16, part): per-file instruction changes from
+  the pinned commit, issue, branch, policy and overlap changes; never rewrites.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 

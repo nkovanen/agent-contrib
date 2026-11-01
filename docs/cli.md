@@ -20,6 +20,7 @@ errors. An exit code is not authorization.
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
 | `agent-contrib inspect 'owner/repo#123' --ai-policy` | Adds located excerpts of AI-contribution statements from the loaded instruction files |
+| `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -261,3 +262,26 @@ line was only partially scanned. The CLI does not interpret the prose: a hit is 
 file in context, and zero hits do not mean AI contributions are welcome. A
 machine-readable maintainer opt-out (a new policy version) is a separate,
 not-yet-implemented design.
+
+## Drift since preparation
+
+`drift task.json` compares a schema-valid contract with the live source and
+never writes anything. It reports:
+
+- `issue`: whether the combined issue hash changed, stored and current
+  `updated_at`, and the current title/body hashes, state, labels and assignees.
+  Per-component baselines are unavailable because schemas 0.1 and 0.2 store one
+  combined hash.
+- `instructions`: the files `added`, `removed` and `modified` (path and both
+  SHA-256s). The baseline is reconstructed by re-reading the instruction files
+  at the contract's immutable `source.commit`; it is used only when its
+  aggregate equals the stored `instructions_sha256` (`baseline_verified`).
+- `default_branch`: stored and current branch and commit. An advanced commit
+  alone is informational and not drift.
+- `policy`: stored and current approval status, plus policy hashes for 0.2.
+- `overlap`: open source-repository PRs added to or gone from the prepared list.
+
+Exit 0 only when every read completed and nothing drifted. Any failed read,
+including an unverifiable baseline, gives `complete: false`. The pinned re-read
+costs another snapshot's worth of reads. After drift, review and prepare the
+contract again.

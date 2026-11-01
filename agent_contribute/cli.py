@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, core, feedback, ownership, prbody, workspace, __version__
+from . import aipolicy, audit, core, drift, feedback, ownership, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -93,6 +93,8 @@ def main(argv=None):
     sub.add_argument('--print-policy', action='store_true')
     sub = commands.add_parser('ownership')
     sub.add_argument('reference')
+    sub = commands.add_parser('drift')
+    sub.add_argument('contract')
     sub = commands.add_parser('feedback')
     sub.add_argument('reference')
     sub.add_argument('--expected-head')
@@ -168,6 +170,9 @@ def main(argv=None):
         elif args.command == 'ownership':
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
+        elif args.command == 'drift':
+            result = drift.drift(core.read_json(args.contract))
+            code = 0 if result['complete'] and result['drifted'] is False else 1
         elif args.command == 'feedback':
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1

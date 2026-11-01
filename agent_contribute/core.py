@@ -254,13 +254,15 @@ def target_pr_scan(source, target, issue, client):
             'complete': not errors, 'pages': listing['pages'], 'errors': errors}, duplicates
 
 
-def repository_snapshot(repository, client, meta=None):
+def repository_snapshot(repository, client, meta=None, commit=None):
+    """commit pins an earlier reviewed snapshot (drift reports); by default the branch tip is read."""
     repository = parse_repository(repository)
     meta = meta if meta is not None else repository_metadata(repository, client)
     canonical = meta['full_name']
     branch = require(meta.get('default_branch'), str, 'default branch')
-    commit_data = require(client.request(f'repos/{repository}/commits/{quote(branch, safe="")}'), dict, 'commit')
-    commit = require(commit_data.get('sha'), str, 'commit sha')
+    if commit is None:
+        commit_data = require(client.request(f'repos/{repository}/commits/{quote(branch, safe="")}'), dict, 'commit')
+        commit = require(commit_data.get('sha'), str, 'commit sha')
     if not re.fullmatch('[0-9a-f]{40}', commit):
         raise ProtocolError('api_shape', 'Invalid default branch commit')
     snapshot = {'repository': canonical, 'default_branch': branch, 'commit': commit,
