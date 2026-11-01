@@ -78,6 +78,11 @@ def main(argv=None):
     sub.add_argument('contract')
     sub.add_argument('--repo-dir', required=True)
     sub.add_argument('--base')
+    sub = commands.add_parser('evidence').add_subparsers(dest='evidence_command', required=True).add_parser('init')
+    sub.add_argument('contract')
+    sub.add_argument('--repo-dir', required=True)
+    sub.add_argument('--base', required=True)
+    sub.add_argument('--output', required=True)
     try:
         args = parser.parse_args(argv)
         if args.command == 'instructions':
@@ -105,6 +110,15 @@ def main(argv=None):
         elif args.command == 'scope-check':
             result = workspace.scope_check(core.read_json(args.contract), args.repo_dir, args.base)
             code = 0 if result['within_scope'] else 1
+        elif args.command == 'evidence':
+            task = core.read_json(args.contract)
+            skeleton = workspace.evidence_skeleton(task, args.repo_dir, args.base)
+            workspace.require_outside_checkout(args.repo_dir, args.output)
+            write_new_json(args.output, skeleton)
+            result = {'output': str(args.output), 'evidence_valid': False,
+                      'schema_errors': len(core.schema_errors(skeleton, core.bundled_schema('evidence', task['schema_version']))),
+                      'warning': 'Skeleton only: fill every result from real runs and reviews; nothing was executed'}
+            code = 0
         elif args.command == 'discover':
             result = core.discover(args.reference)
             code = 0 if result['complete'] else 1

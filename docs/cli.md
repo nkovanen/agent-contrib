@@ -13,6 +13,7 @@ errors. An exit code is not authorization.
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base SHA]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
+| `agent-contrib evidence init task.json --repo-dir checkout --base SHA --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -95,3 +96,20 @@ closed. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
+
+## Evidence skeleton
+
+`evidence init` writes a draft evidence file for the contract's schema version.
+It fills only what the CLI observes locally: the canonical `contract_sha256`,
+`git_head`, `git_tree`, the given `base_commit` and the observed
+`worktree_clean`. Validation entries copy each contract `id` and `argv`;
+criteria copy their IDs. Every result field is left unfilled (`null` or empty),
+criteria and attestations are `pending`, and `implementer` is blank, so the
+skeleton deliberately fails evidence validation. It never runs argv and never
+writes `passed`.
+
+The base must be a full SHA that descends from `source.commit` and is an
+ancestor of HEAD. Gitlinks are refused. The output is created exclusively and
+must be outside the checkout's Git top level, because an untracked file there
+would invalidate the evidence. A dirty worktree is recorded as observed
+(`worktree_clean: false`), which `verify` rejects.

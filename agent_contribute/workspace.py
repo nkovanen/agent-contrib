@@ -1,5 +1,6 @@
 """Offline local-checkout helpers. No GitHub reads, no argv execution, never evidence."""
 import re
+from pathlib import Path
 
 from . import core
 
@@ -12,12 +13,8 @@ def scope_check(task, directory, base=None):
               'evidence': 'A pass is not evidence and is never recorded as such; verify remains authoritative.'}
     if errors:
         return result
-    base = task['source']['commit'] if base is None else base
-    if not isinstance(base, str) or not re.fullmatch('[0-9a-f]{40}', base):
-        errors.append('Base must be a full lowercase 40-character commit SHA')
-        return result
-    result['base_commit'] = base
     try:
+        base = result['base_commit'] = _base(task['source']['commit'] if base is None else base)
         try:
             core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')
         except core.ProtocolError:
@@ -34,3 +31,48 @@ def scope_check(task, directory, base=None):
         errors.append(str(exc))
     result['within_scope'] = not errors and not result['violations']
     return result
+
+
+def _base(base):
+    if not isinstance(base, str) or not re.fullmatch('[0-9a-f]{40}', base):
+        raise core.ProtocolError('invalid_base', 'Base must be a full lowercase 40-character commit SHA')
+    return base
+
+
+def evidence_skeleton(task, directory, base):
+    """Prefill only facts Git observes; results stay unfilled so the draft cannot validate."""
+    if core.validate_contract(task):
+        raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
+    base = _base(base)
+    try:
+        core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
+        core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')
+    except core.ProtocolError:
+        raise core.ProtocolError('base_history', 'Base must descend from source.commit and be an ancestor of HEAD') from None
+    if core.has_gitlink(directory, 'HEAD', base):
+        raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
+    version = task['schema_version']
+    attestation = {'status': 'pending', 'reviewer': '', 'git_head': '', 'contract_sha256': '', 'notes': ''}
+    skeleton = {'schema_version': version, 'contract_sha256': core.canonical_hash(task),
+                'git_head': core.git_read(directory, 'rev-parse', 'HEAD'),
+                'git_tree': core.git_read(directory, 'rev-parse', 'HEAD^{tree}'), 'base_commit': base,
+                'worktree_clean': not core.git_read(directory, 'status', '--porcelain', '--untracked-files=all',
+                                                    '--ignore-submodules=all'),
+                'implementer': '',
+                'validations': [{'id': item['id'], 'argv': item['argv'], 'status': None, 'exit_code': None,
+                                 'skipped': None, 'output': '', 'started_at': '', 'finished_at': '',
+                                 'tool_version': '', 'git_head': '', 'tests_run': None} for item in task['validation']],
+                'criteria': [{'id': item['id'], 'status': 'pending', 'evidence': ''} for item in task['behavior_criteria']],
+                'independent_review': dict(attestation, reviewed_at='') if version == '0.2' else attestation,
+                'artifacts': []}
+    if version == '0.1':
+        skeleton['human_signoff'] = dict(attestation)
+    return skeleton
+
+
+def require_outside_checkout(directory, output):
+    """An untracked evidence file inside the checkout would itself invalidate the evidence."""
+    root = Path(core.git_read(directory, 'rev-parse', '--show-toplevel')).resolve()
+    target = Path(output).parent.resolve() / Path(output).name
+    if target == root or target.is_relative_to(root):
+        raise core.ProtocolError('output_in_checkout', 'Write evidence outside the checkout it describes')

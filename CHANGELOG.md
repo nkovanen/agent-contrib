@@ -4,6 +4,9 @@
 
 - Add offline `scope-check` (#15). `verify` and `scope-check` share one scope
   evaluator; schema 0.1 decisions are unchanged.
+- Add `evidence init` (#14): an evidence skeleton prefilled only with observed
+  Git facts and contract IDs. It never runs argv or writes `passed`, and it
+  fails validation until filled.
 
 ## 0.3.0 — unreleased
 
