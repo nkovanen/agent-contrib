@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_contribute import cli, core, workspace
+from tests.test_authorization import candidate_task
 from tests.test_protocol import evidence_checkout
 
 
@@ -44,9 +45,12 @@ class EvidenceInitTests(unittest.TestCase):
     def test_schema_02_skeleton_has_no_human_signoff(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, _ = evidence_checkout(tmp)
-            task['schema_version'] = '0.2'
-            with patch.object(core, 'validate_contract', return_value=[]):
-                skeleton = workspace.evidence_skeleton(task, tmp, evidence['base_commit'])
+            legacy_commit = task['source']['commit']
+            task, client = candidate_task()
+            task['source']['commit'] = client.commit = legacy_commit
+            self.assertEqual(core.validate_contract(task), [])
+            skeleton = workspace.evidence_skeleton(task, tmp, evidence['base_commit'])
+            self.assertEqual(skeleton['contract_sha256'], core.canonical_hash(task))
             self.assertEqual(skeleton['schema_version'], '0.2')
             self.assertNotIn('human_signoff', skeleton)
             self.assertEqual(skeleton['independent_review']['reviewed_at'], '')
@@ -105,11 +109,35 @@ class EvidenceInitTests(unittest.TestCase):
                     code, result = self.invoke(*args, '--output', str(inside))
                     self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
                     self.assertFalse(inside.exists())
+            nested = pathlib.Path(out, 'link-to-src')
+            nested.symlink_to(pathlib.Path(tmp, 'src'), target_is_directory=True)
+            code, result = self.invoke(*args, '--output', str(nested / 'e.json'))
+            self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
             link = pathlib.Path(out, 'link')
             link.symlink_to(tmp, target_is_directory=True)
             code, result = self.invoke(*args, '--output', str(link / 'e.json'))
             self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
             self.assertFalse(pathlib.Path(tmp, 'e.json').exists())
+
+    def test_checkout_root_with_trailing_whitespace_still_contains_output(self):
+        # Git output is stripped by git_read; the containment root must not be.
+        for suffix in [' ', '\t', '\n', ' \n ']:
+            with self.subTest(suffix=repr(suffix)), tempfile.TemporaryDirectory() as parent:
+                repo = pathlib.Path(parent, 'repo' + suffix)
+                repo.mkdir()
+                task, _, evidence, _ = evidence_checkout(str(repo))
+                contract = pathlib.Path(parent, 'task.json')
+                contract.write_text(json.dumps(task))
+                with self.assertRaises(core.ProtocolError):
+                    workspace.require_outside_checkout(str(repo), str(repo / 'evidence.json'))
+                code, result = self.invoke('evidence', 'init', str(contract), '--repo-dir', str(repo),
+                                           '--base', evidence['base_commit'], '--output', str(repo / 'evidence.json'))
+                self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
+                self.assertFalse((repo / 'evidence.json').exists())
+                sibling = pathlib.Path(parent, 'repo')
+                if not sibling.exists():
+                    sibling.mkdir()
+                    workspace.require_outside_checkout(str(repo), str(sibling / 'evidence.json'))
 
 
 if __name__ == '__main__':

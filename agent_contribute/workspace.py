@@ -72,7 +72,8 @@ def evidence_skeleton(task, directory, base):
 
 def require_outside_checkout(directory, output):
     """An untracked evidence file inside the checkout would itself invalidate the evidence."""
-    root = Path(core.git_read(directory, 'rev-parse', '--show-toplevel')).resolve()
+    # --show-cdup emits only '../' components, so stripped Git output cannot alter the root path.
+    root = (Path(directory).resolve() / core.git_read(directory, 'rev-parse', '--show-cdup')).resolve()
     target = Path(output).parent.resolve() / Path(output).name
     if target == root or target.is_relative_to(root):
         raise core.ProtocolError('output_in_checkout', 'Write evidence outside the checkout it describes')
