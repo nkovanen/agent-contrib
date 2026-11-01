@@ -117,6 +117,16 @@ class DiscoveryLimitTests(unittest.TestCase):
                 self.assertEqual(result['display']['requested_limit'], expected)
                 self.assertEqual(len(result['issues']), 1)
 
+    def test_leading_zero_decimal_limits_have_the_same_value(self):
+        for value in ('0001', '00001', '0' * 5000 + '1'):
+            with self.subTest(digits=len(value)):
+                result = core.discover('acme/photos', self.client(), limit=value)
+                self.assertEqual(result['display']['requested_limit'], 1)
+                with patch.object(core, 'GitHub', return_value=self.client()):
+                    status, result = self.invoke(['discover', 'acme/photos', '--limit', value])
+                self.assertEqual(status, 0)
+                self.assertEqual(result['display']['requested_limit'], 1)
+
     def test_cli_invalid_limits_are_structured_errors_without_network(self):
         for value in ('0', '-1', '1001', 'abc', '1.0', '١', '9' * 5000):
             with self.subTest(value=value[:20]), patch.object(core, 'GitHub') as github:

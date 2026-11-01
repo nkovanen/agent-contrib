@@ -477,8 +477,8 @@ def inspect_issue(reference, client=None):
 def discover(repository, client=None, *, limit=None):
     """Limit displayed candidates only after full discovery and ranking."""
     if limit is not None:
-        if isinstance(limit, str) and re.fullmatch(r'[0-9]{1,4}', limit):
-            limit = int(limit)
+        if isinstance(limit, str) and re.fullmatch(r'0*[0-9]{1,4}', limit):
+            limit = int(limit.lstrip('0') or '0')
         if type(limit) is not int or not 1 <= limit <= 1000:
             raise ProtocolError('invalid_limit', 'Discovery limit must be an ASCII integer from 1 to 1000')
     result = _discover(repository, client)
