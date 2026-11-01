@@ -21,6 +21,8 @@
   statement excerpts from loaded instructions; the opt-out policy is deferred.
 - Add read-only `drift task.json` (#16, part): per-file instruction changes from
   the pinned commit, issue, branch, policy and overlap changes; never rewrites.
+- Add opt-in `verify --observe-ci` (#17, part): report-only check runs and
+  combined status for the exact evidence head; gates and exit codes unchanged.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 

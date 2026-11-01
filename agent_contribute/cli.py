@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, core, drift, feedback, ownership, prbody, workspace, __version__
+from . import aipolicy, audit, ci, core, drift, feedback, ownership, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -79,6 +79,7 @@ def main(argv=None):
     sub.add_argument('--repo-dir')
     sub.add_argument('--stage', choices=('implementation', 'draft', 'completion'))
     sub.add_argument('--host-context-stdin', action='store_true')
+    sub.add_argument('--observe-ci', action='store_true')
     sub = commands.add_parser('scope-check')
     sub.add_argument('contract')
     sub.add_argument('--repo-dir', required=True)
@@ -207,6 +208,8 @@ def main(argv=None):
             else:
                 result = core.verify(task, evidence, args.repo_dir)
                 code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
+            if args.observe_ci and result.get('schema_valid') is True:
+                result['ci_observation'] = ci.observe(task, evidence)  # report only; code is already decided
     except core.ProtocolError as exc:
         result = {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1

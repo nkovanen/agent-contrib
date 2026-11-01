@@ -21,6 +21,7 @@ errors. An exit code is not authorization.
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
 | `agent-contrib inspect 'owner/repo#123' --ai-policy` | Adds located excerpts of AI-contribution statements from the loaded instruction files |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
+| `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -285,3 +286,21 @@ Exit 0 only when every read completed and nothing drifted. Any failed read,
 including an unverifiable baseline, gives `complete: false`. The pinned re-read
 costs another snapshot's worth of reads. After drift, review and prepare the
 contract again.
+
+## CI observation (opt-in, report only)
+
+`verify ... --evidence evidence.json --observe-ci` adds `ci_observation` after
+the verify decision and exit code are fixed; it never changes any gate. For the
+evidence `git_head` in the contract's target repository (the source when the
+target is blank), it reads every check-run page and the paginated combined
+commit status. It reports check runs for that exact head (name, app slug and
+numeric app ID, status, conclusion, URL), the count of runs for other heads,
+and the combined state with each status context.
+
+Shapes are strict: positive IDs, documented statuses and conclusions (set
+exactly when a run is completed), stable `total_count`, unique IDs across pages,
+and a combined status for the requested SHA. Any failure, or a missing or
+invalid evidence head, gives `complete: false` with errors. Queued, pending,
+approval-required or missing runs are never success. This is an observation of
+what GitHub reports, not proof that the evidence checks equal the CI checks.
+Required-check gating is a deferred future-schema design.
