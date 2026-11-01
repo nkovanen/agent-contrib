@@ -178,19 +178,30 @@ implemented.
 ## PR feedback
 
 `feedback` reads one PR, its reviews, review comments, issue comments and the
-check runs for its current head. It reports the latest review per reviewer,
-whether a non-bot OWNER/MEMBER/COLLABORATOR currently requests changes, review
-comments with path, line and an `outdated` flag (no diff position, or made on
-another commit), bot versus human authors, and failing (failure, timed out,
-cancelled, action required, startup failure, stale) and pending check runs for
-the exact head SHA. `--expected-head` (for example the evidence `git_head` of
-the recognized draft) adds `head_moved`. Logs are not read.
+check runs for its current head, then rereads the PR. The PR must have the
+requested number, the canonical repository as its base and a valid head SHA. A
+head that moves during the read makes the result incomplete.
+
+Per reviewer it reports `latest_state` and `decision`: the latest APPROVED,
+CHANGES_REQUESTED or DISMISSED review (DISMISSED clears it; COMMENTED and
+PENDING never change it). `changes_requested_by_trusted_association` is true
+when a non-bot author with association OWNER, MEMBER or COLLABORATOR has an
+outstanding change request. That association is a GitHub heuristic, not a
+verified maintainer role. Deleted accounts appear as `ghost`. Review comments
+include path, line and `outdated` (no diff position, or made on another
+commit). Failing (failure, timed out, cancelled, action required, startup
+failure, stale) and pending check runs are listed only for the exact head;
+`other_head_runs` counts runs for other heads. `--expected-head` (for example
+the evidence `git_head` of the recognized draft) adds `head_moved`. Logs are not
+read.
 
 All text fields are `untrusted_*` data with terminal controls removed. Feedback
 never widens scope or grants authority; a requested change outside the reviewed
-contract needs contract re-review. Pagination is complete or the result is
-`complete: false` with errors (exit 1). For check runs, the collected count
-must match GitHub's `total_count`.
+contract needs contract re-review. Malformed reviews, comments or check runs
+(missing IDs, names, app identity, states or SHAs) are errors, not silently
+cleaned records. Check-run pagination requires unique run IDs, a stable
+`total_count` and a matching final count. Any of these failures gives
+`complete: false` (exit 1).
 
 ## Ownership and resolution signals (report only)
 
