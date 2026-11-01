@@ -9,6 +9,8 @@
   fails validation until filled.
 - Add `pr-body` (#19): a Markdown PR description from the contract, evidence
   and live verify gates, with untrusted text neutralized and `Refs` by default.
+- Add opt-in `discover --signals` (#12): code-location, acceptance-clarity,
+  activity and maintainer signals with explanations; default output unchanged.
 
 ## 0.3.0 — unreleased
 

@@ -62,6 +62,8 @@ def main(argv=None):
     for command in ('discover', 'inspect', 'prepare'):
         sub = commands.add_parser(command)
         sub.add_argument('reference')
+        if command == 'discover':
+            sub.add_argument('--signals', action='store_true')
         if command == 'prepare':
             sub.add_argument('--output', required=True)
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1')
@@ -140,7 +142,7 @@ def main(argv=None):
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
         elif args.command == 'discover':
-            result = core.discover(args.reference)
+            result = core.discover(args.reference, signals=True) if args.signals else core.discover(args.reference)
             code = 0 if result['complete'] else 1
         elif args.command in ('inspect', 'prepare'):
             result = core.inspect_issue(args.reference)

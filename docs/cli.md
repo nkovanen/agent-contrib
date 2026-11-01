@@ -8,6 +8,7 @@ errors. An exit code is not authorization.
 | Command | Result |
 | --- | --- |
 | `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
+| `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
@@ -132,3 +133,27 @@ its schema is not quoted; its errors appear among the gates. The output file is
 created exclusively. Rendering never writes to GitHub and is not publication
 authority. The CLI does not fill repository PR templates; merge the sections
 into one when the repository has it.
+
+## Opt-in ranking signals
+
+`discover --signals` adds deterministic, explained heuristics to each issue
+without extra API calls. Without the flag, output and ordering are unchanged.
+
+- `code_location`: paths in the issue title/body (first 64 KiB) that exist in
+  the snapshot tree, including repository-relative suffixes of stack-frame
+  paths and file names that match exactly one tree path (at most 20). It is
+  `unknown` when the tree read was incomplete. Module names are not resolved.
+- `acceptance_clarity`: `high`, `medium` or `low` from checklists,
+  expected/actual sections, reproduction steps and code blocks.
+- `activity`: age and last-update days, comment and reaction counts from the
+  issue list payload; malformed fields are `null`.
+- `maintainer`: whether the issue author's association is OWNER, MEMBER or
+  COLLABORATOR.
+- `score`: one point for found locations, up to two for clarity, one for a
+  maintainer author.
+
+Ordering stays exclusions first, then overlaps, then low success likelihood;
+only then does a higher `score` come first, with the issue number as the final
+tie-breaker. Signals are heuristics. They never approve, authorize or replace
+reading the issue. The optional repository-responsiveness read from #12 is not
+implemented.
