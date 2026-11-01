@@ -1,0 +1,20 @@
+{
+  "result": {
+    "requested_repository": "person/photos",
+    "issue_source_repository": null,
+    "proposed_target_repository": "person/photos",
+    "resolution_provenance": {
+      "metadata_reads": [],
+      "reason": "unresolved",
+      "execution_authority": "none"
+    },
+    "complete": false,
+    "errors": [
+      "GitHub read failed"
+    ],
+    "issues": []
+  },
+  "calls": [
+    "repos/person/photos"
+  ]
+}

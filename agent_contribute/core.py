@@ -477,15 +477,20 @@ def inspect_issue(reference, client=None):
 
 
 def discover(repository, client=None, *, signals=False):
+    return discover_with_snapshot(repository, client, signals=signals)[0]
+
+
+def discover_with_snapshot(repository, client=None, *, signals=False):
+    """The snapshot is internal context for read-only reports such as audit; it is never output."""
     repository = parse_repository(repository)
     client = client or GitHub()
     context, meta = resolve_repository(repository, client)
     if context.get('complete') is False:
-        return {**context, 'issues': []}
+        return {**context, 'issues': []}, None
     try:
         snapshot = repository_snapshot(context['issue_source_repository'], client, meta)
     except ProtocolError as exc:
-        return {**context, 'complete': False, 'errors': [str(exc)], 'issues': []}
+        return {**context, 'complete': False, 'errors': [str(exc)], 'issues': []}, None
     source = snapshot['repository']
     listing = paginate(client, f'repos/{source}/issues?state=open')
     issues, errors = [], list(snapshot['errors']) + listing['errors']
@@ -532,7 +537,7 @@ def discover(repository, client=None, *, signals=False):
                            'proposed_target_pulls': target_scan},
             'issue_scan': {k: v for k, v in listing.items() if k != 'items'},
             'limits': {'pages_per_list': MAX_PAGES, 'instruction_files': 60},
-            'warning': 'Candidates only. Resolution proposes a target; it never grants execution authority.'}
+            'warning': 'Candidates only. Resolution proposes a target; it never grants execution authority.'}, snapshot
 
 
 def prepare(inspected, schema_version='0.1', client=None):
