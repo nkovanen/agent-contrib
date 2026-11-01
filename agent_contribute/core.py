@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 VERSION = '0.1'
+SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
@@ -527,7 +528,12 @@ def discover(repository, client=None):
             'warning': 'Candidates only. Resolution proposes a target; it never grants execution authority.'}
 
 
-def prepare(inspected):
+def prepare(inspected, schema_version='0.1', client=None):
+    if schema_version == '0.2':
+        from .lifecycle import prepare_v2
+        return prepare_v2(inspected, client or GitHub())
+    if schema_version != '0.1':
+        raise ProtocolError('unsupported_schema', 'Unsupported task schema version')
     target = inspected.get('proposed_target_repository', '')
     if target.casefold() == inspected['source']['repository'].casefold():
         target = ''
@@ -588,12 +594,18 @@ def schema_errors(value, schema, path='$', depth=0):
     return errors
 
 
-def bundled_schema(name):
-    return json.loads(importlib.resources.files('agent_contribute').joinpath(name + '.schema.json').read_text('utf-8'))
+def bundled_schema(name, version='0.1'):
+    if name not in ('task', 'evidence', 'host-context') or (version not in SUPPORTED_SCHEMA_VERSIONS or
+            (name == 'host-context' and version != '0.1')):
+        raise ProtocolError('unsupported_schema', 'Unsupported schema resource or version')
+    path = (f'schemas/host-context/{version}.schema.json' if name == 'host-context' else
+            name + '.schema.json' if version == '0.1' else f'schemas/{version}/{name}.schema.json')
+    return json.loads(importlib.resources.files('agent_contribute').joinpath(path).read_text('utf-8'))
 
 
 def validate_contract(contract):
-    return schema_errors(contract, bundled_schema('task'))
+    version = contract.get('schema_version') if isinstance(contract, dict) else None
+    return schema_errors(contract, bundled_schema('task', '0.2' if version == '0.2' else '0.1'))
 
 
 def unique_ids(items):
@@ -623,8 +635,9 @@ def implementation_paths(directory, base):
                                       '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, 'HEAD').split('\0') if path]
 
 
-def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None):
-    errors = schema_errors(evidence, bundled_schema('evidence'))
+def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None,
+                   schema_version='0.1', attestations=('independent_review', 'human_signoff')):
+    errors = schema_errors(evidence, bundled_schema('evidence', schema_version))
     if errors:
         return errors
     if directory is None:
@@ -648,6 +661,8 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     try:
         head = git_read(directory, 'rev-parse', 'HEAD')
         tree = git_read(directory, 'rev-parse', 'HEAD^{tree}')
+        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
+            errors.append('Checkout branch differs from reviewed head ref')
         # Reject submodule repositories without traversing or invoking their local config.
         trees = [git_read(directory, 'ls-tree', '-r', '-z', revision)
                  for revision in ('HEAD', evidence['base_commit'])]
@@ -685,6 +700,9 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     for name in ('validations', 'criteria'):
         if not unique_ids(evidence[name]):
             errors.append('Evidence has duplicate ' + name + ' IDs')
+    parse_timestamp = lambda value: dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if schema_version == '0.2':
+        from .authorization import timestamp as parse_timestamp
     actual_checks = {item['id']: item for item in evidence['validations']}
     if set(actual_checks) != {item['id'] for item in task['validation']}:
         errors.append('Evidence must cover exactly every required validation')
@@ -700,8 +718,8 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
             if not actual[field].strip():
                 errors.append('Validation requires nonblank ' + field)
         try:
-            start = dt.datetime.fromisoformat(actual['started_at'].replace('Z', '+00:00'))
-            end = dt.datetime.fromisoformat(actual['finished_at'].replace('Z', '+00:00'))
+            start = parse_timestamp(actual['started_at'])
+            end = parse_timestamp(actual['finished_at'])
             if start.tzinfo is None or end.tzinfo is None or end < start or end > dt.datetime.now(dt.timezone.utc) or (commit_time is not None and start < commit_time):
                 raise ValueError('invalid interval')
         except (ValueError, OverflowError):
@@ -711,13 +729,14 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence must cover exactly every behavior criterion')
     if any(item['status'] != 'passed' or not item['evidence'].strip() for item in criteria.values()):
         errors.append('A behavior criterion is unproven')
-    for name in ('independent_review', 'human_signoff'):
+    for name in attestations:
         attestation = evidence[name]
         if (attestation['status'] != 'passed' or not attestation['reviewer'].strip() or
                 not attestation['notes'].strip() or attestation['git_head'] != evidence['git_head'] or
                 attestation['contract_sha256'] != digest):
             errors.append(name + ' is missing, failed, pending or stale')
-    if evidence['independent_review']['reviewer'].strip().casefold() == evidence['implementer'].strip().casefold():
+    if ('independent_review' in attestations and
+            evidence['independent_review']['reviewer'].strip().casefold() == evidence['implementer'].strip().casefold()):
         errors.append('Independent reviewer must differ from implementer')
     for artifact in evidence['artifacts']:
         try:
@@ -734,8 +753,13 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     return errors
 
 
-def verify(task, evidence=None, repo_dir=None, client=None):
+def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None):
+    if isinstance(task, dict) and task.get('schema_version') == '0.2':
+        from .lifecycle import verify as verify_v2
+        return verify_v2(task, evidence, repo_dir, host_context=host_context, client=client)
     errors = validate_contract(task)
+    if host_context is not None:
+        errors.append('Host context is unsupported for schema 0.1')
     result = {'schema_version': VERSION, 'schema_valid': not errors, 'execution_ready': False,
               'evidence_valid': False, 'upstream_submission_ready': False, 'fork_completion_ready': False,
               'approval': {'status': 'unknown', 'reason': 'Not refreshed'}, 'errors': errors,
