@@ -56,9 +56,22 @@ class AIPolicyTests(unittest.TestCase):
             {'path': 'x', 'sha256': '0' * 64, 'untrusted_text': text}]})
         self.assertLess(time.monotonic() - started, 2.0)
         self.assertEqual(len(result['excerpts']), aipolicy.MAX_EXCERPTS)
-        self.assertTrue(result['truncated'])
+        self.assertTrue(result['excerpts_capped'])
         self.assertEqual(result['coverage'], 'incomplete')
         self.assertTrue(all(len(e['untrusted_excerpt']) <= 300 for e in result['excerpts']))
+
+    def test_long_line_past_scan_bound_makes_coverage_incomplete(self):
+        text = 'x' * 2500 + ' No AI contributions are accepted.'
+        result = aipolicy.ai_policy_excerpts({'complete': True, 'instructions': [
+            {'path': 'CONTRIBUTING.md', 'sha256': '0' * 64, 'untrusted_text': text}]})
+        self.assertEqual(result['excerpts'], [])
+        self.assertEqual(result['lines_partially_scanned'], 1)
+        self.assertEqual(result['coverage'], 'incomplete')
+        self.assertFalse(result['excerpts_capped'])
+        long_hit = aipolicy.ai_policy_excerpts({'complete': True, 'instructions': [
+            {'path': 'C', 'sha256': '0' * 64, 'untrusted_text': 'No AI contributions. ' + 'y' * 400}]})
+        self.assertEqual(long_hit['coverage'], 'complete')
+        self.assertTrue(long_hit['excerpts'][0]['excerpt_truncated'])
 
     def test_cli_opt_in_never_changes_approval(self):
         def run(*argv):

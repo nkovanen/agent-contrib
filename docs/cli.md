@@ -250,12 +250,14 @@ set of patterns (AI-generated, AI-assisted, LLM, large language model,
 generative AI, artificial intelligence, Copilot, ChatGPT, machine-generated, "no
 AI", AI tools/agents/contributions/code). Each hit gives the path, line number,
 the file's SHA-256, the matched patterns and a one-line `untrusted_excerpt` of
-at most 300 characters. At most 200 excerpts are returned (`truncated: true`
-beyond that).
+at most 300 characters (`excerpt_truncated` marks a shortened excerpt). At most
+200 excerpts are returned (`excerpts_capped: true` beyond that). Only the first
+2000 characters of each line are scanned; `lines_partially_scanned` counts
+longer lines.
 
 `ai_policy_review` is always `required`. `coverage` is `incomplete` when any
-instruction read failed, the 60-file cap was hit or the excerpts were
-truncated. The CLI does not interpret the prose: a hit is a signal to read the
+instruction read failed, the 60-file cap was hit, excerpts were capped or any
+line was only partially scanned. The CLI does not interpret the prose: a hit is a signal to read the
 file in context, and zero hits do not mean AI contributions are welcome. A
 machine-readable maintainer opt-out (a new policy version) is a separate,
 not-yet-implemented design.
