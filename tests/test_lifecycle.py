@@ -535,3 +535,97 @@ class IntegratedLifecycleTests(unittest.TestCase):
         result = self.verify(evidence=False)
         self.assertFalse(result['user_authorization']['authorized'])
         self.assertFalse(result['implementation_ready'])
+
+    def remove_issue_references(self):
+        for record in self.client.prs + self.client.history + list(self.client.details.values()):
+            record.update(title='Unrelated maintenance', body='No issue reference')
+
+    def test_complete_empty_history_allows_implementation_and_draft_creation(self):
+        result = self.verify(evidence=False)
+        self.assertTrue(result['publication']['provenance']['history']['complete'])
+        self.assertEqual(result['publication']['status'], 'absent')
+        self.assertTrue(result['implementation_ready'])
+        self.assertEqual(result['next_action'], 'implement')
+        result = self.verify()
+        self.assertTrue(result['draft_create_ready'])
+        self.assertEqual(result['next_action'], 'create_draft')
+
+    def test_unreferenced_exact_head_pr_blocks_implementation_even_without_a_claim(self):
+        for state in ('open', 'closed'):
+            with self.subTest(state=state):
+                self.publish()
+                self.remove_issue_references()
+                del self.context['publication']
+                for record in self.client.history:
+                    record['state'] = state
+                if state == 'closed':
+                    self.client.prs = []
+                result = self.verify(evidence=False)
+                self.assertEqual(result['duplicates'], [])
+                self.assertTrue(result['user_authorization']['implement'])
+                self.assertEqual(result['publication']['status'], 'blocked')
+                self.assertFalse(result['implementation_ready'])
+                self.assertNotEqual(result['next_action'], 'implement')
+                self.assertIn('Implementation requires complete empty exact-head PR history',
+                              result['stage_blockers']['implementation'])
+
+    def test_unreferenced_own_draft_preserves_publication_and_completion_but_not_implementation(self):
+        self.publish()
+        self.remove_issue_references()
+        result = self.verify()
+        self.assertEqual(result['duplicates'], [])
+        self.assertTrue(result['publication']['verified'])
+        self.assertFalse(result['implementation_ready'])
+        self.assertFalse(result['draft_create_ready'])
+        self.assertEqual(result['next_action'], 'none')
+        self.assertIn('Implementation requires complete empty exact-head PR history',
+                      result['stage_blockers']['implementation'])
+        self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)
+        self.assertTrue(self.verify()['completion_ready'])
+
+    def test_unreadable_or_malformed_exact_head_history_blocks_implementation(self):
+        endpoint = ('repos/acme/photos/pulls?state=all&head=acme%3Aagent%2Fbounds'
+                    '&base=main&sort=created&direction=asc&per_page=100&page=1')
+        for history, failures in [([], {endpoint}), (None, set())]:
+            with self.subTest(history=history, failures=failures):
+                self.client.history = history
+                self.client.failed = failures
+                result = self.verify(evidence=False)
+                self.assertEqual(result['duplicates'], [])
+                self.assertTrue(result['live_complete'])
+                self.assertTrue(result['user_authorization']['implement'])
+                self.assertEqual(result['publication']['status'], 'unknown')
+                self.assertFalse(result['publication']['provenance']['history']['complete'])
+                self.assertFalse(result['implementation_ready'])
+                self.assertNotEqual(result['next_action'], 'implement')
+                self.assertIn('Implementation requires complete empty exact-head PR history',
+                              result['stage_blockers']['implementation'])
+
+    def test_partial_exact_head_history_blocks_implementation(self):
+        pr = self.publish()
+        del self.context['publication']
+        self.client.prs = []
+        self.client.history = [dict(pr, id=3000 + number, number=number,
+                                    html_url=f'https://github.com/acme/photos/pull/{number}')
+                               for number in range(1, 101)]
+        self.client.failed = {'repos/acme/photos/pulls?state=all&head=acme%3Aagent%2Fbounds'
+                              '&base=main&sort=created&direction=asc&per_page=100&page=2'}
+        result = self.verify(evidence=False)
+        self.assertEqual(result['duplicates'], [])
+        self.assertTrue(result['user_authorization']['implement'])
+        self.assertEqual(result['publication']['status'], 'unknown')
+        self.assertFalse(result['publication']['provenance']['history']['complete'])
+        self.assertFalse(result['implementation_ready'])
+        self.assertNotEqual(result['next_action'], 'implement')
+        self.assertIn('Implementation requires complete empty exact-head PR history',
+                      result['stage_blockers']['implementation'])
+
+    def test_implement_only_preflight_remains_ready_with_complete_empty_history(self):
+        self.context['mandate']['actions'] = ['implement']
+        self.context['mandate']['event']['binding_sha256'] = event_binding(self.context['mandate'])
+        result = self.verify(evidence=False)
+        self.assertEqual(result['publication']['status'], 'absent')
+        self.assertTrue(result['publication']['provenance']['history']['complete'])
+        self.assertTrue(result['implementation_ready'])
+        self.assertFalse(result['draft_create_ready'])
+        self.assertEqual(result['next_action'], 'implement')

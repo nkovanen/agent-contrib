@@ -202,7 +202,6 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         implementation_errors.append('Current implement action is not authorized')
     if all_duplicates:
         implementation_errors.append('Issue overlaps an open or unresolved prepared PR')
-    result['implementation_ready'] = not implementation_errors
     if evidence is None:
         result['evidence_errors'] = ['No technical execution evidence provided']
     else:
@@ -218,6 +217,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         head = evidence['git_head'] if result['technical_evidence_valid'] else None
         publication = check_publication(authority['binding'], claim, head, client)
         result['publication'] = publication
+    if publication['status'] != 'absent' or not publication['creation_clear'] or publication['errors']:
+        implementation_errors.append('Implementation requires complete empty exact-head PR history')
+    result['implementation_ready'] = not implementation_errors
     stage_errors = historical_errors + result['evidence_errors'] + review['errors']
     if not review['valid'] and not review['errors']:
         stage_errors.append('Independent review is pending')
