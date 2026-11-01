@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 from agent_contribute import cli
 from tests.test_cli_output import BrokenFlush
+from tests.test_multi_discover import MultiGitHub
 
 
 class TextCliTests(unittest.TestCase):
@@ -55,6 +56,16 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('Repository: acme/a', output)
         self.assertIn('Repository: acme/b', output)
         self.assertIn('Denied', output)
+
+    def test_real_fork_discovery_keeps_requested_source_and_target_distinct(self):
+        with patch('agent_contribute.core.GitHub', return_value=MultiGitHub()):
+            code, output = self.invoke(['--format', 'text', 'discover', 'acme/photos', 'person/photos'])
+        self.assertEqual(code, 0)
+        self.assertIn('Repository: person/photos\n', output)
+        self.assertIn('Issue source: acme/photos\n', output)
+        self.assertIn('Proposed target (not authority): person/photos\n', output)
+        self.assertIn('  person/photos#12 [candidate]', output)
+        self.assertIn('  acme/photos#12 [candidate]', output)
 
     def test_bad_format_is_structured_usage_and_text_bad_command_is_safe(self):
         code, output = self.invoke(['--format', 'xml', 'instructions'])

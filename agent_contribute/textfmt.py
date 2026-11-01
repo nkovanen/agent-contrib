@@ -44,13 +44,18 @@ def _discover(result):
         for repository in result['repositories']:
             out += _discover(repository)
         return out + _list('Errors', result.get('errors', []))
-    out = [f'Repository: {line(result.get("repository", result.get("requested_repository", "")))}',
+    out = [f'Repository: {line(result.get("requested_repository", result.get("repository", "")))}',
            f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}']
+    if result.get('issue_source_repository'):
+        out.append('Issue source: ' + line(result['issue_source_repository']))
+    if result.get('proposed_target_repository'):
+        out.append('Proposed target (not authority): ' + line(result['proposed_target_repository']))
     for issue in result.get('issues', [])[:20]:
         notes = [line(item, 40) for item in issue.get('exclusions', [])]
         if issue.get('duplicates'):
             notes.append(f'{len(issue["duplicates"])} overlapping PR(s)')
-        out.append(f'  #{issue["number"]} [{line(issue.get("approval", {}).get("status", "unknown"), 20)}] '
+        reference = issue.get('reference', f'#{issue["number"]}')
+        out.append(f'  {line(reference, 200)} [{line(issue.get("approval", {}).get("status", "unknown"), 20)}] '
                    f'{line(issue.get("untrusted_title", ""), 120)}' + (' -- ' + '; '.join(notes) if notes else ''))
     if len(result.get('issues', [])) > 20:
         out.append(f'  ... {len(result["issues"]) - 20} more issues in JSON output')
