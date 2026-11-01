@@ -361,3 +361,13 @@ class IntegratedLifecycleTests(unittest.TestCase):
         issue = self.client.request('repos/acme/photos/issues/12')
         self.client.overrides['repos/acme/photos/issues/12'] = dict(issue, repository_url='https://api.github.com/repos/other/photos')
         self.assertFalse(self.verify()['publication']['verified'])
+
+    def test_malformed_host_mandate_with_structural_signoff_fails_without_traceback(self):
+        self.publish()
+        record = signoff(self.task, self.context, self.evidence)
+        for malformed in (None, [], 'human', 0):
+            self.context = {'schema_version': '0.1', 'mandate': malformed, 'final_signoff': record}
+            result = self.verify()
+            self.assertFalse(result['completion_ready'])
+            self.assertFalse(result['publication']['verified'])
+            self.assertEqual(result['human_signoff']['status'], 'invalid')

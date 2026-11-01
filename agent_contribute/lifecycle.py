@@ -96,6 +96,8 @@ def human_signoff(task, context, evidence, authority, publication, review, now):
     result = {'valid': False, 'status': 'pending', 'trust': 'host-asserted', 'errors': [], 'sha256': None}
     if not isinstance(context, dict) or 'final_signoff' not in context:
         return result
+    if core.schema_errors(context, core.bundled_schema('host-context')):
+        return dict(result, status='invalid', errors=['Host context schema is invalid'])
     record = context['final_signoff']
     errors = core.schema_errors(record, core.bundled_schema('host-context')['properties']['final_signoff'])
     result.update(status='invalid', errors=errors)
