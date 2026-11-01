@@ -35,6 +35,29 @@ executable instruction. There is no central service, database, model credential,
 agent subscription or automatic update channel.
 
 CLI versions use semantic versioning; schema support is an explicit exact set
-(currently `0.1`). The closed schemas and bundled validator reject unknown
+(`0.1` and explicit `0.2`). The closed schemas and bundled validator reject unknown
 versions/properties and malformed JSON. A schema migration requires a future
 reviewed release; it is never guessed from a contract.
+
+## Same-repository candidates in schema 0.2
+
+`authorization.py` checks an explicit human/host mandate against live GitHub
+credential, role, repository and issue identities. `pr_identity.py` observes
+exact-head PR history and details. `lifecycle.py` combines those facts with the
+reviewed contract, technical evidence and separate final human sign-off.
+
+Host context has independently hashed mandate, optional worker publication claim
+and optional later human sign-off sections. It is explicit stdin/library input,
+never discovered repository data. The host is responsible for the actual human
+approval; the CLI labels the mandate host-asserted and verifies only GitHub facts
+and record consistency.
+
+Before implementation or first publication, overlapping PRs block. After a
+separately authorized publication, exactly one matching draft can be recognized
+at the tested commit. Every other overlap remains. Draft-stage success reports
+whether to create or simply return the existing verified draft; completion still
+requires final human sign-off. No draft-update lifecycle is implemented.
+
+The old schemas and evaluator retain their behavior. The new mode does not
+change the label approval policy or reinterpret a legacy task. Full details are
+in [host authorization](host-authorization.md) and the installed workflow.

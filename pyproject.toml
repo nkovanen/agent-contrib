@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-contrib"
-version = "0.2.0"
+version = "0.3.0"
 description = "A portable contribution protocol for coding agents"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,4 +36,4 @@ include = ["agent_contribute*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-agent_contribute = ["*.schema.json", "instructions.md", "adapters/agent-contribute/SKILL.md"]
+agent_contribute = ["*.schema.json", "instructions.md", "adapters/agent-contribute/SKILL.md", "schemas/0.2/*.schema.json", "schemas/host-context/*.schema.json"]

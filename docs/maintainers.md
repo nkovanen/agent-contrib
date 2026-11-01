@@ -46,3 +46,16 @@ No GitHub App, webhook, hosted service or additional CI integration is required.
 You may add repository-native checks later; this release supplies a passive
 local verifier, not a trusted admission controller. Review actual diffs, logs
 and provenance because evidence and reviewer identities are self-attested.
+
+## Authorize one candidate without repository-wide opt-in
+
+The v0.3.0 candidate adds an explicit schema 0.2 route for a same-repository task.
+The human/host approves a reviewed contract and exact actions, while GitHub
+independently confirms the personal credential's admin/maintain role. The issue
+stays a candidate whether the opt-in policy is absent or simply lacks a matching
+label. An unreadable or malformed policy still blocks.
+
+Review the scope and retain your actual approval event and mandate hash outside
+the worker. Do not let the worker fill an approval field on your behalf. Pending
+final human sign-off need not prevent an authorized tested draft; it always
+prevents final completion. See [the host handoff](host-authorization.md).

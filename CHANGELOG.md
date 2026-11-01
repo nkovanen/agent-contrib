@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 — unreleased
+
+- Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
+  Live credential/role checks stay separate from host-asserted human mandates;
+  repository policy approval is unchanged.
+- Separate implementation, draft and completion gates. Recognize exactly one
+  authenticated open draft at the tested head, preserving unrelated overlaps.
+- Preserve schema 0.1 decisions and default preparation with golden fixtures.
+- Add adversarial authorization/lifecycle/CLI tests and installed-resource checks.
+
+This route is create-only, uses the source default branch and requires a personal
+admin/maintain credential. Human records require an explicit host handoff; they
+are not cryptographic consent. No merge, release, GitHub write API or runtime
+model provider is added.
+
 CLI/library versions follow semantic versioning. Task/evidence schema versions
 are independent and require an explicit compatibility decision.
 

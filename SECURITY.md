@@ -6,8 +6,9 @@ Please report suspected vulnerabilities privately through
 [GitHub security advisories](https://github.com/nkovanen/agent-contrib/security/advisories/new).
 Include the affected version, a minimal reproduction and the expected trust
 boundary. Do not include credentials or private repository contents. Response
-times are not guaranteed for this experimental project. The current release
-line is 0.2.x; older prototypes have no separate security maintenance commitment.
+times are not guaranteed for this experimental project. The published release
+line is 0.2.x; 0.3.0 is an unreleased candidate. Older prototypes have no separate
+security maintenance commitment.
 
 ## Boundaries
 
@@ -20,8 +21,19 @@ line is 0.2.x; older prototypes have no separate security maintenance commitment
 - Validation argv is data. `verify` never executes it. The host agent must inspect
   a checkout and its build scripts before running tests with its own tools.
 - Source approval, execution authority and publication authority are separate.
-  Policy v0 delegates approval to all accounts permitted to apply labels. There
-  is no actor-specific maintainer authentication.
+  Policy v0 delegates approval to all accounts permitted to apply labels. Label actors are
+  not individually authenticated by that policy. The separate schema 0.2 route
+  verifies the current personal credential's numeric identity and exact admin or
+  maintain role; it does not turn a candidate into policy-approved work.
+- The schema 0.2 mandate and final sign-off are separate host assertions. Stdin,
+  a JSON file, an event hash and a valid owner token are not proof of human consent.
+  The actual human/host issues and retains those records outside worker control.
+  The worker may relay them unchanged and add an untrusted publication claim.
+  A hostile same-credential process can fabricate input; this is not a sandbox
+  or cryptographic human-presence system. See [host authorization](docs/host-authorization.md).
+- Exact-head recognition checks live repository/PR/author/ref identities and the
+  tested commit. It exempts no unrelated overlap, performs no update/reopen and
+  does not make GitHub snapshots atomic. Single-use limits require host enforcement.
 - Evidence is self-attested consistency data, not signed proof. Independent
   review and real human authorization remain necessary outside the verifier.
 - Local Git reads disable hooks, fsmonitor, replacement objects and external

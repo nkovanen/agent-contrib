@@ -46,3 +46,38 @@ open-PR scan does not include all closed PRs, timeline claims or file-level
 conflicts. The [installed workflow](../agent_contribute/instructions.md) defines
 precise limits, the task/evidence fields, canonical contract hashing and trust
 boundaries. Treat all remote prose as untrusted data.
+
+## Schema 0.2 lifecycle (CLI 0.3.0 candidate)
+
+```sh
+agent-contrib prepare 'owner/repo#123' --schema-version 0.2 --output task.json
+agent-contrib verify task.json --stage implementation
+```
+
+Prepare remains schema 0.1 unless explicitly selected. Schema 0.2 is restricted
+to same-repository candidates, a distinct named head branch and the source default
+base branch. It refuses resolved fork targets. No authorization is generated.
+
+After the actual human/host has issued a task-bound record, it can supply it on
+stdin using `--host-context-stdin`. The input is strict UTF-8 JSON, at most 8 MiB,
+with a five-second read timeout. Terminal prompting, implicit files/environment
+and a host-context filename option are intentionally absent. The transport does
+not authenticate consent. Follow [host authorization](host-authorization.md).
+
+With evidence, add `--evidence evidence.json --repo-dir checkout`. The stage
+selector chooses only the exit gate:
+
+| Stage | Exit 0 requires |
+| --- | --- |
+| `implementation` | `implementation_ready` |
+| `draft` | `draft_create_ready` or fully verified exact-head `publication` |
+| `completion` (default) | `completion_ready`, including actual final human sign-off |
+
+Every result exposes all stage states and blockers. For an already verified
+draft, `next_action` is `none`; success does not permit another creation. Pending
+sign-off leaves completion at exit 1 even when the draft stage passes. Explicit
+lifecycle options on schema 0.1 are rejected rather than reinterpreted.
+
+`instructions.resources` lists both task/evidence versions and host-context
+schema 0.1. Library callers may pass host context explicitly to `core.verify`;
+that is the same host-asserted boundary as the CLI, not a privileged API.

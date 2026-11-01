@@ -3,9 +3,41 @@ import argparse
 import json
 import hashlib
 import importlib.resources
+import os
+import select
+import sys
+import time
 from pathlib import Path
 
 from . import core, __version__
+
+
+HOST_INPUT_TIMEOUT = 5.0
+
+
+def read_host_context_stdin():
+    """Bounded explicit input. The transport never authenticates a human mandate."""
+    try:
+        if sys.stdin.isatty():
+            raise OSError('An explicit piped host context is required')
+        descriptor = sys.stdin.fileno()
+        deadline = time.monotonic() + HOST_INPUT_TIMEOUT
+        chunks, size = [], 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([descriptor], [], [], remaining)[0]:
+                raise OSError('Host context input timed out')
+            chunk = os.read(descriptor, min(65536, core.MAX_BYTES + 1 - size))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > core.MAX_BYTES:
+                raise OSError('Host context exceeds the input bound')
+        return core.strict_json(b''.join(chunks).decode('utf-8'))
+    except (OSError, ValueError, UnicodeError) as exc:
+        raise core.ProtocolError('host_context_input',
+                                 'Cannot read bounded UTF-8 host context from stdin within 5 seconds') from exc
 
 
 class Parser(argparse.ArgumentParser):
@@ -32,6 +64,7 @@ def main(argv=None):
         sub.add_argument('reference')
         if command == 'prepare':
             sub.add_argument('--output', required=True)
+            sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1')
     commands.add_parser('instructions')
     sub = commands.add_parser('skill')
     sub.add_argument('--output', required=True)
@@ -39,13 +72,20 @@ def main(argv=None):
     sub.add_argument('contract')
     sub.add_argument('--evidence')
     sub.add_argument('--repo-dir')
+    sub.add_argument('--stage', choices=('implementation', 'draft', 'completion'))
+    sub.add_argument('--host-context-stdin', action='store_true')
     try:
         args = parser.parse_args(argv)
         if args.command == 'instructions':
-            result = {'cli_version': __version__, 'supported_schema_versions': [core.VERSION],
+            result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
+                      'supported_host_context_versions': ['0.1'],
+                      'host_authorization': 'host-asserted; actual human event must be retained outside worker control',
                       'workflow_markdown': importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8'),
                       'resources': {'task_schema': 'agent_contribute/task.schema.json',
-                                    'evidence_schema': 'agent_contribute/evidence.schema.json'},
+                                    'evidence_schema': 'agent_contribute/evidence.schema.json',
+                                    'task_schema_0.2': 'agent_contribute/schemas/0.2/task.schema.json',
+                                    'evidence_schema_0.2': 'agent_contribute/schemas/0.2/evidence.schema.json',
+                                    'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json'},
                       'automatic_updates': False}
             code = 0
         elif args.command == 'skill':
@@ -65,16 +105,30 @@ def main(argv=None):
             result = core.inspect_issue(args.reference)
             code = 0 if result['complete'] else 1
             if args.command == 'prepare' and 'source' in result:
-                task = core.prepare(result)
+                task = core.prepare(result) if args.schema_version == '0.1' else core.prepare(result, schema_version=args.schema_version)
                 write_new_json(args.output, task)
                 context = {k: result[k] for k in ('requested_repository', 'issue_source_repository',
                                                   'proposed_target_repository', 'resolution_provenance', 'reference')}
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
                           'warning': 'Draft saved; inspect and review before execution'}
         else:
-            result = core.verify(core.read_json(args.contract),
-                                 core.read_json(args.evidence) if args.evidence else None, args.repo_dir)
-            code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
+            task = core.read_json(args.contract)
+            version = task.get('schema_version') if isinstance(task, dict) else None
+            if version != '0.2' and (args.stage is not None or args.host_context_stdin):
+                raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
+            evidence = core.read_json(args.evidence) if args.evidence else None
+            if version == '0.2':
+                context = read_host_context_stdin() if args.host_context_stdin else None
+                result = core.verify(task, evidence, args.repo_dir, host_context=context)
+                stage = args.stage or 'completion'
+                ready = {'implementation': result.get('implementation_ready') is True,
+                         'draft': (result.get('draft_create_ready') is True or
+                                   result.get('publication', {}).get('verified') is True),
+                         'completion': result.get('completion_ready') is True}
+                code = 0 if result.get('schema_valid') is True and ready[stage] else 1
+            else:
+                result = core.verify(task, evidence, args.repo_dir)
+                code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
     except core.ProtocolError as exc:
         result = {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1

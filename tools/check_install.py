@@ -22,6 +22,9 @@ import venv
 RESOURCE_PATHS = (
     "task.schema.json",
     "evidence.schema.json",
+    "schemas/0.2/task.schema.json",
+    "schemas/0.2/evidence.schema.json",
+    "schemas/host-context/0.1.schema.json",
     "instructions.md",
     "adapters/agent-contribute/SKILL.md",
 )
@@ -43,7 +46,7 @@ def installed_check(source):
     assert sys.prefix != sys.base_prefix, "Smoke checks require a clean virtualenv"
     assert Path(agent_contribute.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
     assert not Path.cwd().is_relative_to(source), "Smoke checks must run outside the checkout"
-    assert __version__ == importlib.metadata.version("agent-contrib") == "0.2.0"
+    assert __version__ == importlib.metadata.version("agent-contrib") == "0.3.0"
     assert core.VERSION == "0.1"
     dist = importlib.metadata.distribution("agent-contrib")
     assert dist.metadata["Requires-Python"] == ">=3.10"
@@ -71,6 +74,13 @@ def installed_check(source):
         assert schema["properties"]["schema_version"]["const"] == "0.1"
         errors = core.schema_errors({"schema_version": "999"}, schema)
         assert "$.schema_version: wrong constant or version" in errors
+    for name in ("task", "evidence"):
+        schema = core.bundled_schema(name, version="0.2")
+        assert schema["properties"]["schema_version"]["const"] == "0.2"
+        assert core.schema_errors({"schema_version": "999"}, schema)
+    host_schema = json.loads(resources.joinpath("schemas/host-context/0.1.schema.json").read_text("utf-8"))
+    assert host_schema["properties"]["schema_version"]["const"] == "0.1"
+    assert core.schema_errors({"schema_version": "999"}, host_schema)
     assert core.check_evidence({}, {"schema_version": "999"}, None, "")
 
     # Restrict PATH so accidental GitHub or git calls cannot make smoke checks pass.
@@ -80,12 +90,12 @@ def installed_check(source):
     def cli(*args, expected=0):
         return run([console, *args], cwd=Path.cwd(), env=env, expected=expected)
 
-    assert cli("--version").strip() == "0.2.0"
+    assert cli("--version").strip() == "0.3.0"
     assert run([sys.executable, "-I", "-m", "agent_contribute", "--version"],
-               cwd=Path.cwd(), env=env).strip() == "0.2.0"
+               cwd=Path.cwd(), env=env).strip() == "0.3.0"
     instructions = json.loads(cli("instructions"))
-    assert instructions["cli_version"] == "0.2.0"
-    assert instructions["supported_schema_versions"] == ["0.1"]
+    assert instructions["cli_version"] == "0.3.0"
+    assert instructions["supported_schema_versions"] == ["0.1", "0.2"]
     assert instructions["automatic_updates"] is False
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
 
@@ -106,6 +116,21 @@ def installed_check(source):
                   "upstream_submission_ready", "fork_completion_ready"):
         assert result[field] is False, field
     assert "$.schema_version: wrong constant or version" in result["errors"]
+    # A new-schema draft with no actual host mandate cannot become ready, even
+    # when installed outside the source and no GitHub executable is available.
+    new_task = Path.cwd() / "new-schema-invalid.json"
+    new_task.write_text('{"schema_version": "0.2"}', encoding="utf-8")
+    for stage in ("implementation", "draft", "completion"):
+        result = json.loads(cli("verify", new_task, "--stage", stage, expected=1))
+        assert result["schema_valid"] is False
+        assert result["implementation_ready"] is False
+        assert result["draft_create_ready"] is False
+        assert result["publication"]["verified"] is False
+        assert result["completion_ready"] is False
+    legacy = Path.cwd() / "legacy-schema-invalid.json"
+    legacy.write_text('{"schema_version": "0.1"}', encoding="utf-8")
+    result = json.loads(cli("verify", legacy, "--stage", "draft", expected=1))
+    assert result["error"]["code"] == "schema_options"
     print("Installed metadata, resources, entrypoints, Skill and schema checks passed.")
 
 
@@ -137,7 +162,9 @@ def main():
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
                     "CHANGELOG.md", "AGENTS.md", "tools/check_install.py",
                     ".github/workflows/ci.yml"}
-        expected.update(str(file.relative_to(source)) for file in (source / "tests").glob("*.py"))
+        expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
+                        if file.is_file() and file.suffix in (".py", ".json") and "__pycache__" not in file.parts)
+        expected.update("agent_contribute/" + name for name in RESOURCE_PATHS)
         assert expected <= names, f"Missing sdist files: {sorted(expected - names)}"
         print("Rebuilding wheel from the sdist...", flush=True)
         run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--wheel-dir", rebuilt, sdist],

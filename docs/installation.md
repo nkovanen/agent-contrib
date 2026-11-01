@@ -106,3 +106,20 @@ silent update checks, migrations or downloads happen while using the CLI.
 
 To uninstall the CLI, use `pipx uninstall agent-contrib`; remove the Skill file
 separately if desired. Existing task/evidence files are yours and are not removed.
+
+## Testing the unreleased v0.3.0 candidate
+
+The published v0.2.0 tag is unchanged. To test the new route, create a separate
+virtual environment and install the exact reviewed candidate commit from GitHub.
+Replace `REVIEWED_COMMIT` with the full immutable commit SHA supplied by its review:
+
+```sh
+python3 -m venv /tmp/agent-contrib-candidate
+/tmp/agent-contrib-candidate/bin/python -m pip install 'git+https://github.com/nkovanen/agent-contrib.git@REVIEWED_COMMIT'
+/tmp/agent-contrib-candidate/bin/agent-contrib --version
+```
+
+Export the Skill using that environment's command into the chosen fresh agent
+workspace. Record the installed commit, CLI version and exported hash. Keep the
+published installation separate; do not install a v0.3.0 tag that does not exist.
+Use the [human/host handoff](host-authorization.md) at authorization boundaries.

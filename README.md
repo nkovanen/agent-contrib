@@ -25,6 +25,10 @@ pipx install 'git+https://github.com/nkovanen/agent-contrib.git@v0.2.0'
 agent-contrib --version
 ```
 
+The published tag above remains v0.2.0. This branch develops v0.3.0; its new
+authorization route requires an explicitly installed, reviewed candidate commit.
+There is no v0.3.0 release yet.
+
 Authenticate with `gh auth login` if you haven't already. If the command isn't
 found, run `pipx ensurepath` and restart your terminal and agent.
 
@@ -85,8 +89,17 @@ can apply issue labels, including triagers. It does not verify that the person
 applying a label is a maintainer. Projects that need tighter control should keep
 tasks as candidates for now. See [maintainer setup](docs/maintainers.md).
 
-Approval to work on an issue, your permission to execute locally and permission
-to publish a PR are checked separately.
+On the v0.3.0 candidate, schema 0.2 adds a separate route for a repository owner
+or maintainer authorizing one candidate task in that same repository. It checks
+live GitHub identity and admin/maintain permissions, plus a separately supplied
+human/host mandate bound to the reviewed contract. The task stays a candidate.
+
+The CLI cannot prove who typed a chat message. The host must retain the actual
+human approval and issued hash; the worker cannot issue its own mandate. Current
+harnesses need an explicit human/host handoff. See [host authorization](docs/host-authorization.md).
+
+Local implementation, draft publication and final human sign-off remain separate.
+A tested, independently reviewed draft can be ready while final sign-off is pending.
 
 ## CLI
 
@@ -100,9 +113,19 @@ agent-contrib verify task.json --evidence evidence.json --repo-dir ./checkout
 
 Use a repository and issue from discovery in place of the examples. Commands
 return JSON. `prepare` writes a draft; it does not approve the task. `verify`
-checks the contract and supplied evidence without running their commands. It
-returns exit code 1 when requirements are still unmet, including for a valid
-draft that has no implementation evidence yet.
+checks the contract and supplied evidence without running their commands. The
+default remains schema 0.1 and completion-based verification. For an explicitly
+authorized same-repository candidate using the v0.3.0 CLI:
+
+```sh
+agent-contrib prepare 'owner/repo#123' --schema-version 0.2 --output task.json
+agent-contrib verify task.json --stage implementation
+```
+
+The prepared task is still a draft. Review its scope, then stop for the actual
+human's task-specific authorization. A task file or an admin credential is not
+that authorization. The [installed workflow](agent_contribute/instructions.md)
+describes the human/host input, evidence and draft-stage checks.
 
 [Command reference](docs/cli.md) · [Task schema](agent_contribute/task.schema.json) ·
 [Evidence schema](agent_contribute/evidence.schema.json)
@@ -112,8 +135,9 @@ draft that has no implementation evidence yet.
 The Python CLI/library owns discovery, GitHub access, schemas and verification.
 The small [skill](agent_contribute/adapters/agent-contribute/SKILL.md) loads the
 workflow with `agent-contrib instructions`; it contains no repository-specific
-rules. Both ship in the same package. CLI 0.2.0 supports task and evidence schema
-0.1 and rejects unknown versions.
+rules. Both ship in the same package. CLI 0.3.0 supports task and evidence schemas
+0.1 and 0.2, with an explicit host-context format. Unknown and mixed versions are
+rejected; old 0.1 contracts retain their decisions.
 
 There are no Python runtime dependencies, hosted services or required model
 providers. GitHub access goes through your local `gh` authentication.
@@ -121,22 +145,25 @@ providers. GitHub access goes through your local `gh` authentication.
 
 ## Current limits
 
-v0.2.0 is an early release. Discovery, fork resolution, specification preparation
-and evidence verification are implemented. The agent makes the final task
-selection; CLI rankings are only heuristics.
+v0.3.0 is under development. Discovery, fork resolution, task preparation and
+passive verification are implemented. The agent chooses the task; CLI rankings
+are heuristics.
 
-- Overlap checks scan open PRs. They can flag unrelated work, and even your own
-  existing draft can block verification. Closed PRs and ownership claims in
-  comments still need manual review.
-- Evidence is self-reported. The verifier checks consistency with the commit,
-  contract and scope; it cannot prove that tests ran or authenticate a reviewer.
-- Incomplete API reads block readiness. Fork resolution follows one parent;
-  submodule evidence is unsupported.
-- CI covers Linux with Python 3.10–3.14. Windows is not tested.
-
-Narrower approval permissions, authenticated evidence and a way to resolve
-reviewed overlaps remain future work. Releases are on GitHub; there is no PyPI
-package in this iteration.
+- Schema 0.2 covers same-repository candidates targeting the default branch.
+  Existing fork and policy-approved routes retain schema 0.1 behavior.
+- Exact-head recognition exempts only the verified contribution's own open draft
+  in the new post-publication stage. Other overlaps still block. Draft updates,
+  force-push adoption and reopening are not supported by this route.
+- Human mandates and sign-off are host-asserted; test and reviewer evidence is
+  self-reported. Hashes bind records but do not prove consent or test execution.
+- Missing permissions, stale identities/commits and incomplete reads fail closed.
+  The credential must be a personal account with admin or maintain access for
+  the new route; bot and delegated identities are unsupported.
+- Core discovery scans open PRs. Publication preflight additionally scans exact
+  head/base open and closed history. Timeline claims, reopened history and
+  conflicts outside those checks still need review.
+- CI covers Linux with Python 3.10–3.14. Windows is not tested. There is no PyPI
+  publication or silent update channel.
 
 ## Development
 
