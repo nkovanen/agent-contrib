@@ -75,3 +75,18 @@ class LegacyGoldenTests(unittest.TestCase):
                 'errors': ['Live issue is excluded or overlaps an open PR',
                            'Upstream execution needs current repository approval and matching target'],
                 'evidence_errors': ['human_signoff is missing, failed, pending or stale']})
+
+
+class FullLegacyGoldenTests(unittest.TestCase):
+    setUp = LegacyGoldenTests.setUp
+    def test_full_results_match_baseline_766bfcd(self):
+        import json
+        from pathlib import Path
+        task, client = ready_contract()
+        actual = {'approved': core.verify(task, client=client),
+                  'candidate': core.verify(task, client=FakeGitHub(labels=['agent-ok'])),
+                  'malformed': core.verify({'schema_version': '9'})}
+        for name, result in actual.items():
+            with self.subTest(name=name):
+                path = Path(__file__).parent / 'fixtures' / 'legacy' / (name + '.json')
+                self.assertEqual(result, json.loads(path.read_text()))

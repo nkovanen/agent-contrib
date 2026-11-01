@@ -1,0 +1,70 @@
+{
+  "approval": {
+    "matched_labels": [],
+    "policy_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "policy_path": ".agent-contrib.json",
+    "reason": "No explicit agent approval policy exists at the default branch snapshot",
+    "status": "candidate"
+  },
+  "contract_sha256": "b673ee6e2a4f664683592e7b545978d2a23ce5359cad86df1c280b1b6249f05c",
+  "duplicates": [],
+  "errors": [
+    "Upstream execution needs current repository approval and matching target"
+  ],
+  "evidence_errors": [
+    "No execution evidence, independent review or human signoff provided"
+  ],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "evidence_valid": false,
+  "execution_authorization": {
+    "authorization_evidence": "Explicit contribution instruction",
+    "authorized_by": "human",
+    "mode": "upstream-contribution",
+    "target_repository": "acme/photos"
+  },
+  "execution_ready": false,
+  "fork_completion_ready": false,
+  "issue_source_repository": "acme/photos",
+  "live_complete": true,
+  "live_provenance": {
+    "labels": {
+      "complete": true,
+      "errors": [],
+      "pages": 1
+    },
+    "policy": null,
+    "policy_state": "missing",
+    "pulls": {
+      "complete": true,
+      "errors": [],
+      "pages": 1
+    }
+  },
+  "proposed_target_repository": "acme/photos",
+  "publication": "This CLI never publishes. Readiness is not authorization to push or open a PR.",
+  "requested_repository": null,
+  "resolution_provenance": {
+    "execution_authority": "separate reviewed assertion; never inferred",
+    "issue_source_repository": "contract.source.repository",
+    "proposed_target_repository": "contract.execution.target_repository",
+    "requested_repository": "original request not stored in schema 0.1"
+  },
+  "schema_valid": true,
+  "schema_version": "0.1",
+  "source_resolution_provenance": {
+    "execution_authority": "none",
+    "metadata_reads": [
+      {
+        "endpoint": "repos/acme/photos",
+        "fetched_at": "2030-01-01T00:00:00+00:00",
+        "observed": {
+          "fork": false,
+          "full_name": "acme/photos",
+          "has_issues": true
+        }
+      }
+    ],
+    "reason": "requested repository has an issue tracker"
+  },
+  "upstream_submission_ready": false
+}
