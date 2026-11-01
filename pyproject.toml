@@ -1,20 +1,39 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-contrib"
 version = "0.2.0"
 description = "Read-only GitHub agent contribution protocol experiment"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
-license = {text = "MIT OR Apache-2.0"}
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE", "NOTICE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.urls]
+Homepage = "https://github.com/nkovanen/agent-contrib"
+Repository = "https://github.com/nkovanen/agent-contrib"
+Issues = "https://github.com/nkovanen/agent-contrib/issues"
 
 [project.scripts]
 agent-contrib = "agent_contribute.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["agent_contribute*"]
+namespaces = false
 
 [tool.setuptools.package-data]
 agent_contribute = ["*.schema.json", "instructions.md", "adapters/agent-contribute/SKILL.md"]

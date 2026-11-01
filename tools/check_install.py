@@ -1,0 +1,162 @@
+"""Build both distributions and smoke-test clean installs outside the checkout.
+
+Run with a Python >=3.10 environment containing pip and build:
+    python tools/check_install.py
+Only build dependency installation uses the network. Wheel installs and smoke
+checks use no index, GitHub credentials, git, or gh.
+"""
+import argparse
+import hashlib
+import importlib.metadata
+import importlib.resources
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tarfile
+import tempfile
+import venv
+
+
+RESOURCE_PATHS = (
+    "task.schema.json",
+    "evidence.schema.json",
+    "instructions.md",
+    "adapters/agent-contribute/SKILL.md",
+)
+
+
+def run(argv, *, cwd, env, expected=0):
+    result = subprocess.run([str(arg) for arg in argv], cwd=cwd, env=env,
+                            capture_output=True, text=True, timeout=300)
+    if result.returncode != expected:
+        raise RuntimeError(f"{argv!r} exited {result.returncode}, expected {expected}\n"
+                           f"{result.stdout}\n{result.stderr}")
+    return result.stdout
+
+
+def installed_check(source):
+    from agent_contribute import __version__, core
+    import agent_contribute
+
+    assert sys.prefix != sys.base_prefix, "Smoke checks require a clean virtualenv"
+    assert Path(agent_contribute.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+    assert not Path.cwd().is_relative_to(source), "Smoke checks must run outside the checkout"
+    assert __version__ == importlib.metadata.version("agent-contrib") == "0.2.0"
+    assert core.VERSION == "0.1"
+    dist = importlib.metadata.distribution("agent-contrib")
+    assert dist.metadata["Requires-Python"] == ">=3.10"
+    assert not dist.requires, "Runtime dependencies must remain empty"
+    assert dist.metadata["License-Expression"] == "MIT OR Apache-2.0"
+    assert dist.metadata.get_payload().strip() == (source / "README.md").read_text("utf-8").strip()
+    urls = dict(value.split(", ", 1) for value in dist.metadata.get_all("Project-URL"))
+    assert urls == {
+        "Homepage": "https://github.com/nkovanen/agent-contrib",
+        "Repository": "https://github.com/nkovanen/agent-contrib",
+        "Issues": "https://github.com/nkovanen/agent-contrib/issues",
+    }
+    for name in ("LICENSE-MIT", "LICENSE-APACHE", "NOTICE"):
+        matches = [file for file in dist.files if str(file).endswith("/licenses/" + name)]
+        assert len(matches) == 1, f"Missing or duplicate license file: {name}"
+        assert dist.locate_file(matches[0]).read_bytes() == (source / name).read_bytes()
+
+    resources = importlib.resources.files("agent_contribute")
+    for name in RESOURCE_PATHS:
+        assert resources.joinpath(name).read_bytes() == (source / "agent_contribute" / name).read_bytes(), name
+    assert [str(file) for file in dist.files if file.name == "SKILL.md"] == [
+        "agent_contribute/adapters/agent-contribute/SKILL.md"]
+    for name in ("task", "evidence"):
+        schema = core.bundled_schema(name)
+        assert schema["properties"]["schema_version"]["const"] == "0.1"
+        errors = core.schema_errors({"schema_version": "999"}, schema)
+        assert "$.schema_version: wrong constant or version" in errors
+    assert core.check_evidence({}, {"schema_version": "999"}, None, "")
+
+    # Restrict PATH so accidental GitHub or git calls cannot make smoke checks pass.
+    scripts = Path(sys.executable).parent
+    env = {**os.environ, "PATH": str(scripts)}
+    console = scripts / ("agent-contrib.exe" if os.name == "nt" else "agent-contrib")
+    def cli(*args, expected=0):
+        return run([console, *args], cwd=Path.cwd(), env=env, expected=expected)
+
+    assert cli("--version").strip() == "0.2.0"
+    assert run([sys.executable, "-I", "-m", "agent_contribute", "--version"],
+               cwd=Path.cwd(), env=env).strip() == "0.2.0"
+    instructions = json.loads(cli("instructions"))
+    assert instructions["cli_version"] == "0.2.0"
+    assert instructions["supported_schema_versions"] == ["0.1"]
+    assert instructions["automatic_updates"] is False
+    assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
+
+    exported = Path.cwd() / "SKILL.md"
+    skill = resources.joinpath("adapters/agent-contribute/SKILL.md").read_bytes()
+    result = json.loads(cli("skill", "--output", exported))
+    assert exported.read_bytes() == skill
+    assert result["sha256"] == hashlib.sha256(skill).hexdigest()
+    exported.write_bytes(b"Keep this user-owned file.\n")
+    result = json.loads(cli("skill", "--output", exported, expected=1))
+    assert result["error"]["code"] == "file_error"
+    assert exported.read_bytes() == b"Keep this user-owned file.\n"
+
+    contract = Path.cwd() / "unknown-schema.json"
+    contract.write_text('{"schema_version": "999"}', encoding="utf-8")
+    result = json.loads(cli("verify", contract, expected=1))
+    for field in ("schema_valid", "execution_ready", "evidence_valid",
+                  "upstream_submission_ready", "fork_completion_ready"):
+        assert result[field] is False, field
+    assert "$.schema_version: wrong constant or version" in result["errors"]
+    print("Installed metadata, resources, entrypoints, Skill and schema checks passed.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--installed", type=Path, help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    if args.installed is not None:
+        installed_check(args.installed.resolve())
+        return
+
+    source = Path(__file__).resolve().parents[1]
+    env = {key: value for key, value in os.environ.items()
+           if key not in ("PYTHONPATH", "PYTHONHOME", "GH_TOKEN", "GITHUB_TOKEN",
+                          "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")}
+    env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+    with tempfile.TemporaryDirectory(prefix="agent-contrib-install-") as tmp:
+        scratch = Path(tmp).resolve()
+        assert not scratch.is_relative_to(source), "Set TMPDIR to a directory outside the checkout"
+        direct = scratch / "direct"
+        rebuilt = scratch / "from-sdist"
+        print("Building sdist and direct wheel...", flush=True)
+        run([sys.executable, "-m", "build", "--sdist", "--wheel", "--outdir", direct, source],
+            cwd=scratch, env=env)
+        sdist, = direct.glob("*.tar.gz")
+        with tarfile.open(sdist) as archive:
+            names = {name.split("/", 1)[1] for name in archive.getnames() if "/" in name}
+        expected = {"pyproject.toml", "MANIFEST.in", "README.md", "NOTICE",
+                    "LICENSE-MIT", "LICENSE-APACHE", "CONTRIBUTING.md", "SECURITY.md",
+                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py",
+                    ".github/workflows/ci.yml"}
+        expected.update(str(file.relative_to(source)) for file in (source / "tests").glob("*.py"))
+        assert expected <= names, f"Missing sdist files: {sorted(expected - names)}"
+        print("Rebuilding wheel from the sdist...", flush=True)
+        run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--wheel-dir", rebuilt, sdist],
+            cwd=scratch, env=env)
+        for label, directory in (("direct", direct), ("from-sdist", rebuilt)):
+            wheel, = directory.glob("*.whl")
+            root = scratch / label / "env"
+            venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(root)
+            python = root / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+            offline_env = {**env, "PIP_NO_INDEX": "1"}
+            run([python, "-I", "-m", "pip", "install", "--no-index", "--no-deps", wheel],
+                cwd=scratch, env=offline_env)
+            cwd = scratch / label / "smoke"
+            cwd.mkdir()
+            print(f"Checking {label} wheel in a clean environment...", flush=True)
+            print(run([python, "-I", Path(__file__).resolve(), "--installed", source],
+                      cwd=cwd, env=offline_env), end="")
+    print("Standalone build/install checks passed.")
+
+
+if __name__ == "__main__":
+    main()
