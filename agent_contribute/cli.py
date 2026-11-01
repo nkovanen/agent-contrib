@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import core, workspace, __version__
+from . import core, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -83,6 +83,13 @@ def main(argv=None):
     sub.add_argument('--repo-dir', required=True)
     sub.add_argument('--base', required=True)
     sub.add_argument('--output', required=True)
+    sub = commands.add_parser('pr-body')
+    sub.add_argument('contract')
+    sub.add_argument('--evidence')
+    sub.add_argument('--repo-dir')
+    sub.add_argument('--closes', action='store_true')
+    sub.add_argument('--assistant')
+    sub.add_argument('--output', required=True)
     try:
         args = parser.parse_args(argv)
         if args.command == 'instructions':
@@ -118,6 +125,19 @@ def main(argv=None):
             result = {'output': str(args.output), 'evidence_valid': False,
                       'schema_errors': len(core.schema_errors(skeleton, core.bundled_schema('evidence', task['schema_version']))),
                       'warning': 'Skeleton only: fill every result from real runs and reviews; nothing was executed'}
+            code = 0
+        elif args.command == 'pr-body':
+            evidence = core.read_json(args.evidence) if args.evidence else None
+            body, verification = prbody.pr_body(core.read_json(args.contract), evidence, args.repo_dir,
+                                                closes=args.closes, assistant=args.assistant)
+            try:
+                with Path(args.output).open('x', encoding='utf-8', newline='') as handle:
+                    handle.write(body)
+            except OSError as exc:
+                raise core.ProtocolError('file_error', 'Cannot create PR body; choose a new writable path') from exc
+            result = {'output': str(args.output), 'sha256': hashlib.sha256(body.encode()).hexdigest(),
+                      'contract_sha256': verification.get('contract_sha256'),
+                      'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
         elif args.command == 'discover':
             result = core.discover(args.reference)

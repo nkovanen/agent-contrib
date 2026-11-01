@@ -14,6 +14,7 @@ errors. An exit code is not authorization.
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base SHA]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base SHA --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
+| `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -113,3 +114,21 @@ ancestor of HEAD. Gitlinks are refused. The output is created exclusively and
 must be outside the checkout's Git top level, because an untracked file there
 would invalidate the evidence. A dirty worktree is recorded as observed
 (`worktree_clean: false`), which `verify` rejects.
+
+## PR description
+
+`pr-body` runs the same read-only `verify` and renders Markdown: the issue
+reference (`Refs` by default, `Closes` only with `--closes`), objective, scope,
+criteria with their evidence status, validation argv with recorded status, exit
+code, test and skip counts, review and sign-off status, every verify blocker
+verbatim, the open-PR overlap scan, and an AI-assistance disclosure with the CLI
+version and contract hash. `--assistant` adds host-reported model text.
+
+All quoted text is neutralized: whitespace collapses to one line, HTML is
+escaped, Markdown link/image/emphasis/code characters are backslash-escaped,
+and zero-width space entities break `@` mentions, `#` references, `://` URLs
+and closing keywords (close, fix, resolve and their forms). Evidence that fails
+its schema is not quoted; its errors appear among the gates. The output file is
+created exclusively. Rendering never writes to GitHub and is not publication
+authority. The CLI does not fill repository PR templates; merge the sections
+into one when the repository has it.

@@ -7,6 +7,8 @@
 - Add `evidence init` (#14): an evidence skeleton prefilled only with observed
   Git facts and contract IDs. It never runs argv or writes `passed`, and it
   fails validation until filled.
+- Add `pr-body` (#19): a Markdown PR description from the contract, evidence
+  and live verify gates, with untrusted text neutralized and `Refs` by default.
 
 ## 0.3.0 — unreleased
 
