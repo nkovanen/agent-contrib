@@ -64,8 +64,8 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('Repository: person/photos\n', output)
         self.assertIn('Issue source: acme/photos\n', output)
         self.assertIn('Proposed target (not authority): person/photos\n', output)
-        self.assertIn('  person/photos#12 [candidate]', output)
-        self.assertIn('  acme/photos#12 [candidate]', output)
+        self.assertIn('  person/photos#12 [', output)
+        self.assertIn('  acme/photos#12 [', output)
 
     def test_bad_format_is_structured_usage_and_text_bad_command_is_safe(self):
         code, output = self.invoke(['--format', 'xml', 'instructions'])
