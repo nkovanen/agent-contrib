@@ -11,8 +11,8 @@
   and live verify gates, with untrusted text neutralized and `Refs` by default.
 - Add opt-in `discover --signals` (#12): code-location, acceptance-clarity,
   activity and maintainer signals with explanations; default output unchanged.
-- Prepare Windows/macOS CI jobs and pin literal POSIX scope and artifact path
-  decisions across platforms (#25, preparation only; no support claim).
+- Pin literal POSIX scope and artifact path decisions across platforms (#25,
+  part; no Windows or macOS support claim and no CI matrix change).
 
 ## 0.3.0 — unreleased
 

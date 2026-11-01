@@ -2,7 +2,6 @@
 import contextlib
 import io
 import json
-import os
 import pathlib
 import tempfile
 import unittest
@@ -110,8 +109,6 @@ class EvidenceInitTests(unittest.TestCase):
                     code, result = self.invoke(*args, '--output', str(inside))
                     self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
                     self.assertFalse(inside.exists())
-            if os.name == 'nt':
-                return  # Unprivileged Windows runners cannot create symlinks.
             nested = pathlib.Path(out, 'link-to-src')
             nested.symlink_to(pathlib.Path(tmp, 'src'), target_is_directory=True)
             code, result = self.invoke(*args, '--output', str(nested / 'e.json'))
@@ -122,7 +119,6 @@ class EvidenceInitTests(unittest.TestCase):
             self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
             self.assertFalse(pathlib.Path(tmp, 'e.json').exists())
 
-    @unittest.skipIf(os.name == 'nt', 'Windows forbids trailing whitespace in directory names')
     def test_checkout_root_with_trailing_whitespace_still_contains_output(self):
         # Git output is stripped by git_read; the containment root must not be.
         for suffix in [' ', '\t', '\n', ' \n ']:
