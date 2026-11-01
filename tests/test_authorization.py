@@ -212,6 +212,7 @@ class AuthorizationTests(unittest.TestCase):
         result = self.check(task, client, host_context(task))
         self.assertFalse(result['authorized'])
         self.assertFalse(result['historical_valid'])
+        self.assertIn('Only the same repository source/target/head route is supported', result['errors'])
 
     def test_matching_mandate_cannot_authorize_pending_execution(self):
         task, client = candidate_task()
@@ -219,6 +220,7 @@ class AuthorizationTests(unittest.TestCase):
         result = self.check(task, client, host_context(task))
         self.assertFalse(result['authorized'])
         self.assertFalse(result['historical_valid'])
+        self.assertIn('Execution mode is pending', result['errors'])
 
     def test_matching_mandate_cannot_use_the_default_branch_as_its_head(self):
         task, client = candidate_task()
@@ -226,6 +228,7 @@ class AuthorizationTests(unittest.TestCase):
         result = self.check(task, client, host_context(task))
         self.assertFalse(result['authorized'])
         self.assertFalse(result['historical_valid'])
+        self.assertIn('Head and base refs must differ', result['errors'])
 
     def test_matching_mandate_cannot_authorize_an_invalid_head_ref(self):
         task, client = candidate_task()
@@ -233,6 +236,7 @@ class AuthorizationTests(unittest.TestCase):
         result = self.check(task, client, host_context(task))
         self.assertFalse(result['authorized'])
         self.assertFalse(result['historical_valid'])
+        self.assertIn('Invalid reviewed Git ref: head_ref', result['errors'])
 
     def test_live_issue_id_change_cannot_keep_the_old_issue_authority(self):
         task, client = candidate_task()
@@ -241,6 +245,7 @@ class AuthorizationTests(unittest.TestCase):
         result = self.check(task, client, host_context(task))
         self.assertFalse(result['authorized'])
         self.assertFalse(result['historical_valid'])
+        self.assertIn('Reviewed issue identity changed', result['errors'])
 
     def test_mandate_expires_at_the_exact_expiry_boundary(self):
         task, client = candidate_task()
@@ -253,9 +258,11 @@ class AuthorizationTests(unittest.TestCase):
         self.assertFalse(result['authorized'])
         self.assertFalse(result['implement'])
         self.assertFalse(result['create_draft'])
+        self.assertIn('Human/host mandate has expired for new actions', result['current_errors'])
 
 
 class TimestampTests(unittest.TestCase):
+
     def test_explicit_timestamp_dialect_has_no_normalized_invalid_offsets(self):
         from agent_contribute.authorization import timestamp
         for value in ('2030-01-01T12:00:00+00:60', '2030-01-01T12:00:00-00:60',

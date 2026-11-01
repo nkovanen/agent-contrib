@@ -406,6 +406,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['technical_evidence_valid'])
         self.assertTrue(result['independent_review']['valid'])
         self.assertFalse(result['publication']['verified'])
+        self.assertIn('Publication claim requires the exact validated evidence HEAD', result['publication']['errors'])
 
     def test_unrelated_overlap_blocks_draft_creation_with_valid_evidence(self):
         self.client.prs = [{'id': 3101, 'number': 31, 'title': 'Other', 'body': 'Fixes #12',
@@ -415,6 +416,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['independent_review']['valid'])
         self.assertTrue(result['publication']['creation_clear'])
         self.assertFalse(result['draft_create_ready'])
+        self.assertIn('Issue overlaps an open or unresolved prepared PR', result['stage_blockers']['draft'])
 
     def test_create_draft_only_mandate_cannot_authorize_implementation(self):
         self.context['mandate']['actions'] = ['create_draft']
@@ -423,6 +425,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['user_authorization']['authorized'])
         self.assertFalse(result['user_authorization']['implement'])
         self.assertFalse(result['implementation_ready'])
+        self.assertIn('Current implement action is not authorized', result['stage_blockers']['implementation'])
 
     def test_implementer_cannot_supply_the_independent_review(self):
         self.evidence['independent_review']['reviewer'] = self.evidence['implementer']
@@ -430,6 +433,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['technical_evidence_valid'])
         self.assertFalse(result['independent_review']['valid'])
         self.assertFalse(result['draft_create_ready'])
+        self.assertIn('Independent review is pending, failed, same implementer or stale',
+                      result['independent_review']['errors'])
 
     def test_review_for_another_contract_cannot_prepare_a_draft(self):
         self.evidence['independent_review']['contract_sha256'] = 'e' * 64
@@ -437,6 +442,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['technical_evidence_valid'])
         self.assertFalse(result['independent_review']['valid'])
         self.assertFalse(result['draft_create_ready'])
+        self.assertIn('Independent review is pending, failed, same implementer or stale',
+                      result['independent_review']['errors'])
 
     def test_review_must_follow_final_validation_results(self):
         self.evidence['independent_review']['reviewed_at'] = (NOW - dt.timedelta(minutes=25)).isoformat()
@@ -444,6 +451,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['technical_evidence_valid'])
         self.assertFalse(result['independent_review']['valid'])
         self.assertFalse(result['draft_create_ready'])
+        self.assertIn('Review must follow final validations and not be in the future',
+                      result['independent_review']['errors'])
 
     def test_review_cannot_be_dated_in_the_future(self):
         self.evidence['independent_review']['reviewed_at'] = (NOW + dt.timedelta(minutes=5)).isoformat()
@@ -451,6 +460,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['technical_evidence_valid'])
         self.assertFalse(result['independent_review']['valid'])
         self.assertFalse(result['draft_create_ready'])
+        self.assertIn('Review must follow final validations and not be in the future',
+                      result['independent_review']['errors'])
 
     def test_signoff_cannot_reuse_any_original_mandate_event_identity(self):
         self.publish()
@@ -468,6 +479,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
                 self.assertTrue(result['publication']['verified'])
                 self.assertEqual(result['human_signoff']['status'], 'invalid')
                 self.assertFalse(result['completion_ready'])
+                self.assertIn('Final signoff must be a distinct later human event', result['human_signoff']['errors'])
 
     def test_signoff_after_review_must_still_follow_publication(self):
         self.evidence['independent_review']['reviewed_at'] = (NOW - dt.timedelta(minutes=18)).isoformat()
@@ -482,6 +494,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['independent_review']['valid'])
         self.assertTrue(result['publication']['verified'])
         self.assertFalse(result['completion_ready'])
+        self.assertIn('Final signoff must be current and follow publication and independent review',
+                      result['human_signoff']['errors'])
 
     def test_signoff_after_publication_must_still_follow_review(self):
         self.publish()
@@ -491,6 +505,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['independent_review']['valid'])
         self.assertTrue(result['publication']['verified'])
         self.assertFalse(result['completion_ready'])
+        self.assertIn('Final signoff must be current and follow publication and independent review',
+                      result['human_signoff']['errors'])
 
     def test_signoff_event_binding_must_match_the_final_record(self):
         self.publish()
@@ -499,6 +515,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         result = self.verify()
         self.assertTrue(result['publication']['verified'])
         self.assertFalse(result['completion_ready'])
+        self.assertIn('Final human event binding hash differs', result['human_signoff']['errors'])
 
     def test_matching_mandate_does_not_replace_reviewed_contract_status(self):
         for status, questions in [('draft', []), ('reviewed', ['Unanswered question'])]:
@@ -508,6 +525,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
                 result = self.verify(evidence=False)
                 self.assertTrue(result['user_authorization']['authorized'])
                 self.assertFalse(result['implementation_ready'])
+                self.assertIn('Contract is draft or has unanswered questions', result['stage_blockers']['implementation'])
 
     def test_new_policy_requires_review_even_without_a_matching_approval_label(self):
         self.client.policy = {'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
@@ -517,6 +535,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['user_authorization']['authorized'])
         self.assertEqual(result['repository_approval']['status'], 'candidate')
         self.assertFalse(result['implementation_ready'])
+        self.assertIn('Source policy state/content changed; refresh and review contract', result['errors'])
 
     def test_issue_prepared_with_exclusion_is_blocked_even_when_semantically_fresh(self):
         issue = self.client.request('repos/acme/photos/issues/12')
@@ -528,6 +547,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['live_complete'])
         self.assertTrue(result['user_authorization']['authorized'])
         self.assertFalse(result['implementation_ready'])
+        self.assertIn('Live issue is excluded: wontfix', result['errors'])
 
     def test_bot_credential_cannot_authorize_work_even_with_a_matching_permission_user(self):
         self.client.actor['type'] = 'Bot'
@@ -535,6 +555,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         result = self.verify(evidence=False)
         self.assertFalse(result['user_authorization']['authorized'])
         self.assertFalse(result['implementation_ready'])
+        self.assertIn('Credential must identify a personal GitHub user', result['user_authorization']['errors'])
 
     def remove_issue_references(self):
         for record in self.client.prs + self.client.history + list(self.client.details.values()):
