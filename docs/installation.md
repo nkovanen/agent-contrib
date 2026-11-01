@@ -4,7 +4,13 @@ Install on the machine that runs your agent. A remote Paseo agent needs the CLI,
 Git and `gh` on its host, not merely on the device displaying the conversation.
 The package requires Python 3.10+ and has no Python runtime dependencies. Build
 and installer tools have their own Python requirements. Linux is the tested
-platform for this release.
+platform for this release. CI defines Windows and macOS jobs for the oldest and
+newest supported Python, but those platforms are not supported until hosted runs
+pass. Known Windows gap: `verify --host-context-stdin` waits on stdin with
+`select()`, which Windows supports only for sockets, so it fails closed there.
+Scope and containment decisions use the literal POSIX paths Git reports on
+every OS. Backslashes, drive letters and case are never normalized, so a path
+that would match only after normalization is out of scope.
 
 ## Pinned GitHub install
 
