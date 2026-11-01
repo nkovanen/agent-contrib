@@ -80,13 +80,12 @@ and evidence before a deliberate upgrade, inspect release changes, and rerun
 verification. Refresh the exported adapter deliberately using the chosen release;
 its workflow always comes from the installed CLI.
 
-This POC is not published to a package registry. Install a reviewed checkout or
-wheel once, in an environment available to the chosen agent runtime. Pin the
-chosen release and record its artifact hash when distributing it. The library,
-schemas, workflow, adapter and license files are packaged together and need no
-repository-relative lookup or particular host. Future extraction into its own
-repository preserves this package boundary; no harness or hosted backend is
-required. The package has no Python runtime dependencies; Git and GitHub's gh
+Install a reviewed GitHub release from `nkovanen/agent-contrib` once, in an
+environment available to the chosen agent runtime. This release is not published
+to PyPI. Pin the chosen tag or immutable commit and record artifact hashes when
+distributing it. The library, schemas, workflow, adapter and license files are
+packaged together and need no source checkout or particular host. No harness
+or hosted backend is required. The package has no Python runtime dependencies; Git and GitHub's gh
 CLI must be installed separately. GitHub credentials and their scopes remain
 with gh; use an account/token appropriate for read-only work.
 
