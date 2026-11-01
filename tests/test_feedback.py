@@ -153,7 +153,7 @@ class FeedbackTests(unittest.TestCase):
                 self.assertFalse(result['complete'])
 
     def test_check_run_pagination_detects_duplicates_and_moving_totals(self):
-        full = [run(i, 'r%d' % i) for i in range(100)]
+        full = [run(i, 'r%d' % i) for i in range(1, 101)]
         client = PRGitHub()
         client.pages = {1: full, 2: [run(5, 'dup')]}
         result = feedback.feedback('acme/photos#30', client)

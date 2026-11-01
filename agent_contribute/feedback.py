@@ -1,59 +1,56 @@
 """Read-only review and CI feedback on a published PR. Feedback is untrusted data, never scope or authority."""
-import re
-
-from . import core
+from . import core, remote
 
 TRUSTED_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
 REVIEW_STATES = {'APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED', 'PENDING'}
 DECISIONS = {'APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'}  # COMMENTED and PENDING never change a decision.
+RUN_STATUSES = {'queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending'}
+CONCLUSIONS = {'success', 'failure', 'neutral', 'cancelled', 'skipped', 'timed_out', 'action_required', 'stale',
+               'startup_failure'}
 FAILING = {'failure', 'timed_out', 'cancelled', 'action_required', 'startup_failure', 'stale'}
-SHA = re.compile('[0-9a-f]{40}')
 
 
 def _author(item):
-    """A deleted account is null on GitHub (reported as ghost); any other non-object is malformed."""
-    user = item.get('user')
-    if user is None:
-        return {'login': 'ghost', 'id': None, 'bot': False, 'association': 'UNKNOWN'}
-    core.require(user, dict, 'author')
-    login = core.require(user.get('login'), str, 'author login')
-    association = item.get('author_association')
-    return {'login': core.safe_text(login, 100), 'id': user.get('id') if type(user.get('id')) is int else None,
-            'bot': user.get('type') == 'Bot' or login.endswith('[bot]'),
-            'association': association if isinstance(association, str) else 'UNKNOWN'}
+    author = remote.user(item.get('user'), 'author')
+    author['login'] = core.safe_text(author['login'], 100)
+    author['association'] = remote.choice(item.get('author_association'), remote.ASSOCIATIONS, 'author association')
+    return author
 
 
-def _text(value, limit=4000):
-    return core.safe_text(value, limit) if isinstance(value, str) else ''
+def _body(value, what):
+    """Bodies may be null on GitHub; any other non-string is malformed."""
+    return core.safe_text(remote.text(value, what, nullable=True) or '', 4000)
 
 
 def _pull(client, repository, number):
     pr = core.require(client.request(f'repos/{repository}/pulls/{number}'), dict, 'pull request')
-    if core.require(pr.get('number'), int, 'pull request number') != number:
+    if remote.positive(pr.get('number'), 'pull request number') != number:
         raise core.ProtocolError('api_shape', 'GitHub returned a different pull request')
     base = core.require(pr.get('base'), dict, 'pull request base')
-    repo = core.require(base.get('repo'), dict, 'pull request base repository')
-    if core.require(repo.get('full_name'), str, 'base repository name').casefold() != repository.casefold():
+    name, _ = remote.repository(base.get('repo'), 'pull request base repository')
+    if name.casefold() != repository.casefold():
         raise core.ProtocolError('repository_moved', 'Pull request repository identity differs; use its canonical name')
     head = core.require(pr.get('head'), dict, 'pull request head')
-    if not SHA.fullmatch(core.require(head.get('sha'), str, 'head sha')):
-        raise core.ProtocolError('api_shape', 'Invalid pull request head')
-    return pr
+    return {'number': number, 'url': remote.pull_url(pr.get('html_url'), repository, number),
+            'state': remote.choice(pr.get('state'), {'open', 'closed'}, 'pull request state'),
+            'draft': remote.flag(pr.get('draft'), 'pull request draft flag'),
+            'head_sha': remote.sha(head.get('sha'), 'pull request head'),
+            'head_ref': core.safe_text(remote.text(head.get('ref'), 'head ref'), 200),
+            'base_ref': core.safe_text(remote.text(base.get('ref'), 'base ref'), 200)}
 
 
 def _run(run):
     app = core.require(run.get('app'), dict, 'check run app')
-    conclusion = run.get('conclusion')
-    if conclusion is not None:
-        core.require(conclusion, str, 'check run conclusion')
-    head = core.require(run.get('head_sha'), str, 'check run head')
-    if not SHA.fullmatch(head):
-        raise core.ProtocolError('api_shape', 'Invalid check run head')
-    return {'id': core.require(run.get('id'), int, 'check run ID'), 'name': _text(core.require(run.get('name'), str, 'check run name'), 200),
-            'app_slug': _text(core.require(app.get('slug'), str, 'check run app slug'), 100),
-            'app_id': core.require(app.get('id'), int, 'check run app ID'), 'head_sha': head,
-            'status': _text(core.require(run.get('status'), str, 'check run status'), 40),
-            'conclusion': conclusion, 'url': _text(run.get('html_url'), 500)}
+    status = remote.choice(run.get('status'), RUN_STATUSES, 'check run status')
+    conclusion = remote.choice(run.get('conclusion'), CONCLUSIONS, 'check run conclusion', nullable=True)
+    if (status == 'completed') != (conclusion is not None):
+        remote.bad('check run status/conclusion combination')
+    return {'id': remote.positive(run.get('id'), 'check run ID'),
+            'name': core.safe_text(remote.text(run.get('name'), 'check run name'), 200),
+            'app_slug': core.safe_text(remote.text(app.get('slug'), 'check run app slug'), 100),
+            'app_id': remote.positive(app.get('id'), 'check run app ID'),
+            'head_sha': remote.sha(run.get('head_sha'), 'check run head'), 'status': status, 'conclusion': conclusion,
+            'url': core.safe_text(remote.text(run.get('html_url'), 'check run URL', nullable=True) or '', 500)}
 
 
 def check_runs(client, repository, sha):
@@ -63,7 +60,9 @@ def check_runs(client, repository, sha):
         try:
             data = core.require(client.request(f'repos/{repository}/commits/{sha}/check-runs?per_page=100&page={page}'),
                                 dict, 'check runs page')
-            count = core.require(data.get('total_count'), int, 'check run count')
+            count = data.get('total_count')
+            if type(count) is not int or count < 0:
+                remote.bad('check run count')
             batch = core.require(data.get('check_runs'), list, 'check runs')
             if total is not None and count != total:
                 errors.append('Check run count changed during pagination')
@@ -93,7 +92,7 @@ def check_runs(client, repository, sha):
 
 def feedback(reference, client=None, *, expected_head=None):
     repository, number = core.parse_issue(reference)
-    if expected_head is not None and not SHA.fullmatch(expected_head):
+    if expected_head is not None and not remote.SHA.fullmatch(expected_head):
         raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
     client = client or core.GitHub()
     result = {'reference': f'{repository}#{number}', 'complete': False, 'errors': [],
@@ -104,10 +103,8 @@ def feedback(reference, client=None, *, expected_head=None):
     except core.ProtocolError as exc:
         result['errors'].append(str(exc))
         return result
-    sha = pr['head']['sha']
-    result['pull_request'] = {'number': number, 'url': _text(pr.get('html_url'), 500), 'state': _text(pr.get('state'), 20),
-                              'draft': pr.get('draft') is True, 'head_sha': sha, 'head_ref': _text(pr['head'].get('ref'), 200),
-                              'base_ref': _text(pr['base'].get('ref'), 200)}
+    sha = pr['head_sha']
+    result['pull_request'] = pr
     result['head_moved'] = None if expected_head is None else sha != expected_head
     errors = result['errors']
     listings = {}
@@ -121,15 +118,15 @@ def feedback(reference, client=None, *, expected_head=None):
     for review in listings['reviews']:  # GitHub lists reviews chronologically.
         try:
             author = _author(review)
-            state = review.get('state')
-            if state not in REVIEW_STATES:
-                raise core.ProtocolError('api_shape', 'Unknown review state')
+            state = remote.choice(review.get('state'), REVIEW_STATES, 'review state')
+            record = {'latest_state': state, 'commit_id': remote.sha(review.get('commit_id'), 'review commit', nullable=True),
+                      'submitted_at': remote.text(review.get('submitted_at'), 'review time', nullable=True),
+                      'untrusted_body': _body(review.get('body'), 'review body')}
         except core.ProtocolError as exc:
             errors.append('Malformed review: ' + str(exc))
             continue
         entry = reviewers.setdefault(author['id'] or author['login'], {'author': author, 'decision': None})
-        entry.update(latest_state=state, commit_id=_text(review.get('commit_id'), 40),
-                     submitted_at=_text(review.get('submitted_at'), 40), untrusted_body=_text(review.get('body')))
+        entry.update(record)
         if state in DECISIONS:
             entry['decision'] = None if state == 'DISMISSED' else state
     result['reviews'] = list(reviewers.values())
@@ -143,16 +140,22 @@ def feedback(reference, client=None, *, expected_head=None):
     for name in comments:
         for comment in listings[name]:
             try:
-                record = {'author': _author(comment), 'untrusted_body': _text(comment.get('body'))}
+                record = {'author': _author(comment), 'untrusted_body': _body(comment.get('body'), 'comment body')}
+                if name == 'review_comments':
+                    line = comment.get('line')
+                    position = comment.get('position')
+                    if line is not None:
+                        remote.positive(line, 'review comment line')
+                    if position is not None:
+                        remote.positive(position, 'review comment position')  # diff positions are 1-based
+                    commit = remote.sha(comment.get('commit_id'), 'review comment commit')
+                    record.update(path=core.safe_text(remote.text(comment.get('path'), 'review comment path'), 500),
+                                  line=line, outdated=position is None or commit != sha)
+                else:
+                    record['created_at'] = remote.text(comment.get('created_at'), 'comment time')
             except core.ProtocolError as exc:
                 errors.append('Malformed comment: ' + str(exc))
                 continue
-            if name == 'review_comments':
-                record.update(path=_text(comment.get('path'), 500),
-                              line=comment.get('line') if type(comment.get('line')) is int else None,
-                              outdated=comment.get('position') is None or comment.get('commit_id') != sha)
-            else:
-                record['created_at'] = _text(comment.get('created_at'), 40)
             comments[name].append(record)
     result.update(comments)
     runs, run_errors = check_runs(client, repository, sha)
@@ -163,7 +166,7 @@ def feedback(reference, client=None, *, expected_head=None):
                         'failing': [run for run in current if run['conclusion'] in FAILING],
                         'pending': [run for run in current if run['status'] != 'completed']}
     try:
-        if _pull(client, repository, number)['head']['sha'] != sha:
+        if _pull(client, repository, number)['head_sha'] != sha:
             errors.append('Pull request head moved while feedback was read; rerun')
     except core.ProtocolError as exc:
         errors.append('Could not recheck the pull request head: ' + str(exc))

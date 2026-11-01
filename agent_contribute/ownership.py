@@ -5,7 +5,7 @@ Nothing here changes approval, overlap or readiness gates; `blocking_if_adopted`
 import datetime as dt
 import re
 
-from . import core
+from . import core, remote
 
 MAX_PR_DETAILS = 50
 STALE_DAYS = 30
@@ -28,25 +28,31 @@ def _days(value, now):
         return None
 
 
-def _login(value):
-    return core.safe_text(value['login'], 100) if isinstance(value, dict) and isinstance(value.get('login'), str) else None
+def _login(value, what):
+    return core.safe_text(remote.user(value, what)['login'], 100)
 
 
-def _pull_detail(repository, number, source, issue_number, client):
+def _pull_detail(repository, repository_id, number, source, issue_number, client):
     pr = core.require(client.request(f'repos/{repository}/pulls/{number}'), dict, 'pull request')
+    if remote.positive(pr.get('number'), 'pull request number') != number:
+        remote.bad('pull request identity (different number returned)')
     base = core.require(pr.get('base'), dict, 'pull request base')
-    repo = core.require(base.get('repo'), dict, 'pull request base repository')
-    repo_id = core.require(repo.get('id'), int, 'pull request repository ID')
-    state = core.require(pr.get('state'), str, 'pull request state')
-    merged = core.require(pr.get('merged'), bool, 'pull request merged flag')
+    name, base_id = remote.repository(base.get('repo'), 'pull request base repository')
+    if name.casefold() != repository.casefold() or base_id != repository_id:
+        remote.bad('pull request repository identity (differs from the timeline reference)')
+    url = remote.pull_url(pr.get('html_url'), repository, number)
+    state = remote.choice(pr.get('state'), {'open', 'closed'}, 'pull request state')
+    merged = remote.flag(pr.get('merged'), 'pull request merged flag')
+    merged_at = remote.text(pr.get('merged_at'), 'pull request merge time', nullable=True)
+    closed_at = remote.text(pr.get('closed_at'), 'pull request close time', nullable=True)
+    if merged and (state != 'closed' or merged_at is None) or state == 'closed' and closed_at is None:
+        remote.bad('pull request state/merge combination')
     [entry] = core.index_prs([pr])
     exact = ((source.casefold(), issue_number) in entry['references'] or
              (repository.casefold() == source.casefold() and issue_number in entry['local']))
-    return {'repository': repository, 'repository_id': repo_id, 'number': number, 'url': entry['url'],
-            'state': state, 'draft': pr.get('draft') is True, 'merged': merged,
-            'merged_at': pr.get('merged_at') if isinstance(pr.get('merged_at'), str) else None,
-            'closed_at': pr.get('closed_at') if isinstance(pr.get('closed_at'), str) else None,
-            'exact_reference': exact}
+    return {'repository': name, 'repository_id': base_id, 'number': number, 'url': core.safe_text(url, 500),
+            'state': state, 'draft': remote.flag(pr.get('draft'), 'pull request draft flag'), 'merged': merged,
+            'merged_at': merged_at, 'closed_at': closed_at, 'exact_reference': exact}
 
 
 def ownership_signals(source, number, client, now=None):
@@ -57,49 +63,56 @@ def ownership_signals(source, number, client, now=None):
     errors += timeline['errors'] + comments['errors']
     referenced, assignments, connections, commits = {}, [], [], []
     for event in timeline['items']:
-        kind = event.get('event')
         try:
+            kind = remote.text(event.get('event'), 'timeline event kind')  # unknown kinds are ignored, not wrong types
             if kind == 'cross-referenced':
                 origin = core.require(core.require(event.get('source'), dict, 'cross-reference source').get('issue'),
                                       dict, 'cross-referenced issue')
-                if 'pull_request' not in origin:
-                    continue
-                repo = core.require(origin.get('repository'), dict, 'cross-referenced repository')
-                name = core.parse_repository(core.require(repo.get('full_name'), str, 'cross-referenced repository name'))
-                pr_number = core.require(origin.get('number'), int, 'cross-referenced PR number')
-                referenced[(name.casefold(), pr_number)] = (name, pr_number)
+                if origin.get('pull_request') is None:
+                    continue  # a plain issue mentioned this one
+                core.require(origin.get('pull_request'), dict, 'cross-referenced pull request')
+                name, repo_id = remote.repository(origin.get('repository'), 'cross-referenced repository')
+                pr_number = remote.positive(origin.get('number'), 'cross-referenced PR number')
+                referenced[(name.casefold(), pr_number)] = (name, repo_id, pr_number)
             elif kind in ('assigned', 'unassigned'):
-                assignments.append({'event': kind, 'assignee': _login(event.get('assignee')),
-                                    'actor': _login(event.get('actor')),
-                                    'created_at': core.safe_text(str(event.get('created_at', '')), 40)})
+                assignments.append({'event': kind, 'assignee': _login(event.get('assignee'), 'assignee'),
+                                    'actor': _login(event.get('actor'), 'actor'),
+                                    'created_at': remote.text(event.get('created_at'), 'event time')})
             elif kind in ('connected', 'disconnected'):
-                connections.append({'event': kind, 'actor': _login(event.get('actor')),
-                                    'created_at': core.safe_text(str(event.get('created_at', '')), 40)})
-            elif kind == 'referenced' and isinstance(event.get('commit_id'), str):
-                commits.append({'commit_id': core.safe_text(event['commit_id'], 40),
-                                'url': core.safe_text(str(event.get('commit_url') or ''), 500)})
+                connections.append({'event': kind, 'actor': _login(event.get('actor'), 'actor'),
+                                    'created_at': remote.text(event.get('created_at'), 'event time')})
+            elif kind == 'referenced':
+                commit = remote.sha(event.get('commit_id'), 'referencing commit', nullable=True)
+                if commit:
+                    commits.append({'commit_id': commit, 'url': core.safe_text(
+                        remote.text(event.get('commit_url'), 'commit URL', nullable=True) or '', 500)})
         except core.ProtocolError as exc:
             errors.append('Malformed timeline event: ' + str(exc))
     pulls = []
-    targets = sorted(referenced.values(), key=lambda item: (item[0].casefold(), item[1]))
+    targets = sorted(referenced.values(), key=lambda item: (item[0].casefold(), item[2]))
     if len(targets) > MAX_PR_DETAILS:
         errors.append(f'More than {MAX_PR_DETAILS} cross-referenced PRs; details are incomplete')
-    for name, pr_number in targets[:MAX_PR_DETAILS]:
+    for name, repo_id, pr_number in targets[:MAX_PR_DETAILS]:
         try:
-            pulls.append(_pull_detail(name, pr_number, source, number, client))
+            pulls.append(_pull_detail(name, repo_id, pr_number, source, number, client))
         except (core.ProtocolError, ValueError) as exc:
             errors.append(f'Could not read cross-referenced PR {name}#{pr_number}: {exc}')
     claims = []
     for comment in comments['items']:
-        body = comment.get('body') if isinstance(comment.get('body'), str) else ''
+        try:
+            body = remote.text(comment.get('body'), 'comment body', nullable=True) or ''
+            author = _login(comment.get('user'), 'comment author')
+            association = remote.choice(comment.get('author_association'), remote.ASSOCIATIONS, 'author association')
+            created = remote.text(comment.get('created_at'), 'comment time')
+        except core.ProtocolError as exc:
+            errors.append('Malformed comment: ' + str(exc))
+            continue
         for label, pattern in CLAIMS:
             match = pattern.search(body[:SCAN_LIMIT])
             if match:
                 start = max(0, match.start() - 80)
-                age = _days(comment.get('created_at'), now)
-                association = comment.get('author_association')
-                claims.append({'pattern': label, 'author': _login(comment.get('user')),
-                               'author_association': association if isinstance(association, str) else 'UNKNOWN',
+                age = _days(created, now)
+                claims.append({'pattern': label, 'author': author, 'author_association': association,
                                'age_days': age, 'stale': age is None or age > STALE_DAYS,
                                'untrusted_excerpt': core.safe_text(body[start:start + 280], 280)})
                 break

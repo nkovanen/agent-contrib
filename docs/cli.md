@@ -199,8 +199,11 @@ read.
 All text fields are `untrusted_*` data with terminal controls removed. Feedback
 never widens scope or grants authority; a requested change outside the reviewed
 contract needs contract re-review. Malformed reviews, comments or check runs
-(missing IDs, names, app identity, states or SHAs) are errors, not silently
-cleaned records. Check-run pagination requires unique run IDs, a stable
+are errors, not silently cleaned records: IDs and diff positions must be
+positive, author associations, review states, run statuses and conclusions must
+be known values, a run's conclusion must be set exactly when it is completed,
+and SHAs must be 40 hex characters. Null bodies, commit IDs and lines are
+accepted where GitHub documents them as nullable. Check-run pagination requires unique run IDs, a stable
 `total_count` and a matching final count. Any of these failures gives
 `complete: false` (exit 1).
 
@@ -230,8 +233,13 @@ the same parser as overlap detection.
 - `blocking_if_adopted` previews what a future versioned gate might block; it
   blocks nothing now.
 
-Any failed, malformed or partial read makes the signals `complete: false` and
-`resolution_signals.status: unknown`; an unknown is never "not fixed". With
+Every consumed field is shape-checked: positive IDs and numbers, known
+enumerations, 40-character SHAs, and PR details whose number, canonical URL,
+base repository name and repository ID match the timeline reference. A deleted
+account (`null` user) appears as `ghost`, and timeline event kinds the reader
+does not use are ignored. Any wrong type, identity mismatch, failed or partial
+read makes the signals `complete: false` and `resolution_signals.status:
+unknown`; an unknown is never "not fixed". With
 `--ownership`, exit 1 also covers incomplete signals.
 
 ## AI-contribution statements (opt-in)
