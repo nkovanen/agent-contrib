@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Contribution evidence 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_sha256",
+    "git_head",
+    "git_tree",
+    "base_commit",
+    "worktree_clean",
+    "implementer",
+    "validations",
+    "criteria",
+    "independent_review",
+    "human_signoff",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "contract_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "git_head": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "git_tree": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "base_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "worktree_clean": {
+      "type": "boolean"
+    },
+    "implementer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100000
+    },
+    "validations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "argv",
+          "status",
+          "exit_code",
+          "skipped",
+          "output",
+          "started_at",
+          "finished_at",
+          "tool_version",
+          "git_head",
+          "tests_run"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "skipped"
+            ]
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "started_at": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "finished_at": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "tool_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "git_head": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "tests_run": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "maxItems": 100
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "evidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "pending"
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          }
+        }
+      },
+      "maxItems": 100
+    },
+    "independent_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reviewer",
+        "git_head",
+        "contract_sha256",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "passed",
+            "failed"
+          ]
+        },
+        "reviewer": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "git_head": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "contract_sha256": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 100000
+        }
+      }
+    },
+    "human_signoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reviewer",
+        "git_head",
+        "contract_sha256",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "passed",
+            "failed"
+          ]
+        },
+        "reviewer": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "git_head": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "contract_sha256": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 100000
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  }
+}

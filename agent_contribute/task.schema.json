@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Contribution task 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "source",
+    "objective",
+    "behavior_criteria",
+    "code_locations",
+    "constraints",
+    "prohibited_changes",
+    "validation",
+    "prerequisites",
+    "approval",
+    "discovery",
+    "done",
+    "evidence",
+    "questions",
+    "execution",
+    "scope"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "reviewed"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "issue",
+        "issue_url",
+        "issue_updated_at",
+        "issue_sha256",
+        "default_branch",
+        "commit",
+        "fetched_at",
+        "instructions_sha256"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$"
+        },
+        "issue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "issue_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "issue_updated_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "issue_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "default_branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "fetched_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "instructions_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "objective": {
+      "type": "string",
+      "maxLength": 100000
+    },
+    "behavior_criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          }
+        }
+      },
+      "maxItems": 100
+    },
+    "code_locations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100000
+      },
+      "maxItems": 100
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100000
+      },
+      "maxItems": 100
+    },
+    "prohibited_changes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100000
+      },
+      "maxItems": 100
+    },
+    "validation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "argv",
+          "success",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "success": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "tests",
+              "check"
+            ]
+          }
+        }
+      },
+      "maxItems": 100
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "status",
+          "evidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "satisfied",
+              "blocked"
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "maxLength": 100000
+          }
+        }
+      },
+      "maxItems": 100
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "policy_path",
+        "policy_commit",
+        "matched_labels",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "candidate",
+            "approved",
+            "unknown"
+          ]
+        },
+        "policy_path": {
+          "const": ".agent-contrib.json"
+        },
+        "policy_commit": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "matched_labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "maxItems": 100
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "complete",
+        "duplicate_prs",
+        "warnings"
+      ],
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "duplicate_prs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "number",
+              "url",
+              "reason"
+            ],
+            "properties": {
+              "number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 100000
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100000
+              }
+            }
+          },
+          "maxItems": 1000
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "maxItems": 100
+        }
+      }
+    },
+    "done": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criteria_ids",
+        "validation_ids",
+        "independent_review_required",
+        "human_signoff_required"
+      ],
+      "properties": {
+        "criteria_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "maxItems": 100
+        },
+        "validation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "maxItems": 100
+        },
+        "independent_review_required": {
+          "const": true
+        },
+        "human_signoff_required": {
+          "const": true
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "contract_hash_algorithm"
+      ],
+      "properties": {
+        "required": {
+          "const": true
+        },
+        "contract_hash_algorithm": {
+          "const": "sha256"
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100000
+      },
+      "maxItems": 100
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "target_repository",
+        "authorized_by",
+        "authorization_evidence"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "fork-experiment",
+            "upstream-contribution"
+          ]
+        },
+        "target_repository": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "authorized_by": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "authorization_evidence": {
+          "type": "string",
+          "maxLength": 100000
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_paths",
+        "prohibited_paths"
+      ],
+      "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "prohibited_paths": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    }
+  }
+}
