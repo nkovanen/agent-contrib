@@ -474,7 +474,23 @@ def inspect_issue(reference, client=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None):
+def discover(repository, client=None, *, limit=None):
+    """Limit displayed candidates only after full discovery and ranking."""
+    if limit is not None:
+        if isinstance(limit, str) and re.fullmatch(r'[0-9]{1,4}', limit):
+            limit = int(limit)
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ProtocolError('invalid_limit', 'Discovery limit must be an ASCII integer from 1 to 1000')
+    result = _discover(repository, client)
+    if limit is not None:
+        total = len(result['issues'])
+        result['issues'] = result['issues'][:limit]
+        result['display'] = {'requested_limit': limit, 'total_issues_considered': total,
+                             'returned': len(result['issues']), 'truncated': total > limit}
+    return result
+
+
+def _discover(repository, client=None):
     repository = parse_repository(repository)
     client = client or GitHub()
     context, meta = resolve_repository(repository, client)

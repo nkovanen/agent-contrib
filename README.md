@@ -92,11 +92,19 @@ to publish a PR are checked separately.
 
 ```sh
 agent-contrib discover owner/repo
+agent-contrib discover owner/repo --limit 10
 agent-contrib inspect 'owner/repo#123'
 agent-contrib prepare 'owner/repo#123' --output task.json
 agent-contrib verify task.json
 agent-contrib verify task.json --evidence evidence.json --repo-dir ./checkout
 ```
+
+`discover --limit N` displays at most N ranked issues (ASCII decimal integers
+1–1000). It still performs full issue and PR scans. Limited responses include
+`display` metadata: `requested_limit`, `total_issues_considered`, `returned` and
+`truncated`. Counts describe observed issues; `truncated` describes the display,
+while `complete` and `errors` still report scan completeness. Omitting `--limit`
+preserves the existing response without `display` metadata.
 
 Use a repository and issue from discovery in place of the examples. Commands
 return JSON. `prepare` writes a draft; it does not approve the task. `verify`
