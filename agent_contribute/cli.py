@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import audit, core, feedback, prbody, workspace, __version__
+from . import audit, core, feedback, ownership, prbody, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -64,6 +64,8 @@ def main(argv=None):
         sub.add_argument('reference')
         if command == 'discover':
             sub.add_argument('--signals', action='store_true')
+        if command == 'inspect':
+            sub.add_argument('--ownership', action='store_true')
         if command == 'prepare':
             sub.add_argument('--output', required=True)
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1')
@@ -88,6 +90,8 @@ def main(argv=None):
     sub = commands.add_parser('audit')
     sub.add_argument('repository')
     sub.add_argument('--print-policy', action='store_true')
+    sub = commands.add_parser('ownership')
+    sub.add_argument('reference')
     sub = commands.add_parser('feedback')
     sub.add_argument('reference')
     sub.add_argument('--expected-head')
@@ -149,6 +153,16 @@ def main(argv=None):
             code = 0
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
+            code = 0 if result['complete'] else 1
+        elif args.command == 'inspect' and args.ownership:
+            client = core.GitHub()
+            result = core.inspect_issue(args.reference, client)
+            if 'source' in result:
+                result['ownership_signals'] = ownership.ownership_signals(
+                    result['issue_source_repository'], result['source']['issue'], client)
+            code = 0 if result['complete'] and result.get('ownership_signals', {}).get('complete') else 1
+        elif args.command == 'ownership':
+            result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
         elif args.command == 'feedback':
             result = feedback.feedback(args.reference, expected_head=args.expected_head)

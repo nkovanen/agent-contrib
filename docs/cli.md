@@ -18,6 +18,7 @@ errors. An exit code is not authorization.
 | `agent-contrib evidence init task.json --repo-dir checkout --base SHA --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
+| `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -190,3 +191,33 @@ never widens scope or grants authority; a requested change outside the reviewed
 contract needs contract re-review. Pagination is complete or the result is
 `complete: false` with errors (exit 1). For check runs, the collected count
 must match GitHub's `total_count`.
+
+## Ownership and resolution signals (report only)
+
+`inspect --ownership` adds `ownership_signals` to the normal inspect result;
+`ownership 'owner/repo#123'` prints them with repository resolution. Without
+the flag, `inspect`, `prepare` and `verify` neither read nor report them, and no
+approval, overlap or readiness decision changes in any schema version.
+
+Reads: the issue timeline and comments (complete pagination; timeline events
+without IDs are deduplicated by content), then a fresh `pulls/{n}` read for
+each cross-referenced PR (at most 50, otherwise incomplete). Each PR reports
+repository, repository ID, number, state, draft, merged, merge/close times and
+`exact_reference`: whether the PR text references this issue exactly (local
+`#N` only in the issue's own repository, `owner/repo#N` or the issue URL), with
+the same parser as overlap detection.
+
+- `resolution_signals.possibly_already_fixed`: merged PRs with an exact
+  reference. `rejected_approaches`: closed, unmerged PRs with an exact reference.
+- `assignment_history`, `connected_events` and `referencing_commits` from the
+  timeline.
+- `claims`: comments matching a fixed set of claim patterns ("I'm working on",
+  "I'll take", "can I work on", `/assign`, "assign me"), with author
+  association, age, `stale` (older than 30 days or unknown) and a sanitized
+  `untrusted_excerpt`. Comment text never proves, grants or removes ownership.
+- `blocking_if_adopted` previews what a future versioned gate might block; it
+  blocks nothing now.
+
+Any failed, malformed or partial read makes the signals `complete: false` and
+`resolution_signals.status: unknown`; an unknown is never "not fixed". With
+`--ownership`, exit 1 also covers incomplete signals.

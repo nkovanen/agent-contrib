@@ -15,6 +15,8 @@
   reads `discover` makes. Discover output and read order are frozen by goldens.
 - Add read-only `feedback 'owner/repo#PR'` (#20): latest reviews, comments,
   outdated flags, bot authors and failing/pending checks for the exact head.
+- Add opt-in, report-only ownership and resolution signals (#5, #6) via
+  `inspect --ownership` and `ownership`; no gate or default output changes.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
 
