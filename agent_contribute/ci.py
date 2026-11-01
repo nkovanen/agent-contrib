@@ -6,7 +6,7 @@ STATUS_STATES = {'success', 'failure', 'pending', 'error'}
 
 
 def combined_status(client, repository, sha):
-    statuses, errors, seen, state = [], [], set(), None
+    statuses, errors, seen, state, total = [], [], set(), None, None
     for page in range(1, core.MAX_PAGES + 1):
         try:
             data = core.require(client.request(f'repos/{repository}/commits/{sha}/status?per_page=100&page={page}'),
@@ -17,6 +17,12 @@ def combined_status(client, repository, sha):
             if state is not None and page_state != state:
                 errors.append('Combined status changed during pagination')
             state = page_state
+            count = data.get('total_count')
+            if type(count) is not int or count < 0:
+                remote.bad('combined status count')
+            if total is not None and count != total:
+                errors.append('Combined status count changed during pagination')
+            total = count
             batch = core.require(data.get('statuses'), list, 'statuses')
             if len(batch) > 100:
                 remote.bad('status page size')
@@ -31,6 +37,8 @@ def combined_status(client, repository, sha):
                                  'state': remote.choice(item.get('state'), STATUS_STATES, 'status state'),
                                  'url': core.safe_text(remote.text(item.get('target_url'), 'status URL', nullable=True) or '', 500)})
             if len(batch) < 100:
+                if len(seen) != total:
+                    errors.append('Combined status count does not match total_count')
                 return {'state': state, 'statuses': statuses, 'complete': not errors}, errors
         except core.ProtocolError as exc:
             return {'state': None, 'statuses': statuses, 'complete': False}, errors + [str(exc)]

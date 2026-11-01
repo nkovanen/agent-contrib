@@ -23,12 +23,15 @@ def drift(task, client=None):
     live = current['source']
     try:
         issue = core.issue_data(client.request(f'repos/{live["repository"]}/issues/{source["issue"]}'), source['issue'])
+        if core.issue_hash(issue) != live['issue_sha256']:
+            # Never mix two snapshots: components must describe the issue the hash comparison saw.
+            raise core.ProtocolError('issue_moved', 'Issue changed between reads; rerun drift')
         components = {'title_sha256': _sha(issue['title']), 'body_sha256': _sha(issue['body']),
                       'state': core.safe_text(issue['state'], 40),
                       'labels': sorted(core.safe_text(label['name'], 100) for label in issue['labels']),
                       'assignees': sorted(core.safe_text(user['login'], 100) for user in issue.get('assignees', []))}
     except core.ProtocolError as exc:
-        errors.append('Could not read current issue components: ' + str(exc))
+        errors.append(str(exc) if exc.code == 'issue_moved' else 'Could not read current issue components: ' + str(exc))
         components = None
     report['issue'] = {'changed': live['issue_sha256'] != source['issue_sha256'],
                        'stored_sha256': source['issue_sha256'], 'current_sha256': live['issue_sha256'],

@@ -86,6 +86,22 @@ class DriftTests(unittest.TestCase):
         self.assertIn('stored_policy_sha256', result['policy'])
         self.assertFalse(result['policy']['changed'], result['policy'])
 
+    def test_issue_changing_between_reads_is_incomplete(self):
+        task, client = ready_contract()
+        original, reads = client.request, [0]
+        def request(endpoint):
+            value = original(endpoint)
+            if endpoint.split('?')[0].endswith('/issues/12'):
+                reads[0] += 1
+                if reads[0] > 1:
+                    value = dict(value, body='Changed acceptance', state='closed')
+            return value
+        client.request = request
+        result = drift.drift(task, client)
+        self.assertFalse(result['complete'])
+        self.assertIn('Issue changed between reads; rerun drift', result['errors'])
+        self.assertIsNone(result['issue']['current_components'])
+
     def test_unreadable_sources_are_incomplete(self):
         task, client = ready_contract()
         client.failed.add('/contents/AGENTS.md?ref=' + PINNED)

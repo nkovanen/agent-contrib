@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, textfmt, workspace, __version__
+from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -53,6 +53,26 @@ def write_new_json(path, value):
             handle.write('\n')
     except OSError as exc:
         raise core.ProtocolError('file_error', 'Cannot create output; choose a new writable path') from exc
+
+
+def prevalidate(args):
+    """Local argument checks that must fail before the optional rate_limit read, with the same errors as without it."""
+    if args.command == 'discover':
+        args.names = args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else [])
+        core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
+    elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
+        core.parse_issue(args.reference)
+        if args.command == 'feedback' and args.expected_head is not None and not remote.SHA.fullmatch(args.expected_head):
+            raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
+    elif args.command == 'audit':
+        core.parse_repository(args.repository)
+    elif args.command in ('verify', 'drift', 'pr-body'):
+        if getattr(args, 'evidence', None):
+            core.read_json(args.evidence)
+        task = core.read_json(args.contract)
+        version = task.get('schema_version') if isinstance(task, dict) else None
+        if args.command == 'verify' and version != '0.2' and (args.stage is not None or args.host_context_stdin):
+            raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
 
 
 def main(argv=None):
@@ -118,6 +138,7 @@ def main(argv=None):
         if args.report_budget:
             if args.command in ('instructions', 'skill', 'scope-check', 'evidence'):
                 raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
+            prevalidate(args)
             before = budget.snapshot()
             if args.min_remaining is not None:
                 budget.require_remaining(before, args.min_remaining)
@@ -191,7 +212,8 @@ def main(argv=None):
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
-            names = args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else [])
+            names = getattr(args, 'names', None) or (
+                args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else []))
             if len(names) == 1:
                 result = core.discover(names[0], signals=True) if args.signals else core.discover(names[0])
             else:

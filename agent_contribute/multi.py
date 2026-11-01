@@ -13,12 +13,17 @@ def read_repositories_file(path):
     return [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith('#')]
 
 
-def discover_many(repositories, client=None, *, signals=False):
+def validate(repositories):
     if not 2 <= len(repositories) <= MAX_REPOSITORIES:
         raise core.ProtocolError('usage', f'Give between 2 and {MAX_REPOSITORIES} repositories for a multi-repository run')
     names = [core.parse_repository(name) for name in repositories]
     if len({name.casefold() for name in names}) != len(names):
         raise core.ProtocolError('usage', 'Repositories must be distinct')
+    return names
+
+
+def discover_many(repositories, client=None, *, signals=False):
+    names = validate(repositories)
     client = client or core.GitHub()
     results, errors, candidates = [], [], []
     for name in names:

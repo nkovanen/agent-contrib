@@ -58,6 +58,37 @@ class CIObservationTests(unittest.TestCase):
         for evidence in [None, {}, {'git_head': 'HEAD'}, ['x']]:
             self.assertFalse(ci.observe(task, evidence, CIGitHub(base))['complete'])
 
+    def test_combined_status_counts_must_be_valid_stable_and_complete(self):
+        task, base = ready_contract()
+        for count in [2, None, '1', -1, True]:
+            with self.subTest(total_count=count):
+                client = CIGitHub(base)
+                client.status.update(state='success', total_count=count)
+                result = ci.observe(task, {'git_head': HEAD}, client)
+                self.assertFalse(result['complete'])
+                self.assertFalse(result['combined_status']['complete'])
+        client = CIGitHub(base)
+        client.status.update(state='success', total_count=2, statuses=[])
+        self.assertFalse(ci.observe(task, {'git_head': HEAD}, client)['complete'])
+        # A count that changes between pages is incomplete.
+        client = CIGitHub(base)
+        pages = [dict(client.status, total_count=101, statuses=[{'id': i, 'context': 'c%d' % i, 'state': 'success',
+                                                                 'target_url': None} for i in range(1, 101)]),
+                 dict(client.status, total_count=102, statuses=[{'id': 101, 'context': 'late', 'state': 'success',
+                                                                 'target_url': None}])]
+        original = client.request
+        def request(endpoint):
+            if endpoint.split('?')[0].endswith('/status'):
+                client.calls.append(endpoint)
+                return copy.deepcopy(pages[int(endpoint.rsplit('page=', 1)[1]) - 1])
+            return original(endpoint)
+        client.request = request
+        result = ci.observe(task, {'git_head': HEAD}, client)
+        self.assertFalse(result['complete'])
+        self.assertTrue(any('count changed' in e for e in result['errors']))
+        pages[1]['total_count'] = 101
+        self.assertTrue(ci.observe(task, {'git_head': HEAD}, client)['complete'])
+
     def test_cli_opt_in_does_not_change_exit_or_gates(self):
         task, base = ready_contract()
         with tempfile.TemporaryDirectory() as tmp:

@@ -59,6 +59,29 @@ class BudgetTests(unittest.TestCase):
         code, result = run(client, '--report-budget', '--min-remaining', '1', 'discover', 'acme/photos')
         self.assertEqual(result['error']['code'], 'rate_limit_budget')
 
+    def test_inconsistent_counters_are_unknown_and_deltas_never_negative(self):
+        class Limits:
+            def __init__(self, limit, remaining, used, reset=1900000000):
+                self.values = dict(limit=limit, remaining=remaining, used=used, reset=reset)
+            def request(self, endpoint):
+                return {'resources': {'core': self.values}}
+        for limit, remaining, used in [(10, 9999, 0), (5000, 4000, 2000), (5000, 6000, 0), (100, 50, 200)]:
+            with self.subTest(limit=limit, remaining=remaining, used=used):
+                snap = budget.snapshot(Limits(limit, remaining, used))
+                self.assertTrue(snap['error'])
+                self.assertIsNone(snap['remaining'])
+                with self.assertRaises(core.ProtocolError):
+                    budget.require_remaining(snap, 1)
+        before = budget.snapshot(Limits(5000, 4000, 1000))
+        for after, reason in [(Limits(5000, 4100, 900), 'decreased'), (Limits(5000, 5000, 0, reset=1900003600), 'reset'),
+                              (Limits(15000, 13900, 1100), 'limit')]:
+            with self.subTest(reason=reason):
+                report = budget.report(before, after)
+                self.assertIsNone(report['used_during_command'])
+                self.assertIn(reason, report['delta_unknown_reason'])
+        report = budget.report(before, Limits(5000, 3990, 1010))
+        self.assertEqual((report['used_during_command'], report['delta_unknown_reason']), (10, None))
+
     def test_malformed_budget_is_unknown_not_zero(self):
         snap = budget.snapshot(BudgetGitHub(malformed=True))
         self.assertIsNone(snap['remaining'])
@@ -66,6 +89,24 @@ class BudgetTests(unittest.TestCase):
         code, result = run(BudgetGitHub(malformed=True), '--report-budget', 'discover', 'acme/photos')
         self.assertEqual(code, 0)
         self.assertIsNone(result['api_budget']['used_during_command'])
+
+    def test_invalid_inputs_are_rejected_before_the_budget_read(self):
+        too_many = ['o/r%d' % i for i in range(21)]
+        for argv, code in [(['discover'], 2), (['discover', 'acme/photos', 'ACME/photos'], 2),
+                           (['discover', 'invalid'], 1), (['discover', 'a/b', 'invalid'], 1), (['discover', *too_many], 2),
+                           (['discover', '--repositories-file', '/nonexistent/repos.txt'], 1),
+                           (['inspect', 'acme/photos#0'], 1), (['ownership', 'nope'], 1), (['audit', 'x'], 1),
+                           (['feedback', 'acme/photos#30', '--expected-head', 'HEAD'], 1),
+                           (['verify', '/nonexistent/task.json'], 1), (['drift', '/nonexistent/task.json'], 1),
+                           (['pr-body', '/nonexistent/task.json', '--output', '/nonexistent/x.md'], 1)]:
+            with self.subTest(argv=argv):
+                client = BudgetGitHub()
+                result_code, result = run(client, '--report-budget', *argv)
+                self.assertEqual(result_code, code, result)
+                self.assertIn('error', result)
+                self.assertEqual(client.calls, [], 'no read, including rate_limit, before input validation')
+                plain_code, plain = run(BudgetGitHub(), *argv)
+                self.assertEqual((plain_code, plain['error']['code']), (result_code, result['error']['code']))
 
     def test_usage_errors(self):
         for argv in [('--min-remaining', '5', 'discover', 'acme/photos'),

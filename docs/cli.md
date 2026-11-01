@@ -294,7 +294,9 @@ never writes anything. It reports:
 - `policy`: stored and current approval status, plus policy hashes for 0.2.
 - `overlap`: open source-repository PRs added to or gone from the prepared list.
 
-Exit 0 only when every read completed and nothing drifted. Any failed read,
+The issue component read must hash to the same value as the inspection it
+accompanies; if the issue changed in between, the report is incomplete. Exit 0
+only when every read completed and nothing drifted. Any failed read,
 including an unverifiable baseline, gives `complete: false`. The pinned re-read
 costs another snapshot's worth of reads. After drift, review and prepare the
 contract again.
@@ -310,8 +312,9 @@ numeric app ID, status, conclusion, URL), the count of runs for other heads,
 and the combined state with each status context.
 
 Shapes are strict: positive IDs, documented statuses and conclusions (set
-exactly when a run is completed), stable `total_count`, unique IDs across pages,
-and a combined status for the requested SHA. Any failure, or a missing or
+exactly when a run is completed), and a combined status for the requested SHA.
+For both check runs and statuses, `total_count` must be a non-negative integer
+that stays stable across pages and equals the number of unique items read. Any failure, or a missing or
 invalid evidence head, gives `complete: false` with errors. Queued, pending,
 approval-required or missing runs are never success. This is an observation of
 what GitHub reports, not proof that the evidence checks equal the CI checks.
@@ -323,9 +326,12 @@ Required-check gating is a deferred future-schema design.
 does not consume the budget) before and after the command and adds
 `api_budget`: both snapshots (limit, remaining, used, reset) and
 `used_during_command`. Because other processes may share the token, that
-number is an upper bound; it is `null` across a reset window or when a snapshot
-failed. A malformed or failed snapshot gives `null` values with an error, never
-zero. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
+number is an upper bound. It is `null`, with `delta_unknown_reason`, when a
+snapshot failed, the reset window or limit changed, or the used counter
+decreased; a negative difference is never reported. A snapshot is rejected
+(`null` values with an error, never zero) unless its counters are non-negative
+integers with `used + remaining == limit`. Command arguments are validated
+before the first snapshot, so invalid input makes no GitHub read at all. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
 estimate a command's cost; choose N yourself. Offline commands reject the flag.
 Without the flag, no rate-limit read happens and output is unchanged. Response
