@@ -5,8 +5,8 @@ Agent Contrib began as an isolated experiment in
 against public issues in `storytold/lightcraft`. This distribution extracts the
 reusable components from PR head
 [`b736531c92d4493594191434180df018e218a50b`](https://github.com/nkovanen/lightcraft/tree/b736531c92d4493594191434180df018e218a50b/experiments/agent-contribute),
-not LightCraft's main branch. Existing copyright notices and both licenses are
-preserved. Application code, Rust dependencies, pilot logs, screenshots and
+not LightCraft's main branch. The standalone project uses the original MIT license option and retains
+its copyright notice and attribution. Application code, Rust dependencies, pilot logs, screenshots and
 session transcripts are excluded.
 
 The pilot first rejected issue #3457 because an existing PR addressed it. A

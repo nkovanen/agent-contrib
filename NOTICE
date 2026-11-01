@@ -5,9 +5,11 @@ https://github.com/nkovanen/lightcraft/pull/1
 Source commit: b736531c92d4493594191434180df018e218a50b
 
 Copyright (c) 2026 ArtCraft Team and the LightCraft contributors.
-Licensed under the MIT License or the Apache License, Version 2.0, at your option
-(LICENSE-MIT, LICENSE-APACHE).
 
-The standalone distribution adapts packaging, documentation and CI. The original
-copyright and license notices are retained. No LightCraft application code,
-fonts, photographs, logos or other third-party assets are included.
+The original experiment was available under MIT or Apache-2.0. This standalone
+project uses the MIT option. Its original copyright and permission notice are
+retained in LICENSE.
+
+The standalone distribution adapts packaging, documentation and CI. No LightCraft
+application code, fonts, photographs, logos or other third-party assets are
+included.

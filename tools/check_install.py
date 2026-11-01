@@ -48,7 +48,7 @@ def installed_check(source):
     dist = importlib.metadata.distribution("agent-contrib")
     assert dist.metadata["Requires-Python"] == ">=3.10"
     assert not dist.requires, "Runtime dependencies must remain empty"
-    assert dist.metadata["License-Expression"] == "MIT OR Apache-2.0"
+    assert dist.metadata["License-Expression"] == "MIT"
     assert dist.metadata.get_payload().strip() == (source / "README.md").read_text("utf-8").strip()
     urls = dict(value.split(", ", 1) for value in dist.metadata.get_all("Project-URL"))
     assert urls == {
@@ -56,7 +56,7 @@ def installed_check(source):
         "Repository": "https://github.com/nkovanen/agent-contrib",
         "Issues": "https://github.com/nkovanen/agent-contrib/issues",
     }
-    for name in ("LICENSE-MIT", "LICENSE-APACHE", "NOTICE"):
+    for name in ("LICENSE", "NOTICE"):
         matches = [file for file in dist.files if str(file).endswith("/licenses/" + name)]
         assert len(matches) == 1, f"Missing or duplicate license file: {name}"
         assert dist.locate_file(matches[0]).read_bytes() == (source / name).read_bytes()
@@ -134,7 +134,7 @@ def main():
         with tarfile.open(sdist) as archive:
             names = {name.split("/", 1)[1] for name in archive.getnames() if "/" in name}
         expected = {"pyproject.toml", "MANIFEST.in", "README.md", "NOTICE",
-                    "LICENSE-MIT", "LICENSE-APACHE", "CONTRIBUTING.md", "SECURITY.md",
+                    "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
                     "CHANGELOG.md", "AGENTS.md", "tools/check_install.py",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").glob("*.py"))

@@ -6,6 +6,7 @@ are independent and require an explicit compatibility decision.
 ## 0.2.0 — 2026-11-01
 
 First standalone release, extracted from the reviewed LightCraft experiment.
+Licensed under MIT, with original attribution retained.
 
 - Read-only GitHub issue discovery, policy/instruction inspection and open-PR
   overlap detection through `gh`.
@@ -15,7 +16,9 @@ First standalone release, extracted from the reviewed LightCraft experiment.
 - Separate repository approval, execution authorization and publication mandate.
 - A portable Skill that loads the workflow from the installed CLI.
 - Standalone Python packaging, GitHub installation and CI; no LightCraft or Rust
-  build dependency. The 65 protocol regressions are retained.
+  build dependency. The 65 original protocol regressions are retained.
+- Normalize Git UTC timestamps for Python 3.10 compatibility, with an additional
+  regression covering newer Git versions that emit a trailing `Z`.
 
 The standalone release preserves the POC's protocol behavior. Approval delegates
 to accounts with label permissions; evidence is self-attested; topical overlap
