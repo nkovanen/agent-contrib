@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add offline `scope-check` (#15). `verify` and `scope-check` share one scope
+  evaluator; schema 0.1 decisions are unchanged.
+
 ## 0.3.0 — unreleased
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.

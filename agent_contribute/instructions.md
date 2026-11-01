@@ -104,6 +104,10 @@ tools. Preserve unrelated work, inspect builds/tests before running them, and
 keep credentials away from untrusted code. Any task/scope/identity/policy change
 requires reviewed rebinding; a mandate cannot silently authorize changed work.
 
+While implementing, `agent-contrib scope-check task.json --repo-dir checkout`
+reports out-of-scope paths early without GitHub reads. A pass is not evidence;
+`verify` remains the gate.
+
 Commit the implementation, run every required check on the clean exact HEAD,
 and record real counts, internal skips, timestamps, logs and artifacts. Tests
 must execute at least one test; zero skips and exit 0 are required. Obtain an

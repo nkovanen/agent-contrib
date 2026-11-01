@@ -12,6 +12,7 @@ errors. An exit code is not authorization.
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
+| `agent-contrib scope-check task.json --repo-dir checkout [--base SHA]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
@@ -81,3 +82,16 @@ lifecycle options on schema 0.1 are rejected rather than reinterpreted.
 `instructions.resources` lists both task/evidence versions and host-context
 schema 0.1. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
+
+## Offline scope check
+
+`scope-check` evaluates the working diff against the contract's
+`scope.allowed_paths` and `scope.prohibited_paths` with the same function that
+`verify` uses for evidence. It reads only the local checkout: committed changes
+from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
+and untracked files that are not ignored. Renames report both paths. The base
+must be a full 40-character SHA that is an ancestor of HEAD; gitlinks fail
+closed. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
+means "no scope violation found", not evidence, readiness or authorization.
+Each violation names the path and either the first matching prohibited pattern
+or `not in allowed_paths`.

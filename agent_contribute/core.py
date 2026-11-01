@@ -635,6 +635,24 @@ def implementation_paths(directory, base):
                                       '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, 'HEAD').split('\0') if path]
 
 
+def has_gitlink(directory, *revisions):
+    """Detect submodules from object data without traversing or invoking their local config."""
+    trees = [git_read(directory, 'ls-tree', '-r', '-z', revision) for revision in revisions]
+    trees.append(git_read(directory, 'ls-files', '--stage', '-z'))
+    return any(record.startswith('160000 ') for tree_entries in trees for record in tree_entries.split('\0'))
+
+
+def scope_violations(scope, paths):
+    """The single scope rule set shared by verify and scope-check, so the two cannot drift."""
+    violations = []
+    for path in paths:
+        prohibited = [pattern for pattern in scope['prohibited_paths'] if fnmatch.fnmatchcase(path, pattern)]
+        if prohibited or not any(fnmatch.fnmatchcase(path, pattern) for pattern in scope['allowed_paths']):
+            violations.append({'path': safe_text(path, 500),
+                               'rule': 'prohibited_paths: ' + safe_text(prohibited[0], 500) if prohibited else 'not in allowed_paths'})
+    return violations
+
+
 def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None,
                    schema_version='0.1', attestations=('independent_review', 'human_signoff')):
     errors = schema_errors(evidence, bundled_schema('evidence', schema_version))
@@ -663,11 +681,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         tree = git_read(directory, 'rev-parse', 'HEAD^{tree}')
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        # Reject submodule repositories without traversing or invoking their local config.
-        trees = [git_read(directory, 'ls-tree', '-r', '-z', revision)
-                 for revision in ('HEAD', evidence['base_commit'])]
-        trees.append(git_read(directory, 'ls-files', '--stage', '-z'))
-        if any(record.startswith('160000 ') for tree_entries in trees for record in tree_entries.split('\0')):
+        if has_gitlink(directory, 'HEAD', evidence['base_commit']):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
         dirty = git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all')
         # A base from another checkout cannot satisfy this task, even with a matching string.
@@ -676,11 +690,8 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         changed = implementation_paths(directory, evidence['base_commit'])
         if not changed:
             errors.append('Implementation diff is empty')
-        scope = task['scope']
-        for path in changed:
-            if (not any(fnmatch.fnmatchcase(path, pattern) for pattern in scope['allowed_paths']) or
-                    any(fnmatch.fnmatchcase(path, pattern) for pattern in scope['prohibited_paths'])):
-                errors.append('Implementation changes a path outside reviewed scope: ' + safe_text(path, 500))
+        for violation in scope_violations(task['scope'], changed):
+            errors.append('Implementation changes a path outside reviewed scope: ' + violation['path'])
         remote_config = git_read(directory, 'config', '--local', '--get-regexp', r'^remote\..*\.url$')
         targets = set()
         for line in remote_config.splitlines():

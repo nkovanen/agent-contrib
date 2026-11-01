@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import core, __version__
+from . import core, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -74,6 +74,10 @@ def main(argv=None):
     sub.add_argument('--repo-dir')
     sub.add_argument('--stage', choices=('implementation', 'draft', 'completion'))
     sub.add_argument('--host-context-stdin', action='store_true')
+    sub = commands.add_parser('scope-check')
+    sub.add_argument('contract')
+    sub.add_argument('--repo-dir', required=True)
+    sub.add_argument('--base')
     try:
         args = parser.parse_args(argv)
         if args.command == 'instructions':
@@ -98,6 +102,9 @@ def main(argv=None):
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
+        elif args.command == 'scope-check':
+            result = workspace.scope_check(core.read_json(args.contract), args.repo_dir, args.base)
+            code = 0 if result['within_scope'] else 1
         elif args.command == 'discover':
             result = core.discover(args.reference)
             code = 0 if result['complete'] else 1
