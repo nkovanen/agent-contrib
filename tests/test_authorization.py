@@ -196,6 +196,16 @@ class AuthorizationTests(unittest.TestCase):
             self.assertFalse(self.check(task, client, context)['authorized'])
 
 
+    def test_candidate_base_ref_must_be_the_reviewed_source_default_branch(self):
+        task, client = candidate_task()
+        task['execution']['base_ref'] = 'otherbranch'
+        context = host_context(task)
+        result = self.check(task, client, context)
+        self.assertFalse(result['authorized'])
+        self.assertFalse(result['historical_valid'])
+        self.assertIn('Candidate base ref must match the source default branch', result['errors'])
+
+
 class TimestampTests(unittest.TestCase):
     def test_explicit_timestamp_dialect_has_no_normalized_invalid_offsets(self):
         from agent_contribute.authorization import timestamp

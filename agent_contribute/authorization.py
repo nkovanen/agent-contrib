@@ -130,6 +130,8 @@ def check(task, host_context, client, now):
     for key in ('head_ref', 'base_ref'):
         if not valid_ref(execution[key]):
             errors.append('Invalid reviewed Git ref: ' + key)
+    if execution['base_ref'] != source['default_branch']:
+        errors.append('Candidate base ref must match the source default branch')
     if execution['head_ref'] == execution['base_ref']:
         errors.append('Head and base refs must differ')
     if (len(set(mandate['actions'])) != len(mandate['actions']) or
