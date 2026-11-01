@@ -331,7 +331,10 @@ snapshot failed, the reset window or limit changed, or the used counter
 decreased; a negative difference is never reported. A snapshot is rejected
 (`null` values with an error, never zero) unless its counters are non-negative
 integers with `used + remaining == limit`. Command arguments are validated
-before the first snapshot, so invalid input makes no GitHub read at all. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
+before the first snapshot: malformed repository references, unreadable input
+files and schema-invalid `drift`/`pr-body` contracts cause no GitHub read.
+`verify` still reports schema and evidence failures in its normal result envelope;
+optional budget reads do not turn those failures into success. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
 estimate a command's cost; choose N yourself. Offline commands reject the flag.
 Without the flag, no rate-limit read happens and output is unchanged. Response

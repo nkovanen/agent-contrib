@@ -70,6 +70,8 @@ def prevalidate(args):
         if getattr(args, 'evidence', None):
             core.read_json(args.evidence)
         task = core.read_json(args.contract)
+        if args.command in ('drift', 'pr-body') and core.validate_contract(task):
+            raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
         version = task.get('schema_version') if isinstance(task, dict) else None
         if args.command == 'verify' and version != '0.2' and (args.stage is not None or args.host_context_stdin):
             raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')

@@ -2,6 +2,8 @@
 import contextlib
 import io
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -107,6 +109,21 @@ class BudgetTests(unittest.TestCase):
                 self.assertEqual(client.calls, [], 'no read, including rate_limit, before input validation')
                 plain_code, plain = run(BudgetGitHub(), *argv)
                 self.assertEqual((plain_code, plain['error']['code']), (result_code, result['error']['code']))
+
+    def test_invalid_report_contract_is_rejected_before_budget_or_threshold(self):
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory, 'task.json')
+            task.write_text('{"schema_version":"0.1"}')
+            commands = [['drift', str(task)],
+                        ['pr-body', str(task), '--output', str(Path(directory, 'body.md'))]]
+            for command in commands:
+                for prefix in ([], ['--report-budget'], ['--report-budget', '--min-remaining', '5001']):
+                    with self.subTest(command=command[0], prefix=prefix):
+                        client = BudgetGitHub()
+                        code, result = run(client, *prefix, *command)
+                        self.assertEqual((code, result['error']['code']), (1, 'invalid_contract'))
+                        self.assertEqual(client.calls, [])
+            self.assertFalse(Path(directory, 'body.md').exists())
 
     def test_usage_errors(self):
         for argv in [('--min-remaining', '5', 'discover', 'acme/photos'),
