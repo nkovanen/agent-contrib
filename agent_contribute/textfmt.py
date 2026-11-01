@@ -38,6 +38,12 @@ def _verify(result):
 
 
 def _discover(result):
+    if 'repositories' in result:
+        out = [f'Complete: {_flag(result.get("complete"))}',
+               f'Repositories: {len(result["repositories"])}']
+        for repository in result['repositories']:
+            out += _discover(repository)
+        return out + _list('Errors', result.get('errors', []))
     out = [f'Repository: {line(result.get("repository", result.get("requested_repository", "")))}',
            f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}']
     for issue in result.get('issues', [])[:20]:
@@ -46,6 +52,8 @@ def _discover(result):
             notes.append(f'{len(issue["duplicates"])} overlapping PR(s)')
         out.append(f'  #{issue["number"]} [{line(issue.get("approval", {}).get("status", "unknown"), 20)}] '
                    f'{line(issue.get("untrusted_title", ""), 120)}' + (' -- ' + '; '.join(notes) if notes else ''))
+    if len(result.get('issues', [])) > 20:
+        out.append(f'  ... {len(result["issues"]) - 20} more issues in JSON output')
     return out + _list('Errors', result.get('errors', []))
 
 

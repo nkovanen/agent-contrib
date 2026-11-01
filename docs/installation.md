@@ -4,7 +4,7 @@ Install on the machine that runs your agent. A remote Paseo agent needs the CLI,
 Git and `gh` on its host, not merely on the device displaying the conversation.
 The package requires Python 3.10+ and has no Python runtime dependencies. Build
 and installer tools have their own Python requirements. Linux is the tested
-platform for this release; Windows and macOS are untested. Known Windows gap: `verify --host-context-stdin` waits on stdin with
+platform; Windows and macOS are untested. In the unreleased v0.3.0 route, `verify --host-context-stdin` waits on stdin with
 `select()`, which Windows supports only for sockets, so it fails closed there.
 Scope and containment decisions use the literal POSIX paths Git reports on
 every OS. Backslashes, drive letters and case are never normalized, so a path
@@ -88,9 +88,10 @@ CI matrix. A virtual environment uses `Scripts/python.exe` and `Scripts` on PATH
 
 ## Compatibility and updates
 
-CLI **0.2.0** bundles task and evidence schemas **0.1**, workflow guidance and
+The published CLI **0.2.0** bundles task and evidence schemas **0.1**, workflow guidance and
 the thin adapter together. `agent-contrib instructions` reports this support set.
-Unknown versions fail closed. The Skill intentionally has no independent copy
+The unreleased CLI **0.3.0** also bundles explicit task/evidence schema **0.2**
+and host-context schema **0.1**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
 of the protocol: it asks the installed CLI for instructions every time.
 
 Updates are explicit. Read the target release notes, back up contracts/evidence
@@ -122,6 +123,10 @@ python3 -m venv /tmp/agent-contrib-candidate
 /tmp/agent-contrib-candidate/bin/python -m pip install 'git+https://github.com/nkovanen/agent-contrib.git@REVIEWED_COMMIT'
 /tmp/agent-contrib-candidate/bin/agent-contrib --version
 ```
+
+A local integration commit may not be pushed yet. In that case, install a clean
+`git archive` export of that exact commit into the new environment instead; do not
+substitute a different remote commit or a mutable working tree.
 
 Export the Skill using that environment's command into the chosen fresh agent
 workspace. Record the installed commit, CLI version and exported hash. Keep the

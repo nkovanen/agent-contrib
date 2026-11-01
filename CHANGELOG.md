@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — unreleased
 
+- Handle closed or missing stdout quietly, including buffered errors and
+  caller-provided write-only streams (#4). Help/version behavior is unchanged.
+- Add opt-in `--format text` summaries; JSON stays canonical (#24, part).
 - Add offline `scope-check` (#15). `verify` and `scope-check` share one scope
   evaluator; schema 0.1 decisions are unchanged.
 - Add `evidence init` (#14): an evidence skeleton prefilled only with observed
@@ -29,8 +32,6 @@
   per-repository results and a merged candidate order; one repository is unchanged.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
-
-## 0.3.0 — unreleased
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

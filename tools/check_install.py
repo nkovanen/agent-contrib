@@ -133,6 +133,11 @@ def installed_check(source):
         expected = json.dumps(instructions, indent=2, ensure_ascii=True, allow_nan=False) + "\n"
         assert redirected.read_bytes() == expected.encode("ascii"), name
 
+    text_result = cli("--format", "text", "instructions")
+    assert "cli_version: " + __version__ in text_result
+    assert "JSON output is canonical" in text_result
+    assert json.loads(cli("--format", "json", "instructions")) == instructions
+
     exported = Path.cwd() / "SKILL.md"
     skill = resources.joinpath("adapters/agent-contribute/SKILL.md").read_bytes()
     result = json.loads(cli("skill", "--output", exported))

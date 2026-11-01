@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, workspace, __version__
+from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -58,6 +58,7 @@ def write_new_json(path, value):
 def main(argv=None):
     parser = Parser(prog='agent-contrib', description='Read-only GitHub agent contribution protocol (JSON output)')
     parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument('--format', choices=('json', 'text'), default='json')
     parser.add_argument('--report-budget', action='store_true')
     parser.add_argument('--min-remaining', type=int)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -109,6 +110,7 @@ def main(argv=None):
     sub.add_argument('--closes', action='store_true')
     sub.add_argument('--assistant')
     sub.add_argument('--output', required=True)
+    args = None
     try:
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
@@ -237,7 +239,9 @@ def main(argv=None):
     if stream is None:
         return 1
     try:
-        print(json.dumps(result, indent=2, ensure_ascii=True, allow_nan=False), file=stream)
+        output = (textfmt.render(args.command, result) if args is not None and args.format == 'text'
+                  else json.dumps(result, indent=2, ensure_ascii=True, allow_nan=False) + '\n')
+        print(output, end='', file=stream)
         flush = getattr(stream, 'flush', None)
         if flush is not None:
             flush()

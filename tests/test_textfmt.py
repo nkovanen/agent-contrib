@@ -58,6 +58,15 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('base_commit: None\n', text)
         self.assertNotIn('violations', text)
 
+    def test_discovery_summary_discloses_omitted_candidates(self):
+        result = {'complete': True, 'issues': [
+            {'number': n, 'untrusted_title': 'Task', 'approval': {'status': 'candidate'}}
+            for n in range(21)], 'errors': []}
+        text = textfmt.render('discover', result)
+        self.assertIn('Issues: 21', text)
+        self.assertIn('... 1 more issues in JSON output', text)
+        self.assertNotIn('  #20 ', text)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30'}]))

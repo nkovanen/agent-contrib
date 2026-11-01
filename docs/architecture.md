@@ -4,8 +4,8 @@ Agent Contrib separates a small portable adapter from a versioned protocol.
 
 - **Skill:** asks the installed CLI for its workflow, then uses the host agent's
   normal tools. One canonical source is packaged and exported without overwrite.
-- **CLI (`agent_contribute.cli`):** fixed commands and JSON output; exclusive
-  local draft/Skill writes; no model, task executor or GitHub write operations.
+- **CLI (`agent_contribute.cli`):** fixed commands and canonical JSON, with optional text summaries;
+  exclusive local contract, evidence-skeleton, PR-body and Skill writes; no model, task executor or GitHub write operations.
 - **Library (`agent_contribute.core`):** GitHub GETs through `gh`, bounded discovery,
   repository resolution, policy evaluation, contract/evidence validation and
   defensive Git reads. The agent still judges feasibility and implements work.
@@ -61,3 +61,19 @@ requires final human sign-off. No draft-update lifecycle is implemented.
 The old schemas and evaluator retain their behavior. The new mode does not
 change the label approval policy or reinterpret a legacy task. Full details are
 in [host authorization](host-authorization.md) and the installed workflow.
+
+## Optional observations and local helpers
+
+Ownership, prior-resolution hints, AI-policy excerpts and CI observations are
+report-only additions. They cannot promote a candidate, satisfy a validation or
+waive an overlap. `audit` reuses the discovery snapshot. `drift` compares current
+facts with the pinned contract without rewriting it. Multi-repository discovery
+keeps each repository's identities, errors and completeness separate.
+
+`scope-check` and evidence verification share the path-scope evaluator. Evidence
+initialization records observed Git facts and leaves claims unfilled. `pr-body`
+quotes live verification results with remote prose neutralized; it has no host
+context input, so it cannot attest schema 0.2 authority or human sign-off.
+
+The [development status](development-status.md) distinguishes implemented tools
+from future policy, signature, lifecycle and platform work.

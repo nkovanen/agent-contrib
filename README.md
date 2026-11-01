@@ -9,7 +9,7 @@ specification it can work from.
 
 Install the CLI and skill once. Then tell your agent:
 
-> Go help pallets/click.
+> Go help owner/repo.
 
 The agent evaluates candidates and brings back a scoped task. Once you authorize
 the work, it implements through its own tools, runs the repository's checks and
@@ -143,6 +143,31 @@ There are no Python runtime dependencies, hosted services or required model
 providers. GitHub access goes through your local `gh` authentication.
 [Architecture and workflow](docs/architecture.md) has the details.
 
+## Tools in the unreleased branch
+
+These commands are implemented on this development branch; installing v0.2.0
+above does not include them. See [development status](docs/development-status.md)
+for unfinished parts and [the command reference](docs/cli.md) for exact outputs.
+
+| Task | Command |
+| --- | --- |
+| Compare candidates across repositories | `discover owner/a owner/b --signals` |
+| Inspect claims and possible prior fixes | `inspect 'owner/repo#123' --ownership` |
+| Locate AI-contribution statements | `inspect 'owner/repo#123' --ai-policy` |
+| Check repository setup | `audit owner/repo` |
+| Check local changes against a contract | `scope-check task.json --repo-dir checkout` |
+| Start an unfilled evidence record | `evidence init task.json --repo-dir checkout --base FULL_SHA --output evidence.json` |
+| Review changes since preparation | `drift task.json` |
+| Observe CI without changing readiness | `verify task.json --evidence evidence.json --observe-ci` |
+| Prepare a description for human review | `pr-body task.json --output body.md` |
+| Read reviews and checks on an existing PR | `feedback 'owner/repo#123'` |
+
+JSON remains the default. Put `--format text` before the command for a short
+summary, or `--report-budget` to observe the API budget. Optional signals and CI
+observations do not grant authority or replace the existing verification gates.
+Evidence initialization runs no tests and deliberately creates an incomplete
+record. Rendering a PR description never publishes it.
+
 ## Current limits
 
 v0.3.0 is under development. Discovery, fork resolution, task preparation and
@@ -163,8 +188,11 @@ are heuristics.
   the new route; bot and delegated identities are unsupported.
 - Core discovery scans open PRs. Publication preflight additionally scans exact
   head/base open and closed history. Timeline claims, reopened history and
-  conflicts outside those checks still need review.
-- CI covers Linux with Python 3.10–3.14. Windows is not tested. There is no PyPI
+  conflicts outside those checks still need review. Optional ownership reports
+  expose some timeline signals but do not change readiness.
+- The CI configuration covers Linux with Python 3.10–3.14. New local commits
+  still need their own green hosted run before publication. Windows host-context
+  input is unsupported; macOS is untested. There is no PyPI
   publication or silent update channel.
 
 ## Development

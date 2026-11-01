@@ -1,6 +1,6 @@
 # Command reference
 
-Commands emit JSON except help/version. Exit codes: **0** for a complete read,
+Commands emit JSON by default except help/version. Exit codes: **0** for a complete read,
 successful export/draft write or completion-ready verification; **1** for an
 expected error, incomplete read or unresolved verification; **2** for usage
 errors. An exit code is not authorization.
@@ -349,3 +349,27 @@ Reads cost the sum of the single-repository runs; combine with
 `--report-budget --min-remaining N` on large lists. A display cap such as the
 proposed `discover --limit` (#1) would apply per repository. Deriving
 repositories from a dependency graph is out of scope.
+
+## Text output (unreleased)
+
+Put the global option before the subcommand:
+
+```sh
+agent-contrib --format text discover owner/repo
+agent-contrib --format text verify task.json
+agent-contrib --format json inspect 'owner/repo#123'
+```
+
+Text changes presentation only, never scan depth, authorization or exit status.
+It is a summary: discovery shows at most 20 issues per repository, lists show at
+most 50 entries and long remote lines are shortened. Omitted list entries are
+counted. Multi-repository discovery includes every repository's completeness and
+errors. Verification shows the gates and blockers. Other commands show top-level
+scalar fields; use JSON for full nested results, instructions and provenance.
+Remote text is sanitized to a single line so it cannot add fake gate headings.
+Default JSON bytes are unchanged. Parse-time usage errors still use structured
+JSON when argument parsing has not produced a valid format selection.
+
+The text option uses the same stdout handling as JSON. Closed output returns 1
+quietly; writable output retains the command's normal exit status. Output JSON
+Schemas and an output-schema version are not implemented yet.
