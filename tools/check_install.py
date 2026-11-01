@@ -99,6 +99,40 @@ def installed_check(source):
     assert instructions["automatic_updates"] is False
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
 
+    # Exercise real installed entry points, including small buffered JSON errors.
+    for name, entrypoint in (
+            ("console", [console]),
+            ("module", [sys.executable, "-I", "-m", "agent_contribute"])):
+        for args in (("instructions",), ("unknown-command",)):
+            reader, writer = os.pipe()
+            os.close(reader)
+            try:
+                result = subprocess.run([str(arg) for arg in [*entrypoint, *args]],
+                                        cwd=Path.cwd(), env=env, stdout=writer,
+                                        stderr=subprocess.PIPE, timeout=15)
+            finally:
+                os.close(writer)
+            assert result.returncode == 1, (name, args, result.returncode, result.stderr)
+            assert result.stderr == b"", (name, args, result.stderr)
+            bootstrap = ("import os, sys; os.close(1); "
+                         "os.execv(sys.argv[1], sys.argv[1:])")
+            result = subprocess.run(
+                [sys.executable, "-I", "-c", bootstrap,
+                 *[str(arg) for arg in [*entrypoint, *args]]],
+                cwd=Path.cwd(), env=env, capture_output=True, timeout=15)
+            assert result.returncode == 1, (name, args, result.returncode, result.stderr)
+            assert result.stdout == b"", (name, args, result.stdout)
+            assert result.stderr == b"", (name, args, result.stderr)
+        redirected = Path.cwd() / f"{name}-instructions.json"
+        with redirected.open("wb") as output:
+            result = subprocess.run([str(arg) for arg in [*entrypoint, "instructions"]],
+                                    cwd=Path.cwd(), env=env, stdout=output,
+                                    stderr=subprocess.PIPE, timeout=15)
+        assert result.returncode == 0, (name, result.returncode, result.stderr)
+        assert result.stderr == b"", (name, result.stderr)
+        expected = json.dumps(instructions, indent=2, ensure_ascii=True, allow_nan=False) + "\n"
+        assert redirected.read_bytes() == expected.encode("ascii"), name
+
     exported = Path.cwd() / "SKILL.md"
     skill = resources.joinpath("adapters/agent-contribute/SKILL.md").read_bytes()
     result = json.loads(cli("skill", "--output", exported))

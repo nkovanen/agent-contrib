@@ -233,5 +233,21 @@ def main(argv=None):
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}
         code = 1
-    print(json.dumps(result, indent=2, ensure_ascii=True, allow_nan=False))
+    stream = sys.stdout
+    if stream is None:
+        return 1
+    try:
+        print(json.dumps(result, indent=2, ensure_ascii=True, allow_nan=False), file=stream)
+        flush = getattr(stream, 'flush', None)
+        if flush is not None:
+            flush()
+    except BrokenPipeError:
+        # Close the broken stream so interpreter shutdown cannot flush it again.
+        try:
+            close = getattr(stream, 'close', None)
+            if close is not None:
+                close()
+        except BrokenPipeError:
+            pass
+        return 1
     return code

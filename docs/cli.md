@@ -5,6 +5,16 @@ successful export/draft write or completion-ready verification; **1** for an
 expected error, incomplete read or unresolved verification; **2** for usage
 errors. An exit code is not authorization.
 
+JSON results are flushed before returning. If the stdout pipe's consumer has
+closed, the command closes the failed stream and exits **1** without a traceback
+or a second error during interpreter shutdown. This also overrides an otherwise
+successful result or usage-error status when its JSON cannot be delivered.
+A missing stdout stream (for example, fd 1 closed before Python starts) also
+returns **1** quietly. Caller-provided replacement streams need only support
+`write()`; their `flush()` and cleanup `close()` methods are used when available.
+Writable stdout, including a redirected output file, retains the normal JSON
+format and command exit status. Help/version output is unchanged.
+
 | Command | Result |
 | --- | --- |
 | `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
