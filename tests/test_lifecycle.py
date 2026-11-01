@@ -650,3 +650,17 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertTrue(result['implementation_ready'])
         self.assertFalse(result['draft_create_ready'])
         self.assertEqual(result['next_action'], 'implement')
+
+    def test_unrelated_branch_overlap_blocks_implementation_with_empty_exact_head_history(self):
+        self.client.prs = [{'id': 3101, 'number': 31, 'title': 'Other', 'body': 'Fixes #12',
+                            'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'other'}}]
+        result = self.verify(evidence=False)
+        self.assertTrue(result['live_complete'])
+        self.assertTrue(result['user_authorization']['implement'])
+        self.assertEqual(result['publication']['status'], 'absent')
+        self.assertTrue(result['publication']['creation_clear'])
+        self.assertTrue(result['publication']['provenance']['history']['complete'])
+        self.assertFalse(result['implementation_ready'])
+        self.assertNotEqual(result['next_action'], 'implement')
+        self.assertEqual(result['stage_blockers']['implementation'],
+                         ['Issue overlaps an open or unresolved prepared PR'])
