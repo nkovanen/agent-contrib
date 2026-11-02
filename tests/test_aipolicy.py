@@ -50,7 +50,8 @@ class AIPolicyTests(unittest.TestCase):
         self.assertEqual(result['coverage'], 'incomplete')
 
     def test_bounded_and_linear(self):
-        # Deterministic, not wall-clock: linear-shaped patterns, each searching at most LINE_LIMIT characters.
+        # Deterministic, not wall-clock: no nested quantifiers (a nesting check, not a linearity proof), and each
+        # search sees at most LINE_LIMIT characters.
         for _, pattern in aipolicy.COMPILED:
             self.assertFalse(nested_repeats(pattern), pattern.pattern)
         longest = []

@@ -1,4 +1,8 @@
-"""Deterministic linear-scan check: no quantifier inside another quantifier, the shape behind catastrophic backtracking."""
+"""Deterministic nesting check: does any quantifier sit inside another quantifier?
+
+This is one common catastrophic-backtracking shape, not a linear-time proof: overlapping alternation such as
+(a|aa)+b and adjacent repeats such as a+a+b pass it. Lookarounds, atomic groups and branches are traversed.
+"""
 try:
     from re import _constants as constants, _parser as parser
 except ImportError:  # Python 3.10
@@ -9,6 +13,9 @@ REPEATS = {getattr(constants, name) for name in ('MAX_REPEAT', 'MIN_REPEAT', 'PO
 
 
 def _children(av):
+    if isinstance(av, parser.SubPattern):  # atomic groups carry their body directly
+        yield av
+        return
     for item in av if isinstance(av, (tuple, list)) else ():
         if isinstance(item, parser.SubPattern):
             yield item

@@ -5,6 +5,7 @@ import datetime as dt
 import io
 import json
 import re
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -51,8 +52,15 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(signals.location_hints('src/thumb.rs', None)['value'], 'unknown')
 
     def test_adversarial_input_is_bounded_and_linear(self):
-        # Deterministic, not wall-clock: every scanning regex has no nested quantifier, and text is cut to SCAN_LIMIT.
-        self.assertTrue(nested_repeats(re.compile(r'(a+)+b')) and nested_repeats(re.compile(r'(?:x|(?:y{1,3})){2}')))
+        # Deterministic, not wall-clock: no scanning regex nests a quantifier, and text is cut to SCAN_LIMIT.
+        # The nesting check is one catastrophic-backtracking shape, not a linear-time proof.
+        nested = [r'(a+)+b', r'(?:x|(?:y{1,3})){2}', r'(?=(a+)+b)', r'(?!(a+)+)', r'(?<=(?:a{2}){2})x']
+        if sys.version_info >= (3, 11):
+            nested.append(r'(?>(a+)+b)')  # review R3-08: atomic-group bodies were skipped
+        for pattern in nested:
+            self.assertTrue(nested_repeats(re.compile(pattern)), pattern)
+        for pattern in [r'a+b+', r'(ab)c+', r'[a+]+', r'(?=ab)c*']:
+            self.assertFalse(nested_repeats(re.compile(pattern)), pattern)
         for pattern in [signals.TOKEN, signals.MODULE_TOKEN, signals.MODULE_SEPARATOR, *signals.MARKERS.values()]:
             self.assertFalse(nested_repeats(pattern), pattern.pattern)
         for text in ['a/' * 200000, 'a.' * 200000, ('x' * 299 + '/') * 2000, '- [ ' * 100000, '`' * 300000,
@@ -272,6 +280,25 @@ class ModuleNameTests(unittest.TestCase):
         self.assertEqual(signals.location_hints('x.y', paths)['value'], 'none')
         index = signals.module_index(tuple(paths))
         self.assertLessEqual(len(index), len(paths) * (signals.MAX_SEGMENTS - 1))
+        # Review R3-08: count generated suffixes (open-ended slices of the split path), not only retained keys,
+        # so building every suffix and filtering afterwards is caught.
+        slices = []
+
+        class Parts(list):
+            def __getitem__(self, item):
+                if isinstance(item, slice) and item.start is not None and item.stop is None:
+                    slices.append(item)
+                return Parts(super().__getitem__(item)) if isinstance(item, slice) else super().__getitem__(item)
+
+            def __add__(self, other):
+                return Parts(super().__add__(other))
+
+        class Path(str):
+            def split(self, *args):
+                return Parts(super().split(*args))
+
+        signals.module_index(tuple(Path(p) for p in paths[:50]))
+        self.assertEqual(len(slices), 50 * (signals.MAX_SEGMENTS - 1))
         # The deepest queryable suffix still resolves (output hints are separately truncated to 500 characters).
         self.assertEqual(signals.module_hint('.'.join(['a'] * 15 + ['m7']), index), paths[7])
         long_names = ('p' * 200 + '/' + 'q' * 200 + '.py',)
