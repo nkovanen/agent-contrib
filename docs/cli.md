@@ -153,7 +153,11 @@ The prerequisite blocker lists each prerequisite that is not `satisfied` with
 non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 
 `instructions.resources` lists both task/evidence versions and host-context
-schema 0.1. Library callers may pass host context explicitly to `core.verify`;
+schemas 0.1 and 0.2. With a host-context 0.2 document, `verify` adds
+`overlap_dispositions`: `absent`, `not_evaluated` (the record's contract, mandate,
+credential, event, interval and entry bindings check out) or `invalid`, with the
+record hash and errors. It never waives an overlap or changes a gate, exit code or
+overlap list in this version, and makes no extra GitHub reads. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
 
 ## Authorization request
@@ -796,6 +800,7 @@ One of `inspect_result`, `issue_unresolved`.
 | `resources.task_schema_0.2` | string |  |
 | `resources.evidence_schema_0.2` | string |  |
 | `resources.host_context_schema` | string |  |
+| `resources.host_context_schema_0.2` | string |  |
 | `resources.output_schemas` | string | Package directory of these output schemas; agent-contrib schema COMMAND prints one |
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
@@ -1644,6 +1649,7 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `api_budget` | `api_budget` (optional) |  |
 | `ci_observation` | `ci_observation` (optional) |  |
 | `signature_observation` | `signature_observation` (optional) |  |
+| `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document; never changes a gate |
 
 #### `verify_0_2_rejected`
 
@@ -1716,6 +1722,18 @@ Provenance of the live inspect refresh
 | `policy` | `policy_file` |  |
 | `proposed_target_pulls` | `target_pulls_scan` (optional) |  |
 | `proposed_target_metadata` | `metadata_read` (optional) | Schema 0.1 fork target metadata read |
+
+#### `verify_overlap_dispositions`
+
+Host-context 0.2 overlap_dispositions report; this version waives no overlap
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `status` | "absent" \| "not_evaluated" \| "invalid" | absent: no section; not_evaluated: its own bindings check out but no waiver is evaluated; invalid: schema or binding errors |
+| `trust` | "host-asserted" |  |
+| `sha256` | string or null | Canonical hash of the overlap_dispositions section; null when absent or the host context is invalid |
+| `errors` | string[] |  |
+| `note` | string |  |
 
 #### `verify_own_pr`
 

@@ -25,6 +25,7 @@ RESOURCE_PATHS = (
     "schemas/0.2/task.schema.json",
     "schemas/0.2/evidence.schema.json",
     "schemas/host-context/0.1.schema.json",
+    "schemas/host-context/0.2.schema.json",
     "schemas/output/1/audit.schema.json",
     "schemas/output/1/authorization-request.schema.json",
     "schemas/output/1/discover.schema.json",
@@ -96,6 +97,10 @@ def installed_check(source):
     host_schema = json.loads(resources.joinpath("schemas/host-context/0.1.schema.json").read_text("utf-8"))
     assert host_schema["properties"]["schema_version"]["const"] == "0.1"
     assert core.schema_errors({"schema_version": "999"}, host_schema)
+    host_schema_02 = core.bundled_schema("host-context", "0.2")
+    assert host_schema_02["properties"]["schema_version"]["const"] == "0.2"
+    assert "overlap_dispositions" in host_schema_02["properties"]
+    assert "overlap_dispositions" not in host_schema["properties"]
     assert core.check_evidence({}, {"schema_version": "999"}, None, "")
 
     # Restrict PATH so accidental GitHub or git calls cannot make smoke checks pass.
@@ -111,6 +116,7 @@ def installed_check(source):
     instructions = json.loads(cli("instructions"))
     assert instructions["cli_version"] == "0.3.0"
     assert instructions["supported_schema_versions"] == ["0.1", "0.2"]
+    assert instructions["supported_host_context_versions"] == ["0.1", "0.2"]
     assert instructions["automatic_updates"] is False
     assert instructions["output_schema_version"] == "1"
     assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:1:verify"

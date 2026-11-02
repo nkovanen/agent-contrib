@@ -1266,6 +1266,10 @@
         },
         "signature_observation": {
           "$ref": "#/$defs/signature_observation"
+        },
+        "overlap_dispositions": {
+          "$ref": "#/$defs/verify_overlap_dispositions",
+          "description": "Present only for a host-context 0.2 document; never changes a gate"
         }
       },
       "required": [
@@ -2117,6 +2121,55 @@
       ],
       "additionalProperties": false,
       "description": "Host-asserted mandate checked against live credential facts; never proof of human consent. mandate_id, event_reference and event_text_sha256 are present once the host context validates"
+    },
+    "verify_overlap_dispositions": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "absent",
+            "not_evaluated",
+            "invalid"
+          ],
+          "description": "absent: no section; not_evaluated: its own bindings check out but no waiver is evaluated; invalid: schema or binding errors"
+        },
+        "trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64,
+          "description": "Canonical hash of the overlap_dispositions section; null when absent or the host context is invalid"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "status",
+        "trust",
+        "sha256",
+        "errors",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Host-context 0.2 overlap_dispositions report; this version waives no overlap"
     }
   }
 }

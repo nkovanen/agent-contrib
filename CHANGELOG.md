@@ -11,6 +11,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Host-context schema **0.2** (#7, slice 1): the 0.1 sections unchanged, plus an
+  optional host-issued `overlap_dispositions` record. `verify` reports it as
+  `absent`, `not_evaluated` or `invalid` with its hash and binding errors; it waives
+  no overlap, changes no gate and makes no extra read. A 0.1 document carrying the
+  section and any other version fail closed.
 - Explicit task and evidence schema **0.2** (`prepare --schema-version 0.2`) for
   one same-repository candidate issue (#3). A human/host-issued mandate in
   host-context schema 0.1 (`verify --host-context-stdin`, at most 8 MiB, 5 s) is
@@ -203,7 +208,7 @@ channel or runtime model provider is added.
 
 - CLI/library versions follow semantic versioning; task, evidence and
   host-context schema versions are independent. Supported sets: task/evidence
-  0.1 and 0.2, host-context 0.1. Unknown versions fail closed; nothing is
+  0.1 and 0.2, host-context 0.1 and 0.2. Unknown versions fail closed; nothing is
   migrated. `prepare` still defaults to 0.1.
 - Schema 0.1 changes, all fail-closed or message-only:
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an

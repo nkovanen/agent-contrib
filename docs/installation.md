@@ -97,7 +97,7 @@ CI matrix. A virtual environment uses `Scripts/python.exe` and `Scripts` on PATH
 The published CLI **0.2.0** bundles task and evidence schemas **0.1**, workflow guidance and
 the thin adapter together. `agent-contrib instructions` reports this support set.
 The unreleased CLI **0.3.0** also bundles explicit task/evidence schema **0.2**
-and host-context schema **0.1**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
+and host-context schemas **0.1** and **0.2**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
 of the protocol: it asks the installed CLI for instructions every time.
 
 Updates are explicit. Read the target release notes, back up contracts/evidence
