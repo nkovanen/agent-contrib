@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
+from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -66,6 +66,8 @@ def prevalidate(args):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
     elif args.command == 'audit':
         core.parse_repository(args.repository)
+    elif args.command == 'authorization-request' and authrequest.check_contract(core.read_json(args.contract)):
+        raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
     elif args.command in ('verify', 'drift', 'pr-body'):
         if getattr(args, 'evidence', None):
             core.read_json(args.evidence)
@@ -106,6 +108,8 @@ def main(argv=None):
     sub.add_argument('--stage', choices=('implementation', 'draft', 'completion'))
     sub.add_argument('--host-context-stdin', action='store_true')
     sub.add_argument('--observe-ci', action='store_true')
+    sub = commands.add_parser('authorization-request')
+    sub.add_argument('contract')
     sub = commands.add_parser('scope-check')
     sub.add_argument('contract')
     sub.add_argument('--repo-dir', required=True)
@@ -191,6 +195,9 @@ def main(argv=None):
                       'contract_sha256': verification.get('contract_sha256'),
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
+        elif args.command == 'authorization-request':
+            result = authrequest.build(core.read_json(args.contract))
+            code = 0 if result.get('ready_for_issuance') is True else 1
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1

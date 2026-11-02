@@ -172,8 +172,10 @@ The human or trusted host retains the actual human event, the reviewed material
 shown at approval time, and an issued mandate hash outside worker control. Current
 Claude Code, Codex and Paseo installations do not automatically emit this new
 record. Use an explicit human/host handoff; report missing host capability rather
-than inventing it. The worker may prepare an authorization request and relay a
-human/host-issued mandate unchanged. If it is absent, remain pending. The human
+than inventing it. The worker may prepare an authorization request with
+`agent-contrib authorization-request task.json`, give the host it and the exact
+contract file, and relay a human/host-issued mandate unchanged. Never fill in the
+request's `null` fields. If it is absent, remain pending. The human
 must see the complete contract, never a worker-written summary in its place.
 
 **Local-only work.** When the user wants local implementation without
