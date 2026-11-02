@@ -269,6 +269,18 @@ class MatchAndScopeTests(WaiverFixture):
         self.assert_waived(self.verify(evidence=False))
         self.assertEqual(self.client.calls.count('repos/acme/photos/pulls/31'), 1)
 
+    def test_a_same_numbered_entry_from_another_repository_still_blocks(self):
+        other = {'number': 31, 'url': 'https://github.com/other/photos/pull/31', 'repository': 'other/photos',
+                 'reason': TOPICAL}
+        self.task['discovery']['duplicate_prs'] = [other]
+        test_lifecycle.IntegratedLifecycleTests.rebind(self)
+        self.base_context = copy.deepcopy(self.context)
+        self.dispose([entry_for(self.pr)])
+        result = self.verify(evidence=False)
+        self.assertEqual([item['number'] for item in result['overlap_dispositions']['waived']], [31])
+        self.assertIn(OVERLAP, result['stage_blockers']['implementation'])
+        self.assertFalse(result['implementation_ready'])
+
     def test_other_overlaps_still_block(self):
         second = pr_detail(32, title='Thumbnail bounds cache')
         self.show(self.pr, second)

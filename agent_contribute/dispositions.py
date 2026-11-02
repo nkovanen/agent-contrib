@@ -115,7 +115,6 @@ def evaluate(task, context, authority, current, client, now):
              'body': current['untrusted_issue']['body']}
     live = [dict(item, repository=repository) for item in current['duplicates']]
     prepared = [item for item in task['discovery']['duplicate_prs'] if item.get('repository') == repository]
-    actor = authority['credential_actor']['id']
     canonical = 'https://github.com/{}/pull/{}'
     waived, extra, tips = set(), [], {}
 
@@ -156,7 +155,8 @@ def evaluate(task, context, authority, current, client, now):
             ('pr_id', pr['id'] == entry['pr_id']),
             ('repository', pr['base']['repo']['id'] == entry['repository_id'] == source['repository_id']),
             ('url', pr['html_url'] == canonical.format(repository, number)),
-            ('author', pr['user']['id'] == entry['author_id'] and pr['user']['id'] != actor),
+            # entry author_id is never the actor (section check), so equality also excludes own PRs
+            ('author', pr['user']['id'] == entry['author_id']),
             ('state', pr['state'] == entry['pr_state'] == 'open'),
             ('draft', pr['draft'] is entry['draft']),
             ('head repository', pr['head']['repo'] is not None and pr['head']['repo']['id'] == entry['head_repository_id']),
