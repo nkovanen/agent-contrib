@@ -77,5 +77,32 @@ class CandidateHeadCaptureTests(unittest.TestCase):
         self.assertIn(UNBORN, result['evidence_errors'])
 
 
+class CandidateBranchBindingTests(unittest.TestCase):
+    # R1-15: the full symbolic ref must equal refs/heads/ + reviewed head_ref, byte for byte.
+    setUp = test_lifecycle.LifecycleTests.setUp
+    verify = test_lifecycle.LifecycleTests.verify
+    DIFFERS = 'Checkout branch differs from reviewed head ref'
+
+    def move_head(self, ref):
+        head = self.git('rev-parse', 'HEAD')
+        self.git('update-ref', ref, head)
+        self.git('symbolic-ref', 'HEAD', ref)
+        self.git('update-ref', '-d', 'refs/heads/agent/bounds')
+
+    def test_tag_namespace_with_the_reviewed_name_is_not_the_branch(self):
+        self.assertTrue(self.verify()['draft_create_ready'])
+        self.move_head('refs/tags/agent/bounds')
+        result = self.verify()
+        self.assertIn(self.DIFFERS, result['evidence_errors'])
+        self.assertFalse(result['draft_create_ready'])
+
+    def test_branch_name_with_trailing_unicode_space_is_a_different_branch(self):
+        self.move_head('refs/heads/agent/bounds\u00a0')
+        result = self.verify()
+        self.assertIn(self.DIFFERS, result['evidence_errors'])
+        self.assertFalse(result['technical_evidence_valid'])
+        self.assertEqual(core.git_read(self.directory.name, 'symbolic-ref', 'HEAD'), 'refs/heads/agent/bounds\u00a0')
+
+
 if __name__ == '__main__':
     unittest.main()
