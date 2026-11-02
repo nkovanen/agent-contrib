@@ -50,9 +50,11 @@ Draft readiness stays false by design. A coordinator agent may forward the
 request and contract to the human/host and relay the issued record unchanged; it
 never issues, edits or approves one, including through host permission prompts.
 
-Work stacked on unpublished commits cannot produce valid schema 0.2 evidence,
-because the evidence base must be in the source default branch's history. Land
-the base first, then prepare, authorize, validate and review again; see the
+An unpublished commit cannot be the evidence base for schema 0.2 evidence,
+because the base must be in the source default branch's history. With a
+published base, the whole unpublished stack is part of the checked diff and must
+belong to the approved contribution. To exclude a separate stacked dependency,
+land it first, then prepare, authorize, validate and review again; see the
 installed workflow.
 
 ## Three separately sourced records

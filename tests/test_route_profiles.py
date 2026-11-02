@@ -40,8 +40,14 @@ class WorkflowTextTests(unittest.TestCase):
     def test_stacked_base_limitation_is_documented(self):
         text = workflow()
         self.assertIn('**Stacked or unpublished bases.**', text)
-        self.assertIn('cannot reach `technical_evidence_valid`', text)
+        self.assertIn('an unpublished commit cannot be the evidence base', text)
+        self.assertIn('includes the whole unpublished stack', text)
+        self.assertIn('must be excluded from this contribution', text)
         self.assertIn('Old evidence, review and mandate do not transfer', text)
+        self.assertNotIn('work stacked on unpublished commits cannot reach', text)
+        host = flat((ROOT / 'docs' / 'host-authorization.md').read_text('utf-8'))
+        self.assertIn('An unpublished commit cannot be the evidence base', host)
+        self.assertNotIn('Work stacked on unpublished commits cannot produce valid', host)
 
     def test_host_handoff_shows_the_complete_contract(self):
         text = flat((ROOT / 'docs' / 'host-authorization.md').read_text('utf-8'))
@@ -117,11 +123,11 @@ class LocalOnlyPins(LifecycleFixture):
         self.assertIn('Both implement and create_draft actions must be authorized',
                       result['stage_blockers']['draft'])
 
-    def test_stacked_base_evidence_cannot_validate(self):
+    def stack(self, path):
         # Commit an unpublished "stacked base" that GitHub cannot resolve, then work on top of it.
         directory = pathlib.Path(self.directory.name)
-        (directory / 'docs').mkdir()
-        (directory / 'docs' / 'stacked.md').write_text('unpublished base work')
+        (directory / path).parent.mkdir(exist_ok=True)
+        (directory / path).write_text('unpublished base work')
         self.git('add', '.')
         self.git('commit', '-q', '-m', 'unpublished stacked base')
         stacked = self.git('rev-parse', 'HEAD')
@@ -134,6 +140,10 @@ class LocalOnlyPins(LifecycleFixture):
         for validation in self.evidence['validations']:
             validation['git_head'] = head
         self.client.failed = {'...' + stacked}
+        return stacked
+
+    def test_unpublished_evidence_base_or_out_of_scope_stack_cannot_validate(self):
+        stacked = self.stack('docs/stacked.md')
         self.evidence['base_commit'] = stacked
         result = self.verify()
         self.assertFalse(result['technical_evidence_valid'])
@@ -144,6 +154,14 @@ class LocalOnlyPins(LifecycleFixture):
         self.assertFalse(result['technical_evidence_valid'])
         self.assertIn('Implementation changes a path outside reviewed scope: docs/stacked.md',
                       result['evidence_errors'])
+
+    def test_in_scope_unpublished_stack_validates_from_a_published_base(self):
+        stacked = self.stack('src/stacked.rs')
+        self.evidence['base_commit'] = self.task['source']['commit']
+        result = self.verify()
+        self.assertTrue(result['technical_evidence_valid'], result['evidence_errors'])
+        self.assertTrue(result['independent_review']['valid'])
+        self.assertNotIn(stacked, str(self.client.calls))
 
 
 if __name__ == '__main__':

@@ -602,7 +602,9 @@ history. Work stacked on unpublished commits therefore either:
 - uses the unpublished base, and GitHub cannot authenticate it; or
 - uses the published base, and every unpublished commit lands in the scope diff.
 
-Either way it can never be technically valid. In addition, the instructions the
+The first can never be technically valid. The second is valid only when the
+whole unpublished stack belongs to the approved contribution and stays in scope
+(review round 3, RD-11); a separate stacked dependency cannot be excluded. In addition, the instructions the
 worker actually follows (the checkout's) are not the ones pinned.
 
 ### Threat model
@@ -643,8 +645,11 @@ preconditions. C stays out of scope.
 Add to `instructions.md`, schema 0.2 implementation section:
 
 > **Stacked or unpublished bases.** Schema 0.2 evidence requires the evidence base
-> in the source default branch's GitHub history. Work stacked on unpublished
-> commits cannot reach `technical_evidence_valid` in this version. Before
+> in the source default branch's GitHub history, so an unpublished commit cannot
+> be the evidence base. A published base includes the whole unpublished stack in
+> the checked diff, which is valid only when all of it belongs to the approved
+> contribution. Work that must exclude a stacked dependency cannot reach
+> `technical_evidence_valid` in this version (wording corrected for RD-11). Before
 > requesting a mandate, tell the human. Do not encode this as a prerequisite:
 > prerequisites gate implementation, and this is an evidence-stage fact. Record
 > it as a constraint naming the stacked base by its full SHA, and in the ledger.

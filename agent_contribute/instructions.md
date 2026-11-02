@@ -240,10 +240,14 @@ tools. Preserve unrelated work, inspect builds/tests before running them, and
 keep credentials away from untrusted code. Any task/scope/identity/policy change
 requires reviewed rebinding; a mandate cannot silently authorize changed work.
 
-**Stacked or unpublished bases.** Schema 0.2 evidence requires its base in the
-source default branch's GitHub history, so work stacked on unpublished commits
-cannot reach `technical_evidence_valid` in this version. Tell the human before
-requesting a mandate. Record it as a constraint naming the stacked base by full
+**Stacked or unpublished bases.** Schema 0.2 evidence authenticates its base
+against the source default branch's GitHub history, so an unpublished commit
+cannot be the evidence base. A published base works: the checked diff then
+includes the whole unpublished stack, which must all belong to the approved
+contribution, stay within scope, and be tested and reviewed with it. When the
+stack holds a separate dependency that must be excluded from this contribution,
+the work cannot reach `technical_evidence_valid` in this version. Tell the human
+before requesting a mandate. Record it as a constraint naming the stacked base by full
 SHA (the human sees it in the contract; the verifier does not enforce it) and in
 the ledger, not as a prerequisite. Start the branch from exactly that commit.
 Ledger the checkout's instructions at that revision too. Under an implement-only
