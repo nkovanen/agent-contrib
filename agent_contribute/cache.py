@@ -1,8 +1,8 @@
 """Opt-in local cache of file contents at a pinned commit (#27). Content-addressed and self-verifying.
 
 Only one kind of read is ever served from the cache: repos/{owner}/{repo}/contents/{path}?ref={commit} for a
-repository whose live metadata in this process said private: false, when a live recursive tree at that commit named
-the path's blob SHA. Entries are the verified blob bytes, named by that SHA. Every hit recomputes the Git blob hash
+repository whose live metadata in this process said private: false and visibility: public, when a live
+recursive tree at that commit named the path's blob SHA. Entries are the verified blob bytes, named by that SHA. Every hit recomputes the Git blob hash
 (sha1 of "blob <len>\\0<bytes>") and must equal the live tree's SHA; anything else is deleted and read live. Trees,
 metadata and every mutable read are always live. The cache is a convenience: any failure falls back to the live read.
 """
@@ -53,7 +53,7 @@ def active():
 class Cache:
     def __init__(self, directory):
         self.directory = directory
-        self.public = set()  # casefolded owner/repo whose live metadata said private: false
+        self.public = set()  # casefolded owner/repo whose live metadata said private: false, visibility: public
         self.blobs = {}  # (casefolded owner/repo, commit) -> {path: blob SHA} from a live, complete tree
         self._fd, self._checked = None, False
 
@@ -85,7 +85,9 @@ class Cache:
         match = METADATA.fullmatch(endpoint)
         if match:
             name = match[1].casefold()
+            # Both fields must agree: internal repositories report private: false with visibility: internal.
             public = (isinstance(value, dict) and value.get('private') is False and
+                      value.get('visibility') == 'public' and
                       isinstance(value.get('full_name'), str) and value['full_name'].casefold() == name)
             (self.public.add if public else self.public.discard)(name)
             return
@@ -253,7 +255,8 @@ def _open_directory(directory):
         raise ValueError('No dir_fd support: the cache is disabled')
     uid = os.getuid()
     # Resolve only the parent (legitimately symlinked homes); the leaf itself is opened with O_NOFOLLOW.
-    parent, leaf = os.path.realpath(os.path.dirname(os.path.abspath(directory))), os.path.basename(os.path.abspath(directory))
+    absolute = os.path.abspath(directory)
+    parent, leaf = os.path.realpath(os.path.dirname(absolute)), os.path.basename(absolute)
     current = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY)
     try:
         _check_ancestor(current, uid)

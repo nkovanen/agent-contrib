@@ -35,7 +35,7 @@ class ContentGitHub(FakeGitHub):
         value = super().request(endpoint)
         path = endpoint.split('?')[0]
         if path == 'repos/acme/photos':
-            value = dict(value, private=self.private)
+            value = dict(value, private=self.private, visibility='private' if self.private else 'public')
         elif '/git/trees/' in path:
             for entry in value['tree']:
                 entry['sha'] = blob(self.content(entry['path']))
@@ -205,7 +205,12 @@ class AllowlistTests(CacheTestCase):
         for name, metadata in {'unobserved': None, 'private': dict(fake.request('repos/acme/photos'), private=True),
                                'text false': dict(fake.request('repos/acme/photos'), private='false'),
                                'missing': {k: v for k, v in fake.request('repos/acme/photos').items() if k != 'private'},
-                               'other name': dict(fake.request('repos/acme/photos'), full_name='acme/other')}.items():
+                               'other name': dict(fake.request('repos/acme/photos'), full_name='acme/other'),
+                               # R10 diagnostic: contradictory metadata is not public.
+                               'internal': dict(fake.request('repos/acme/photos'), visibility='internal'),
+                               'visibility missing': {k: v for k, v in fake.request('repos/acme/photos').items() if k != 'visibility'},
+                               'visibility private': dict(fake.request('repos/acme/photos'), visibility='private'),
+                               'visibility case': dict(fake.request('repos/acme/photos'), visibility='Public')}.items():
             with self.subTest(name):
                 store = cache.Cache(str(self.root))
                 if metadata is not None:

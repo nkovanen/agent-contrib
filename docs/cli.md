@@ -502,7 +502,7 @@ status.
 
 - Only `repos/{owner}/{repo}/contents/{path}?ref={40-hex commit}` reads are
   served from it, and only for a repository whose live metadata earlier in the
-  same command said `"private": false`. Private, internal or unobserved
+  same command said both `"private": false` and `"visibility": "public"`. Private, internal or unobserved
   repositories always read live.
 - The expected Git blob SHA for the path comes from the **live** recursive tree
   read at that commit. Trees, metadata, issues, PRs, labels, permissions, branch
