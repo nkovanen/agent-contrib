@@ -267,6 +267,9 @@ class ClosedGitHub(SignalGitHub):
             if self.closed is None or (self.fail_closed_after is not None and self.closed_reads > self.fail_closed_after):
                 raise core.ProtocolError('api_error', 'GitHub read failed')
             return copy.deepcopy(self.closed)
+        if any(key in endpoint for key in self.failed):  # SignalGitHub answers issue listings before FakeGitHub checks
+            self.calls.append(endpoint)
+            raise core.ProtocolError('api_error', 'GitHub read failed')
         return super().request(endpoint)
 
 
@@ -366,12 +369,20 @@ class DiscoverResponsivenessTests(unittest.TestCase):
         self.assertEqual((report['repository'], report['endpoint']), ('acme/photos', CLOSED))
 
     def test_unresolved_discover_reports_unknown_without_reading(self):
+        # Review R3-06: a snapshot with a commit but a failed tree or instruction read is still incomplete.
+        for failure in ('/commits/main', '/git/trees/', '/contents/'):
+            with self.subTest(failure=failure):
+                client = ClosedGitHub(SAMPLE)
+                client.failed.add(failure)
+                result = core.discover('acme/photos', client, responsiveness=True)
+                report = result['repository_signals']['responsiveness']
+                self.assertEqual((result['complete'], report['complete'], report['value']), (False, False, 'unknown'))
+                self.assertNotIn(CLOSED, client.calls)
+        # A complete source snapshot is still reported when only the issue listing fails, as documented.
         client = ClosedGitHub(SAMPLE)
-        client.failed.add('/commits/main')
+        client.failed.add('issues?state=open')
         result = core.discover('acme/photos', client, responsiveness=True)
-        report = result['repository_signals']['responsiveness']
-        self.assertEqual((result['complete'], report['complete'], report['value']), (False, False, 'unknown'))
-        self.assertNotIn(CLOSED, client.calls)
+        self.assertEqual((result['complete'], result['repository_signals']['responsiveness']['value']), (False, 'measured'))
 
     def run_cli(self, client, *argv):
         output = io.StringIO()
