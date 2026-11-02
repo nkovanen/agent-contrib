@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import cli, core, drift
+from agent_contribute import cli, core, drift, textfmt
 from tests.test_authorization import candidate_task
 from tests.test_protocol import FakeGitHub, ready_contract
 
@@ -85,6 +85,48 @@ class DriftTests(unittest.TestCase):
         result = drift.drift(task, client)
         self.assertIn('stored_policy_sha256', result['policy'])
         self.assertFalse(result['policy']['changed'], result['policy'])
+
+    def test_source_tracker_switch_is_drift(self):
+        # R1-06: the fork disables Issues, so the same reference now resolves to the parent's tracker.
+        import copy
+        from tests.test_resolution import RepositoryGitHub
+        client = RepositoryGitHub()
+        client.metadata['person/photos']['has_issues'] = True
+        client.repos['person/photos'].policy = copy.deepcopy(client.repos['acme/photos'].policy)
+        task = core.prepare(core.inspect_issue('person/photos#12', client))
+        client.metadata['person/photos']['has_issues'] = False
+        result = drift.drift(task, client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertTrue(result['drifted'], 'a different source tracker is drift')
+        self.assertEqual((result['source']['stored_repository'], result['source']['current_repository']),
+                         ('person/photos', 'acme/photos'))
+        self.assertTrue(result['source']['changed'])
+        self.assertTrue(result['drifted'])
+        self.assertNotIn('stored_identity', result['source'], 'schema 0.1 stores no numeric identities')
+        self.assertIn('  - Source changed: person/photos -> acme/photos\n', textfmt.render('drift', result))
+
+    def test_schema_02_recreated_source_identity_is_drift(self):
+        task, client = candidate_task()
+        self.assertFalse(drift.drift(task, client)['drifted'])
+        client.metadata['id'] = 102  # same canonical name, new repository
+        result = drift.drift(task, client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertTrue(result['drifted'], 'a recreated repository is drift')
+        self.assertEqual(result['source']['stored_identity']['repository_id'], 101)
+        self.assertEqual(result['source']['current_identity']['repository_id'], 102)
+        self.assertIn('  - Source issue URL or repository/issue identity changed\n', textfmt.render('drift', result))
+        self.assertTrue(result['source']['changed'])
+        self.assertTrue(result['drifted'])
+
+    def test_schema_02_unresolved_source_identity_is_incomplete(self):
+        task, client = candidate_task()
+        issue = client.request('repos/acme/photos/issues/12')
+        client.overrides['repos/acme/photos/issues/12'] = dict(issue, repository_url='https://api.github.com/repos/x/y')
+        result = drift.drift(task, client)
+        self.assertFalse(result['complete'])
+        self.assertIn('Could not resolve current source identity: Issue ID or canonical repository URL is unresolved',
+                      result['errors'])
+        self.assertIsNone(result['source']['current_identity'])
 
     def test_issue_changing_between_reads_is_incomplete(self):
         task, client = ready_contract()

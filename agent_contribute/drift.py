@@ -39,6 +39,22 @@ def drift(task, client=None):
                        'current_components': components,
                        'component_baseline': 'unavailable: the contract stores one combined issue hash; '
                                              'per-component baselines need a future task schema'}
+    # A different tracker, issue URL or (0.2) numeric identity is a different source, even with equal content.
+    report['source'] = {'stored_repository': source['repository'], 'current_repository': live['repository'],
+                        'stored_issue_url': source['issue_url'], 'current_issue_url': live['issue_url']}
+    report['source']['changed'] = source['repository'] != live['repository'] or source['issue_url'] != live['issue_url']
+    if task['schema_version'] == '0.2':
+        from .authorization import issue_identity, repository_identity
+        report['source']['stored_identity'] = {key: source[key] for key in ('repository_id', 'owner_id', 'issue_id')}
+        try:
+            meta = repository_identity(live['repository'], client)
+            identity = {'repository_id': meta['id'], 'owner_id': meta['owner']['id'],
+                        'issue_id': issue_identity(live['repository'], source['issue'], client)['id']}
+        except core.ProtocolError as exc:
+            errors.append('Could not resolve current source identity: ' + str(exc))
+            identity = None
+        report['source']['current_identity'] = identity
+        report['source']['changed'] |= identity is not None and identity != report['source']['stored_identity']
     report['default_branch'] = {'stored_branch': source['default_branch'], 'current_branch': live['default_branch'],
                                 'stored_commit': source['commit'], 'current_commit': live['commit'],
                                 'advanced': source['commit'] != live['commit'],
@@ -75,7 +91,7 @@ def drift(task, client=None):
     live_urls = {item['url'] for item in current['duplicates']}
     report['overlap'] = {'added': sorted(live_urls - stored_urls), 'removed': sorted(u for u in stored_urls - live_urls if u),
                          'scope': 'open PRs in the source repository only'}
-    report['drifted'] = bool(report['issue']['changed'] or instructions['changed'] or policy['changed'] or
+    report['drifted'] = bool(report['source']['changed'] or report['issue']['changed'] or instructions['changed'] or policy['changed'] or
                              report['overlap']['added'] or report['default_branch']['stored_branch'] !=
                              report['default_branch']['current_branch'])
     report['errors'] = errors

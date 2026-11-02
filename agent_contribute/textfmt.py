@@ -100,6 +100,11 @@ def _drift(result):
     issue, branch = result.get('issue') or {}, result.get('default_branch') or {}
     instructions, policy, overlap = (result.get(key) or {} for key in ('instructions', 'policy', 'overlap'))
     reasons, info = [], []
+    source = result.get('source') or {}
+    if source.get('changed'):
+        stored, current = source.get('stored_repository'), source.get('current_repository')
+        reasons.append(f'Source changed: {line(stored, 100)} -> {line(current, 100)}' if stored != current else
+                       'Source issue URL or repository/issue identity changed')
     if issue.get('changed'):
         reasons.append('Issue content changed')
     if branch and branch.get('stored_branch') != branch.get('current_branch'):

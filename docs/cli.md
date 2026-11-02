@@ -348,6 +348,10 @@ not-yet-implemented design.
 `drift task.json` compares a schema-valid contract with the live source and
 never writes anything. It reports:
 
+- `source`: stored and current source repository and issue URL, and for 0.2
+  stored and current repository, owner and issue numeric IDs. Any difference,
+  such as a fork tracker switch or a recreated repository, is drift; an
+  unresolved 0.2 identity makes the report incomplete.
 - `issue`: whether the combined issue hash changed, stored and current
   `updated_at`, and the current title/body hashes, state, labels and assignees.
   Per-component baselines are unavailable because schemas 0.1 and 0.2 store one

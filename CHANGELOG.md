@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- `drift` reports a source repository or issue URL change, and for schema 0.2 a
+  changed repository, owner or issue numeric ID, as drift; an unresolved 0.2
+  identity makes the report incomplete (R1-06).
 - Schema 0.2 final sign-off expiry is checked at the current time after all
   GitHub reads, not at the start of `verify` (R1-05).
 - Require `--repo-dir` to be the Git worktree top level for `verify`,
