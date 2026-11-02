@@ -74,7 +74,9 @@ channel or runtime model provider is added.
   and lowers the score by 2 for each documented label group (on hold, needs a
   decision, not planned, major-version bucket) and for meta, tracking, roadmap
   or WIP titles, whose maintainer point is no longer counted (E-08, E-09).
-  Default discover output and ordering are unchanged.
+  Default discover output and ordering are unchanged. An offline regression
+  replays the dogfood-2 click, ripgrep and hono rankings; precision@5 is
+  unchanged on it (1/5, 1/5, 0/5).
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,

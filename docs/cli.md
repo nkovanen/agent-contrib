@@ -300,6 +300,14 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   maintainer author unless the title is meta-like, minus two per demotion,
   never below zero.
 
+`tests/test_ranking_eval.py` replays a frozen dogfood-2 snapshot (public titles,
+labels and signal inputs for click, ripgrep and hono, with human verdicts) and
+checks precision@5 and the ranks of known bad labelled or meta issues offline.
+The demotions move those issues out of the top ranks but do not raise
+precision@5 on that snapshot (click 1/5, ripgrep 1/5, hono 0/5 before and
+after): most remaining false candidates are design debates, already fixed or
+not this project's bug, with no label or title cue.
+
 Ordering stays exclusions first, then overlaps, then low success likelihood;
 only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
