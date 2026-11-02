@@ -43,7 +43,10 @@ format and command exit status. Help/version output is unchanged.
 
 `--repo-dir` must be the Git worktree top level. `verify`, `scope-check` and
 `evidence init` refuse a subdirectory or Git directory, because tree, index and
-untracked-file reads there would omit the rest of the checkout.
+untracked-file reads there would omit the rest of the checkout. They also refuse an
+index with assume-unchanged or skip-worktree entries, including any sparse
+checkout, because Git status and diff would hide changes to those files. The
+index is only read, never changed; clear the flags or use a full checkout.
 
 `agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
 and option of the installed version. Exit status is 0 when a command succeeds and

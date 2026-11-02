@@ -695,6 +695,15 @@ def require_worktree_root(directory):
         raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
 
 
+def require_plain_index(directory):
+    """Status and diff honor assume-unchanged and skip-worktree, so a flagged tracked file can change unseen.
+    ls-files -v tags such entries lowercase or S/s; anything but H fails closed. The index is never modified."""
+    entries = git_read(directory, 'ls-files', '-v', '-z').split('\0')
+    if any(entry and not entry.startswith('H ') for entry in entries):
+        raise ProtocolError('index_flags', 'Index hides tracked paths (assume-unchanged, skip-worktree or sparse '
+                            'checkout); use a full checkout without these flags')
+
+
 def current_head(directory):
     """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
     names when the current branch is unborn or deleted, so later reads use this object ID instead."""
@@ -757,6 +766,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence was not recorded from a clean worktree')
     try:
         require_worktree_root(directory)
+        require_plain_index(directory)
         head = current_head(directory)
         tree = git_read(directory, 'rev-parse', head + '^{tree}')
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:

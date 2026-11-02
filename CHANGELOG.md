@@ -2,6 +2,10 @@
 
 ## 0.3.0 — unreleased
 
+- `verify`, `scope-check` and `evidence init` fail closed with `index_flags`
+  when the index marks tracked paths assume-unchanged or skip-worktree
+  (including sparse checkouts), since status and diff would hide their changes
+  (R1-14). The index is never modified. This also hardens schema 0.1 `verify`.
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
 handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
