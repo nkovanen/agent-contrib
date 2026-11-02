@@ -228,6 +228,34 @@ class LocalCommitTests(unittest.TestCase):
         head = self.git('hash-object', '-t', 'commit', '-w', '--stdin', stdin=content)
         self.assertEqual(self.local(base, head)['commits'], [{'sha': head, 'signature_header': 'absent'}])
 
+    def raw_commit(self, extra_headers, message=b'message\n'):
+        self.git('init', '-q')
+        self.git('commit', '-q', '--allow-empty', '-m', 'base')
+        base, tree = self.git('rev-parse', 'HEAD'), self.git('rev-parse', 'HEAD^{tree}')
+        content = (f'tree {tree}\nparent {base}\nauthor A <a@e> 1 +0000\ncommitter A <a@e> 1 +0000\n'.encode()
+                   + extra_headers + b'\n' + message)
+        head = subprocess.run(['git', '-C', self.repo, 'hash-object', '-t', 'commit', '-w', '--stdin', '--literally'],
+                              input=content, capture_output=True, check=True).stdout.decode().strip()
+        return base, head
+
+    def test_carriage_returns_and_lookalikes_never_forge_a_header(self):
+        # Review R6-03: text-mode newline conversion turned a CR inside another header into a gpgsig line.
+        for name, headers in {'cr in extra header': b'x-note hello\rgpgsig FORGED\n',
+                              'cr in continuation': b'mergetag object x\n gpgsig IGNORE\rgpgsig FORGED\n',
+                              'continuation only': b'mergetag object x\n gpgsig not-a-header\n',
+                              'lookalike name': b'gpgsignature FORGED\n',
+                              'name without value': b'gpgsig\n'}.items():
+            with self.subTest(name):
+                base, head = self.raw_commit(headers)
+                self.assertEqual(self.local(base, head)['commits'], [{'sha': head, 'signature_header': 'absent'}])
+        base, head = self.raw_commit(b'x-note a\rb\ngpgsig -----BEGIN\n FORGED\n')
+        self.assertEqual(self.local(base, head)['commits'], [{'sha': head, 'signature_header': 'present'}])
+
+    def test_non_utf8_commit_is_read_as_bytes(self):
+        base, head = self.raw_commit(b'encoding ISO-8859-1\ngpgsig -----BEGIN\n \xe9\n', message=b'caf\xe9\n')
+        part = self.local(base, head)
+        self.assertEqual((part['complete'], part['commits']), (True, [{'sha': head, 'signature_header': 'present'}]))
+
     def test_over_the_cap_is_incomplete_not_truncated(self):
         base, head, _ = self.build((False, False, False))
         with patch.object(signatures, 'MAX_COMMITS', 2):
@@ -249,7 +277,7 @@ class LocalCommitTests(unittest.TestCase):
                                    'option-like base': ('--octopus', head)}.items():
             with self.subTest(name):
                 calls, real = [], core.git_read
-                with patch.object(core, 'git_read', lambda directory, *args: calls.append(args) or real(directory, *args)):
+                with patch.object(core, 'git_read', lambda directory, *args, **kw: calls.append(args) or real(directory, *args, **kw)):
                     result = observe(SignatureGitHub(ready_contract()[1], head=end),
                                      evidence={'git_head': end, 'base_commit': start}, repo_dir=self.repo)[0]
                 part = result['local_commits']
@@ -282,9 +310,9 @@ class LocalCommitTests(unittest.TestCase):
         calls = []
         real = core.git_read
 
-        def recording(directory, *args):
+        def recording(directory, *args, **kwargs):
             calls.append(args)
-            return real(directory, *args)
+            return real(directory, *args, **kwargs)
 
         with patch.object(core, 'git_read', recording):
             part = self.local(base, head)

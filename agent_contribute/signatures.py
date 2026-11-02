@@ -9,7 +9,7 @@ from urllib.parse import quote
 from . import core, remote
 
 MAX_COMMITS = 1000
-SIGNATURE_HEADERS = ('gpgsig ', 'gpgsig-sha256 ')
+SIGNATURE_HEADERS = (b'gpgsig ', b'gpgsig-sha256 ')
 # GitHub's documented commit verification reasons; anything else is reported as unrecognized, never echoed.
 REASONS = {'valid', 'unsigned', 'unknown_key', 'bad_email', 'unverified_email', 'no_user', 'expired_key',
            'not_signing_key', 'unknown_signature_type', 'malformed_signature', 'invalid', 'gpgverify_error',
@@ -92,7 +92,9 @@ def local_commits(directory, base, head):
         for sha in listed:
             if not core.SHA.fullmatch(sha):
                 raise core.ProtocolError('git_error', 'Git listed an invalid commit ID')
-            headers = core.git_read(directory, 'cat-file', 'commit', sha).split('\n\n', 1)[0].split('\n')
+            # Raw bytes with literal LF structure: headers end at the first empty line, and continuation lines
+            # (leading space) never start with a header name. No decoding and no CR conversion.
+            headers = core.git_read(directory, 'cat-file', 'commit', sha, raw=True).split(b'\n\n', 1)[0].split(b'\n')
             present = any(line.startswith(SIGNATURE_HEADERS) for line in headers)
             commits.append({'sha': sha, 'signature_header': 'present' if present else 'absent'})
     except core.ProtocolError as exc:
