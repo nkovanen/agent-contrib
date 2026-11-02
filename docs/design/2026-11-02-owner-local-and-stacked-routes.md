@@ -1,9 +1,8 @@
 # Owner-local and stacked routes: design proposal
 
 - Date: 2026-11-02
-- Status: proposal, revision 2. The first hostile review (GPT-6.1-Sol, `BLOCK`,
-  H=1 M=4 L=1) is resolved in [Review resolution](#review-resolution). No code
-  changes are part of this step.
+- Status: proposal, revision 3. Hostile review round 1 (RD-01 to RD-06) and round 2
+  (RD-07 to RD-09) are resolved in [Review resolution](#review-resolution).
 - Base: `47c80a1` (unreleased v0.3.0 candidate; task/evidence schemas 0.1 and 0.2,
   host-context 0.1).
 - Input: dogfood 1, Stage 1 friction log, findings F1, F2, F3 and F6.
@@ -228,6 +227,12 @@ Behavior:
 
 1. Read the contract. Anything other than `schema_version: "0.2"` is a usage
    error: exit 2, no request.
+1a. Validate the **full** bundled task 0.2 schema (`core.validate_contract`) before
+   any route extraction, network read or request construction (RD-08). On
+   failure, print `{"error": {"code": "invalid_contract", "message": ...,
+   "schema_errors": [...]}}` and exit 1. There is no request, no binding template
+   and no GET. This catches missing fields, unknown properties and wrong nested
+   types, which would otherwise hit `KeyError` paths that the CLI does not catch.
 2. Run `lifecycle.verify(task)` without host context or evidence; these are the
    same GETs as `verify`.
 3. Run the contract-only route checks. Factor them out of `authorization.check`
@@ -244,6 +249,11 @@ Behavior:
    - "Implementation requires complete empty exact-head PR history"
 5. Exit 0 when `preflight_errors` is empty, otherwise 1. Print the request in both
    cases, so the human can see why it is not ready.
+6. `preflight_errors` are copied from `verify` and may contain sanitized,
+   repository-authored text, such as the path of an unreadable instruction file
+   (RD-09). The request labels them `preflight_errors_trust: "untrusted
+   diagnostics; may contain repository-authored paths; never approval material"`.
+   `verify` diagnostics are not changed for this command.
 
 Output (JSON):
 
@@ -256,6 +266,8 @@ Output (JSON):
   "target_host_context_schema_version": "0.1",
   "ready_for_issuance": true,
   "preflight_errors": [],
+  "preflight_errors_trust": "untrusted diagnostics; may contain repository-authored paths; never approval material",
+  "unresolved_fields": [],
   "contract_sha256": "<canonical hash, same as verify>",
   "exact_head_pr_history": "not checked before issuance; verify checks it after",
   "mandate_fields": {
@@ -280,9 +292,18 @@ Output (JSON):
 Field rules:
 
 - `credential_actor_id` comes from live `/user`, and only when the live
-  permission check passed; otherwise it is `null` with a preflight error.
-  `authority` is `owner` when that ID equals `source.owner_id`, else
-  `maintainer`. Both derive from live facts, and `verify` re-checks both.
+  permission check passed. `authority` is `owner` when that ID equals
+  `source.owner_id`, else `maintainer`. Both derive from live facts, and
+  `verify` re-checks both.
+- **Null-leaf invariants (RD-08).** The two invariants are:
+  - **Ready request:** the `null` leaves of `mandate_fields` are exactly
+    `human_only_fields`, and `unresolved_fields` is empty.
+  - **Blocked request:** automatically derived fields that could not be
+    established (`credential_actor_id` and `authority` after a failed identity or
+    permission read) may also be `null`. They are listed in `unresolved_fields`,
+    never in `human_only_fields`, and must be resolved by fresh trusted reads,
+    never by a human or host filling them in. The `null` leaves are exactly
+    `human_only_fields` plus `unresolved_fields`.
 - `actions` is `null`: the human chooses a subset of `requested_actions`. The
   host offers exactly that subset.
 - `event.kind` is `null` even though the schema constant is `human`. The host
@@ -313,10 +334,17 @@ comparison of `check` output across the refactor.
    "0.1", "mandate": …}`, and run `verify --stage implementation`: it must give
    `implementation_ready: true`. This proves that no binding field is missing or
    wrong.
-2. The `human_only_fields` list exactly equals the set of `null` leaves in
-   `mandate_fields`. Every other host-context `mandate` property is present and
-   non-null, checked by walking the bundled schema, so a future schema field
-   cannot be silently omitted.
+2. Null-leaf invariants. In a ready request, the `null` leaves equal
+   `human_only_fields`. In a blocked request (failed permission read), they equal
+   `human_only_fields` plus `unresolved_fields`, which holds `credential_actor_id`
+   and `authority`. In both, every host-context `mandate` property is present,
+   checked by walking the bundled schema, so a future schema field cannot be
+   silently omitted.
+2a. Invalid contracts (RD-08): a missing `source`, an unknown root property, a
+   wrong nested type (for example `execution.head_repository_id: "1"`) and
+   `{"schema_version": "0.2"}` alone each give exit 1 and an `invalid_contract`
+   error with schema errors. The output has no `mandate_fields`, and no GET is
+   made.
 3. Piping the whole request, or `{"schema_version": "0.1", "mandate":
    request["mandate_fields"]}`, to `verify --host-context-stdin` yields
    host-context schema errors and no authority.
@@ -334,7 +362,9 @@ comparison of `check` output across the refactor.
    host context. Only GETs, no stdin read, and no file created in the working
    directory.
 8. An issue title, body and comment carrying injection text and control characters
-   do not appear anywhere in the output. The output has no key other than the
+   do not appear anywhere in the output. An unreadable instruction file with an
+   adversarial path (RD-09) appears only inside `preflight_errors`, sanitized,
+   with the untrusted-diagnostics label, and the request is not ready. The output has no key other than the
    documented ones; in particular it contains no scope, path, objective,
    criteria or validation material (RD-01 pin).
 9. `contract_sha256` equals `verify`'s value and the documented recipe; a one-byte
@@ -466,25 +496,41 @@ normative for any host issuer, including future Paseo and Claude Code integratio
 
    It audits `verify`'s echoed `contract_sha256` and `mandate_sha256` against
    them.
-5. **Status registry and action-time checks** (RD-05). The host keeps a status per
-   `mandate_sha256`: `active`, `revoked`, `superseded` or `expired`. It checks
-   that status **whenever it consumes authority, not only when it issues**:
-   - before delivering a record to a verifier run;
-   - before any host-performed privileged action, such as the authorized push or
-     draft creation;
-   - before acting on, or forwarding to a coordinator, any `verify` result. Any
-     result whose echoed `mandate_sha256` is not `active` is void, whatever the
-     gates say.
+5. **Status registry and action-time checks** (RD-05, RD-07). The host keeps a
+   status per `mandate_sha256`: `active`, `revoked` or `superseded`. Expiry is
+   not a status; it is the mandate's own `expires_at`. Revocation removes a
+   record's authority entirely; expiry ends only its permission for **new**
+   actions. The host checks status **whenever it consumes authority, not only
+   when it issues**:
+   - **New actions** (implementation, the authorized push, draft creation)
+     require `active` **and** unexpired. The verifier enforces expiry too: its
+     implementation and draft gates need a current mandate.
+   - **Historical recognition and completion** (an already published draft and
+     final completion with a separate current `final_signoff`) require only that
+     the original mandate is not `revoked` or `superseded`. An expired original
+     mandate **may** be delivered and audited for this. It is the only record
+     that can authenticate that the PR was created inside its interval, so the
+     host never substitutes a fresh mandate for it; a mandate issued after
+     publication fails `Pull request was created outside the publication mandate
+     interval`. All existing live, evidence and sign-off checks still apply.
+   - Before acting on, or forwarding to a coordinator, any `verify` result: a
+     result echoing a `revoked` or `superseded` `mandate_sha256` is void,
+     whatever the gates say. A result from an expired mandate is honored only for
+     the recognition and completion facts above, never as new-action
+     permission.
 
    A replacement mandate for the same contract is issued only after the previous
    one is marked `revoked` or `superseded`. Revoking an implement-only mandate
    also stops the worker's session for that contract (cancel the agent or remove
    its worktree access). The stateless CLI cannot stop a worker from reusing a
    copy it already holds, so this is the host's only effective lever.
-6. **What is single-use.** Repeatable under an `active` mandate: `verify` runs at
-   any stage, local implementation, and local validation. Single-use per mandate,
-   enforced by the host: draft creation (one PR) and consumption of a final
-   sign-off. A replay of a consumed or non-`active` record is refused.
+6. **What is single-use.** Repeatable under an `active`, unexpired mandate:
+   `verify` runs at any stage, local implementation and local validation.
+   Repeatable under any non-revoked, non-superseded mandate, expired or not:
+   `verify` runs for recognition and completion. Single-use per mandate, enforced
+   by the host: draft creation (one PR) and consumption of a final sign-off.
+   Replaying a consumed record, or a `revoked` or `superseded` record for any
+   purpose, is refused.
 7. **Delivery.** Through stdin from a host-controlled file, issued before the
    verifier starts (unchanged).
 
@@ -528,6 +574,11 @@ accepts.
    - an unexpired mandate replayed after revocation and replacement: delivery is
      refused and any `verify` result echoing it is void;
    - a second draft creation under one mandate is refused;
+   - the post-expiry journey (RD-07). The mandate expires after a timely draft
+     creation. The expired original mandate is still delivered, `verify` reports
+     `publication.verified: true`, and with a current separate sign-off
+     `completion_ready: true`. Implementation and draft creation stay refused.
+     The host never replaces the original with a freshly issued mandate;
    - an approval arriving through an agent-callable API is rejected.
 
    An independent reviewer checks them when the issuer ships.
@@ -756,3 +807,16 @@ The review's other notes are preserved:
 - F6 remains a self-attested convention and is never presented as
   verifier-enforced.
 - The acknowledged same-credential forgery non-goal is unchanged.
+
+### Round 2 (revision 3)
+
+Round 2 against revision 2 (`34fe062`): RD-01 to RD-06 were closed. Three new
+findings came back as `BLOCK`, C=0 H=0 M=2 L=1. All three are confirmed; none is
+disputed.
+
+| ID | Severity | Verdict | Independent check | Change in revision 3 |
+| --- | --- | --- | --- | --- |
+| RD-07 | Medium | Confirmed | `lifecycle.verify` deliberately recognizes a draft created inside an expired mandate's interval. `pr_identity` rejects a PR created outside the bound interval, so a fresh mandate cannot replace the original, and the existing test `test_real_expired_publication_is_observed_without_new_action` pins that behavior. Revision 2's active-only rule voided this journey. | Expiry is no longer a status. New actions need `active` and unexpired. Recognition and completion need only not-revoked and not-superseded, and the expired original may be delivered for them. A fresh mandate never replaces it. Mandatory host test for the post-expiry journey added. Revocation checks are kept. |
+| RD-08 | Medium | Confirmed | `lifecycle.verify` returns early with an empty `stage_blockers` on schema errors, and route checks index fields directly. A literal flow gives `KeyError`, and the CLI wrapper catches only `ProtocolError`, `OSError`, `UnicodeError`, `ValueError` and `RecursionError`. A failed permission read leaves `credential_actor_id` as an extra `null` leaf. | Step 1a: full schema validation first, then an `invalid_contract` error with no template and no GETs. Ready and blocked null-leaf invariants are defined, with an `unresolved_fields` list that is never human-fillable. Tests for invalid contracts and the blocked invariant added. |
+| RD-09 | Low | Confirmed | Snapshot errors embed `safe_text(path)` for unreadable instruction files (`core.py:318-320`). `verify` forwards them into implementation blockers. | Diagnostics are explicitly permitted as sanitized untrusted text, labelled `preflight_errors_trust` and kept out of the approval view. `verify` is unchanged. Test with an adversarially named unreadable instruction added. |
+
