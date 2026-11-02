@@ -49,6 +49,17 @@ class DocsConsistencyTests(unittest.TestCase):
         readme = (ROOT / 'README.md').read_text('utf-8')
         self.assertLess(readme.index(path_entry), readme.index('agent-contrib skill --output'))
 
+    def test_ranking_and_compatibility_claims_are_qualified(self):
+        readme = (ROOT / 'README.md').read_text('utf-8')
+        changelog = (ROOT / 'CHANGELOG.md').read_text('utf-8')
+        for text in (readme, changelog):
+            self.assertNotRegex(text, r'never change a gate, approval or\s+ordering')
+            self.assertNotRegex(text, r'change no gate, approval or ordering')
+            self.assertRegex(text, r'`--signals`\s+re-ranks')
+        for name in ('README.md', 'docs/architecture.md'):
+            self.assertIn('CHANGELOG.md#compatibility-notes', (ROOT / name).read_text('utf-8'))
+        self.assertNotIn('Default `discover` output and read order are frozen by goldens and unchanged', changelog)
+
     def test_relative_links_resolve(self):
         for path in DOCS:
             for target in re.findall(r'\]\(([^)#\s]+)(?:#[^)]*)?\)', path.read_text('utf-8')):

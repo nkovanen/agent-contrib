@@ -4,8 +4,9 @@
 
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
-handling. Schema 0.1 contracts keep their decisions; every 0.1 behaviour change
-is listed under "Compatibility notes". No GitHub write API, merge, release
+handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
+every 0.1 behaviour change, including fail-closed hardening and message
+changes, is listed under "Compatibility notes". No GitHub write API, merge, release
 channel or runtime model provider is added.
 
 ### Added
@@ -55,7 +56,9 @@ channel or runtime model provider is added.
   and (0.2) numeric identities. It never rewrites the contract.
 - Multi-repository `discover` (#13) for 2–20 repositories with isolated results
   and a merged candidate order; a single repository's output is unchanged.
-- Report-only options that change no gate, approval or ordering:
+- Optional reports that grant no approval or authority and change no readiness
+  gate. `--signals` re-ranks candidates by its score after exclusions,
+  overlaps and low likelihood; the others leave ordering unchanged:
   `discover --signals` (#12; code location including unique dotted and `::`
   module names, clarity, activity, author association), `discover
   --responsiveness` (#12; one read of recently closed PRs), `inspect
@@ -138,7 +141,9 @@ channel or runtime model provider is added.
     evidence `base_commit` stays a full SHA, so 0.1 `verify` is unaffected.
   - Lifecycle options (`--stage`, `--host-context-stdin`) are rejected for 0.1
     contracts rather than reinterpreted.
-- Default `discover` output and read order are frozen by goldens and unchanged.
+- Default `discover` read sequence and output structure are pinned by goldens.
+  Individual values can still differ where listed above: heuristic overlap
+  reasons and malformed-input completeness.
 
 ## 0.2.0 — 2026-11-01
 

@@ -58,7 +58,9 @@ at the tested commit. Every other overlap remains. Draft-stage success reports
 whether to create or simply return the existing verified draft; completion still
 requires final human sign-off. No draft-update lifecycle is implemented.
 
-The old schemas and evaluator retain their behavior. The new mode does not
+The old schemas and evaluator keep their formats and route meaning, apart from
+the hardening and message changes in the
+[compatibility notes](../CHANGELOG.md#compatibility-notes). The new mode does not
 change the label approval policy or reinterpret a legacy task. Full details are
 in [host authorization](host-authorization.md) and the installed workflow.
 

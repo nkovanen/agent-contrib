@@ -146,9 +146,12 @@ agent-contrib verify task.json --evidence evidence.json --repo-dir ./checkout
 | `skill` | Export the canonical Skill file |
 
 v0.2.0 has `discover`, `inspect`, `prepare`, `verify`, `instructions` and
-`skill`; the other commands are new in the v0.3.0 candidate. Report-only options never change a gate, approval or
-ordering: `discover --signals`, `discover --responsiveness`, `inspect
---ownership`, `inspect --ai-policy`, `verify --observe-ci` and `--report-budget`.
+`skill`; the other commands are new in the v0.3.0 candidate. Optional reports
+never grant approval or authority and never change a readiness gate:
+`discover --signals`, `discover --responsiveness`, `inspect --ownership`,
+`inspect --ai-policy`, `verify --observe-ci` and `--report-budget`. `--signals`
+re-ranks candidates by its score after exclusions, overlaps and low likelihood;
+the others leave ordering unchanged.
 Put `--format text` before the command for an abridged summary; JSON is
 canonical. Exit status: 0 when the command's gate passes, 1 when it does not or
 a read is incomplete, 2 for usage errors. An exit code is never authorization.
@@ -185,8 +188,10 @@ The small [skill](agent_contribute/adapters/agent-contribute/SKILL.md) loads the
 workflow with `agent-contrib instructions` and holds no repository-specific
 rules. Both ship in one package with no Python runtime dependencies, hosted
 service or required model provider. CLI 0.3.0 supports task and evidence schemas
-0.1 and 0.2 and host-context 0.1; unknown versions fail closed and 0.1 contracts
-keep their decisions. [Architecture](docs/architecture.md) has the details.
+0.1 and 0.2 and host-context 0.1; unknown versions fail closed. Schema 0.1
+formats are unchanged and its routes keep their meaning, apart from the
+hardening and message changes in the
+[compatibility notes](CHANGELOG.md#compatibility-notes). [Architecture](docs/architecture.md) has the details.
 
 ## Development
 
