@@ -16,10 +16,8 @@ MARKERS = {'checklist': re.compile(r'(?m)^[ \t]{0,8}[-*] \[[ xX]\]'),
            'reproduction steps': re.compile(r'(?i)\b(steps to reproduce|to reproduce|reproduction)\b'),
            'code block': re.compile(r'```')}
 MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
-# One unbounded character class: each match is the complete run, so a token is never cut short. The
-# lookbehind and MODULE_CONTINUES leave dotted names inside paths to the path matcher.
-MODULE_TOKEN = re.compile(r'(?<![A-Za-z0-9_./\\:-])[A-Za-z_][A-Za-z0-9_.:]*')
-MODULE_CONTINUES = re.compile(r'[A-Za-z0-9_./\\:-]')
+# One unbounded class: each match is a complete run, never cut short. module_hint validates the segments.
+MODULE_TOKEN = re.compile(r'[\w.:]+')
 MODULE_SEPARATOR = re.compile(r'::|\.')
 MAX_SEGMENTS = 16
 MAX_TOKEN = 300
@@ -52,6 +50,11 @@ def module_index(paths):
                 if len(suffix) <= MAX_TOKEN:
                     index[suffix] = path if index.get(suffix, path) == path else AMBIGUOUS
     return index
+
+
+def _adjoins(char):
+    """A neighbour that would extend an identifier (including marks \\w misses) or place the token in a path."""
+    return bool(char) and (char in './\\:-' or ('a' + char).isidentifier())
 
 
 def module_hint(token, index):
@@ -95,8 +98,8 @@ def location_hints(text, paths):
     if len(hints) < MAX_HINTS:
         index = None
         for found in MODULE_TOKEN.finditer(text, 0, SCAN_LIMIT):
-            # A continuation means a path, or a token cut by the scan limit: refuse partial tokens.
-            if MODULE_CONTINUES.match(text, found.end()):
+            # Refuse partial tokens: inside a longer identifier or path, or cut by the scan limit.
+            if _adjoins(text[found.start() - 1:found.start()]) or _adjoins(text[found.end():found.end() + 1]):
                 continue
             token = found.group().rstrip('.:')
             if '.' not in token and '::' not in token:

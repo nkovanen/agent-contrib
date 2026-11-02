@@ -185,7 +185,8 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   never falls back to a shorter prefix. Single names (`signals`), names inside
   paths, names of more than 16 segments, modules longer than 300 characters and
   a name cut off by the 64 KiB scan limit are not resolved; a name is never
-  shortened to fit.
+  shortened to fit. Identifiers are read whole, including non-ASCII ones, so
+  `pkg.mod` inside `äpkg.mod` is not resolved on its own.
   Path and file-name matches come first and the same limit of 20 applies.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
   expected/actual sections, reproduction steps and code blocks.

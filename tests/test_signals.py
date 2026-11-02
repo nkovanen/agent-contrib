@@ -185,6 +185,15 @@ class ModuleNameTests(unittest.TestCase):
         self.assertEqual(self.hints(' ' * 65536 + 'a.b', ['a/b.py']), [], 'text past the scan limit')
         self.assertEqual(self.hints('pkg.mod-extra', MODULE_PATHS), [])
 
+    def test_unicode_identifiers_are_read_whole(self):
+        # Review R3-03: ASCII-only boundaries resolved the pkg.mod tail of äpkg.mod to an unrelated file.
+        self.assertEqual(self.hints('äpkg.mod', ['pkg/mod.py', 'äpkg/mod.py']), ['äpkg/mod.py'])
+        self.assertEqual(self.hints('Fehler in päck.mod', ['päck/mod.py']), ['päck/mod.py'])
+        self.assertEqual(self.hints('«pkg.mod»', ['pkg/mod.py']), ['pkg/mod.py'])
+        for text in ['xäpkg.mod', 'e\u0301pkg.mod', 'pkg.mod\u0301x', '\u0663pkg.mod', '1pkg.mod']:
+            with self.subTest(text=text):
+                self.assertEqual(self.hints(text, ['pkg/mod.py', 'äpkg/mod.py']), [])
+
     def test_modules_inside_paths_are_left_to_the_path_matcher(self):
         self.assertEqual(self.hints('docs/pkg.mod and C:\\x\\pkg.mod and pkg.mod/extra and pkg-pkg.mod'), [])
 
