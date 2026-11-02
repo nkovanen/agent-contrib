@@ -1,7 +1,8 @@
 # Reviewed overlap dispositions (#7): design proposal
 
 - Date: 2026-11-02
-- Status: proposal for hostile review. No code is part of this step.
+- Status: proposal, revision 2. Hostile review RO-01 to RO-06 is resolved in
+  [Review resolution](#review-resolution). No code is part of this step.
 - Base: `rsi/v03-land` at `44bf2d5` (unreleased v0.3.0 candidate: task/evidence
   schemas 0.1 and 0.2, host-context 0.1).
 - Issue: [#7](https://github.com/nkovanen/agent-contrib/issues/7), product-map key B3.
@@ -12,14 +13,29 @@ A human or trusted host may record, for one schema 0.2 contract, that a specific
 **topical** overlap with a specific open PR is `unrelated`. The record goes in a
 new optional host-context section, `overlap_dispositions`. It carries its own
 event, nonce and interval, and is bound to the contract hash, the mandate hash and
-the credential actor. Each entry pins the PR's repository and PR IDs, number, head
-SHA, `updated_at`, a hash of its title, body and refs, and the exact match reason.
+the credential actor. Each entry pins:
 
-`verify` re-reads each disposed PR and recomputes the match from that fresh copy.
-It waives the overlap only if every bound fact still holds and the match is still
-the same topical one. Anything else re-blocks: a direct issue reference, a new or
-changed match, any PR edit, a push or state change, an incomplete scan, an expired
-or invalid record, or a different contract or mandate.
+- the PR's repository and PR IDs, number and author;
+- its head repository and head SHA, state and draft flag;
+- a hash of its title, body and refs, and `updated_at`;
+- the exact match reason;
+- the identity and hash of the immutable code comparison the human reviewed.
+
+`verify` re-reads every disposed PR, reconciles each read with the open-PR scan,
+and recomputes the match from the fresh copy. It waives the overlap only when all
+of these hold:
+
+- every bound observation is still equal;
+- the match is still the same topical one;
+- the PR is not authored by the bound credential actor;
+- the record is unexpired after all blocking reads.
+
+Anything else re-blocks: a direct issue reference, including one first seen in
+the fresh read; a new or changed match; a change to any bound observation; an
+incomplete scan or failed read; an expired or invalid record; or a different
+contract or mandate. The guarantee is equality of these enumerated observations.
+`updated_at` is an extra conservative check, not a complete history of past
+events.
 
 Schema 0.1 and host-context 0.1 are unchanged. Host-context gains an exact new
 version `0.2`, which is 0.1 plus this optional section; unknown versions still
@@ -84,14 +100,15 @@ What blocks today, and what this design changes:
 | # | Actor and attack | Required property |
 | --- | --- | --- |
 | T1 | **The worker launders a real conflict**: it writes or edits a disposition, or presents an "unrelated" summary to the human. | Only a human or trusted host issues dispositions, with the same event, nonce and hash discipline as the mandate. The host derives what the human sees from its own fresh PR read, never from a worker summary (RD-01 rule). `verify` echoes the record hash for audit. Same-credential forgery stays the documented non-goal. |
-| T2 | **A hostile PR author changes the PR after review**: retitles it, edits the body to "fixes #12", pushes code, force-pushes back to the same SHA, reopens it, or turns a draft ready. | Bind head SHA, `updated_at`, state, and a hash of title, body, head ref and base ref. Recompute the match from the fresh read. A new direct reference is never waivable. Any edit or push changes `updated_at` or the SHA and re-blocks. |
+| T1b | **A hostile PR author writes a misleading description** (RO-01): a truthful API response whose title and body describe something unrelated while the code implements the issue, or a branch that changes while the human opens a diff link. | The human must review the **actual code**: an immutable comparison identified by full commit SHAs (merge base to bound head), retained by the host with the event. The record binds the comparison's base and head SHAs and the hash of the retained material. Missing or truncated comparison material means the host must not issue. No automatic conflict analyzer is claimed. |
+| T2 | **A hostile PR author changes the PR after review**: retitles it, edits the body to "fixes #12", pushes code, turns a draft ready, retargets the base or reopens it. | Bind and compare explicitly: head SHA, head repository ID, state, `draft`, base ref, a hash of title, body and refs, and the author. Recompute the match from the fresh read; a new direct reference is never waivable. `updated_at` equality is an **extra** conservative check. GitHub does not document that every event bumps it, and same-second ABA changes can leave it equal (RO-02). The guarantee is limited to the enumerated observations. |
 | T3 | **A stale disposition**: the issue changes, the contract is re-prepared, or the mandate is re-issued. | Bind `contract_sha256` and `mandate_sha256`; the issue is already bound through the contract. |
 | T4 | **Replay across tasks, repositories or PRs**. | Bind the repository ID, PR ID and number, the contract and mandate hashes, and the credential actor ID. Each entry covers exactly one PR. |
-| T5 | **Waiver by omission**: an incomplete scan, an unread page, or a PR that failed to read. | A disposition never covers an unknown. An incomplete live scan or any failed detail read leaves the entry blocking. |
+| T5 | **Waiver by omission**: an incomplete scan, an unread page, a PR that failed to read, or a disposed PR that left the scan but is direct in the detail read (RO-03). | A disposition never covers an unknown. Every disposed PR is read and reconciled with the scan. An incomplete scan, a failed detail read, or a contradiction between list and detail blocks. A direct or topical match first seen in the detail read becomes a blocker. |
 | T6 | **Scope creep**: one disposition hides new or other matches. | A waiver applies only to entries whose recomputed reason equals the bound reason, for that PR. New PRs, and new reasons on the same PR, block. |
-| T7 | **The disposition outlives human attention**. | Its own interval, at most 24 hours, and checked whenever it is applied. Expiry re-blocks instead of failing silently. Because it is a separate section, a host can re-issue it without touching the mandate. |
-| T8 | **Read amplification by a hostile repository with many matches**. | At most 20 entries per record, and one GET per entry, only when a record is supplied. |
-| T9 | **The worker relabels the agent's own earlier draft as unrelated**. | Own drafts normally reference the issue directly, so they are not waivable. Exact-head recognition (#3) and draft updates (#21) stay the only routes. |
+| T7 | **The disposition outlives human attention**, including expiring during slow reads (RO-05). | Its own interval, at most 24 hours. Expiry is judged with a fresh clock after all blocking reads, before any waiver-dependent gate, as is already done for final sign-off. Expiry re-blocks. Because it is a separate section, a host can re-issue it without touching the mandate. |
+| T8 | **Read amplification by a hostile repository with many matches**. | At most 20 entries per record, and one logical GET per disposed PR (deduplicated), only when a record is supplied. The transport retries a transient failure up to three times with 30-second timeouts, so the worst case adds about 31 minutes. This is documented, and it is why expiry is rechecked after the reads. |
+| T9 | **The worker relabels the agent's own earlier draft as unrelated** (RO-04). | Enforced, not assumed: a PR authored by the bound credential actor is **never** waivable. This also refuses legitimate earlier human PRs from that account, deliberately. Exact-head recognition (#3) and draft updates (#21) stay the only routes for the agent's own work. |
 
 Schema 0.1 has no host-context channel, and this design adds none. Under 0.1 a
 "disposition" could only be worker-editable contract data, which T1 forbids.
@@ -140,18 +157,31 @@ dispositions later by re-wrapping the same issued mandate as 0.2.
       "type": "array", "minItems": 1, "maxItems": 20,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["repository_id", "pr_number", "pr_id", "disposition", "match_reason",
-                     "pr_state", "head_sha", "updated_at", "content_sha256", "rationale"],
+        "required": ["repository_id", "pr_number", "pr_id", "author_id", "disposition",
+                     "match_reason", "pr_state", "draft", "head_repository_id", "head_sha",
+                     "updated_at", "content_sha256", "comparison", "rationale"],
         "properties": {
           "repository_id": {"type": "integer", "minimum": 1},
           "pr_number": {"type": "integer", "minimum": 1},
           "pr_id": {"type": "integer", "minimum": 1},
           "disposition": {"const": "unrelated"},
           "match_reason": {"type": "string", "minLength": 1, "maxLength": 2000},
+          "author_id": {"type": "integer", "minimum": 1},
           "pr_state": {"const": "open"},
+          "draft": {"type": "boolean"},
+          "head_repository_id": {"type": "integer", "minimum": 1},
           "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
           "updated_at": {"type": "string", "minLength": 1, "maxLength": 100},
           "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "comparison": {
+            "type": "object", "additionalProperties": false,
+            "required": ["base_sha", "head_sha", "material_sha256"],
+            "properties": {
+              "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+              "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+              "material_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          },
           "rationale": {"type": "string", "minLength": 1, "maxLength": 2000}
         }
       }
@@ -181,7 +211,21 @@ Definitions:
   The host computes it from its own read.
 - `match_reason` is the exact topical reason string `verify` produces today.
 - `updated_at` is GitHub's string, compared exactly. The RFC 3339 parser
-  validates its shape; values are not normalized.
+  validates its shape; values are not normalized. It is an extra conservative
+  check, not an event counter.
+- `comparison` identifies the code the human reviewed. It holds:
+  - `base_sha`, the merge base of the PR's base and head, as reported by
+    `GET repos/{source}/compare/{base.sha}...{head.sha}`;
+  - `head_sha`, which must equal the entry's `head_sha`;
+  - `material_sha256`, the SHA-256 of the exact comparison material the host
+    showed and retained (file list and patch).
+
+  The CLI checks that `comparison.head_sha` equals the bound and live head. It
+  cannot verify the retained material: that is host evidence for audit. A base
+  branch that moves forward without a head change leaves the merge base, and so
+  the reviewed comparison, unchanged; any head change re-blocks.
+- `author_id` is the PR's `user.id` and `head_repository_id` its `head.repo.id`.
+  A `null` head repository (deleted fork) cannot be bound and is not waivable.
 - Event binding and record hash follow the existing recipe:
   `event.binding_sha256` is computed over the section without that field, and
   `overlap_dispositions_sha256` is the canonical hash of the complete section.
@@ -206,44 +250,62 @@ The steps, in order:
 1. **Section checks.** If the host context has `overlap_dispositions`, check:
    - the schema (above);
    - `event.binding_sha256`;
-   - the interval: positive, at most 24 hours, not issued in the future, and
-     unexpired **now**;
+   - the interval: positive, at most 24 hours and not issued in the future (its
+     expiry is decided in step 7);
    - `contract_sha256` equals the current contract hash;
    - `mandate_sha256` equals the supplied mandate's hash, and the mandate is
      `historical_valid`;
    - `credential_actor_id` equals the live credential actor;
    - `(repository_id, pr_number)` is unique across entries;
    - every `repository_id` equals `source.repository_id`;
+   - no entry's `author_id` equals `credential_actor_id`;
+   - each `comparison.head_sha` equals the entry's `head_sha`;
    - `id`, `nonce` and `event.reference` differ from the mandate's and from any
      `final_signoff`'s (a distinct human event).
 
    Any failure gives `overlap_dispositions.status: "invalid"` with errors, and
    **nothing is waived**. Mandate gates are not otherwise affected.
-2. **Candidate entries.** These are the live duplicates plus the prepared
-   duplicates whose `repository` is the source and whose `number` has a
-   disposition entry. Everything else stays blocking unchanged.
-3. **Preconditions per candidate.** All must hold:
-   - the live discovery is `complete`, and so is the open-PR scan;
-   - the candidate's reason does not equal `Explicit reference to this issue`,
-     and starts with the topical prefix;
-   - every live and prepared entry for that PR number has the same reason, and
-     it equals `match_reason`.
-4. **Fresh read.** Make one `GET repos/{source}/pulls/{n}` per disposed PR, with
-   strict shape checks (reusing `pr_identity` field validators). Require all of:
+2. **Read every disposed PR.** For each distinct `(repository_id, pr_number)` in
+   the record, whether or not the scan matched it, make one
+   `GET repos/{source}/pulls/{n}` with strict shape checks (reusing the
+   `pr_identity` field validators). A failed or malformed read adds the blocker
+   `Overlap disposition read failed for PR #N`.
+3. **Recompute** the finding from each detail:
+   `duplicate_prs(source, current_issue, index_prs([detail]))`. The result is
+   no match, one direct finding or one topical finding.
+4. **Reconcile with the scan** (live and prepared entries for the same source
+   PR number). Each case gives one of these outcomes:
+   - **Direct in the detail** (even if absent from the list): the PR blocks with
+     `Explicit reference to this issue (observed in disposition read)`. It is
+     added to `blocking_duplicates`, and to `duplicates` with `observed_in:
+     "disposition_read"`.
+   - **Topical in the detail, absent from the list**, or **in the list but no
+     match in the detail**: a list/detail contradiction. It blocks with
+     `Overlap scan and disposition read disagree for PR #N`.
+   - **Topical in both**: the PR is a waiver candidate.
+   - **No match in both, and no prepared entry**: the entry is `unused`
+     (informational). That is only established after this read.
+5. **Waiver candidate checks.** All must hold:
+   - the live discovery and its open-PR scan are `complete`;
+   - every live and prepared entry for the PR has the same reason; it equals the
+     detail's recomputed reason and `match_reason`, and is not the direct reason;
    - `id == pr_id`, `number == pr_number`, and
      `base.repo.id == repository_id == source.repository_id`;
    - the canonical `html_url`;
-   - `state == "open"`, `head.sha == head_sha` and `updated_at == updated_at`;
-   - the recomputed content hash equals `content_sha256`.
-5. **Recompute the match** from that same object:
-   `duplicate_prs(source, current_issue, index_prs([detail]))`. This must give
-   exactly one finding: topical, with a reason equal to `match_reason`. A direct
-   reference found now, such as an edited body, makes the entry non-waivable.
-6. **Result.** A candidate that passes is moved to `waived_duplicates`. A
-   candidate that fails stays blocking, and its specific error is added, for
-   example `Overlap disposition stale for PR #2: updated_at`. Disposition entries
-   that match no current candidate are listed in `unused`; they waive nothing
-   and are not an error.
+   - `user.id == author_id`, which is not the credential actor;
+   - `state == "open"`, `draft` equal, `head.repo.id == head_repository_id`, and
+     `head.sha == head_sha`;
+   - `updated_at` equal;
+   - the content hash equal.
+
+   A failure leaves the PR blocking with its specific error, for example
+   `Overlap disposition stale for PR #2: draft`.
+6. **Remaining reads.** Evidence, publication and other reads continue as today.
+7. **Expiry, after all blocking reads** (RO-05). Using a fresh clock, as for the
+   final sign-off (`lifecycle.py:225-227`), decide whether the record is still
+   unexpired. Only then move candidates into `waived_duplicates` and compute the
+   gates. An expired record waives nothing and adds `Overlap disposition record
+   expired`.
 
 The waiver feeds the existing lists. Only the unwaived list drives:
 
@@ -253,11 +315,12 @@ The waiver feeds the existing lists. Only the unwaived list drives:
 
 `result['duplicates']` still lists every live match. The PR is never hidden.
 
-New `verify` output keys (schema 0.2 only; additions, no existing key changes):
+New `verify` output keys (schema 0.2 only). These are additions; existing keys
+change only by gaining entries observed in a disposition read:
 
 ```json
 "overlap_dispositions": {
-  "status": "absent | valid | invalid",
+  "status": "absent | evaluated | invalid",
   "trust": "host-asserted",
   "sha256": "<hash or null>",
   "errors": [],
@@ -271,6 +334,11 @@ New `verify` output keys (schema 0.2 only; additions, no existing key changes):
 
 `next_action`, the gates and exit codes follow the unwaived lists. If no section
 is supplied, every result is byte-identical to today's.
+
+**Text output** (RO-06). Whenever a waiver was applied, `--format text verify`
+adds a line such as `Overlaps waived by host disposition (host-asserted): 1 -
+PR #2; see JSON overlap_dispositions`. It also shows the disposition status and
+its errors, so a green gate never hides the exception that made it green.
 
 ### Commands that take no host context
 
@@ -295,16 +363,31 @@ never a waiver.
   section.
 - **`docs/host-authorization.md`, host issuer requirements:**
   - the host reads the PR itself and shows the human its title, body, head and
-    base refs, state and the match reason (rendered as data);
-  - it links the human to the PR diff;
-  - it computes `content_sha256`, `head_sha` and `updated_at` from that read;
+    base refs, state, draft flag, author and the match reason (rendered as data);
+  - it shows the actual code (RO-01): it fetches
+    `compare/{base.sha}...{head.sha}` for the bound head and presents the full
+    file list and patch as retained material, identified by its merge base and
+    head SHAs. A mutable diff link is not enough. If the comparison is truncated
+    (GitHub caps files and patch size) or unavailable, it does not issue;
+  - it retains that exact material with the event, and records its hash as
+    `comparison.material_sha256`;
+  - it computes every bound field from its own reads;
+  - it refuses PRs authored by the credential actor;
   - the event text includes the nonce and the PR number;
   - the record is kept in the same status registry as mandates; a `revoked` or
     `superseded` record waives nothing;
   - re-issuing after a PR changes is a new human event.
 
-  Mandatory host tests: a forged summary, and a PR edited between review and
-  issuance.
+  Mandatory host tests:
+  - a forged summary;
+  - a PR edited between review and issuance;
+  - a truthful API response whose description misleads about its code;
+  - a branch pushed while the human reviews, where the record must bind the
+    reviewed head;
+  - a truncated comparison, which must not issue.
+
+  These requirements ship **with or before** the waiver evaluation (slice 3), never
+  after it.
 - `docs/cli.md`, `README.md` (current limits) and `docs/product-map.md` (B3 moves
   to partly implemented once shipped) are updated.
 
@@ -315,7 +398,8 @@ never a waiver.
 | Task 0.1, any route | unchanged; host context rejected | unchanged |
 | Task 0.2 with host-context 0.1 | current decisions | byte-identical (golden-pinned) |
 | Task 0.2 with host-context 0.2, no `overlap_dispositions` | unknown version, fail closed | same decisions as 0.1, plus `overlap_dispositions.status: "absent"` |
-| Task 0.2 with host-context 0.2 and a valid section | n/a | the matching topical overlaps are waived; all else unchanged |
+| Task 0.2 with host-context 0.2 and a section, after slice 1 only | n/a | parsed and hashed, `status: "not_evaluated"`; **nothing waived**; gates unchanged |
+| Task 0.2 with host-context 0.2 and a valid section, after slice 3 | n/a | matching topical overlaps are waived; newly observed direct matches and contradictions block; all else unchanged |
 | Host-context 0.1 containing `overlap_dispositions` | schema error | schema error |
 | Unknown host-context version | fail closed | fail closed |
 | Older CLI given host-context 0.2 | n/a | fails closed (unknown version) |
@@ -332,11 +416,18 @@ binding.
    - implementation is ready;
    - after publication, completion is no longer blocked by PR #2;
    - `duplicates` still lists #2, and `waived` shows it with provenance.
-2. **Each bound field changing re-blocks**, each with its specific error: title
-   (also changes the reason), body, head ref, base ref, head SHA, `updated_at`
-   only (for example a comment), state closed, draft-to-ready (via
-   `updated_at`), `pr_id`, `repository_id`, `pr_number`, and `html_url`
-   non-canonical.
+2. **Each bound field changing re-blocks**, each with its specific error:
+   - title (also changes the reason), body, head ref, base ref;
+   - head SHA, head repository ID (and a `null` head repository);
+   - `draft` alone, with an **unchanged** `updated_at` (RO-02);
+   - `updated_at` alone;
+   - state closed;
+   - author, `pr_id`, `repository_id`, `pr_number`;
+   - a non-canonical `html_url`.
+
+   **ABA:** a field changed and restored, with every field and `updated_at`
+   equal again, is waived. This pins that the guarantee covers current observed
+   equality, not history.
 3. **Direct references are never waivable:**
    - a disposition for a PR whose body says `fixes #12`, `owner/repo#12`, the
      issue URL, `GH-12` or a branch `12-fix`;
@@ -348,6 +439,19 @@ binding.
    entry re-blocks. The live and prepared reasons differ, which re-blocks.
 5. **Scope.** A second, undisposed topical PR still blocks. A new PR opened after
    review still blocks. The disposition for #2 never affects #3.
+5a. **Reconciliation** (RO-03):
+   - not matched in the list, but direct in the detail: blocks, and the PR is
+     listed in `duplicates` with `observed_in`;
+   - not matched in the list, but topical in the detail: contradiction, blocks;
+   - topical in the list, no match in the detail: contradiction, blocks;
+   - a detail read failure for an `unused` candidate: blocks;
+   - a PR in both live and prepared entries is read once (one GET).
+5b. **Own work** (RO-04): a PR whose author is the credential actor, on a
+   different branch and with no issue reference, is a schema-valid record. It is
+   refused at section check (the record's `author_id`), and refused again if the
+   record lies (the live `user.id` matches the actor).
+5c. **Expiry during reads** (RO-05): a fake clock advances past `expires_at` during
+   the detail GETs. Nothing is waived, and gates computed before and after agree.
 6. **Unknowns:**
    - the open-PR list is incomplete, or a page failed;
    - the detail GET fails, returns malformed JSON or is missing `head.sha`;
@@ -372,9 +476,11 @@ binding.
    byte-identical `verify` JSON and exit codes. The same mandate wrapped as 0.2
    without the section gives identical gates and the same `mandate_sha256`.
 10. **Reads.** Without the section, the read sequence is identical to today's.
-    With N entries, exactly N extra `pulls/{n}` GETs are made, and only after
-    the list scan completed. With more than 20 entries the schema fails before
-    any read.
+    With N distinct disposed PRs, exactly N extra `pulls/{n}` GETs are made,
+    only after the list scan completed. With more than 20 entries the schema
+    fails before any read.
+10a. **Text output** (RO-06): with a waiver applied, `--format text verify` shows
+    the waiver line and PR number; without one it is unchanged.
 11. **Unused entries.** A disposition for a PR that no longer matches is listed in
     `unused`, waives nothing and adds no error. A closed PR that is still in the
     prepared list stays blocking.
@@ -389,6 +495,11 @@ binding.
     - ignore expiry;
     - accept a mandate hash mismatch;
     - apply the waiver to the `duplicates` output list;
+    - skip the detail read for `unused` entries;
+    - drop the direct-in-detail promotion;
+    - skip the author check;
+    - check expiry before the reads;
+    - omit the text waiver line;
     - use the 0.1 schema for 0.2 documents.
 
 ## Slices
@@ -397,12 +508,17 @@ Each slice is independently shippable and gets its own hostile review.
 
 1. **Host-context 0.2 plumbing.** The schema file, exact version selection at
    every caller, `instructions` versions and compatibility goldens. A valid
-   section is validated, hashed and reported (`status`, `sha256`), but
-   **waives nothing**. This is safe on its own: it can only add errors.
-2. **Waiver evaluation.** The fresh PR reads, recompute, waiver lists, the new
-   output keys and the full adversarial plan with mutants.
-3. **Docs.** Workflow text, host issuer requirements (disposition issuance and
-   tests), `docs/cli.md`, README limits, product map and CHANGELOG.
+   section is validated, hashed and reported with `status: "not_evaluated"`
+   (never "valid"), but **waives nothing**. `instructions` and the docs say
+   that waiver evaluation is not supported yet. This is safe on its own: it can
+   only add errors.
+2. **Host issuer requirements and workflow text**, shipped before or with
+   slice 3. These are the code-review, retention and refusal rules and the
+   mandatory host tests.
+3. **Waiver evaluation.** Read all disposed PRs, reconcile, recompute, expiry
+   after the reads, waiver lists, new output keys, the text line, and the full
+   adversarial plan with mutants. Update `docs/cli.md`, README limits, the
+   product map and the CHANGELOG.
 4. **Deferred, only if hosts need it.** A read-only helper that emits a
    disposition request for each topical overlap: bindings pre-filled from fresh
    reads, human-only fields `null`, no summary, as in RD-01. Hosts must compute
@@ -425,11 +541,23 @@ Each slice is independently shippable and gets its own hostile review.
 - Showing waivers in `inspect`, `discover` or `pr-body`, which cannot
   authenticate host records.
 
-## Open questions for review
+## Review resolution
 
-- Is binding `updated_at` (re-block on any comment) too strict for long-lived
-  drafts? The alternative is binding only the content hash and head SHA, at the
-  cost of not noticing label or state churn. The design picks the strict option;
-  re-issuing a separate section is cheap.
-- Should `unused` entries make the section `invalid`, to force hosts to keep
-  records tight, or remain informational as proposed?
+Round 1 (`review-ro-sol.md`, against `5f7378f`): `BLOCK`, H=1 M=4 L=1. Each
+finding was checked against the design text and code. None is disputed.
+
+| ID | Severity | Verdict | Independent check | Change in revision 2 |
+| --- | --- | --- | --- | --- |
+| RO-01 | High | Confirmed | Revision 1 required the host only to render the PR metadata and link to `/files`. The description is author-controlled, and the link is a mutable snapshot. | T1b added. The host must review and retain an immutable comparison (merge base to bound head, full SHAs), or refuse when it is truncated. The record binds `comparison {base_sha, head_sha, material_sha256}`. Mandatory host tests added. Requirements now ship before or with waiver evaluation. |
+| RO-02 | Medium | Confirmed (binding gap); platform behavior not verified | The content hash omitted `draft`, and nothing documents that every event bumps `updated_at`, which has second precision. | `draft`, `author_id` and `head_repository_id` are bound and compared explicitly. `updated_at` is now an extra check. The promise is narrowed to equality of the enumerated observations. ABA and draft-only-change tests added. |
+| RO-03 | Medium | Confirmed | Revision 1 fixed the candidate set from the list before the detail reads, and treated non-candidates as `unused` without reconciling them. | Every disposed PR is read (deduplicated) and reconciled. A direct finding seen only in the detail blocks and is listed. A list/detail contradiction blocks. `unused` is decided only after the read. A read failure blocks. Residual: a PR created after the scan is not covered, and reads are not atomic (documented). |
+| RO-04 | Medium | Confirmed | No check compared the PR author with the credential. "Own drafts reference the issue" was an assumption. | A PR authored by the credential actor is never waivable. This is checked on the record's `author_id` and on the live `user.id`, and is documented to over-refuse legitimate earlier PRs from that account. |
+| RO-05 | Medium (suspected) | Accepted | The ordered steps checked expiry once, before the detail reads. Final sign-off already uses a fresh clock after the blocking reads. | Expiry is decided with a fresh clock after all blocking reads, before any waiver-dependent gate. A fake-clock test is added. The worst-case retry duration is documented. |
+| RO-06 | Low | Confirmed | `textfmt._verify` renders gates and errors only. | The text output names the waived PRs and the disposition status and errors. A formatter test and a mutant are added. |
+
+The review's answers to the open questions are adopted:
+
+- keep strict `updated_at` as an extra check, without overstating it;
+- keep `unused` informational, but only after reconciliation;
+- slice 1 reports `not_evaluated`, never `valid`;
+- issuer requirements ship with or before evaluation.
