@@ -68,7 +68,10 @@ channel or runtime model provider is added.
   --ownership` and `ownership` (#5, #6; a conflicting repository ID for one
   cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
   part), `verify --observe-ci` (#17, part) and `--report-budget` /
-  `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
+  `--min-remaining` (#27, part). `--cache` (#27) reuses file contents at a
+  pinned commit of a public repository from the user cache, keyed by Git blob
+  SHA and re-verified against the live tree on every hit; trees and all
+  mutable reads stay live and output is unchanged. An opted-in report that is incomplete exits 1
   where documented. `discover --signals` also lists
   `code_location.named_paths_missing`: file paths the issue names that are not
   in the snapshot tree, compared exactly (F13).

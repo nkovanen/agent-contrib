@@ -37,6 +37,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib --report-budget [--min-remaining N] COMMAND ...` | Adds the core REST rate-limit budget before and after a GitHub-reading command; optionally refuses to start below N |
+| `agent-contrib --cache COMMAND ...` | Reuses verified file contents at pinned commits of public repositories from the user cache; every other read stays live and output is unchanged |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib schema COMMAND` | The JSON Schema of COMMAND's JSON output; see [Output schemas](#output-schemas) |
@@ -489,8 +490,38 @@ cause no GitHub read.
 optional budget reads do not turn those failures into success. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
 estimate a command's cost; choose N yourself. Offline commands reject the flag.
-Without the flag, no rate-limit read happens and output is unchanged. Response
-caching is a deferred design.
+Without the flag, no rate-limit read happens and output is unchanged.
+
+## Content cache (opt-in)
+
+`--cache` before a command reuses file contents that GitHub returned for a
+pinned commit, so repeated `discover`, `inspect`, `prepare`, `verify` and
+`drift` runs skip re-reading the same instruction and policy files. The cache is
+content-addressed and self-verifying, and it never changes output, gates or exit
+status.
+
+- Only `repos/{owner}/{repo}/contents/{path}?ref={40-hex commit}` reads are
+  served from it, and only for a repository whose live metadata earlier in the
+  same command said `"private": false`. Private, internal or unobserved
+  repositories always read live.
+- The expected Git blob SHA for the path comes from the **live** recursive tree
+  read at that commit. Trees, metadata, issues, PRs, labels, permissions, branch
+  heads, comparisons, checks and every other read are never cached.
+- Entries are the decoded file bytes, named by blob SHA. A stored response must
+  carry that SHA and hash to it. Every hit recomputes the Git blob hash
+  (SHA-1 of `blob <length>\0<bytes>`) and must match the live tree; a
+  mismatching, oversized, symlinked or foreign-owned entry is deleted and read
+  live. Identical files at different paths share one entry.
+- The directory is `$XDG_CACHE_HOME/agent-contrib` (an absolute
+  `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`. It is created with
+  mode 0700 and used only when it is a real directory owned by you with no group
+  or other write permission. Writes are atomic and private (0600). On platforms
+  without POSIX ownership checks the cache is bypassed.
+- Entries are at most 8 MiB. The total is kept under 256 MiB by deleting the
+  oldest entries. Delete the directory to clear it; any cache error falls back
+  to the live read.
+- `--report-budget` counts only the live reads that remain. The cache is active
+  for one invocation; library callers never inherit it.
 
 ## Several repositories
 
@@ -541,7 +572,7 @@ commands show top-level scalar fields; use JSON for full nested results, instruc
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured
 JSON when argument parsing has not produced a valid format selection.
-A global option (`--format`, `--report-budget`, `--min-remaining`) placed after
+A global option (`--format`, `--report-budget`, `--min-remaining`, `--cache`) placed after
 the subcommand is still a usage error (exit 2); its message says to move the
 option before the subcommand.
 

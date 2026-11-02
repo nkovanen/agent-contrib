@@ -19,6 +19,8 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import quote
 
+from . import cache
+
 VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
@@ -113,6 +115,17 @@ def safe_text(value, limit=100000):
 class GitHub:
     """Only fixed GET endpoints; no gh aliases, shell, writes, or remote argv."""
     def request(self, endpoint):
+        store = cache.active()  # opt-in --cache: verified file contents at a pinned commit only
+        if store is not None:
+            hit = store.lookup(endpoint)
+            if hit is not None:
+                return hit
+        value = self._live(endpoint)
+        if store is not None:
+            store.observe(endpoint, value)
+        return value
+
+    def _live(self, endpoint):
         for attempt in range(3):
             try:
                 env = dict(os.environ, GH_PROMPT_DISABLED='1', GH_NO_UPDATE_NOTIFIER='1')

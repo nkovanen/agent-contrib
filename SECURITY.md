@@ -64,6 +64,12 @@ stage succeeds. Evidence skeletons and generated PR descriptions are local files
 not attestations that work ran or that publication is permitted. Text output is
 abridged; use canonical JSON for audits and automated decisions.
 
+The opt-in `--cache` stores only file contents of repositories observed public in
+the same command, under a user-owned 0700 directory. Each hit must hash to the
+Git blob SHA from a live tree read, so a corrupted or tampered entry is discarded
+rather than used. The cache does not defend against other code running as the
+same user, which could alter the CLI itself.
+
 Repository compliance is checked by the host and independent reviewer, not by
 interpreting prose as executable policy. The installed workflow requires a
 source-linked requirements ledger and evidence at the required stages. This

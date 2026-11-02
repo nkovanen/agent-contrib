@@ -154,7 +154,8 @@ never grant approval or authority and never change a readiness gate:
 re-ranks candidates by its score after exclusions, overlaps and low likelihood;
 the others leave ordering unchanged.
 Put `--format text` before the command for an abridged summary; JSON is
-canonical. Exit status: 0 when the command's gate passes, 1 when it does not or
+canonical. Put `--cache` before it to reuse verified file contents of public
+repositories at pinned commits; output is unchanged. Exit status: 0 when the command's gate passes, 1 when it does not or
 a read is incomplete, 2 for usage errors. An exit code is never authorization.
 
 [Command reference](docs/cli.md) · [Product map](docs/product-map.md) ·
