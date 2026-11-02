@@ -215,6 +215,34 @@ class PublicationTests(unittest.TestCase):
                     self.client.detail = item
                     self.assert_closed(self.check(), 'unknown')
 
+    def test_history_url_must_be_the_target_pull_route(self):
+        for url in ('https://github.com/other/widget/pull/3', 'https://github.com/acme/widget/pull/4',
+                    'https://github.com/acme/widget/issues/3'):
+            with self.subTest(url=url):
+                item = dict(pull(), html_url=url)
+                self.client.pages[1] = [item]
+                self.client.detail = item
+                result = self.check()
+                self.assert_closed(result, 'unknown')
+                self.assertEqual(result['errors'], ['Exact-head history returned a different repository, ref or URL'])
+
+    def test_history_repeating_a_pull_number_is_unknown(self):
+        self.client.pages[1] = [pull(), dict(pull(), id=999)]
+        for claim in (True, False):
+            with self.subTest(claim=claim):
+                result = self.check(claim=claim)
+                self.assert_closed(result, 'unknown')
+                self.assertEqual(result['errors'], ['Exact-head history repeated a pull request number'])
+
+    def test_malformed_expected_head_fails_closed_even_without_claim(self):
+        self.client.pages[1] = []
+        for head in ('A' * 40, 'a' * 39, '', True):
+            with self.subTest(head=head):
+                result = self.check(claim=False, head=head)
+                self.assert_closed(result, 'unknown')
+                self.assertEqual(result['errors'], ['Invalid expected evidence HEAD'])
+        self.assertTrue(self.check(claim=False, head=None)['creation_clear'])
+
     def test_missing_or_different_evidence_head_never_reuses_draft(self):
         for head in (None, '', True, 'e' * 40, 'a' * 39):
             with self.subTest(head=head):
