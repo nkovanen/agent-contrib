@@ -485,6 +485,9 @@
           "additionalProperties": false,
           "description": "Added by --responsiveness"
         },
+        "local_work": {
+          "$ref": "#/$defs/local_work"
+        },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
         }
@@ -568,6 +571,9 @@
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
+        },
+        "local_work": {
+          "$ref": "#/$defs/local_work"
         }
       },
       "required": [
@@ -794,6 +800,40 @@
             "explanation"
           ],
           "additionalProperties": false
+        },
+        "local_work": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": [
+                "referenced",
+                "none",
+                "unknown"
+              ]
+            },
+            "commits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "maxItems": 10
+            },
+            "explanation": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "value",
+            "commits",
+            "explanation"
+          ],
+          "additionalProperties": false,
+          "description": "Present with --repo-dir; a referenced issue ranks below other candidates that are not excluded or overlapping"
         },
         "score": {
           "type": "integer",
@@ -1203,6 +1243,94 @@
       ],
       "additionalProperties": false,
       "description": "Open-PR scan of the proposed target repository when it differs from the issue source"
+    },
+    "local_work": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean",
+          "description": "False when the checkout or base could not be read or the commit limit was reached; sets exit 1"
+        },
+        "head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "minLength": 40,
+          "maxLength": 40
+        },
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "minLength": 40,
+          "maxLength": 40,
+          "description": "Source default-branch commit of the snapshot"
+        },
+        "commits_scanned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commit_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "commits": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$",
+                  "minLength": 40,
+                  "maxLength": 40
+                },
+                "maxItems": 10
+              }
+            },
+            "required": [
+              "number",
+              "commits"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2147483647
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "head",
+        "base",
+        "commits_scanned",
+        "commit_limit",
+        "issues",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Present with --repo-dir: issues referenced by local commits not in the source default branch; report only"
     }
   }
 }

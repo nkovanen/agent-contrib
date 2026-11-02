@@ -11,6 +11,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
+  referenced by local commits that are not in the source default branch, read
+  with the hardened Git reader and capped at 500 commits. With `--signals`,
+  referenced issues rank below the other candidates that are not excluded or
+  overlapping.
 - Explicit task and evidence schema **0.2** (`prepare --schema-version 0.2`) for
   one same-repository candidate issue (#3). A human/host-issued mandate in
   host-context schema 0.1 (`verify --host-context-stdin`, at most 8 MiB, 5 s) is

@@ -521,15 +521,50 @@ def inspect_issue(reference, client=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False):
+def discover(repository, client=None, *, signals=False, responsiveness=False, repo_dir=None):
     client = client or GitHub()
     result, snapshot = discover_with_snapshot(repository, client, signals=signals)
+    if repo_dir is not None:
+        local_work(result, snapshot, repo_dir, signals)
     if responsiveness:
         from .signals import responsiveness as report
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
         source = snapshot['repository'] if snapshot is not None and snapshot['complete'] else None
         result['repository_signals'] = {'responsiveness': report(source, client)}
     return result
+
+
+def local_work(result, snapshot, repo_dir, signals):
+    """F12, report only: with --signals, locally referenced issues move below every other candidate that is not
+    excluded or overlapping (known work below unknown); scores, gates and exclusions are unchanged."""
+    from .workspace import local_issue_references, LOCAL_NOTICE
+    if snapshot is None:
+        report = {'complete': False, 'head': None, 'base': None, 'commits_scanned': 0, 'commit_limit': 0, 'issues': [],
+                  'errors': ['Discovery did not resolve a source snapshot; the checkout was not read'],
+                  'notice': LOCAL_NOTICE}
+    else:
+        report = local_issue_references(repo_dir, snapshot['repository'], snapshot['commit'])
+    result['local_work'] = report
+    if not signals or snapshot is None:
+        return
+    commits = {item['number']: item['commits'] for item in report['issues']}
+    for issue in result['issues']:
+        found = commits.get(issue['number'])
+        issue['signals']['local_work'] = (
+            {'value': 'referenced', 'commits': found, 'explanation': f'Referenced by {len(found)} local commit(s) not in '
+             'the source default branch; the work may already exist'} if found else
+            {'value': 'none' if report['complete'] else 'unknown', 'commits': [],
+             'explanation': 'No local reference found' if report['complete'] else 'The checkout was not read completely'})
+    result['issues'].sort(key=lambda item: issue_order(item, True, local=True))
+    result['ordering'] = ('exclusions, overlaps, locally referenced, low likelihood, then higher signal score, '
+                          'then issue number')
+
+
+def issue_order(item, signals, local=False):
+    return (bool(item['exclusions']), bool(item['duplicates']),
+            local and item['signals']['local_work']['value'] == 'referenced',
+            item['ranking']['success_likelihood']['value'] == 'low',
+            -item['signals']['score'] if signals else 0, item['number'])
 
 
 def discover_with_snapshot(repository, client=None, *, signals=False):
@@ -578,9 +613,7 @@ def discover_with_snapshot(repository, client=None, *, signals=False):
                 errors.extend(inspected['errors'])
         except ProtocolError as exc:
             errors.append(str(exc))
-    issues.sort(key=lambda item: (bool(item['exclusions']), bool(item['duplicates']),
-                                  item['ranking']['success_likelihood']['value'] == 'low',
-                                  -item['signals']['score'] if signals else 0, item['number']))
+    issues.sort(key=lambda item: issue_order(item, signals))
     extra = {'ordering': 'exclusions, overlaps, low likelihood, then higher signal score, then issue number'} if signals else {}
     return {**context, **extra, 'schema_version': VERSION, 'repository': source, 'commit': snapshot['commit'],
             'fetched_at': snapshot['fetched_at'], 'complete': not errors, 'errors': sorted(set(errors)),

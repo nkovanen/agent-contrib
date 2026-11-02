@@ -308,6 +308,20 @@ only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
 
+`discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
+`local_work` object for unpublished local work. It lists the issue numbers
+referenced as `#N` or `owner/repo#N` (the source repository only)
+in the messages of commits reachable from the checkout's HEAD but not from the
+snapshot's source default-branch commit. It reads the newest 500 commits at most
+and 64 KiB of each message, with the hardened Git reader after the worktree-root
+and checkout-config checks. A missing base commit (the CLI never fetches), an
+unsafe config, a subdirectory or more than 500 commits make it incomplete,
+which exits 1. With `--signals`, each issue gets `signals.local_work`
+(`referenced`, `none` or `unknown`), and a referenced issue ranks below every
+other candidate that is not excluded or overlapping. Its score, gates and
+exclusions are unchanged. Without `--signals` the issue order is unchanged. A
+reference is not proof that the work is done.
+
 ## Repository responsiveness
 
 `discover --responsiveness` makes exactly one additional GET for the issue
@@ -1020,6 +1034,7 @@ One repository was resolved and read
 | `warning` | string |  |
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
+| `local_work` | `local_work` (optional) |  |
 | `api_budget` | `api_budget` (optional) |  |
 
 #### `discover_unresolved`
@@ -1038,6 +1053,7 @@ The repository could not be resolved or its snapshot read
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `local_work` | `local_work` (optional) |  |
 
 #### `duplicate`
 
@@ -1220,6 +1236,10 @@ Added by --signals; report-only heuristics, never approval
 | `maintainer` | object |  |
 | `maintainer.value` | "maintainer" \| "other" \| "unknown" |  |
 | `maintainer.explanation` | string |  |
+| `local_work` | object (optional) | Present with --repo-dir; a referenced issue ranks below other candidates that are not excluded or overlapping |
+| `local_work.value` | "referenced" \| "none" \| "unknown" |  |
+| `local_work.commits` | string[] |  |
+| `local_work.explanation` | string |  |
 | `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1) |
 
 #### `issue_unresolved`
@@ -1246,6 +1266,23 @@ Completeness of one paginated GitHub list read
 | `complete` | boolean |  |
 | `pages` | integer |  |
 | `errors` | string[] |  |
+
+#### `local_work`
+
+Present with --repo-dir: issues referenced by local commits not in the source default branch; report only
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean | False when the checkout or base could not be read or the commit limit was reached; sets exit 1 |
+| `head` | string or null |  |
+| `base` | string or null | Source default-branch commit of the snapshot |
+| `commits_scanned` | integer |  |
+| `commit_limit` | integer |  |
+| `issues` | object[] |  |
+| `issues[].number` | integer |  |
+| `issues[].commits` | string[] |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `metadata_read`
 
