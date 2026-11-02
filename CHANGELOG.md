@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- Schema 0.2 authorization requires the collaborator-permission login to be a
+  valid ASCII GitHub login before its case-insensitive comparison, so Unicode
+  confusables such as `ſ` or the Kelvin sign no longer match (R1-08).
 - Reject JSON strings containing a lone surrogate escape (such as `"\ud800"`)
   as `invalid_json` when parsing GitHub responses, contracts, evidence and host
   context (R1-07). Such a value used to raise an uncaught encoding error at

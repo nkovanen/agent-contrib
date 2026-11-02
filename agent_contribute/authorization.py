@@ -91,7 +91,8 @@ def check(task, host_context, client, now):
         user = core.require(permission.get('user'), dict, 'collaborator user')
         if (permission.get('role_name') not in ('admin', 'maintain') or not positive(user.get('id')) or
                 user['id'] != actor['id'] or user.get('type') != 'User' or
-                not isinstance(user.get('login'), str) or user['login'].casefold() != actor['login'].casefold()):
+                not isinstance(user.get('login'), str) or not _LOGIN.fullmatch(user['login']) or
+                user['login'].casefold() != actor['login'].casefold()):  # ASCII-only, so casefold cannot fold confusables
             raise core.ProtocolError('credential_permission', 'Credential needs exact admin/maintain role and matching user ID')
         result['permission'] = {'role_name': permission['role_name'], 'user_id': user['id'], 'endpoint': endpoint}
         result['provenance']['endpoints'].append('repos/' + source['repository'])

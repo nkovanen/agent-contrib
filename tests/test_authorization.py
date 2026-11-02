@@ -146,6 +146,21 @@ class AuthorizationTests(unittest.TestCase):
             client.actor = actor
             self.assertFalse(self.check(task, client, context)['authorized'])
 
+    def test_permission_login_must_be_the_same_ascii_login_with_the_same_id(self):
+        # R1-08: the numeric ID matches in every case, so only the login check can reject.
+        task, client = candidate_task()
+        context = host_context(task)
+        client.actor['login'] = 'sk'
+        for login in ('another-person', '\u017fk', 's\u212a', '\u017f\u212a', 'sk ', ''):
+            with self.subTest(login=login):
+                client.permission['user'] = {'id': 7, 'login': login, 'type': 'User'}
+                result = self.check(task, client, context)
+                self.assertIn('Credential needs exact admin/maintain role and matching user ID', result['errors'])
+                self.assertFalse(result['authorized'])
+                self.assertIsNone(result['permission'])
+        client.permission['user'] = {'id': 7, 'login': 'SK', 'type': 'User'}  # GitHub logins are ASCII case-insensitive
+        self.assertTrue(self.check(task, client, context)['authorized'])
+
     def test_current_identity_revocation_and_api_failures_block(self):
         task, client = candidate_task()
         context = host_context(task)
