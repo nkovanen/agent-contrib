@@ -887,6 +887,92 @@ def scope_violations(scope, paths):
     return violations
 
 
+MAX_LINK_BYTES = 4096
+MAX_LINK_HOPS = 40
+
+
+class LinkView:
+    """Symlinks of one snapshot (a commit, the index or the worktree) as {path: target}, read without following."""
+    def __init__(self, directory, revision=None, index=False, worktree=False):
+        self.directory, self.worktree, self.shas, self.targets = directory, worktree, {}, {}
+        if worktree:
+            return
+        listing = (git_read(directory, 'ls-files', '--stage', '-z') if index else
+                   git_read(directory, 'ls-tree', '-r', '-z', '--full-tree', revision))
+        for entry in listing.split('\0'):
+            meta, _, path = entry.partition('\t')
+            if meta.startswith('120000 '):
+                self.shas[path] = meta.split()[1 if index else 2]
+
+    def target(self, path):
+        if path not in self.targets:
+            self.targets[path] = self._read(path)
+        return self.targets[path]
+
+    def _read(self, path):
+        if self.worktree:
+            full = Path(self.directory, path)
+            try:  # each prefix was already resolved, so lstat never passes through a link
+                return os.readlink(full) if stat.S_ISLNK(os.lstat(full).st_mode) else None
+            except OSError:
+                return None
+        sha = self.shas.get(path)
+        if sha is None:
+            return None
+        if int(git_read(self.directory, 'cat-file', '-s', sha)) > MAX_LINK_BYTES:
+            return '\0too long'
+        return git_read(self.directory, 'cat-file', 'blob', sha, raw=True).decode('utf-8', errors='surrogateescape')
+
+
+def link_violation(scope, path, view):
+    """G-08: resolve a symlink lexically, every hop and directory link included, and judge where it lands."""
+    stack, hops, shown = path.split('/')[:-1], 0, view.target(path)
+    parts = ['\0link', shown]  # a '\0link' marker is followed by a link target still to expand
+    while parts:
+        part = parts.pop(0)
+        if part == '\0link':
+            target = parts.pop(0)
+            hops += 1
+            if hops > MAX_LINK_HOPS:
+                return 'symlink target has too many levels of links: ' + safe_text(shown, 200)
+            if target == '\0too long':
+                return f'symlink target is longer than {MAX_LINK_BYTES} bytes'
+            if '\\' in target:
+                return 'symlink target uses a backslash (Windows-style): ' + safe_text(target, 200)
+            if not target or target.startswith('/') or re.match(r'[A-Za-z]:', target):
+                return 'symlink target is absolute: ' + safe_text(target, 200)
+            parts = target.split('/') + parts
+            continue
+        if part in ('', '.'):
+            continue
+        if part == '..':
+            if not stack:
+                return 'symlink target escapes the repository: ' + safe_text(shown, 200)
+            stack.pop()
+            continue
+        stack.append(part)
+        nested = view.target('/'.join(stack))
+        if nested is not None:
+            stack.pop()
+            parts = ['\0link', nested] + parts
+    resolved = '/'.join(stack)
+    if not resolved:
+        return 'symlink to the repository root'
+    rules = scope_violations(scope, [resolved])
+    return f'symlink to {safe_text(resolved, 500)}: {rules[0]["rule"]}' if rules else None
+
+
+def link_violations(scope, paths, view):
+    """Violations for every changed path that is a symlink in view; other paths are left to scope_violations."""
+    found = []
+    for path in sorted(paths):
+        if view.target(path) is not None:
+            rule = link_violation(scope, path, view)
+            if rule:
+                found.append({'path': safe_text(path, 500), 'rule': rule})
+    return found
+
+
 def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None,
                    schema_version='0.1', attestations=('independent_review', 'human_signoff')):
     errors = schema_errors(evidence, bundled_schema('evidence', schema_version))
@@ -934,6 +1020,8 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
             errors.append('Implementation diff is empty')
         for violation in scope_violations(task['scope'], changed):
             errors.append('Implementation changes a path outside reviewed scope: ' + violation['path'])
+        for violation in link_violations(task['scope'], changed, LinkView(directory, head)):
+            errors.append(f'Implementation adds a symlink outside reviewed scope: {violation["path"]} ({violation["rule"]})')
         remote_config = git_read(directory, 'config', '--local', '--get-regexp', r'^remote\..*\.url$')
         targets = set()
         for line in remote_config.splitlines():

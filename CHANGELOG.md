@@ -129,6 +129,14 @@ channel or runtime model provider is added.
 
 ### Security
 
+- Scope judges each changed symlink by where it points (G-08), in `verify`
+  evidence checks and `scope-check`. The committed (or staged, or worktree)
+  target is read without following it and resolved lexically from the link's
+  directory through every link hop, directory links included. A target that is
+  absolute, uses a backslash or a drive letter, escapes the repository, points
+  at the repository root, exceeds 4096 bytes or 40 hops, or resolves outside
+  `allowed_paths` or into `prohibited_paths` is a scope violation that names the
+  reason. A link to an allowed file still passes.
 - Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and
   numbers that overflow to infinity (`1e999`) as `invalid_json` in GitHub
   responses, contracts, evidence and host context. A lone surrogate used to
@@ -215,6 +223,8 @@ channel or runtime model provider is added.
   0.1 and 0.2, host-context 0.1 and 0.2. Unknown versions fail closed; nothing is
   migrated. `prepare` still defaults to 0.1.
 - Schema 0.1 changes, all fail-closed or message-only:
+  - `verify` rejects evidence whose implementation adds a symlink that resolves
+    outside the contract scope (G-08); a symlink to an in-scope file still passes.
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an
     evidence error instead of reading part of the checkout.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.

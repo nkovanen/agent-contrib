@@ -218,6 +218,19 @@ means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
 
+A changed path that is a symlink is also judged by its target, the same way in
+`verify` and `scope-check`. The target comes from the commit, the index or the
+worktree that holds the link, read without following it. It is resolved
+lexically from the link's directory, expanding every link hop, including links
+to directories, up to 40 hops. The link is a violation, with the reason as its
+rule, when the target is absolute (`/x` or `C:/x`), contains a backslash,
+escapes the repository, points at the repository root, is longer than 4096
+bytes, loops, or resolves to a path outside `allowed_paths` or matching
+`prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
+A link to an allowed file passes. Git records no path beyond a symlink, so a
+file written through a linked directory appears at its real path and is judged
+there.
+
 ## Evidence skeleton
 
 `evidence init` writes a draft evidence file for the contract's schema version.

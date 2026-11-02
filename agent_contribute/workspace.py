@@ -32,14 +32,20 @@ def scope_check(task, directory, base=None):
                 'git_error', 'Base commit is missing or not an ancestor of HEAD')) from None
         if core.has_gitlink(directory, head, base):  # stop before any index or worktree diff
             raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
-        paths = set(core.implementation_paths(directory, base, head))
+        committed = set(core.implementation_paths(directory, base, head))
         # Index, working tree and untracked files: everything a later commit could contain.
         # The index itself is the subject only for staged changes; worktree content is judged without its stat cache.
-        paths.update(path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path)
-        paths.update(core.worktree_changes(directory, base))
-        paths.update(core.untracked_paths(directory))
+        staged = {path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path}
+        working = core.worktree_changes(directory, base) | core.untracked_paths(directory)
+        paths = committed | staged | working
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
-        result['violations'] = sorted(core.scope_violations(task['scope'], paths), key=lambda item: item['path'])
+        # G-08: each symlink is also judged by its resolved target, in the snapshot that holds it.
+        links = (core.link_violations(task['scope'], committed, core.LinkView(directory, head)) +
+                 core.link_violations(task['scope'], staged, core.LinkView(directory, index=True)) +
+                 core.link_violations(task['scope'], working, core.LinkView(directory, worktree=True)))
+        result['violations'] = sorted(core.scope_violations(task['scope'], paths) +
+                                      list({(item['path'], item['rule']): item for item in links}.values()),
+                                      key=lambda item: (item['path'], item['rule']))
         if default and result['violations']:
             # Report only: several commits plus violations often mean work stacked on unpublished commits.
             behind = int(core.git_read(directory, 'rev-list', '--count', base + '..' + head))
