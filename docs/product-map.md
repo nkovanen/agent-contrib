@@ -70,6 +70,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [3] D2 `scope-check` offline scope check ([#15](https://github.com/nkovanen/agent-contrib/issues/15))
 - [3] F1 `pr-body` description from contract, evidence and live gates ([#19](https://github.com/nkovanen/agent-contrib/issues/19))
 - [3] F2 `feedback`: reviews, comments and exact-head checks on a PR ([#20](https://github.com/nkovanen/agent-contrib/issues/20))
+- [3] G1 `--format text` summaries and versioned output JSON Schemas for every command (`schemas/output/1/`, `agent-contrib schema`) ([#24](https://github.com/nkovanen/agent-contrib/issues/24))
 - [3] Requirements-ledger workflow, contract field mapping, local-only (implement-only) profile and coordinator relay rules in the installed workflow
 
 ### Partly implemented
@@ -79,7 +80,6 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [~] D3 `drift` report with per-file instruction comparison ([#16](https://github.com/nkovanen/agent-contrib/issues/16)). Missing: per-component issue baselines in a new task schema
 - [~] E1 `verify --observe-ci`, report only ([#17](https://github.com/nkovanen/agent-contrib/issues/17)). Missing: required-check declarations and gating
 - [~] F5 `authorization-request` and normative [host issuer requirements](host-authorization.md#host-issuer-requirements) ([#23](https://github.com/nkovanen/agent-contrib/issues/23)). Missing: a native issuer in Claude Code or Paseo
-- [~] G1 `--format text` summaries ([#24](https://github.com/nkovanen/agent-contrib/issues/24)). Missing: output JSON Schemas and an output-schema version
 - [~] G2 Literal POSIX path decisions pinned ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: Windows host-context input and Windows/macOS CI
 - [~] G4 `--report-budget` and `--min-remaining` ([#27](https://github.com/nkovanen/agent-contrib/issues/27)). Missing: freshness-aware response cache
 
@@ -103,7 +103,7 @@ prompt is not proof of human presence.
 
 1. Release v0.3.0 after the acceptance gate in [development status](development-status.md).
 2. Maintainer safety: C1 opt-out policy, a native issuer for F5, then gate adoption of B1/B2.
-3. Contributor ergonomics: G1 output schemas, #1.
+3. Contributor ergonomics: #1.
 4. Lifecycle: F3, then F4 and B3.
 5. Trust and adoption: E1 gating, C2, C4, E2.
 6. Scale and reach: G4 cache, G2, G3; H1 to measure A1.
