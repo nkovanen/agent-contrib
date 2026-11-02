@@ -3,9 +3,12 @@ name: agent-contribute
 description: Use when asked to help an open-source GitHub repository, select contribution work, or prepare an agent contribution handoff.
 ---
 
-Run `agent-contrib instructions` first and read its JSON workflow. The installed
-CLI/library owns the protocol, schemas, compatibility checks and guidance.
-Follow that workflow for the repository the user identifies. Build its required
+First run `agent-contrib --format text instructions` and read the workflow it
+prints (an older CLI without `--format`: `agent-contrib instructions`, field
+`workflow_markdown`). Start with its "Quick path" section: the command sequence
+and the points where you must stop. The installed CLI/library owns the protocol,
+schemas, compatibility checks and guidance. Follow that workflow for the
+repository the user identifies. Build its required
 source-linked repository requirements ledger before implementation and have an
 independent reviewer check compliance before publication. Passing tests or CLI
 gates alone does not establish compliance.
