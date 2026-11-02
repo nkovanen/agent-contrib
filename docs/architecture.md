@@ -64,7 +64,7 @@ in [host authorization](host-authorization.md) and the installed workflow.
 
 ## Optional observations and local helpers
 
-Ownership, prior-resolution hints, AI-policy excerpts and CI observations are
+Ownership, prior-resolution hints, repository policy reports and CI observations are
 report-only additions. They cannot promote a candidate, satisfy a validation or
 waive an overlap. `audit` reuses the discovery snapshot. `drift` compares current
 facts with the pinned contract without rewriting it. Multi-repository discovery

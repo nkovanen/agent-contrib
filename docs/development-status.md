@@ -22,7 +22,7 @@ The Skill stays portable and all GitHub operations in the CLI remain read-only.
 | Issues | Available now | Still missing |
 | --- | --- | --- |
 | #5, #6 | Opt-in ownership, claims and prior-resolution reports | Adoption into readiness rules; current reports never change gates |
-| #8 | Located AI-policy excerpts with explicit scan coverage | A versioned machine-readable refusal policy; excerpts are not a policy verdict |
+| #8 | Default-on repository policy report (bounded inventory incl. owner `.github`, high-recall hints, unassessed references) and a mandatory workflow review | A versioned machine-readable refusal policy; verifier enforcement; hints are never a verdict |
 | #16 | Aggregate issue/policy/overlap drift and pinned per-file instruction comparison | Historical per-component issue baselines in a new task schema |
 | #17 | Exact-head CI observations | Required-check declarations and readiness enforcement |
 | #24 | Opt-in text CLI summaries | Output JSON Schemas and an explicit output-schema version |

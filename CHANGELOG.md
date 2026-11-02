@@ -2,6 +2,19 @@
 
 ## 0.3.0 — unreleased
 
+- Replace the opt-in `inspect --ai-policy` excerpts with a default-on,
+  report-only `repository_policy` in `discover`, `inspect` and `prepare` output
+  (dogfood E-01 to E-05). The old scanner reported `coverage: complete` with no
+  hits on pallets/click, BurntSushi/ripgrep and honojs/hono, although each
+  project refuses such work: in an owner `.github` file, in `AI_POLICY.md`, or
+  with "Pull requests are limited to maintainers". The new report adds
+  policy-named files and the owner `.github` repository, pinned by commit; it
+  hints over paragraphs and lists unassessed links and formats. It has no
+  coverage verdict. `--ai-policy` is kept as a no-op. The installed workflow
+  gains a mandatory policy review with five dispositions, an `unresolved` state
+  that blocks upstream work, and a rule that local authorization never overrides
+  the source project's policy. Contracts, `instructions_sha256` and verifier
+  decisions are unchanged.
 - Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
   repository; merged PRs elsewhere move to `downstream_references` (dogfood
   E-11: a downstream workaround in another repository was reported as a possible

@@ -161,7 +161,7 @@ for unfinished parts and [the command reference](docs/cli.md) for exact outputs.
 | --- | --- |
 | Compare candidates across repositories | `discover owner/a owner/b --signals` |
 | Inspect claims and possible prior fixes | `inspect 'owner/repo#123' --ownership` |
-| Locate AI-contribution statements | `inspect 'owner/repo#123' --ai-policy` |
+| Review repository AI/PR policy sources | `repository_policy` in `discover`/`inspect`/`prepare` output (always on) |
 | Check repository setup | `audit owner/repo` |
 | Check local changes against a contract | `scope-check task.json --repo-dir checkout` |
 | Start an unfilled evidence record | `evidence init task.json --repo-dir checkout --base REV --output evidence.json` |

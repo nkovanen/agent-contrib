@@ -472,3 +472,23 @@ class HostileGitHub(FakeGitHub):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class WorkflowTests(unittest.TestCase):
+    """The decision is a workflow obligation; the installed instructions must state it completely."""
+    def test_instructions_define_the_mandatory_policy_review(self):
+        import importlib.resources
+        text = ' '.join(importlib.resources.files('agent_contribute').joinpath('instructions.md')
+                        .read_text('utf-8').split())
+        section = text[text.index('## Repository policy review'):]
+        section = section[:section.index('## ', 3)]
+        self.assertLess(text.index('## Repository policy review'), text.index('3. Choose the supported route'))
+        for phrase in ('mandatory', 'not verifier-enforced', 'repository_policy', 'before ranking or preparing',
+                       'false positive', 'inapplicable', 'compliant constrained workflow',
+                       'source-authorized exception', 'prohibited', '`unresolved`', 'P-POLICY',
+                       "does not override the source project's policy", 'STOP', 'admin', 'maintain',
+                       'intended submitting account', 'retrieval time', 'inventory_sha256',
+                       'even when every count is zero', 'never_inspected'):
+            with self.subTest(phrase):
+                self.assertIn(phrase.casefold(), section.casefold())
+        self.assertNotIn('--ai-policy', text, 'the report is default-on; the old flag is not workflow guidance')

@@ -4,6 +4,65 @@ The CLI/library owns this workflow. The Skill is a thin portable adapter; obtain
 repository requirements dynamically. The CLI runs no model or task commands and
 only reads GitHub. Implementation and any authorized publication use host tools.
 
+## Repository policy review (mandatory; not verifier-enforced)
+
+`discover`, `inspect` and `prepare` always add `repository_policy`: the policy
+files read at pinned commits (`sources_scanned`), references and files the tool
+did not assess (`unassessed`), `limits_reached`, fixed blind spots
+(`never_inspected`, such as wikis, websites and images) and high-recall `hints`
+with sanitized excerpts. It is not a verdict. Zero hints never mean that AI or
+agent contributions are permitted. The CLI checks none of the steps below; we
+chose a workflow-only design to keep existing contracts and verifiers unchanged,
+so the host agent, the user and the independent reviewer are responsible for it.
+
+1. Before ranking or preparing any task, read in full every scanned source,
+   every hint in context, and every unassessed reference you can reach with your
+   own read-only tools. Repeat this even when every count is zero. Record one
+   requirements-ledger row per relevant source: repository, path or URL, the
+   revision or content digest you read, retrieval time, and what it says about
+   AI or agent use and pull request eligibility.
+2. Give each relevant rule exactly one disposition, with quoted evidence:
+   (a) **false positive**: the text is not a contribution rule;
+   (b) **inapplicable**: the rule's own scope excludes this work (for example
+   media only), shown by its actual context;
+   (c) **compliant constrained workflow**: the policy permits a mode you will
+   really follow, such as a human who understands the work and writes every
+   comment and the PR description; valid only where the policy permits that mode;
+   (d) **source-authorized exception**: written permission from the source
+   project's authority, with link and provenance;
+   (e) **prohibited**.
+3. Use the separate state **`unresolved`** until the evidence supports a
+   disposition. It applies when a source the project explicitly references or
+   delegates to is unreadable, when relevant text is in a language or format you
+   cannot assess, and when a maintainers-only rule applies and the intended
+   submitter's eligibility is unknown. Unresolved policy keeps P-POLICY pending
+   and blocks upstream preparation, implementation and publication. A generic
+   `never_inspected` category or an owner `.github` lookup that failed does not
+   block on its own; dispose of an unrelated link as inapplicable only from its
+   actual context.
+4. **STOP** upstream work when any relevant rule is prohibited or unresolved.
+   Report the excerpts and the reason to the user. The user's local
+   authorization does not override the source project's policy: it can cover
+   local experimentation, never upstream publication. Where the project invites
+   issues, you may draft issue text for the human to post. For a rule limiting
+   pull requests to maintainers, eligibility needs a fresh read-only observation
+   before preparation: the intended submitting account's numeric identity
+   (`gh api user`, run by that account) and its exact `admin` or `maintain`
+   `role_name` from `gh api repos/OWNER/REPO/collaborators/LOGIN/permission`.
+   Record both numeric IDs. A different logged-in account proves nothing about
+   the intended submitter. Schema 0.2 verification repeats the role check later.
+5. Record the outcome in the contract: a `constraints` entry quoting each
+   applicable rule, and prerequisite `P-POLICY` holding the dispositions, the
+   ledger reference and the report's `inventory_sha256`. The host keeps the full
+   report with the reviewed contract. The independent compliance reviewer
+   compares the ledger with the original sources, not with a worker summary.
+6. Before implementation and again before any publication, run a fresh
+   `inspect`. Then re-read every manually reviewed source and exception. When the
+   `inventory_sha256`, the unassessed list or any recorded digest differs,
+   repeat the dispositions, update P-POLICY and the ledger, and under schema 0.2
+   present the change to the human before continuing. If you cannot establish a
+   source's contents again, it is unresolved.
+
 ## Start with discovery, then choose a contract version
 
 1. Record the installed CLI version and the actual user request. Run `discover
@@ -23,10 +82,9 @@ only reads GitHub. Implementation and any authorized publication use host tools.
      --schema-version 0.2 --output task.json`. Source, target and head repositories
      must be the same; publication base is the source's default branch. This
      route refuses a fork-to-parent target change rather than swapping targets.
-   Run `agent-contrib inspect 'owner/repo#N' --ai-policy` and read every
-   excerpt in context. Respect any refusal of AI contributions; record the
-   review in the contract and disclose it in the PR body. Zero hits are not
-   permission.
+   Complete the repository policy review above first. Respect any refusal of
+   AI contributions; record the review in the contract and disclose it in the
+   PR body.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Build the repository
    requirements ledger below before marking the task reviewed. Resolve questions,

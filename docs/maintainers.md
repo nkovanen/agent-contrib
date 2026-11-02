@@ -52,12 +52,18 @@ Exit 1 means some read was incomplete.
 
 ## AI-contribution statements
 
-If your CONTRIBUTING, code of conduct or agent instructions say how you treat
-AI-generated contributions, agents running `inspect --ai-policy` get those
-lines as located excerpts and are told to review them, record the result in the
-contract and disclose it in the PR. Plain, explicit sentences are easiest to
-find. A machine-readable opt-out in `.agent-contrib.json` is not supported yet;
-until it is, state refusals clearly in CONTRIBUTING.md.
+Agents receive a `repository_policy` report on every `discover`, `inspect` and
+`prepare`. It covers your CONTRIBUTING (including `.rst`), `AI_POLICY.md`,
+AGENTS.md/CLAUDE.md, PR templates, the code of conduct and other policy files,
+plus your owner `.github` repository. Lines that look like AI, agent or
+pull-request restrictions are quoted as hints, and the workflow requires agents
+to read the sources, stop when you refuse such contributions, and treat
+unreadable delegated policies as unresolved.
+
+Plain, explicit sentences in a Markdown, reStructuredText or text file in the
+repository are easiest to find. Policies only on a website, wiki, image or PDF
+are listed as not assessed. A machine-readable opt-out in `.agent-contrib.json`
+is not supported yet; until it is, state refusals clearly in CONTRIBUTING.md.
 
 ## Practical guidance
 

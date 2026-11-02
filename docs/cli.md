@@ -31,7 +31,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
-| `agent-contrib inspect 'owner/repo#123' --ai-policy` | Adds located excerpts of AI-contribution statements from the loaded instruction files |
+| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is an accepted no-op |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib --report-budget [--min-remaining N] COMMAND ...` | Adds the core REST rate-limit budget before and after a GitHub-reading command; optionally refuses to start below N |
@@ -327,25 +327,60 @@ read makes the signals `complete: false` and `resolution_signals.status:
 unknown`; an unknown is never "not fixed". With
 `--ownership`, exit 1 also covers incomplete signals.
 
-## AI-contribution statements (opt-in)
+## Repository policy report (default-on, report only)
 
-`inspect --ai-policy` adds `ai_policy` without changing any other field. It
-scans the instruction files `inspect` already loaded, line by line, for a fixed
-set of patterns (AI-generated, AI-assisted, LLM, large language model,
-generative AI, artificial intelligence, Copilot, ChatGPT, machine-generated, "no
-AI", AI tools/agents/contributions/code). Each hit gives the path, line number,
-the file's SHA-256, the matched patterns and a one-line `untrusted_excerpt` of
-at most 300 characters (`excerpt_truncated` marks a shortened excerpt). At most
-200 excerpts are returned (`excerpts_capped: true` beyond that). Only the first
-2000 characters of each line are scanned; `lines_partially_scanned` counts
-longer lines.
+`discover` (once per repository), `inspect` and `prepare` add `repository_policy`
+in the CLI output. Core results, prepared contracts, `instructions_sha256` and
+exit codes do not change. `--ai-policy` is accepted and does nothing more.
 
-`ai_policy_review` is always `required`. `coverage` is `incomplete` when any
-instruction read failed, the 60-file cap was hit, excerpts were capped or any
-line was only partially scanned. The CLI does not interpret the prose: a hit is a signal to read the
-file in context, and zero hits do not mean AI contributions are welcome. A
-machine-readable maintainer opt-out (a new policy version) is a separate,
-not-yet-implemented design.
+- **Inventory.** The issue source repository (never a requested fork) at the
+  observed commit: the loaded instruction files plus policy-named files at any
+  depth: `CONTRIBUTING*`/`CONTRIBUTE*`, files under `contributing/`,
+  `contributors/` or `policy/` directories, `AI_POLICY*`/`ai.md`/`ai_usage*`,
+  `AGENTS.md`, `CLAUDE.md`, `copilot-instructions.md`, `.cursorrules`,
+  `.cursor/rules/*`, PR templates, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`,
+  `GOVERNANCE` and the root README. It also covers the owner's `.github`
+  repository (root, `.github/`, `docs/`) at its default-branch commit.
+  Contents are read by commit SHA and must match the tree's blob SHA.
+- **Formats.** `.md`, `.markdown`, `.rst`, `.txt` and extensionless files are
+  scanned. Other policy-named files (such as `.adoc`, `.pdf` or `.html`) are
+  listed in `unassessed` as `unsupported format`.
+- **`sources_scanned`.** Origin, repository, path, commit, SHA-256 of the file
+  bytes, scan kind, and notes such as `paragraphs with non-Latin script not
+  assessed: N`. The vocabulary is English only.
+- **`unassessed`.** Policy-like links from any scanned file, including READMEs
+  (`referenced, not assessed`; links to a scanned file at the same revision are
+  omitted). Also unsupported formats, failed reads, an owner `.github`
+  repository that is `not found or inaccessible` (never "absent"), and content
+  that did not match the pinned tree entry.
+- **`hints`.** Attention labels, not classifications:
+  - `possible_agent_restriction`, `possible_ai_restriction` and
+    `possible_pr_restriction`: an agent/automation, AI or pull-request term
+    within 12 words of a restriction word.
+  - `ai_mention`: any AI or agent term.
+
+  Paragraphs are joined across wrapped lines, and headings are kept as context.
+  HTML comments are scanned, and entities, tags, fullwidth forms and zero-width
+  characters are normalized. Adding sentences or paragraphs before or after a
+  passage never removes its hint kinds. Inserting words between the matched
+  terms can move them out of the 12-word window, and so can added text that
+  turns an existing line into a heading. Excerpts are sanitized and at most 300
+  characters.
+- **`limits_reached` and `reads`.** At most 25 logical GitHub requests per
+  report (each with the client's usual three attempts), 12 source and 8 owner
+  policy files, 200 kB per file and 1 MB scanned. The report keeps 100 hints,
+  50 unassessed entries and 256 kB serialized, and identifiers are truncated
+  with `what_truncated`. Anything dropped is counted in `limits_reached`.
+- **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
+  comments, other repositories, non-Latin text.
+- **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained
+  unassessed identifiers and the limits. It excludes commit SHAs, so unrelated
+  pushes do not change it. No verifier checks it; the workflow records it in
+  prerequisite `P-POLICY`.
+
+There is deliberately no `coverage`, `complete` or `clear` field. Hints are
+noisy on purpose. The installed workflow's mandatory policy review decides what
+they mean, and that review is not verifier-enforced.
 
 ## Drift since preparation
 

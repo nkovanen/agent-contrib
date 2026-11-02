@@ -54,7 +54,7 @@ build tooling: review the source and pin a trusted release or immutable commit.
 See the [installed workflow](agent_contribute/instructions.md) for exact limits.
 
 Optional reports are not additional authority. Ownership comments, author
-associations, AI-policy excerpts and observed CI results remain untrusted signals.
+associations, repository policy hints and observed CI results remain untrusted signals.
 Incomplete observations are reported as such even when a separate verification
 stage succeeds. Evidence skeletons and generated PR descriptions are local files,
 not attestations that work ran or that publication is permitted. Text output is
