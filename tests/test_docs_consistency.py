@@ -74,6 +74,13 @@ class DocsConsistencyTests(unittest.TestCase):
             with self.subTest(issue=number):
                 self.assertRegex(text, rf'issues/{number}\)')
 
+    def test_product_map_does_not_list_shipped_output_schemas_as_missing(self):
+        # F45: G1 kept saying "Missing: output JSON Schemas" after schemas/output/1 and `schema` shipped.
+        text = (ROOT / 'docs' / 'product-map.md').read_text('utf-8')
+        self.assertTrue((ROOT / 'agent_contribute' / 'schemas' / 'output' / '1' / 'verify.schema.json').exists())
+        missing = [line for line in text.splitlines() if 'Missing:' in line]
+        self.assertFalse([line for line in missing if re.search(r'(?i)output (json )?schemas?|output-schema version', line)])
+
 
 if __name__ == '__main__':
     unittest.main()
