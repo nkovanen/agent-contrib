@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- `scope-check` warns when the default base is more than one commit behind
+  HEAD and out-of-scope paths changed, naming the base and suggesting `--base`
+  for stacked work (F36). Report only; violations and exit status are unchanged.
 - Overlap detection no longer treats standards, algorithm or encoding names
   followed by numbers (`SHA-256`, `UTF-8`, `ISO-8601`, `RFC-3339`) as checklist
   IDs (F34). Fewer false overlaps; shared project IDs, CVEs and other uppercase

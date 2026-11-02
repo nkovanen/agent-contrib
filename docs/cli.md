@@ -177,7 +177,10 @@ other Git reads, and nothing under `.git` is opened directly. `base_commit`
 reports the full SHA. A value that is blank, starts with `-` or contains
 whitespace or control characters is refused. When the default base is not an ancestor of HEAD,
 `warnings` suggests passing `--base` for stacked or rebased work; the result
-still fails. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
+still fails. When the default base is an ancestor but more than one commit
+behind HEAD and out-of-scope paths changed, `warnings` names the base, the
+commit count and suggests `--base`; the violations and exit status are
+unchanged. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
