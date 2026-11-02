@@ -46,6 +46,10 @@
   unchanged.
 - Heuristic overlap reasons name the shared title words and checklist IDs that
   triggered the match. Duplicate entry fields and matching are unchanged.
+- `scope-check --base` and `evidence init --base` accept any local revision,
+  resolved with hardened `git rev-parse --verify 'REV^{commit}'`; option-like
+  values are refused. `scope-check` adds a `warnings` list and warns when the
+  default base is not an ancestor of HEAD.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

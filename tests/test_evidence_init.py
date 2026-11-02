@@ -70,9 +70,18 @@ class EvidenceInitTests(unittest.TestCase):
             git('commit', '-q', '-m', 'unrelated root')
             unrelated = git('rev-parse', 'HEAD')
             git('checkout', '-q', '-f', head)
-            for base in [unrelated, 'HEAD', '--output=x', 'f' * 40]:
+            for base in [unrelated, '--output=x', '-x', '', 'f' * 40, 'nope', 'HEAD^{tree}', 'HEAD~1..HEAD']:
                 with self.subTest(base=base), self.assertRaises(core.ProtocolError):
                     workspace.evidence_skeleton(task, tmp, base)
+            with self.assertRaises(core.ProtocolError) as raised:
+                workspace.evidence_skeleton(task, tmp, '--output=x')
+            self.assertEqual(raised.exception.code, 'invalid_base')
+            # Any local revision resolves to the full commit that is recorded.
+            git('branch', 'work-base', evidence['base_commit'])
+            for rev in ['work-base', 'HEAD~1', evidence['base_commit'][:12]]:
+                with self.subTest(rev=rev):
+                    self.assertEqual(workspace.evidence_skeleton(task, tmp, rev)['base_commit'], evidence['base_commit'])
+            self.assertEqual(workspace.evidence_skeleton(task, tmp, 'HEAD')['base_commit'], head)
             # The pinned source commit must be an ancestor of the chosen base.
             later = dict(task, source=dict(task['source'], commit=head))
             with self.assertRaises(core.ProtocolError):

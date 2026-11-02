@@ -10,14 +10,18 @@ DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '-
 def scope_check(task, directory, base=None):
     errors = core.validate_contract(task)
     result = {'within_scope': False, 'base_commit': None, 'changed_paths': [], 'violations': [], 'errors': errors,
-              'evidence': 'A pass is not evidence and is never recorded as such; verify remains authoritative.'}
+              'warnings': [], 'evidence': 'A pass is not evidence and is never recorded as such; verify remains authoritative.'}
     if errors:
         return result
     try:
-        base = result['base_commit'] = _base(task['source']['commit'] if base is None else base)
+        default = base is None
+        base = result['base_commit'] = _base(task['source']['commit']) if default else resolve_base(directory, base)
         try:
             core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')
         except core.ProtocolError:
+            if default:
+                result['warnings'].append('Default base source.commit is not an ancestor of HEAD; for stacked or '
+                                          'rebased work pass --base REV naming the commit your change starts from')
             raise core.ProtocolError('git_error', 'Base commit is missing or not an ancestor of HEAD') from None
         if core.has_gitlink(directory, 'HEAD', base):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
@@ -39,11 +43,24 @@ def _base(base):
     return base
 
 
+def resolve_base(directory, rev):
+    """Resolve a caller's revision to a full commit with the same hardened, read-only Git environment."""
+    if not isinstance(rev, str) or not rev or rev.startswith('-') or len(rev) > 256 or any(
+            char.isspace() or not char.isprintable() for char in rev):
+        raise core.ProtocolError('invalid_base', 'Base must be a SHA, branch or tag name; it cannot be blank, '
+                                 'start with "-" or contain spaces or control characters')
+    try:
+        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet', rev + '^{commit}'))
+    except core.ProtocolError:
+        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a SHA, branch or '
+                                 'tag (resolved locally with git rev-parse --verify REV^{commit})') from None
+
+
 def evidence_skeleton(task, directory, base):
     """Prefill only facts Git observes; results stay unfilled so the draft cannot validate."""
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
-    base = _base(base)
+    base = resolve_base(directory, base)
     try:
         core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
         core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')

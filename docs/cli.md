@@ -25,8 +25,8 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
-| `agent-contrib scope-check task.json --repo-dir checkout [--base SHA]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
-| `agent-contrib evidence init task.json --repo-dir checkout --base SHA --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
+| `agent-contrib scope-check task.json --repo-dir checkout [--base REV]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
+| `agent-contrib evidence init task.json --repo-dir checkout --base REV --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
@@ -122,8 +122,14 @@ that is the same host-asserted boundary as the CLI, not a privileged API.
 `verify` uses for evidence. It reads only the local checkout: committed changes
 from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
 and untracked files that are not ignored. Renames report both paths. The base
-must be a full 40-character SHA that is an ancestor of HEAD; gitlinks fail
-closed. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
+must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts any local
+revision (SHA, abbreviated SHA, branch or tag), resolved in the checkout with
+`git rev-parse --verify 'REV^{commit}'` under the same hook, fsmonitor and
+replacement-object protections as other Git reads; `base_commit` reports the
+full SHA. A value that is blank, starts with `-` or contains whitespace or
+control characters is refused. When the default base is not an ancestor of HEAD,
+`warnings` suggests passing `--base` for stacked or rebased work; the result
+still fails. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
@@ -139,8 +145,9 @@ criteria and attestations are `pending`, and `implementer` is blank, so the
 skeleton deliberately fails evidence validation. It never runs argv and never
 writes `passed`.
 
-The base must be a full SHA that descends from `source.commit` and is an
-ancestor of HEAD. Gitlinks are refused. The output is created exclusively and
+The base is resolved like `scope-check --base` and recorded as a full SHA. It
+must descend from `source.commit` and be an ancestor of HEAD. Gitlinks are
+refused. The output is created exclusively and
 must be outside the checkout's Git top level, because an untracked file there
 would invalidate the evidence. A dirty worktree is recorded as observed
 (`worktree_clean: false`), which `verify` rejects.

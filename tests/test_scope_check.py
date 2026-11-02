@@ -62,15 +62,69 @@ class ScopeCheckTests(unittest.TestCase):
     def test_gitlink_and_bad_base_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, git = self.checkout(tmp)
-            for base in ['HEAD', '--output=/tmp/x', 'f' * 40]:
+            for base in ['--output=/tmp/x', '-x', '', 'f' * 40, 'nope', 'HEAD^{tree}', 'HEAD\nHEAD', 'HEAD~1..HEAD']:
                 with self.subTest(base=base):
                     result = workspace.scope_check(task, tmp, base)
                     self.assertFalse(result['within_scope'])
                     self.assertTrue(result['errors'])
+                    self.assertIsNone(result['base_commit'])
             git('update-index', '--add', '--cacheinfo', '160000,' + evidence['base_commit'] + ',src/evil')
             result = workspace.scope_check(task, tmp)
             self.assertFalse(result['within_scope'])
             self.assertIn('Submodule/gitlink evidence is unsupported; no submodule commands were run', result['errors'])
+
+    def test_base_accepts_local_revisions_resolved_to_the_full_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            base = evidence['base_commit']
+            git('branch', 'work-base', base)
+            git('tag', '-a', '-m', 'annotated', 'v-base', base)
+            for rev in ['work-base', 'v-base', 'HEAD~1', base[:12], base]:
+                with self.subTest(rev=rev):
+                    result = workspace.scope_check(task, tmp, rev)
+                    self.assertTrue(result['within_scope'], result)
+                    self.assertEqual(result['base_commit'], base)
+                    self.assertEqual(result['changed_paths'], ['src/thumb.rs'])
+                    self.assertEqual(result['warnings'], [])
+            result = workspace.scope_check(task, tmp, 'HEAD')
+            self.assertEqual((result['base_commit'], result['changed_paths']), (evidence['git_head'], []))
+
+    def test_base_errors_hint_at_accepted_forms_and_resolution_ignores_replacements(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            self.assertEqual(workspace.scope_check(task, tmp, 'nope')['errors'],
+                             ['Base does not name a commit in this checkout; give a SHA, branch or tag '
+                              '(resolved locally with git rev-parse --verify REV^{commit})'])
+            self.assertEqual(workspace.scope_check(task, tmp, '--output=x')['errors'],
+                             ['Base must be a SHA, branch or tag name; it cannot be blank, '
+                              'start with "-" or contain spaces or control characters'])
+            # A replacement object must not redirect the resolved base.
+            git('replace', '-f', evidence['base_commit'], git('rev-parse', 'HEAD^{tree}'))
+            result = workspace.scope_check(task, tmp, evidence['base_commit'][:12])
+            self.assertEqual(result['base_commit'], evidence['base_commit'])
+            self.assertTrue(result['within_scope'], result)
+            with patch.object(core, 'git_read', wraps=core.git_read) as git_read:
+                workspace.resolve_base(tmp, 'HEAD')
+            git_read.assert_called_once_with(tmp, 'rev-parse', '--verify', '--quiet', 'HEAD^{commit}')
+
+    def test_default_base_outside_head_history_warns_and_still_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            head = evidence['git_head']
+            git('checkout', '-q', '--orphan', 'other')
+            git('commit', '-q', '-m', 'unrelated root')
+            unrelated = git('rev-parse', 'HEAD')
+            git('checkout', '-q', '-f', head)
+            task['source']['commit'] = unrelated
+            result = workspace.scope_check(task, tmp)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], ['Base commit is missing or not an ancestor of HEAD'])
+            self.assertEqual(result['warnings'], ['Default base source.commit is not an ancestor of HEAD; for '
+                                                  'stacked or rebased work pass --base REV naming the commit '
+                                                  'your change starts from'])
+            result = workspace.scope_check(task, tmp, unrelated)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['warnings'], [])
 
     def test_invalid_contract_reads_no_checkout(self):
         with patch.object(core, 'git_read') as git_read:
@@ -124,6 +178,10 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertEqual(result['violations'], [{'path': 'outside.txt', 'rule': 'not in allowed_paths'}])
             self.assertEqual(run('--base', 'nope')[0], 1)
+            code, result = run('--base=--output=x')
+            self.assertEqual((code, result['base_commit']), (1, None))
+            code, result = run('--base', 'HEAD~1')
+            self.assertEqual((code, result['base_commit']), (1, task['source']['commit']))
 
 
 if __name__ == '__main__':
