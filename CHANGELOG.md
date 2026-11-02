@@ -60,8 +60,11 @@ channel or runtime model provider is added.
   gate. `--signals` re-ranks candidates by its score after exclusions,
   overlaps and low likelihood; the others leave ordering unchanged:
   `discover --signals` (#12; code location including unique dotted and `::`
-  module names, clarity, activity, author association), `discover
-  --responsiveness` (#12; one read of recently closed PRs), `inspect
+  module names, clarity, activity, author association; over-long, truncated or
+  partly non-word module names are refused whole, never shortened), `discover
+  --responsiveness` (#12; one read of recently closed PRs, skipped after an
+  incomplete snapshot; malformed, repeated or out-of-interval PR entries make it
+  `unknown`), `inspect
   --ownership` and `ownership` (#5, #6; a conflicting repository ID for one
   cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
   part), `verify --observe-ci` (#17, part) and `--report-budget` /
