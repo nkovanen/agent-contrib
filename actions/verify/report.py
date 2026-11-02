@@ -232,15 +232,21 @@ def build(environ):
     sections = [('Documents', documents)]
     if evidence is None:
         return not_checked('No evidence block in the PR body', facts, sections)
-    evidence_errors = (['$.schema_version: differs from the contract'] if not isinstance(evidence, dict)
-                       or evidence.get('schema_version') != version else [])
-    if not evidence_errors and not contract_errors:
-        evidence_errors = core.schema_errors(evidence, core.bundled_schema('evidence', version))
-    documents.append(check('Evidence matches the evidence schema of the contract version',
-                           'mismatch' if evidence_errors else 'match', [[('', error)] for error in evidence_errors]))
+    # Validated on its own (MA-08): an invalid contract does not stop the evidence check, and a check that
+    # cannot run is not evaluated rather than an empty, matching list.
+    name = 'Evidence matches the evidence schema of the contract version'
+    if version not in core.SUPPORTED_SCHEMA_VERSIONS:
+        evidence_errors = None
+        documents.append(check(name, 'not-evaluated', [[('', 'the contract schema version is unsupported')]]))
+    else:
+        evidence_errors = (['$.schema_version: differs from the contract'] if not isinstance(evidence, dict)
+                           or evidence.get('schema_version') != version
+                           else core.schema_errors(evidence, core.bundled_schema('evidence', version)))
+        documents.append(check(name, 'mismatch' if evidence_errors else 'match',
+                               [[('', error)] for error in evidence_errors]))
     if not contract_errors:
         sections.append(('PR route binding', route_checks(task, facts, repository)))
-    if not contract_errors and not evidence_errors:
+    if not contract_errors and evidence_errors == []:
         sections.append(('Evidence binding and scope', evidence_checks(task, evidence, facts, directory, head)))
     return finish(facts, sections, version)
 

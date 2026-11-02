@@ -228,6 +228,20 @@ class CheckoutTests(CheckoutCase):
         self.assertEqual(model['result'], 'not-checked')
         self.assertIn('No evidence block', model['reason'])
 
+    def test_evidence_row_reflects_its_own_validation(self):
+        def rows(model):
+            return {c['name']: c['state'] for _, checks in model['sections'] for c in checks}
+        evidence_row = 'Evidence matches the evidence schema of the contract version'
+        model = self.build(task=dict(self.task, status='invalid'), evidence={'schema_version': '0.1'})
+        self.assertEqual(rows(model)[evidence_row], 'mismatch')
+        self.assertGreaterEqual(len(model['sections'][0][1][1]['details']), 10)
+        model = self.build(task=dict(self.task, status='invalid'))
+        self.assertEqual(rows(model)[evidence_row], 'match')
+        model = self.build(task=dict(self.task, schema_version='0.9'))
+        self.assertEqual(rows(model)[evidence_row], 'not-evaluated')
+        model = self.build(task={'schema_version': '0.1'}, evidence=dict(self.evidence, schema_version='0.2'))
+        self.assertEqual(rows(model)[evidence_row], 'mismatch')
+
     def test_checkout_must_be_the_payload_head_inside_the_workspace(self):
         self.assertEqual(self.build(head_ref='agent/bounds')['result'], 'no-inconsistency')
         environ = self.environ(body(self.task, self.evidence))
