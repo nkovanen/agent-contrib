@@ -80,11 +80,15 @@ channel or runtime model provider is added.
   `unknown`), `inspect
   --ownership` and `ownership` (#5, #6; a conflicting repository ID for one
   cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
-  part), `verify --observe-ci` (#17, part) and `--report-budget` /
-  `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
-  where documented. `discover --signals` also lists
-  `code_location.named_paths_missing`: file paths the issue names that are not
-  in the snapshot tree, compared exactly (F13).
+  part), `verify --observe-ci` (#17, part), `verify --observe-signatures` (#18,
+  part; GitHub's verification of the evidence head, labelled as not approval;
+  active `required_signatures` rulesets on the base branch; and, with
+  `--repo-dir`, signature-header presence for at most 1000 commits in
+  `base_commit..git_head`, never truncated; no gpg, ssh-keygen or
+  `verify-commit` runs) and `--report-budget` / `--min-remaining` (#27, part).
+  An opted-in report that is incomplete exits 1 where documented. `discover
+  --signals` also lists `code_location.named_paths_missing`: file paths the
+  issue names that are not in the snapshot tree, compared exactly (F13).
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
@@ -174,9 +178,33 @@ channel or runtime model provider is added.
   a promisor `ext::` transport ran during status, diff, show or merge-base.
 - Git reads force `core.checkStat=default`, `core.trustctime=true`,
   `core.ignoreStat=false` and `core.fileMode=true`, so relaxed checkout stat or
-  mode settings cannot hide a same-size edit or an executable-bit change.
+  mode settings cannot hide a same-size edit or an executable-bit change. On
+  POSIX they also force `core.symlinks=true`, so a regular file replacing a
+  tracked symlink is reported.
   `core.ignoreCase=true` on a case-sensitive filesystem is refused
-  (`unsafe_git_config`) because it hides case twins.
+  (`unsafe_git_config`) because it hides case twins. The setting is read as
+  Git's effective boolean (an empty or later-overridden value is false), and a
+  `.GIT` symlink or second entry cannot make a case-sensitive filesystem look
+  case-insensitive.
+- `scope-check` stops on a gitlink before any index or worktree diff, and every
+  index or worktree diff and status passes `--ignore-submodules=all`, so Git
+  never starts a command inside a populated submodule with that submodule's own
+  config. Previously scope-check reported the gitlink but still ran a
+  submodule-configured clean filter.
+- The worktree content comparison is byte for byte: it reads attributes from
+  the empty tree (`--attr-source`, Git 2.40 or newer, otherwise
+  `git_too_old`) with `core.autocrlf=false`, and every read forces
+  `core.attributesFile` to `/dev/null`. A non-empty `.git/info/attributes`,
+  which `--attr-source` does not cover, is refused (`unsafe_git_attributes`).
+  `ident`, `eol`/`text` and `working-tree-encoding` conversions can no longer
+  make an edited file (for example code added inside `$Id: ...$`) match the
+  commit. Checkouts whose files differ from their blobs only by such a
+  conversion (for example CRLF working copies) now report as changed (R1-19).
+- Worktree content is compared with HEAD (and, for `scope-check`, the base)
+  through a fresh temporary index outside the checkout, so a hand-edited stat
+  cache in `.git/index` cannot hide an edit. The checkout's index is used only
+  where it is itself the subject (staged changes, index flags) and is never
+  written. Large checkouts take longer, because every tracked file is hashed.
 - Untracked files are found with only per-directory `.gitignore` rules:
   `.git/info/exclude` and a local `core.excludesFile` no longer hide an
   untracked file from `verify`, `scope-check` or `evidence init`, and an
@@ -185,6 +213,10 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- The worktree content check gets a timeout scaled from the tracked blob size
+  (15 s plus one second per 32 MiB, at most 900 s), and running out reports
+  `checkout_too_large_for_timeout` with the byte count instead of a generic
+  read error. Other Git reads keep their 15 s limit (G-16).
 - In a shallow clone that lacks the base or its history, `verify`,
   `scope-check` and `evidence init` now say so (`shallow_checkout`, with a
   fetch hint) instead of a generic read or base error. They still fail closed.
@@ -209,6 +241,9 @@ channel or runtime model provider is added.
     `unsafe_git_config`.
   - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
     evidence dirty.
+  - Files that equal their blob only after an attribute or autocrlf conversion
+    now make evidence dirty; a non-empty `.git/info/attributes` fails with
+    `unsafe_git_attributes`; Git older than 2.40 fails with `git_too_old`.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;

@@ -150,7 +150,8 @@ v0.2.0 has `discover`, `inspect`, `prepare`, `verify`, `instructions` and
 `skill`; the other commands are new in the v0.3.0 candidate. Optional reports
 never grant approval or authority and never change a readiness gate:
 `discover --signals`, `discover --responsiveness`, `inspect --ownership`,
-`inspect --ai-policy`, `verify --observe-ci` and `--report-budget`. `--signals`
+`inspect --ai-policy`, `verify --observe-ci`, `verify --observe-signatures` and
+`--report-budget`. `--signals`
 re-ranks candidates by its score after exclusions, overlaps and low likelihood;
 the others leave ordering unchanged.
 Put `--format text` before the command for an abridged summary; JSON is

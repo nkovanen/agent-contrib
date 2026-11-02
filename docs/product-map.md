@@ -79,6 +79,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [~] C1 `inspect --ai-policy` excerpts with scan coverage ([#8](https://github.com/nkovanen/agent-contrib/issues/8)). Missing: a versioned machine-readable opt-out policy
 - [~] D3 `drift` report with per-file instruction comparison ([#16](https://github.com/nkovanen/agent-contrib/issues/16)). Missing: per-component issue baselines in a new task schema
 - [~] E1 `verify --observe-ci`, report only ([#17](https://github.com/nkovanen/agent-contrib/issues/17)). Missing: required-check declarations and gating
+- [~] E2 `verify --observe-signatures`, report only: GitHub verification of the evidence head, required-signature rulesets and local signature-header presence ([#18](https://github.com/nkovanen/agent-contrib/issues/18)). Missing: contract-required verified heads and SSH-signed evidence attestations
 - [~] F5 `authorization-request` and normative [host issuer requirements](host-authorization.md#host-issuer-requirements) ([#23](https://github.com/nkovanen/agent-contrib/issues/23)). Missing: a native issuer in Claude Code or Paseo
 - [~] G1 `--format text` summaries ([#24](https://github.com/nkovanen/agent-contrib/issues/24)). Missing: output JSON Schemas and an output-schema version
 - [~] G2 Literal POSIX path decisions pinned ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: Windows host-context input and Windows/macOS CI
@@ -89,7 +90,6 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [ ] Bounded `discover --limit` display ([#1](https://github.com/nkovanen/agent-contrib/issues/1), draft [PR #2](https://github.com/nkovanen/agent-contrib/pull/2), not part of the candidate)
 - [ ] C2 Actor-verified approval labels (maintainer-applied only) ([#9](https://github.com/nkovanen/agent-contrib/issues/9))
 - [ ] C4 Passive verification GitHub Action for maintainers ([#11](https://github.com/nkovanen/agent-contrib/issues/11))
-- [ ] E2 Signed commits and SSH-signed evidence attestations ([#18](https://github.com/nkovanen/agent-contrib/issues/18))
 - [ ] F3 Fast-forward draft updates with fresh evidence ([#21](https://github.com/nkovanen/agent-contrib/issues/21))
 - [ ] F4 Fork-to-upstream route in schema 0.2 ([#22](https://github.com/nkovanen/agent-contrib/issues/22)) (after C1)
 - [ ] G3 PyPI trusted publishing with build provenance ([#26](https://github.com/nkovanen/agent-contrib/issues/26)) (needs maintainer decision)
