@@ -223,7 +223,7 @@ def main():
             names = {name.split("/", 1)[1] for name in archive.getnames() if "/" in name}
         expected = {"pyproject.toml", "MANIFEST.in", "README.md", "NOTICE",
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
-                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py",
+                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py", "tools/release_check.py",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
