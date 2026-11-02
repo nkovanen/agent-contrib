@@ -125,6 +125,19 @@ class SymlinkScopeTests(unittest.TestCase):
         self.assertEqual(found['src/docs'], 'symlink to docs: not in allowed_paths')
         self.assertNotIn('src/docs/new.md', workspace.scope_check(task, tmp)['changed_paths'])
 
+    def test_unstaged_worktree_links_on_paths_added_after_the_base_are_judged(self):
+        # Review SL-03: the worktree view covered only paths that differ from the base, not paths committed since.
+        tmp, task, client, evidence = self.committed([('src/l', 'thumb.rs')], extra=['src/added.rs'])
+        pathlib.Path(tmp, 'src/added.rs').unlink()
+        link(tmp, 'src/added.rs', '../AGENTS.md')           # W1: committed file replaced by a link
+        pathlib.Path(tmp, 'src/l').unlink()
+        link(tmp, 'src/l', '../AGENTS.md')                  # W3: committed link re-pointed
+        result = workspace.scope_check(task, tmp)
+        self.assertFalse(result['within_scope'])
+        found = {item['path']: item['rule'] for item in result['violations']}
+        self.assertEqual(found, {'src/added.rs': 'symlink to AGENTS.md: not in allowed_paths',
+                                 'src/l': 'symlink to AGENTS.md: not in allowed_paths'})
+
     def test_unreadable_hop_fails_closed(self):
         # Review SL-01: a permission error on a hop used to read as an ordinary in-scope path.
         if os.geteuid() == 0:

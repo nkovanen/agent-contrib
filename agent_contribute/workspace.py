@@ -42,7 +42,8 @@ def scope_check(task, directory, base=None):
         # G-08: each symlink is also judged by its resolved target, in the snapshot that holds it.
         links = (core.link_violations(task['scope'], committed, core.LinkView(directory, head)) +
                  core.link_violations(task['scope'], staged, core.LinkView(directory, index=True)) +
-                 core.link_violations(task['scope'], working, core.LinkView(directory, worktree=True)))
+                 # Every changed path: a path committed since the base is not in worktree_changes (review SL-03).
+                 core.link_violations(task['scope'], paths, core.LinkView(directory, worktree=True)))
         result['violations'] = sorted(core.scope_violations(task['scope'], paths) +
                                       list({(item['path'], item['rule']): item for item in links}.values()),
                                       key=lambda item: (item['path'], item['rule']))
