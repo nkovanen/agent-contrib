@@ -2,6 +2,7 @@
 import pathlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from agent_contribute import core, workspace
 from tests.test_authorization import host_context
@@ -61,6 +62,16 @@ class LegacyCheckoutRootTests(unittest.TestCase):
                 with self.assertRaises(core.ProtocolError) as caught:
                     workspace.evidence_skeleton(self.task, directory, self.evidence['base_commit'])
                 self.assertEqual((caught.exception.code, str(caught.exception)), ('not_worktree_root', NOT_ROOT))
+
+    def test_symbolic_base_is_not_resolved_from_a_subdirectory(self):
+        # F1 resolves --base with rev-parse; the top-level check must still run first.
+        subdir = pathlib.Path(self.root, 'src')
+        with patch.object(workspace, 'resolve_base', side_effect=AssertionError('resolved before root check')):
+            self.assertEqual(workspace.scope_check(self.task, subdir, 'HEAD~1')['errors'], [NOT_ROOT])
+            with self.assertRaises(core.ProtocolError) as caught:
+                workspace.evidence_skeleton(self.task, subdir, 'HEAD~1')
+        self.assertEqual(caught.exception.code, 'not_worktree_root')
+        self.assertEqual(workspace.scope_check(self.task, self.root, 'HEAD~1')['base_commit'], self.evidence['base_commit'])
 
 
 class CandidateCheckoutRootTests(unittest.TestCase):
