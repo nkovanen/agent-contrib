@@ -203,9 +203,11 @@ head that moves during the read makes the result incomplete.
 
 Per reviewer it reports `latest_state` and `decision`: the latest APPROVED,
 CHANGES_REQUESTED or DISMISSED review (DISMISSED clears it; COMMENTED and
-PENDING never change it). `changes_requested_by_trusted_association` is true
-when a non-bot author with association OWNER, MEMBER or COLLABORATOR has an
-outstanding change request. That association is a GitHub heuristic, not a
+PENDING never change it). Reviews are grouped by numeric user ID; `author` is
+the latest observation and `decision_author` the author of the decisive review.
+`changes_requested_by_trusted_association` is true when the decisive review of
+an outstanding change request has a non-bot author with association OWNER,
+MEMBER or COLLABORATOR. That association is a GitHub heuristic, not a
 verified maintainer role. Deleted accounts appear as `ghost`. Review comments
 include path, line and `outdated` (no diff position, or made on another
 commit). Failing (failure, timed out, cancelled, action required, startup

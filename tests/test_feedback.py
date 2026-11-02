@@ -99,6 +99,27 @@ class FeedbackTests(unittest.TestCase):
         result = feedback.feedback('acme/photos#30', client)
         self.assertFalse(result['changes_requested_by_trusted_association'])
 
+    def test_decision_is_classified_by_the_association_of_its_own_review(self):
+        # (history, trusted request, decisive association): association changes between reviews (R1-03).
+        cases = [([('COMMENTED', 'CONTRIBUTOR'), ('CHANGES_REQUESTED', 'MEMBER')], True, 'MEMBER'),
+                 ([('COMMENTED', 'MEMBER'), ('CHANGES_REQUESTED', 'CONTRIBUTOR')], False, 'CONTRIBUTOR'),
+                 ([('CHANGES_REQUESTED', 'MEMBER'), ('COMMENTED', 'CONTRIBUTOR')], True, 'MEMBER'),
+                 ([('CHANGES_REQUESTED', 'CONTRIBUTOR'), ('COMMENTED', 'MEMBER')], False, 'CONTRIBUTOR'),
+                 ([('CHANGES_REQUESTED', 'CONTRIBUTOR'), ('CHANGES_REQUESTED', 'MEMBER')], True, 'MEMBER'),
+                 ([('APPROVED', 'MEMBER'), ('CHANGES_REQUESTED', 'CONTRIBUTOR')], False, 'CONTRIBUTOR'),
+                 ([('CHANGES_REQUESTED', 'MEMBER'), ('DISMISSED', 'MEMBER')], False, None)]
+        for history, trusted, association in cases:
+            with self.subTest(history=history):
+                client = PRGitHub()
+                client.reviews = [review(i, 'maint', 2, state, assoc) for i, (state, assoc) in enumerate(history, 1)]
+                result = feedback.feedback('acme/photos#30', client)
+                self.assertTrue(result['complete'], result['errors'])
+                self.assertIs(result['changes_requested_by_trusted_association'], trusted)
+                [entry] = result['reviews']
+                self.assertEqual(entry['decision'], association and 'CHANGES_REQUESTED')
+                self.assertEqual((entry['decision_author'] or {}).get('association'), association)
+                self.assertEqual(entry['author']['association'], history[-1][1], 'author is the latest observation')
+
     def test_injection_text_stays_sanitized_data(self):
         result = feedback.feedback('acme/photos#30', PRGitHub())
         body = result['review_comments'][0]['untrusted_body']

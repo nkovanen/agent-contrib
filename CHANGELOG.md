@@ -12,6 +12,9 @@
   empty text, so a complete-looking scan could report no overlap. `null` stays the
   only empty value. Schema 0.1 discovery and verification also fail closed on such
   data now (incomplete scan), a hardening of malformed-input handling only.
+- `feedback` classifies each reviewer's decision by the association on the review
+  that made it, reported as `decision_author`; `author` is now the latest
+  observation (R1-03). Previously the first review's association was kept.
 
 - Require a source-linked repository requirements ledger in the installed
   workflow, precommit gates before commits, and independent review of compliance

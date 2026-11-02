@@ -125,14 +125,15 @@ def feedback(reference, client=None, *, expected_head=None):
         except core.ProtocolError as exc:
             errors.append('Malformed review: ' + str(exc))
             continue
-        entry = reviewers.setdefault(author['id'] or author['login'], {'author': author, 'decision': None})
-        entry.update(record)
+        entry = reviewers.setdefault(author['id'] or author['login'], {'author': author, 'decision': None, 'decision_author': None})
+        entry.update(record, author=author)
         if state in DECISIONS:
-            entry['decision'] = None if state == 'DISMISSED' else state
+            # Associations change between reviews; classify a decision by the review that made it.
+            entry['decision'], entry['decision_author'] = (None, None) if state == 'DISMISSED' else (state, author)
     result['reviews'] = list(reviewers.values())
     result['changes_requested_by_trusted_association'] = any(
-        item['decision'] == 'CHANGES_REQUESTED' and item['author']['association'] in TRUSTED_ASSOCIATIONS and
-        not item['author']['bot'] for item in reviewers.values())
+        item['decision'] == 'CHANGES_REQUESTED' and item['decision_author']['association'] in TRUSTED_ASSOCIATIONS and
+        not item['decision_author']['bot'] for item in reviewers.values())
     result['review_provenance'] = ('decision is the latest APPROVED, CHANGES_REQUESTED or DISMISSED review per '
                                    'reviewer; COMMENTED never clears a request. Trusted association is GitHub\'s '
                                    'author_association (OWNER/MEMBER/COLLABORATOR), a heuristic, not a verified role.')
