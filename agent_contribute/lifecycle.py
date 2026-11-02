@@ -249,7 +249,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not publication['creation_clear']:
         draft_errors.append('Exact-head PR history does not permit creation' if authority['historical_valid'] else unchecked)
     result['draft_create_ready'] = not draft_errors and not identity_verified
-    signoff = human_signoff(task, host_context, evidence, authority, publication, review, now)
+    # Judge final sign-off expiry after every blocking read, never at the start of verification.
+    signoff = human_signoff(task, host_context, evidence, authority, publication, review,
+                            dt.datetime.now(dt.timezone.utc))
     result['human_signoff'] = signoff
     result['final_signoff_sha256'] = signoff['sha256']
     completion_errors = list(post_errors) + signoff['errors']

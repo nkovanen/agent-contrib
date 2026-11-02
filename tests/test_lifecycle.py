@@ -578,6 +578,37 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertIn('Final signoff must be current and follow publication and independent review',
                       result['human_signoff']['errors'])
 
+    def test_signoff_expiring_during_github_reads_blocks_completion(self):
+        # Expiry is judged after the blocking reads, not at the time verify started (R1-05).
+        self.publish()
+        record = self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)
+        record['expires_at'] = (NOW + dt.timedelta(seconds=1)).isoformat()
+        record['event']['binding_sha256'] = event_binding(record)
+        self.assertTrue(self.verify()['completion_ready'], 'the record is valid when no time passes')
+
+        class AdvancingClock(Clock):
+            current = NOW
+
+            @classmethod
+            def now(cls, tz=None):
+                return cls.current.astimezone(tz)
+
+        original = self.client.request
+
+        def slow_request(endpoint):
+            value = original(endpoint)
+            if endpoint == 'repos/acme/photos/pulls/30':  # the final PR detail read takes two seconds
+                AdvancingClock.current = NOW + dt.timedelta(seconds=2)
+            return value
+
+        self.client.request = slow_request
+        with patch.object(core.dt, 'datetime', AdvancingClock):
+            result = self.verify()
+        self.assertEqual(result['human_signoff']['errors'],
+                         ['Final signoff must be current and follow publication and independent review'])
+        self.assertFalse(result['completion_ready'])
+        self.assertIn('Final human signoff is pending or invalid', result['stage_blockers']['completion'])
+
     def test_signoff_event_binding_must_match_the_final_record(self):
         self.publish()
         self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)

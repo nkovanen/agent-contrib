@@ -2,6 +2,8 @@
 
 ## 0.3.0 — unreleased
 
+- Schema 0.2 final sign-off expiry is checked at the current time after all
+  GitHub reads, not at the start of `verify` (R1-05).
 - Require `--repo-dir` to be the Git worktree top level for `verify`,
   `scope-check` and `evidence init` (R1-01). From a subdirectory, Git tree, index
   and untracked reads omitted the rest of the checkout, hiding gitlinks and
