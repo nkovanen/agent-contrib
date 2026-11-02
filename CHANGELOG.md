@@ -2,131 +2,143 @@
 
 ## 0.3.0 — unreleased
 
-- `verify`, `scope-check` and `evidence init` capture HEAD once with an exact
-  lookup and use that commit for every tree, diff, ancestry, gitlink and
-  timestamp read (R4-05). An unborn or deleted current branch, or a HEAD naming
-  a non-commit, now fails with `unborn_head`; previously a `refs/tags/HEAD`
-  tag could stand in for it. This also hardens schema 0.1 `verify`.
-- Schema 0.2 `user_authorization` adds `source_errors`, the source identity
-  failures also listed in its `errors`; `pr-body` keeps them as source blockers
-  instead of omitting them with the authority states (R1-10).
-- Schema 0.2 authorization requires the collaborator-permission login to be a
-  valid ASCII GitHub login before its case-insensitive comparison, so Unicode
-  confusables such as `ſ` or the Kelvin sign no longer match (R1-08).
-- Reject JSON strings containing a lone surrogate escape (such as `"\ud800"`)
-  as `invalid_json` when parsing GitHub responses, contracts, evidence and host
-  context (R1-07). Such a value used to raise an uncaught encoding error at
-  hashing time, which aborted a whole multi-repository `discover`. It now
-  makes only the affected repository incomplete. For schema 0.1 inputs this is
-  a fail-closed hardening: a contract or response that already failed with
-  `input_error` now fails with `invalid_json`.
-- `drift` reports a source repository or issue URL change, and for schema 0.2 a
-  changed repository, owner or issue numeric ID, as drift; an unresolved 0.2
-  identity makes the report incomplete (R1-06).
-- Schema 0.2 final sign-off expiry is checked at the current time after all
-  GitHub reads, not at the start of `verify` (R1-05).
-- Require `--repo-dir` to be the Git worktree top level for `verify`,
-  `scope-check` and `evidence init` (R1-01). From a subdirectory, Git tree, index
-  and untracked reads omitted the rest of the checkout, hiding gitlinks and
-  out-of-scope untracked files. This also changes schema 0.1 `verify`: a
-  subdirectory or Git directory now fails closed with an evidence error.
-- Reject non-null, non-string PR `body`/`head.ref` and non-object `head` values in
-  every overlap scan (R1-02). Values such as `[]`, `false` or `0` were scanned as
-  empty text, so a complete-looking scan could report no overlap. `null` stays the
-  only empty value. Schema 0.1 discovery and verification also fail closed on such
-  data now (incomplete scan), a hardening of malformed-input handling only.
-  A PR record missing its `body` or `head` key, or a `head` without `ref`, is
-  likewise malformed and makes the scan incomplete; an explicit `null` body or
-  head stays empty (R1-11). This also applies to schema 0.1.
-- `feedback` classifies each reviewer's decision by the association on the review
-  that made it, reported as `decision_author`; `author` is now the latest
-  observation (R1-03). Previously the first review's association was kept.
-- For schema 0.2, `pr-body` shows only `technical_evidence_valid` with source,
-  evidence and review blockers, and states that authority gates, `next_action`,
-  final sign-off and authorization blockers are omitted (A1-12). Without host
-  context it previously rendered authorized work as unauthorized.
+The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
+read-only helper commands and report-only options, and hardens untrusted-input
+handling. Schema 0.1 contracts keep their decisions; every 0.1 behaviour change
+is listed under "Compatibility notes". No GitHub write API, merge, release
+channel or runtime model provider is added.
 
-- Require a source-linked repository requirements ledger in the installed
-  workflow, precommit gates before commits, and independent review of compliance
-  as well as code. Include required docs, PR-visible artifacts and template items;
-  do not equate passing CLI gates with prose compliance. Schemas are unchanged.
+### Added
 
-- Handle closed or missing stdout quietly, including buffered errors and
-  caller-provided write-only streams (#4). Help/version behavior is unchanged.
-- Add opt-in `--format text` summaries; JSON stays canonical (#24, part).
-- Add offline `scope-check` (#15). `verify` and `scope-check` share one scope
-  evaluator; schema 0.1 decisions are unchanged.
-- Add `evidence init` (#14): an evidence skeleton prefilled only with observed
-  Git facts and contract IDs. It never runs argv or writes `passed`, and it
-  fails validation until filled.
-- Add `pr-body` (#19): a Markdown PR description from the contract, evidence
-  and live verify gates, with untrusted text neutralized and `Refs` by default.
-- Add opt-in `discover --signals` (#12): code-location, acceptance-clarity,
-  activity and maintainer signals with explanations; default output unchanged.
-  Code location also resolves unique dotted and `::` module names.
-- Add opt-in `discover --responsiveness` (#12): one extra read of recently
-  closed PRs reporting the external merge rate and median days to close.
-  Report only; an incomplete report exits 1 and changes no gate or ordering.
-- Add read-only `audit owner/repo` (#10) for maintainers, using exactly the
-  reads `discover` makes. Discover output and read order are frozen by goldens.
-- Add read-only `feedback 'owner/repo#PR'` (#20): latest reviews, comments,
-  outdated flags, bot authors and failing/pending checks for the exact head.
-- Add opt-in, report-only ownership and resolution signals (#5, #6) via
-  `inspect --ownership` and `ownership`; no gate or default output changes.
-- Add opt-in `inspect --ai-policy` (#8, part): located AI-contribution
-  statement excerpts from loaded instructions; the opt-out policy is deferred.
-- Add read-only `drift task.json` (#16, part): per-file instruction changes from
-  the pinned commit, issue, branch, policy and overlap changes; never rewrites.
-- Add opt-in `verify --observe-ci` (#17, part): report-only check runs and
-  combined status for the exact evidence head; gates and exit codes unchanged.
-- Add opt-in `--report-budget` and `--min-remaining` (#27, part): rate-limit
-  snapshots around a command; the response cache is deferred.
-- Add multi-repository `discover` (#13) for 2 to 20 repositories with isolated
-  per-repository results and a merged candidate order; one repository is unchanged.
-- Pin literal POSIX scope and artifact path decisions across platforms (#25,
-  part; no Windows or macOS support claim and no CI matrix change).
-- Schema 0.2 `verify` reports `Exact-head PR history not checked: requires a
-  valid mandate` instead of implying the history was read. Gates are unchanged.
-- The prerequisite blocker names each failing prerequisite ID and status, for
-  example `P1 (pending), P4 (satisfied without evidence)`.
-- `--format text verify --stage X` leads with stage X, its exit gate and its
-  blockers, and reduces other stages to blocker counts. JSON and exit codes are
-  unchanged.
-- Heuristic overlap reasons name the shared title words and checklist IDs that
-  triggered the match. Duplicate entry fields and matching are unchanged.
-- `scope-check --base` and `evidence init --base` accept a full SHA, `HEAD` or
-  an exact `refs/...` name, optionally followed by `~N`/`^N` (previously only a
-  full SHA). Short branch/tag names, abbreviated SHAs, other pseudo-refs and
-  other revision syntax are refused with a conversion hint. `scope-check`
-  adds a `warnings` list and warns when the default base is not an ancestor of
-  HEAD.
-- `agent-contrib --help` describes every command and option, including input
-  constraints and exit status; the description no longer claims JSON-only output.
-- A global option given after the subcommand is still a usage error, but the
-  message now says to move it before the subcommand.
-- `discover` with no repository again reports the missing `reference` instead
-  of the 2-20 multi-repository bound. Exit status stays 2.
-- `--format text` for `scope-check` lists violating paths, warnings and errors;
-  for `drift` it lists each drift reason and informational changes separately.
-- `pr-body` no longer renders a mangled `next_action` (previously
-  `resolve_blockers` was escaped); with the A1-12 change it omits the value for
-  schema 0.2 instead of showing it.
+- Explicit task and evidence schema **0.2** (`prepare --schema-version 0.2`) for
+  one same-repository candidate issue (#3). A human/host-issued mandate in
+  host-context schema 0.1 (`verify --host-context-stdin`, at most 8 MiB, 5 s) is
+  bound to the contract hash, numeric repository, owner, issue and credential IDs,
+  refs and actions. Live GETs require a personal credential with exactly the
+  `admin` or `maintain` role. Mandates and sign-off are host-asserted, not
+  cryptographic consent. The base must be the source default branch; a
+  case-variant repository spelling is refused with `case_mismatch`.
+- Separate schema 0.2 gates selected with `verify --stage
+  implementation|draft|completion`. Implementation needs complete, empty
+  exact-head PR history; without a valid mandate the blockers say `Exact-head PR
+  history not checked: requires a valid mandate`. Exactly one authenticated open
+  draft at the tested head is recognized after publication; unrelated overlaps
+  still block. A draft created inside an expired mandate's interval stays
+  recognized; new actions need a current mandate. Final sign-off is a separate,
+  later host record whose expiry is checked after all GitHub reads.
+- `authorization-request` (schema 0.2): an unsigned request with every mandate
+  binding pre-filled from the contract and live reads and every human-only field
+  `null`. It validates the full schema before any read, labels its diagnostics
+  untrusted, contains no display summary and cannot pass as host context.
+- `scope-check` (#15): offline check of committed, staged, unstaged and untracked
+  paths with the same scope evaluator as `verify`.
+- `evidence init` (#14): an evidence skeleton with only observed Git facts and
+  contract IDs; it never runs argv or writes `passed` and fails validation until
+  filled.
+- `--base` for `scope-check` and `evidence init` accepts exactly a full SHA,
+  `HEAD` or a full `refs/...` name, optionally followed by `~N`/`^N`, looked up
+  exactly (never through Git's short-name lookup). Other forms are refused with
+  a conversion hint. `scope-check` warns when the default base is not an
+  ancestor of HEAD.
+- `pr-body` (#19): a Markdown PR description from the contract, evidence and a
+  fresh `verify`, with remote text neutralized and `Refs` by default. For schema
+  0.2 it shows only `technical_evidence_valid` with source (including identity),
+  evidence and review blockers, and says that authority gates, `next_action` and
+  sign-off are omitted because it takes no host context.
+- `feedback 'owner/repo#PR'` (#20): latest reviews, comments, outdated flags and
+  failing or pending checks for the exact head. Each reviewer's decision is
+  classified by the association on the review that made it (`decision_author`).
+- `audit owner/repo` (#10): read-only maintainer report using exactly the reads
+  `discover` makes.
+- `drift task.json` (#16, part): issue, per-file instruction, branch, policy and
+  overlap changes since preparation, plus changed source repository, issue URL
+  and (0.2) numeric identities. It never rewrites the contract.
+- Multi-repository `discover` (#13) for 2–20 repositories with isolated results
+  and a merged candidate order; a single repository's output is unchanged.
+- Report-only options that change no gate, approval or ordering:
+  `discover --signals` (#12; code location including unique dotted and `::`
+  module names, clarity, activity, author association), `discover
+  --responsiveness` (#12; one read of recently closed PRs), `inspect
+  --ownership` and `ownership` (#5, #6; a conflicting repository ID for one
+  cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
+  part), `verify --observe-ci` (#17, part) and `--report-budget` /
+  `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
+  where documented.
+- `--format text` summaries (#24, part); JSON stays canonical and unchanged.
+- `--help` describes every command and option, input constraints and exit status.
+- Installed workflow: a source-linked requirements ledger, precommit gates,
+  independent compliance review, the contract fields that hold the AI-policy
+  review and ledger reference, an implement-only local profile, coordinator relay
+  rules, the stacked-base limitation and normative host issuer requirements.
 
-- Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
-  Live credential/role checks stay separate from host-asserted human mandates;
-  repository policy approval is unchanged.
-- Separate implementation, draft and completion gates. Recognize exactly one
-  authenticated open draft at the tested head, preserving unrelated overlaps.
-- Preserve schema 0.1 decisions and default preparation with golden fixtures.
-- Add adversarial authorization/lifecycle/CLI tests and installed-resource checks.
+### Changed
 
-This route is create-only, uses the source default branch and requires a personal
-admin/maintain credential. Human records require an explicit host handoff; they
-are not cryptographic consent. No merge, release, GitHub write API or runtime
-model provider is added.
+- The prerequisite blocker names each failing prerequisite, for example
+  `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
+  without evidence)`. The condition is unchanged.
+- A heuristic overlap `reason` ends with the shared title words and checklist IDs
+  that triggered it. Matching and fields are unchanged.
+- A global option placed after the subcommand is still a usage error; the
+  message now says to move it before the subcommand. `discover` with no
+  repository reports the missing `reference`.
+- CLI input files are read once and validated before any GitHub or budget read,
+  with identical errors with or without `--report-budget`. Schema-invalid
+  `drift`, `pr-body` and `authorization-request` contracts make no GitHub read.
 
-CLI/library versions follow semantic versioning. Task/evidence schema versions
-are independent and require an explicit compatibility decision.
+### Security
+
+- Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and
+  numbers that overflow to infinity (`1e999`) as `invalid_json` in GitHub
+  responses, contracts, evidence and host context. A lone surrogate used to
+  abort a whole multi-repository `discover` at hashing time; an overflowing
+  number in a repository policy used to crash `inspect` output. Now only the
+  affected read or repository is incomplete or unknown.
+- Overlap scans treat a PR whose `body`, `head` or `head.ref` is missing or has
+  the wrong type as malformed, making the scan incomplete. Values such as `[]`,
+  `false` or `0` used to be scanned as empty text. An explicit `null` body or
+  head stays empty.
+- `--repo-dir` must be the Git worktree top level for `verify`, `scope-check`
+  and `evidence init` (`not_worktree_root`). From a subdirectory, tree, index and
+  untracked reads omitted the rest of the checkout, hiding gitlinks and
+  out-of-scope files.
+- HEAD is captured once with an exact lookup and used for every tree, diff,
+  ancestry, gitlink and timestamp read. An unborn or deleted branch, or a HEAD
+  naming a non-commit, fails with `unborn_head`; a `refs/tags/HEAD` tag can no
+  longer stand in for it.
+- Schema 0.2 requires the collaborator-permission login to be a valid ASCII
+  GitHub login before its case-insensitive comparison, so Unicode confusables
+  such as `ſ` or the Kelvin sign no longer match.
+
+### Fixed
+
+- Closed or missing stdout exits 1 quietly, including buffered errors and
+  caller-provided write-only streams (#4). Help and version are unchanged.
+- Library `verify` of a schema-valid 0.1 contract with host context keeps
+  `schema_valid: true` and reports the refusal only in `errors`.
+
+### Compatibility notes
+
+- CLI/library versions follow semantic versioning; task, evidence and
+  host-context schema versions are independent. Supported sets: task/evidence
+  0.1 and 0.2, host-context 0.1. Unknown versions fail closed; nothing is
+  migrated. `prepare` still defaults to 0.1.
+- Schema 0.1 changes, all fail-closed or message-only:
+  - `verify --repo-dir` from a subdirectory or Git directory now fails with an
+    evidence error instead of reading part of the checkout.
+  - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.
+  - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
+    and verification scans incomplete instead of empty.
+  - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;
+    contracts or responses that used to fail with `input_error`, or to parse to
+    infinity, change error code.
+  - The prerequisite blocker and heuristic overlap reasons carry more detail,
+    so their strings differ; the decisions do not.
+  - Misplaced global options produce a more specific usage message.
+  - `--base` grammar applies only to the new `scope-check` and `evidence init`;
+    evidence `base_commit` stays a full SHA, so 0.1 `verify` is unaffected.
+  - Lifecycle options (`--stage`, `--host-context-stdin`) are rejected for 0.1
+    contracts rather than reinterpreted.
+- Default `discover` output and read order are frozen by goldens and unchanged.
 
 ## 0.2.0 — 2026-11-01
 
