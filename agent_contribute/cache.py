@@ -147,7 +147,8 @@ class Cache:
         if name is None:
             return None
         try:
-            descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=self._fd)
+            # Nonblocking, so a FIFO or device entry cannot stall the read; fstat then admits only a regular file.
+            descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=self._fd)
         except FileNotFoundError:
             return None
         except OSError:  # a symlink (ELOOP) or unreadable entry

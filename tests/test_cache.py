@@ -344,6 +344,28 @@ class StorageSafetyTests(CacheTestCase):
             store.observe(self.contents(), fake.request(self.contents()))
         self.assertFalse(self.root.exists() and self.entries())
 
+    def test_a_fifo_entry_cannot_hang_the_read(self):
+        # Review R10-02: a blocking open of a FIFO with no writer never returns, so the fallback never ran.
+        import threading
+        store, fake = self.store()
+        self.root.mkdir(mode=0o700, parents=True)
+        fifo = self.root / ('blob-' + blob(INSTRUCTION))
+        os.mkfifo(fifo, 0o600)
+        flags, real_open, outcome = [], cache.os.open, []
+
+        def recording(path, flag, *args, **kwargs):
+            flags.append(flag)
+            return real_open(path, flag, *args, **kwargs)
+        self.assertIsNotNone(store._root())  # acquire first: a patched os.open is not in os.supports_dir_fd
+        worker = threading.Thread(target=lambda: outcome.append(store.lookup(self.contents())), daemon=True)
+        with patch.object(cache.os, 'open', recording):
+            worker.start()
+            worker.join(30)  # a hang guard only; the deterministic check is the open flag below
+        self.assertFalse(worker.is_alive(), 'lookup blocked on a FIFO entry')
+        self.assertEqual(outcome, [None])
+        self.assertFalse(fifo.exists(), 'the non-regular entry is discarded')
+        self.assertTrue(flags[-1] & os.O_NONBLOCK and flags[-1] & os.O_NOFOLLOW)
+
     def test_symlinked_entries_are_never_followed(self):
         store, fake = self.store()
         secret = pathlib.Path(self.directory.name, 'secret')

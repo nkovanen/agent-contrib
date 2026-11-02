@@ -510,8 +510,8 @@ status.
 - Entries are the decoded file bytes, named by blob SHA. A stored response must
   carry that SHA and hash to it. Every hit recomputes the Git blob hash
   (SHA-1 of `blob <length>\0<bytes>`) and must match the live tree; a
-  mismatching, oversized, symlinked or foreign-owned entry is deleted and read
-  live. Identical files at different paths share one entry.
+  mismatching, oversized, symlinked, foreign-owned or non-regular entry (such
+  as a FIFO, opened nonblocking) is deleted and read live. Identical files at different paths share one entry.
 - The directory is `$XDG_CACHE_HOME/agent-contrib` (an absolute
   `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`.
   - It is opened once, walking the resolved parent path component by component
