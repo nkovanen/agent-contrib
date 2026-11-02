@@ -117,7 +117,7 @@ class TextFormatTests(unittest.TestCase):
 
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30'}]))
+            {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
         text = textfmt.render('inspect', result)
         self.assertIn('Approval: candidate', text)
         self.assertIn('Overlapping PRs (1):\n  - https://github.com/acme/photos/pull/30: Explicit reference to this issue', text)

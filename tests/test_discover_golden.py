@@ -28,7 +28,7 @@ def scenarios():
         'plain': ('acme/photos', FakeGitHub()),
         'policy_overlap': ('acme/photos', FakeGitHub(POLICY, ['agent-ok'], [
             {'number': 30, 'title': 'Fix thumbnail bounds', 'body': 'Fixes #12',
-             'html_url': 'https://github.com/acme/photos/pull/30'}])),
+             'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}])),
         'labels_fail': ('acme/photos', failing('/labels')),
         'issue_list_fail': ('acme/photos', failing('/issues?')),
         'tree_fail': ('acme/photos', failing('/git/trees/')),

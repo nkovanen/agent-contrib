@@ -5,6 +5,7 @@ import datetime as dt
 import re
 from urllib.parse import quote
 
+from .authorization import positive as _positive_id
 from .core import ProtocolError, paginate, parse_repository
 
 _BINDING_KEYS = {'target_repository', 'target_repository_id', 'head_repository',
@@ -19,15 +20,13 @@ def _require(condition, message):
         raise ProtocolError('publication_shape', message)
 
 
-def _positive_id(value):
-    return type(value) is int and value > 0
-
-
 def _hex(value, length):
     return isinstance(value, str) and re.fullmatch(r'[0-9a-f]{%d}' % length, value) is not None
 
 
 def _ref(value):
+    # Deliberately not authorization.valid_ref: GitHub may report any Git-valid ref (up to 1024, HEAD allowed),
+    # while reviewed refs are narrower (200, no HEAD). Bound publications still match reviewed refs exactly.
     if not isinstance(value, str) or not value or len(value) > 1024:
         return False
     if (value == '@' or value.startswith(('-', '/')) or value.endswith(('/', '.'))
@@ -39,6 +38,8 @@ def _ref(value):
 
 
 def _timestamp(value):
+    # Same RFC3339 subset as authorization.timestamp, but parsed without fromisoformat and failing as
+    # publication_shape; the two are kept separate so each error contract stays unchanged.
     # Parse the same RFC3339 subset on every supported Python, without truncation.
     match = re.fullmatch(
         r'([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})'

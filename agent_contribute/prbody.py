@@ -85,7 +85,8 @@ def render(task, verification, evidence=None, *, closes=False, assistant=None, t
         lines += ['`agent-contrib verify` reported (text neutralized):', '',
                   _gate('technical_evidence_valid', verification.get('technical_evidence_valid')), '', AUTHORITY_OMITTED]
         authority = verification.get('user_authorization') or {}
-        omitted = set(authority.get('errors', [])) | set(authority.get('current_errors', []))
+        omitted = (set(authority.get('errors', [])) | set(authority.get('current_errors', []))) - set(
+            authority.get('source_errors', []))
         blockers = [('source', error) for error in verification.get('errors', []) if error not in omitted]
         blockers += [('evidence', error) for error in verification.get('evidence_errors', [])]
         blockers += [('review', error) for error in (verification.get('independent_review') or {}).get('errors', [])]
@@ -146,7 +147,7 @@ def template_pointer(task, client):
             if entry.get('type') == 'blob' and TEMPLATE.fullmatch(path):
                 sha = entry.get('sha')
                 found.append({'path': core.safe_text(path, 500),
-                              'sha': sha if isinstance(sha, str) and re.fullmatch('[0-9a-f]{40}', sha) else None})
+                              'sha': sha if isinstance(sha, str) and core.SHA.fullmatch(sha) else None})
         return {'state': 'found' if found else 'none', 'templates': sorted(found, key=lambda t: t['path'])[:20]}
     except core.ProtocolError:
         return {'state': 'unknown', 'templates': []}

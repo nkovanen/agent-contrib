@@ -26,6 +26,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
+| `agent-contrib authorization-request task.json` | Schema 0.2 only: an unsigned request with every mandate binding pre-filled from the contract and live reads and every human-only field `null`. Grants nothing; exit 1 when not ready |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base REV]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base REV --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
@@ -128,6 +129,29 @@ non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 schema 0.1. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
 
+## Authorization request
+
+`authorization-request task.json` makes the same GitHub reads as `verify
+task.json` without host context, writes no file and reads no stdin. It first
+validates the full task 0.2 schema: a schema 0.1 or unknown version is a usage
+error (exit 2), and an invalid contract returns `error.code: invalid_contract`
+with `schema_errors` and no template (exit 1), before any read; the payload is
+identical with `--report-budget`, which takes no budget snapshot in that case.
+
+The output has `issued: false`, `contract_sha256`, `mandate_fields`,
+`human_only_fields`, `unresolved_fields`, `preflight_errors` and
+`ready_for_issuance` (exit 0 only when true). In a ready request the `null`
+leaves of `mandate_fields` are exactly `human_only_fields`. When identity or
+permission reads fail, `credential_actor_id` and `authority` are also `null` and
+listed in `unresolved_fields`; only fresh trusted reads resolve them.
+`preflight_errors` omit the blockers that exist only because no mandate exists
+yet. They are untrusted diagnostics and may contain repository-authored paths.
+
+The request deliberately contains no scope, path, objective, criteria or
+validation summary. The host renders the complete contract from the file it
+hashes, issues the record, and the worker relays it unchanged. The request is not
+host context: piping it to `verify --host-context-stdin` fails schema validation.
+
 ## Offline scope check
 
 `scope-check` evaluates the working diff against the contract's
@@ -135,12 +159,21 @@ that is the same host-asserted boundary as the CLI, not a privileged API.
 `verify` uses for evidence. It reads only the local checkout: committed changes
 from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
 and untracked files that are not ignored. Renames report both paths. The base
-must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts any local
-revision (SHA, abbreviated SHA, branch or tag), resolved in the checkout with
-`git rev-parse --verify 'REV^{commit}'` under the same hook, fsmonitor and
-replacement-object protections as other Git reads; `base_commit` reports the
-full SHA. A value that is blank, starts with `-` or contains whitespace or
-control characters is refused. When the default base is not an ancestor of HEAD,
+must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts exactly a
+full 40-character SHA, `HEAD`, or a full ref name such as `refs/heads/NAME` or
+`refs/tags/NAME`, each optionally followed by `~N` or `^N` (for example
+`HEAD~3` or `refs/heads/base~1`). Short branch or tag names, abbreviated SHAs
+(convert with `git rev-parse ABBREV`), pseudo-refs other than `HEAD` and other
+revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths, ranges) are refused.
+`HEAD` and `refs/...` names are looked up exactly with `git show-ref --verify`,
+never through Git's short-name lookup, so a same-named ref such as
+`refs/tags/HEAD` cannot stand in for them; an unborn `HEAD` is refused. The
+object ID is captured first, then the suffix and `^{commit}` are applied to it
+with `git rev-parse`.
+Every read uses the same hook, fsmonitor and replacement-object protections as
+other Git reads, and nothing under `.git` is opened directly. `base_commit`
+reports the full SHA. A value that is blank, starts with `-` or contains
+whitespace or control characters is refused. When the default base is not an ancestor of HEAD,
 `warnings` suggests passing `--base` for stacked or rebased work; the result
 still fails. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
@@ -180,7 +213,8 @@ When supplied evidence does not pass `verify`, its statuses are labelled
 `unverified claim`. Evidence that fails its schema is not quoted at all; its
 errors appear among the gates. For schema 0.2, review and sign-off states come
 from `verify`. `pr-body` takes no host context, so for 0.2 it shows only
-`technical_evidence_valid` with source, evidence and review blockers. It omits
+`technical_evidence_valid` with source (including repository, owner and issue
+identity), evidence and review blockers. It omits
 the implementation, draft and completion gates, `next_action`, final sign-off and
 authorization blockers, and says so, rather than misreporting authorized work as
 unauthorized. The host's `verify --host-context-stdin` run decides those.
@@ -448,7 +482,9 @@ counted. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that
-exit. JSON still contains every stage. `scope-check` lists each violating path
+exit. When schema validation fails before any stage is evaluated, the stage
+line reads `not evaluated; see Errors` and the schema errors follow. JSON still
+contains every stage. `scope-check` lists each violating path
 and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
 informational changes (an advanced default branch, PRs no longer open) apart.
 Other commands show top-level

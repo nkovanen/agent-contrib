@@ -55,39 +55,14 @@ def _run(run):
 
 def check_runs(client, repository, sha):
     """check-runs pages are objects; IDs must be unique and total_count stable across pages."""
-    runs, errors, seen, total, malformed = [], [], set(), None, 0
-    for page in range(1, core.MAX_PAGES + 1):
-        try:
-            data = core.require(client.request(f'repos/{repository}/commits/{sha}/check-runs?per_page=100&page={page}'),
-                                dict, 'check runs page')
-            count = data.get('total_count')
-            if type(count) is not int or count < 0:
-                remote.bad('check run count')
-            batch = core.require(data.get('check_runs'), list, 'check runs')
-            if total is not None and count != total:
-                errors.append('Check run count changed during pagination')
-            total = count
-            if len(batch) > 100:
-                raise core.ProtocolError('api_shape', 'Check run page exceeds 100 items')
-            for item in batch:
-                try:
-                    run = _run(core.require(item, dict, 'check run'))
-                except core.ProtocolError as exc:
-                    errors.append('Malformed check run: ' + str(exc))
-                    malformed += 1
-                    continue
-                if run['id'] in seen:
-                    errors.append('Pagination repeated a check run; results may have moved')
-                    continue
-                seen.add(run['id'])
-                runs.append(run)
-            if len(batch) < 100:
-                if len(seen) + malformed != total:
-                    errors.append('Check run count does not match total_count')
-                return runs, errors
-        except core.ProtocolError as exc:
-            return runs, errors + [str(exc)]
-    return runs, errors + ['Pagination reached the 40-page limit']
+    def parse(item):
+        run = _run(item)
+        return run['id'], run
+    runs, errors, _ = remote.counted_pages(
+        client, f'repos/{repository}/commits/{sha}/check-runs', 'check_runs', parse, page='check runs page',
+        count='Check run count', noun='check run', oversize='Check run page exceeds 100 items',
+        malformed='Malformed check run: ')
+    return runs, errors
 
 
 def feedback(reference, client=None, *, expected_head=None):

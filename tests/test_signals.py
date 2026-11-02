@@ -103,7 +103,7 @@ class DiscoverSignalTests(unittest.TestCase):
         self.assertEqual(top['code_location']['hints'], ['src/thumb.rs'])
         self.assertEqual(top['maintainer']['value'], 'maintainer')
         overlapping = SignalGitHub(prs=[{'number': 9, 'title': 'x', 'body': 'Fixes #12',
-                                         'html_url': 'https://github.com/acme/photos/pull/9'}])
+                                         'html_url': 'https://github.com/acme/photos/pull/9', 'head': None}])
         self.assertEqual([i['number'] for i in core.discover('acme/photos', overlapping, signals=True)['issues']], [3, 12])
 
     def test_malformed_remote_signal_fields_degrade_through_cli(self):

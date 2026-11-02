@@ -181,20 +181,20 @@ class DiscoveryTests(unittest.TestCase):
         for body, expected in cases:
             with self.subTest(body=body):
                 client = FakeGitHub(prs=[{'number': 30, 'title': 'Unrelated work', 'body': body,
-                                          'html_url': 'https://github.com/acme/photos/pull/30'}])
+                                          'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}])
                 result = core.inspect_issue('acme/photos#12', client)
                 self.assertEqual(bool(result['duplicates']), expected)
 
     def test_long_remote_pr_is_scanned_in_linear_time(self):
         started = time.monotonic()
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'Other', 'body': 'a' * 30000 + ' Fixes #12', 'html_url': 'url'}]))
+            {'number': 30, 'title': 'Other', 'body': 'a' * 30000 + ' Fixes #12', 'html_url': 'url', 'head': None}]))
         self.assertTrue(result['duplicates'])
         self.assertLess(time.monotonic() - started, 1.0)
 
     def test_project_independent_identifier_overlap_warns(self):
         client = FakeGitHub(prs=[{'number': 30, 'title': 'Other work',
-                                 'body': 'Implements ABC-FEATURE-ID', 'html_url': 'url'}])
+                                 'body': 'Implements ABC-FEATURE-ID', 'html_url': 'url', 'head': None}])
         original = client.request
         def request(endpoint):
             result = original(endpoint)
@@ -207,7 +207,7 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_topic_overlap_warns(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url'}]))
+            {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url', 'head': None}]))
         self.assertTrue(result['duplicates'])
         self.assertEqual(result['duplicates'][0]['reason'],
                          'Potential title/checklist overlap; review manually (shared title words: bounds, thumbnail)')
@@ -215,7 +215,7 @@ class DiscoveryTests(unittest.TestCase):
     def test_overlap_match_list_is_sorted_bounded_and_limited_to_the_trigger(self):
         words = ['word%02d' % n for n in range(30)]
         index = core.index_prs([{'number': 30, 'title': ' '.join(reversed(words)), 'html_url': 'url',
-                                 'body': 'Tracks ABC-ONE and ABC-TWO'}])
+                                 'body': 'Tracks ABC-ONE and ABC-TWO', 'head': None}])
         issue = {'number': 12, 'title': ' '.join(words), 'body': 'See ABC-TWO'}
         [finding] = core.duplicate_prs('acme/photos', issue, index)
         self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared title words: ' +
@@ -325,10 +325,18 @@ class VerificationTests(unittest.TestCase):
         task['behavior_criteria'][0]['description'] = '   '
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
+    def test_legacy_prepared_duplicate_blocks_execution_without_a_live_overlap(self):
+        task, client = ready_contract()
+        self.assertTrue(core.verify(task, client=client)['execution_ready'])
+        task['discovery']['duplicate_prs'] = [{'number': 30, 'url': 'https://github.com/acme/photos/pull/30',
+                                               'reason': 'Explicit reference to this issue'}]
+        result = core.verify(task, client=client)
+        self.assertEqual(result['errors'], ['Prepared discovery is incomplete or has unresolved duplicates'])
+        self.assertFalse(result['execution_ready'])
+
     def test_prerequisite_blocker_names_each_failing_id_and_status(self):
         expected = ('Prerequisites are not satisfied with evidence: P1 (pending), '
                     'P3 (blocked), P4 (satisfied without evidence)')
-        from agent_contribute import lifecycle
         from tests.test_authorization import candidate_task
         prerequisites = [{'id': 'P1', 'description': 'One', 'status': 'pending', 'evidence': ''},
                          {'id': 'P2', 'description': 'Two', 'status': 'satisfied', 'evidence': 'Done'},
@@ -341,9 +349,9 @@ class VerificationTests(unittest.TestCase):
         self.assertIn(expected, result['errors'])
         task, client = candidate_task()
         task['prerequisites'] = copy.deepcopy(prerequisites)
-        self.assertIn(expected, lifecycle.reviewed_errors(task))
+        self.assertIn(expected, core.reviewed_contract_errors(task, '0.2'))
         task['prerequisites'] = [prerequisites[1]]
-        self.assertFalse([item for item in lifecycle.reviewed_errors(task) if 'Prerequisites' in item])
+        self.assertFalse([item for item in core.reviewed_contract_errors(task, '0.2') if 'Prerequisites' in item])
 
     def test_duplicate_json_keys_are_rejected(self):
         with self.assertRaises(core.ProtocolError):
@@ -364,7 +372,7 @@ class VerificationTests(unittest.TestCase):
 
     def test_new_duplicate_blocks_prepared_contract(self):
         task, client = ready_contract()
-        client.prs = [{'number': 30, 'title': 'Unrelated', 'body': 'Fixes #12', 'html_url': 'url'}]
+        client.prs = [{'number': 30, 'title': 'Unrelated', 'body': 'Fixes #12', 'html_url': 'url', 'head': None}]
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
     def test_duplicate_ids_and_done_omissions_fail_readiness(self):
@@ -506,13 +514,17 @@ class VerificationTests(unittest.TestCase):
             utc_timestamp = commit_time.astimezone(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             original_git_read = core.git_read
 
+            patched = []
+
             def read_git(directory, *args):
-                if args == ('show', '-s', '--format=%cI', 'HEAD'):
+                if args == ('show', '-s', '--format=%cI', evidence['git_head']):  # the captured HEAD (R4-05)
+                    patched.append(args)
                     return utc_timestamp
                 return original_git_read(directory, *args)
 
             with patch.object(core, 'git_read', side_effect=read_git):
                 result = core.verify(task, evidence, tmp, client)
+            self.assertEqual(len(patched), 1, 'the commit time read must use the captured HEAD')
             self.assertTrue(result['evidence_valid'], result['evidence_errors'])
             self.assertTrue(result['upstream_submission_ready'], result['evidence_errors'])
 

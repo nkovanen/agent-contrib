@@ -11,6 +11,14 @@
   bumps it. The bundled validator gained `null`, `number`, type lists, `anyOf`,
   local `$ref` and `additionalProperties` maps, which the task, evidence and
   host-context schemas do not use.
+- `verify`, `scope-check` and `evidence init` capture HEAD once with an exact
+  lookup and use that commit for every tree, diff, ancestry, gitlink and
+  timestamp read (R4-05). An unborn or deleted current branch, or a HEAD naming
+  a non-commit, now fails with `unborn_head`; previously a `refs/tags/HEAD`
+  tag could stand in for it. This also hardens schema 0.1 `verify`.
+- Schema 0.2 `user_authorization` adds `source_errors`, the source identity
+  failures also listed in its `errors`; `pr-body` keeps them as source blockers
+  instead of omitting them with the authority states (R1-10).
 - Schema 0.2 authorization requires the collaborator-permission login to be a
   valid ASCII GitHub login before its case-insensitive comparison, so Unicode
   confusables such as `ſ` or the Kelvin sign no longer match (R1-08).
@@ -36,6 +44,9 @@
   empty text, so a complete-looking scan could report no overlap. `null` stays the
   only empty value. Schema 0.1 discovery and verification also fail closed on such
   data now (incomplete scan), a hardening of malformed-input handling only.
+  A PR record missing its `body` or `head` key, or a `head` without `ref`, is
+  likewise malformed and makes the scan incomplete; an explicit `null` body or
+  head stays empty (R1-11). This also applies to schema 0.1.
 - `feedback` classifies each reviewer's decision by the association on the review
   that made it, reported as `decision_author`; `author` is now the latest
   observation (R1-03). Previously the first review's association was kept.
@@ -92,10 +103,12 @@
   unchanged.
 - Heuristic overlap reasons name the shared title words and checklist IDs that
   triggered the match. Duplicate entry fields and matching are unchanged.
-- `scope-check --base` and `evidence init --base` accept any local revision,
-  resolved with hardened `git rev-parse --verify 'REV^{commit}'`; option-like
-  values are refused. `scope-check` adds a `warnings` list and warns when the
-  default base is not an ancestor of HEAD.
+- `scope-check --base` and `evidence init --base` accept a full SHA, `HEAD` or
+  an exact `refs/...` name, optionally followed by `~N`/`^N` (previously only a
+  full SHA). Short branch/tag names, abbreviated SHAs, other pseudo-refs and
+  other revision syntax are refused with a conversion hint. `scope-check`
+  adds a `warnings` list and warns when the default base is not an ancestor of
+  HEAD.
 - `agent-contrib --help` describes every command and option, including input
   constraints and exit status; the description no longer claims JSON-only output.
 - A global option given after the subcommand is still a usage error, but the

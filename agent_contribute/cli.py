@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote, textfmt, workspace, __version__
+from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -53,14 +53,17 @@ class Parser(argparse.ArgumentParser):
         raise core.ProtocolError('usage', message)
 
 
-def write_new_json(path, value):
-    """Exclusive creation avoids clobbering a hand-reviewed contract or symlink."""
+def create_new(path, text, what, newline=''):
+    """Exclusive creation avoids clobbering a hand-reviewed file or symlink."""
     try:
-        with Path(path).open('x', encoding='utf-8') as handle:
-            json.dump(value, handle, indent=2, ensure_ascii=False, allow_nan=False)
-            handle.write('\n')
+        with Path(path).open('x', encoding='utf-8', newline=newline) as handle:
+            handle.write(text)
     except OSError as exc:
-        raise core.ProtocolError('file_error', 'Cannot create output; choose a new writable path') from exc
+        raise core.ProtocolError('file_error', f'Cannot create {what}; choose a new writable path') from exc
+
+
+def write_new_json(path, value):
+    create_new(path, json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + '\n', 'output', newline=None)
 
 
 def discover_names(args):
@@ -81,10 +84,15 @@ def prevalidate(args):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
     elif args.command == 'audit':
         core.parse_repository(args.repository)
+    elif args.command == 'authorization-request':
+        args.task = core.read_json(args.contract)  # read once; dispatch builds from this object
+        authrequest.check_contract(args.task)
     elif args.command in ('verify', 'drift', 'pr-body'):
+        # Each file is read once; dispatch uses these objects, so a file changed later cannot change the route.
+        args.evidence_data = None
         if args.command == 'pr-body' and args.evidence:
-            core.read_json(args.evidence)
-        task = core.read_json(args.contract)
+            args.evidence_data = core.read_json(args.evidence)
+        task = args.task = core.read_json(args.contract)
         if args.command in ('drift', 'pr-body') and core.validate_contract(task):
             raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
         if args.command == 'verify':
@@ -92,7 +100,7 @@ def prevalidate(args):
             if version != '0.2' and (args.stage is not None or args.host_context_stdin):
                 raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
             if args.evidence:
-                core.read_json(args.evidence)
+                args.evidence_data = core.read_json(args.evidence)
 
 
 def main(argv=None):
@@ -150,18 +158,23 @@ def main(argv=None):
                           'not proof of human consent')
     sub.add_argument('--observe-ci', action='store_true',
                      help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub = commands.add_parser('authorization-request',
+                              help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
+    sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
     sub.add_argument('--base', metavar='REV',
-                     help='Base commit, branch or tag (default source.commit); must be an ancestor of HEAD')
+                     help='Full SHA, HEAD or refs/... name, optionally ~N/^N (default source.commit); '
+                          'must be an ancestor of HEAD')
     sub = commands.add_parser('evidence', help='Evidence file helpers').add_subparsers(
         dest='evidence_command', required=True, metavar='COMMAND').add_parser(
         'init', help='Write an unfilled evidence skeleton from observed Git facts; runs nothing')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout the evidence will describe')
     sub.add_argument('--base', required=True, metavar='REV',
-                     help='Base commit, branch or tag; must descend from source.commit and be an ancestor of HEAD')
+                     help='Full SHA, HEAD or refs/... name, optionally ~N/^N; must descend from source.commit '
+                          'and be an ancestor of HEAD')
     sub.add_argument('--output', required=True, help='New evidence file outside the checkout; never overwritten')
     sub = commands.add_parser('audit', help='Read-only maintainer report: policy, labels, instructions, issue quality')
     sub.add_argument('repository', help='owner/repo')
@@ -213,11 +226,7 @@ def main(argv=None):
             code = 0
         elif args.command == 'skill':
             adapter = importlib.resources.files('agent_contribute').joinpath('adapters/agent-contribute/SKILL.md').read_text('utf-8')
-            try:
-                with Path(args.output).open('x', encoding='utf-8', newline='') as handle:
-                    handle.write(adapter)
-            except OSError as exc:
-                raise core.ProtocolError('file_error', 'Cannot create adapter; choose a new writable path') from exc
+            create_new(args.output, adapter, 'adapter')
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
@@ -234,18 +243,16 @@ def main(argv=None):
                       'warning': 'Skeleton only: fill every result from real runs and reviews; nothing was executed'}
             code = 0
         elif args.command == 'pr-body':
-            evidence = core.read_json(args.evidence) if args.evidence else None
-            body, verification = prbody.pr_body(core.read_json(args.contract), evidence, args.repo_dir,
+            body, verification = prbody.pr_body(args.task, args.evidence_data, args.repo_dir,
                                                 closes=args.closes, assistant=args.assistant)
-            try:
-                with Path(args.output).open('x', encoding='utf-8', newline='') as handle:
-                    handle.write(body)
-            except OSError as exc:
-                raise core.ProtocolError('file_error', 'Cannot create PR body; choose a new writable path') from exc
+            create_new(args.output, body, 'PR body')
             result = {'output': str(args.output), 'sha256': hashlib.sha256(body.encode()).hexdigest(),
                       'contract_sha256': verification.get('contract_sha256'),
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
+        elif args.command == 'authorization-request':
+            result = authrequest.build(args.task)
+            code = 0 if result.get('ready_for_issuance') is True else 1
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
@@ -263,7 +270,7 @@ def main(argv=None):
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
         elif args.command == 'drift':
-            result = drift.drift(core.read_json(args.contract))
+            result = drift.drift(args.task)
             code = 0 if result['complete'] and result['drifted'] is False else 1
         elif args.command == 'feedback':
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
@@ -287,9 +294,8 @@ def main(argv=None):
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
                           'warning': 'Draft saved; inspect and review before execution'}
         else:
-            task = core.read_json(args.contract)
+            task, evidence = args.task, args.evidence_data
             version = task.get('schema_version') if isinstance(task, dict) else None
-            evidence = core.read_json(args.evidence) if args.evidence else None
             if version == '0.2':
                 context = read_host_context_stdin() if args.host_context_stdin else None
                 result = core.verify(task, evidence, args.repo_dir, host_context=context)
@@ -309,7 +315,7 @@ def main(argv=None):
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:
-        result = {'error': {'code': exc.code, 'message': str(exc)}}
+        result = getattr(exc, 'payload', None) or {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}

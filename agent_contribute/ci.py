@@ -5,44 +5,28 @@ from .feedback import check_runs
 STATUS_STATES = {'success', 'failure', 'pending', 'error'}
 
 
+def _status(item):
+    return remote.positive(item.get('id'), 'status ID'), {
+        'context': core.safe_text(remote.text(item.get('context'), 'status context'), 200),
+        'state': remote.choice(item.get('state'), STATUS_STATES, 'status state'),
+        'url': core.safe_text(remote.text(item.get('target_url'), 'status URL', nullable=True) or '', 500)}
+
+
 def combined_status(client, repository, sha):
-    statuses, errors, seen, state, total = [], [], set(), None, None
-    for page in range(1, core.MAX_PAGES + 1):
-        try:
-            data = core.require(client.request(f'repos/{repository}/commits/{sha}/status?per_page=100&page={page}'),
-                                dict, 'combined status')
-            if remote.sha(data.get('sha'), 'combined status commit') != sha:
-                remote.bad('combined status commit (different commit returned)')
-            page_state = remote.choice(data.get('state'), STATUS_STATES, 'combined status state')
-            if state is not None and page_state != state:
-                errors.append('Combined status changed during pagination')
-            state = page_state
-            count = data.get('total_count')
-            if type(count) is not int or count < 0:
-                remote.bad('combined status count')
-            if total is not None and count != total:
-                errors.append('Combined status count changed during pagination')
-            total = count
-            batch = core.require(data.get('statuses'), list, 'statuses')
-            if len(batch) > 100:
-                remote.bad('status page size')
-            for item in batch:
-                item = core.require(item, dict, 'status')
-                status_id = remote.positive(item.get('id'), 'status ID')
-                if status_id in seen:
-                    errors.append('Pagination repeated a status; results may have moved')
-                    continue
-                seen.add(status_id)
-                statuses.append({'context': core.safe_text(remote.text(item.get('context'), 'status context'), 200),
-                                 'state': remote.choice(item.get('state'), STATUS_STATES, 'status state'),
-                                 'url': core.safe_text(remote.text(item.get('target_url'), 'status URL', nullable=True) or '', 500)})
-            if len(batch) < 100:
-                if len(seen) != total:
-                    errors.append('Combined status count does not match total_count')
-                return {'state': state, 'statuses': statuses, 'complete': not errors}, errors
-        except core.ProtocolError as exc:
-            return {'state': None, 'statuses': statuses, 'complete': False}, errors + [str(exc)]
-    return {'state': None, 'statuses': statuses, 'complete': False}, errors + ['Pagination reached the 40-page limit']
+    states = []
+
+    def check_page(data, errors):
+        if remote.sha(data.get('sha'), 'combined status commit') != sha:
+            remote.bad('combined status commit (different commit returned)')
+        state = remote.choice(data.get('state'), STATUS_STATES, 'combined status state')
+        if states and state != states[-1]:
+            errors.append('Combined status changed during pagination')
+        states.append(state)
+
+    statuses, errors, finished = remote.counted_pages(
+        client, f'repos/{repository}/commits/{sha}/status', 'statuses', _status, page='combined status',
+        count='Combined status count', noun='status', oversize='Invalid GitHub status page size', check_page=check_page)
+    return {'state': states[-1] if finished else None, 'statuses': statuses, 'complete': finished and not errors}, errors
 
 
 def observe(task, evidence, client=None):

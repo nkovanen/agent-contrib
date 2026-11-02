@@ -22,6 +22,7 @@ VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
+SHA = re.compile('[0-9a-f]{40}')
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
                   'question', 'roadmap', 'backlog', 'in progress', 'duplicate', 'invalid',
                   'wontfix', "won't fix", 'needs info', 'fixed'}
@@ -61,8 +62,14 @@ def strict_json(text):
         return result
     def invalid_constant(_):
         raise ValueError('nonfinite number')
+    def finite_float(literal):
+        # Exponent overflow (1e999) parses to infinity without reaching parse_constant.
+        value = float(literal)
+        if value in (float('inf'), float('-inf')):
+            raise ValueError('nonfinite number')
+        return value
     try:
-        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant)
+        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant, parse_float=finite_float)
     except (ValueError, RecursionError) as exc:
         raise ProtocolError('invalid_json', 'Invalid JSON (including duplicate keys or excessive nesting)') from exc
     try:
@@ -269,7 +276,7 @@ def repository_snapshot(repository, client, meta=None, commit=None):
     if commit is None:
         commit_data = require(client.request(f'repos/{repository}/commits/{quote(branch, safe="")}'), dict, 'commit')
         commit = require(commit_data.get('sha'), str, 'commit sha')
-    if not re.fullmatch('[0-9a-f]{40}', commit):
+    if not SHA.fullmatch(commit):
         raise ProtocolError('api_shape', 'Invalid default branch commit')
     snapshot = {'repository': canonical, 'default_branch': branch, 'commit': commit,
                 'fetched_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'complete': True,
@@ -370,10 +377,15 @@ def index_prs(prs):
         number = require(pr.get('number'), int, 'pull request number')
         title = require(pr.get('title'), str, 'pull request title')
         url = require(pr.get('html_url'), str, 'pull request URL')
-        # Only null means empty: a falsy non-string must not be scanned as empty text.
-        body = require('' if pr.get('body') is None else pr['body'], str, 'pull request body')
-        head = require({} if pr.get('head') is None else pr['head'], dict, 'pull request head')
-        branch = require('' if head.get('ref') is None else head['ref'], str, 'pull request branch')
+        # Only an explicit null means empty; an absent key was never read, so it cannot be scanned as empty.
+        for key in ('body', 'head'):
+            if key not in pr:
+                raise ProtocolError('api_shape', 'Invalid GitHub pull request ' + key)
+        body = require('' if pr['body'] is None else pr['body'], str, 'pull request body')
+        head = require({'ref': None} if pr['head'] is None else pr['head'], dict, 'pull request head')
+        if 'ref' not in head:
+            raise ProtocolError('api_shape', 'Invalid GitHub pull request branch')
+        branch = require('' if head['ref'] is None else head['ref'], str, 'pull request branch')
         text = title + '\n' + body + '\n' + branch
         if len(text) > 100000:
             raise ProtocolError('scan_limit', 'PR reference scan exceeds 100 kB text limit')
@@ -699,9 +711,23 @@ def require_worktree_root(directory):
         raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
 
 
-def implementation_paths(directory, base):
+def current_head(directory):
+    """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
+    names when the current branch is unborn or deleted, so later reads use this object ID instead."""
+    try:
+        head = git_read(directory, 'show-ref', '--verify', '--hash', 'HEAD')
+    except ProtocolError:
+        head = None
+    if not isinstance(head, str) or not SHA.fullmatch(head) or not git_read(
+            directory, 'cat-file', '-t', head) == 'commit':
+        raise ProtocolError('unborn_head', 'Checkout HEAD is unborn or not a commit; commit on a branch first')
+    return head
+
+
+def implementation_paths(directory, base, head=None):
+    head = head or current_head(directory)
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
-                                      '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, 'HEAD').split('\0') if path]
+                                      '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, head).split('\0') if path]
 
 
 def has_gitlink(directory, *revisions):
@@ -747,17 +773,17 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence was not recorded from a clean worktree')
     try:
         require_worktree_root(directory)
-        head = git_read(directory, 'rev-parse', 'HEAD')
-        tree = git_read(directory, 'rev-parse', 'HEAD^{tree}')
+        head = current_head(directory)
+        tree = git_read(directory, 'rev-parse', head + '^{tree}')
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        if has_gitlink(directory, 'HEAD', evidence['base_commit']):
+        if has_gitlink(directory, head, evidence['base_commit']):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
         dirty = git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all')
         # A base from another checkout cannot satisfy this task, even with a matching string.
         git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
-        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], 'HEAD')
-        changed = implementation_paths(directory, evidence['base_commit'])
+        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        changed = implementation_paths(directory, evidence['base_commit'], head)
         if not changed:
             errors.append('Implementation diff is empty')
         for violation in scope_violations(task['scope'], changed):
@@ -772,7 +798,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
                     targets.add(match.group(1).casefold())
         if task['execution']['target_repository'].casefold() not in targets:
             errors.append('Checkout has no GitHub remote matching the authorized target')
-        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', 'HEAD').replace('Z', '+00:00'))
+        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', head).replace('Z', '+00:00'))
         if dirty or head != evidence['git_head'] or tree != evidence['git_tree']:
             errors.append('Current checkout is dirty or differs from evidence HEAD/tree')
     except (ProtocolError, ValueError) as exc:
@@ -781,6 +807,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     for name in ('validations', 'criteria'):
         if not unique_ids(evidence[name]):
             errors.append('Evidence has duplicate ' + name + ' IDs')
+    # Schema 0.1 keeps its original, Python-version-dependent fromisoformat dialect; 0.2 uses the strict parser.
     parse_timestamp = lambda value: dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
     if schema_version == '0.2':
         from .authorization import timestamp as parse_timestamp
@@ -831,6 +858,43 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
                 errors.append('Artifact is oversized or its hash differs')
         except OSError:
             errors.append('Evidence artifact cannot be read')
+    return errors
+
+
+def reviewed_contract_errors(task, schema_version):
+    """Reviewed-contract checks shared by both verifiers. Two decisions differ by schema and are kept as they were:
+    0.2 rejects any backslash in a scope pattern, while 0.1 rejects only leading or traversing backslash paths; and
+    0.1 also blocks on prepared duplicate PRs here, which 0.2 handles in its overlap stages."""
+    errors = []
+    if task['status'] != 'reviewed' or task['questions']:
+        errors.append('Contract is draft or has unanswered questions')
+    for key in ('objective', 'behavior_criteria', 'code_locations', 'constraints', 'prohibited_changes', 'validation'):
+        value = task[key]
+        if not value or (isinstance(value, str) and not value.strip()):
+            errors.append('Reviewed contract requires ' + key)
+    scope = task['scope']
+    if not scope['allowed_paths'] or not scope['prohibited_paths']:
+        errors.append('Reviewed contract requires allowed paths and explicit prohibited paths')
+    for pattern in scope['allowed_paths']:
+        first = pattern.split('/')[0]
+        if first in ('', '.', '..') or any(char in first for char in '*?['):
+            errors.append('Allowed scope requires a concrete root file or directory prefix')
+    for pattern in scope['allowed_paths'] + scope['prohibited_paths']:
+        if (pattern.startswith(('/', '\\')) or (schema_version == '0.2' and '\\' in pattern) or
+                '..' in pattern.replace('\\', '/').split('/')):
+            errors.append('Scope patterns must be repository-relative without parent traversal')
+    for key in ('behavior_criteria', 'validation', 'prerequisites'):
+        if not unique_ids(task[key]):
+            errors.append('Duplicate IDs in ' + key)
+    for list_key, ids_key in [('behavior_criteria', 'criteria_ids'), ('validation', 'validation_ids')]:
+        ids = task['done'][ids_key]
+        if len(ids) != len(set(ids)) or set(ids) != {item['id'] for item in task[list_key]}:
+            errors.append('Definition of done must cover exactly all ' + list_key)
+    if schema_version == '0.2' and not task['discovery']['complete']:
+        errors.append('Prepared discovery is incomplete')
+    elif schema_version != '0.2' and (not task['discovery']['complete'] or task['discovery']['duplicate_prs']):
+        errors.append('Prepared discovery is incomplete or has unresolved duplicates')
+    errors.extend(prerequisite_errors(task['prerequisites']))
     return errors
 
 
@@ -906,31 +970,7 @@ def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None
         errors.append('Live GitHub refresh failed: ' + str(exc))
         current = None
         result['live_complete'] = False
-    if task['status'] != 'reviewed' or task['questions']:
-        errors.append('Contract is draft or has unanswered questions')
-    for key in ('objective', 'behavior_criteria', 'code_locations', 'constraints', 'prohibited_changes', 'validation'):
-        value = task[key]
-        if not value or (isinstance(value, str) and not value.strip()):
-            errors.append('Reviewed contract requires ' + key)
-    if not task['scope']['allowed_paths'] or not task['scope']['prohibited_paths']:
-        errors.append('Reviewed contract requires allowed paths and explicit prohibited paths')
-    for pattern in task['scope']['allowed_paths']:
-        first = pattern.split('/')[0]
-        if first in ('', '.', '..') or any(char in first for char in '*?['):
-            errors.append('Allowed scope requires a concrete root file or directory prefix')
-    for pattern in task['scope']['allowed_paths'] + task['scope']['prohibited_paths']:
-        if pattern.startswith(('/', '\\')) or '..' in pattern.replace('\\', '/').split('/'):
-            errors.append('Scope patterns must be repository-relative without parent traversal')
-    for key in ('behavior_criteria', 'validation', 'prerequisites'):
-        if not unique_ids(task[key]):
-            errors.append('Duplicate IDs in ' + key)
-    for list_key, ids_key in [('behavior_criteria', 'criteria_ids'), ('validation', 'validation_ids')]:
-        ids = task['done'][ids_key]
-        if len(ids) != len(set(ids)) or set(ids) != {item['id'] for item in task[list_key]}:
-            errors.append('Definition of done must cover exactly all ' + list_key)
-    if not task['discovery']['complete'] or task['discovery']['duplicate_prs']:
-        errors.append('Prepared discovery is incomplete or has unresolved duplicates')
-    errors.extend(prerequisite_errors(task['prerequisites']))
+    errors.extend(reviewed_contract_errors(task, '0.1'))
     execution = task['execution']
     result['execution_authorization'] = execution
     if not execution['authorized_by'].strip() or not execution['authorization_evidence'].strip():

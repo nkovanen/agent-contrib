@@ -71,11 +71,30 @@ def interval(record, now):
     return issued, expires
 
 
+def route_errors(task):
+    """Contract-only route checks; they need no mandate or GitHub read."""
+    errors = []
+    source, execution = task['source'], task['execution']
+    if (execution['target_repository'] != source['repository'] or execution['head_repository'] != source['repository'] or
+            execution['target_repository_id'] != source['repository_id'] or execution['head_repository_id'] != source['repository_id']):
+        errors.append('Only the same repository source/target/head route is supported')
+    if execution['mode'] != 'repository-candidate':
+        errors.append('Execution mode is pending')
+    for key in ('head_ref', 'base_ref'):
+        if not valid_ref(execution[key]):
+            errors.append('Invalid reviewed Git ref: ' + key)
+    if execution['base_ref'] != source['default_branch']:
+        errors.append('Candidate base ref must match the source default branch')
+    if execution['head_ref'] == execution['base_ref']:
+        errors.append('Head and base refs must differ')
+    return errors
+
+
 def check(task, host_context, client, now):
     result = {'authorized': False, 'historical_valid': False, 'implement': False, 'create_draft': False,
               'mandate_trust': 'host-asserted', 'mandate_sha256': None,
               'credential_actor': None, 'permission': None, 'binding': None, 'actions': [],
-              'errors': [], 'current_errors': [], 'provenance': {'fetched_at': now.isoformat(), 'endpoints': []}}
+              'errors': [], 'current_errors': [], 'source_errors': [], 'provenance': {'fetched_at': now.isoformat(), 'endpoints': []}}
     errors = result['errors']
     source, execution = task['source'], task['execution']
     try:
@@ -95,14 +114,19 @@ def check(task, host_context, client, now):
                 user['login'].casefold() != actor['login'].casefold()):  # ASCII-only, so casefold cannot fold confusables
             raise core.ProtocolError('credential_permission', 'Credential needs exact admin/maintain role and matching user ID')
         result['permission'] = {'role_name': permission['role_name'], 'user_id': user['id'], 'endpoint': endpoint}
-        result['provenance']['endpoints'].append('repos/' + source['repository'])
-        meta = repository_identity(source['repository'], client)
-        if meta['id'] != source['repository_id'] or meta['owner']['id'] != source['owner_id']:
-            raise core.ProtocolError('identity_changed', 'Reviewed repository or owner identity changed')
-        result['provenance']['endpoints'].append(f'repos/{source["repository"]}/issues/{source["issue"]}')
-        issue = issue_identity(source['repository'], source['issue'], client)
-        if issue['id'] != source['issue_id']:
-            raise core.ProtocolError('identity_changed', 'Reviewed issue identity changed')
+        try:
+            result['provenance']['endpoints'].append('repos/' + source['repository'])
+            meta = repository_identity(source['repository'], client)
+            if meta['id'] != source['repository_id'] or meta['owner']['id'] != source['owner_id']:
+                raise core.ProtocolError('identity_changed', 'Reviewed repository or owner identity changed')
+            result['provenance']['endpoints'].append(f'repos/{source["repository"]}/issues/{source["issue"]}')
+            issue = issue_identity(source['repository'], source['issue'], client)
+            if issue['id'] != source['issue_id']:
+                raise core.ProtocolError('identity_changed', 'Reviewed issue identity changed')
+        except core.ProtocolError as exc:
+            # Observed source facts, unlike credential/mandate authority, stay visible to reports without host context.
+            result['source_errors'].append(str(exc))
+            raise
     except core.ProtocolError as exc:
         errors.append(str(exc))
     if host_context is None:
@@ -123,18 +147,7 @@ def check(task, host_context, client, now):
     for key, value in expected.items():
         if mandate[key] != value:
             errors.append('Mandate binding differs: ' + key)
-    if (execution['target_repository'] != source['repository'] or execution['head_repository'] != source['repository'] or
-            execution['target_repository_id'] != source['repository_id'] or execution['head_repository_id'] != source['repository_id']):
-        errors.append('Only the same repository source/target/head route is supported')
-    if execution['mode'] != 'repository-candidate':
-        errors.append('Execution mode is pending')
-    for key in ('head_ref', 'base_ref'):
-        if not valid_ref(execution[key]):
-            errors.append('Invalid reviewed Git ref: ' + key)
-    if execution['base_ref'] != source['default_branch']:
-        errors.append('Candidate base ref must match the source default branch')
-    if execution['head_ref'] == execution['base_ref']:
-        errors.append('Head and base refs must differ')
+    errors.extend(route_errors(task))
     if (len(set(mandate['actions'])) != len(mandate['actions']) or
             len(set(execution['requested_actions'])) != len(execution['requested_actions']) or
             not set(mandate['actions']).issubset(execution['requested_actions'])):

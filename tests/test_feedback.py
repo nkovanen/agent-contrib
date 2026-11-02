@@ -203,6 +203,14 @@ class FeedbackTests(unittest.TestCase):
                 self.assertFalse(result['complete'])
                 self.assertNotIn('pull_request', result)
 
+    def test_malformed_check_run_ends_the_read(self):
+        # S-2: check runs and statuses share one reader; a malformed item makes later items untrusted.
+        client = PRGitHub()
+        client.pages = {1: [run(100, 'tests'), dict(run(6, 'n'), id='6'), run(101, 'lint', status='queued', conclusion=None)]}
+        result = feedback.feedback('acme/photos#30', client)
+        self.assertEqual(result['checks']['pending'], [])
+        self.assertEqual(result['errors'], ['Malformed check run: Invalid GitHub check run ID'])
+
     def test_malformed_runs_reviews_and_comments_are_incomplete(self):
         bad_runs = [{'id': 5, 'name': [], 'app': 'x', 'head_sha': None, 'status': {}, 'conclusion': 7},
                     dict(run(6, 'n'), id='6'), dict(run(7, 'n'), head_sha='zz'), dict(run(8, 'n'), app={'slug': 's'})]
