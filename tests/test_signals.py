@@ -404,6 +404,18 @@ class ResponsivenessTests(unittest.TestCase):
                      merged_at=None) for i in range(1, 6)]
         self.assertEqual(self.report(page)['median_days_to_close'], 0.5)
 
+    def test_merge_lifetime_compares_instants_and_bots_are_validated(self):
+        # Review round 2 mutants R2-M03/M04: offsets matter for the merge interval, and excluded bots are still
+        # validated and deduplicated.
+        def page(merged):
+            return [dict(closed_pr(i), created_at='2029-12-01T18:00:00+06:00', merged_at=merged,
+                         closed_at='2029-12-02T02:00:00+02:00') for i in range(1, 6)]
+        valid = self.report(page('2029-12-01T11:00:00-02:00'))  # 13:00Z, between 12:00Z and 00:00Z
+        self.assertEqual((valid['complete'], valid['external_merge_rate'], valid['median_days_to_close']), (True, 1.0, 0.5))
+        self.assertEqual(self.report(page('2029-12-01T19:00:00+10:00'))['value'], 'unknown')  # 09:00Z, before creation
+        self.assertEqual(self.report([closed_pr(1, kind='Bot')] * 5 + [closed_pr(i) for i in range(2, 7)])['value'],
+                         'unknown')
+
     def test_api_error_is_unknown(self):
         report = self.report(None)
         self.assertEqual((report['complete'], report['value'], report['errors']),
