@@ -172,10 +172,14 @@ def responsiveness(repository, client):
         page = client.request(endpoint)
         if not isinstance(page, list) or len(page) > 100:
             raise core.ProtocolError('api_shape', 'Expected one bounded closed-PR list page')
-        days, merged = [], 0
+        days, merged, numbers = [], 0, set()
         for pr in page:
             if not isinstance(pr, dict) or not isinstance(pr.get('user'), dict):
                 raise core.ProtocolError('api_shape', 'Closed PR entry lacks a user object')
+            # Like paginate, a repeated identity means the page is not a trustworthy sample.
+            if type(pr.get('number')) is not int or pr['number'] < 1 or pr['number'] in numbers:
+                raise core.ProtocolError('api_shape', 'Closed PR number is missing, malformed or repeated')
+            numbers.add(pr['number'])
             kind, association = pr['user'].get('type'), pr.get('author_association')
             created, closed = _timestamp(pr.get('created_at')), _timestamp(pr.get('closed_at'))
             if not isinstance(kind, str) or not isinstance(association, str):

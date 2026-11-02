@@ -311,7 +311,11 @@ class ResponsivenessTests(unittest.TestCase):
                  # Review R3-04: a missing field is not "unmerged", and a merge must lie within the PR's lifetime.
                  'merged missing': [{k: v for k, v in pr.items() if k != 'merged_at'} for pr in broken()],
                  'merged empty': broken(merged_at=''), 'merged before created': broken(merged_at='2028-01-01T00:00:00Z'),
-                 'merged after closed': broken(merged_at='2031-01-01T00:00:00Z')}
+                 'merged after closed': broken(merged_at='2031-01-01T00:00:00Z'),
+                 # Review R3-05: repeated or unidentified entries must not fill the minimum sample.
+                 'repeated': [closed_pr(1)] * 5, 'repeated once': broken(number=1),
+                 'number missing': broken()[:1] + [{k: v for k, v in closed_pr(2).items() if k != 'number'}] + broken()[2:],
+                 'number bool': [dict(closed_pr(1), number=True)] + [closed_pr(i) for i in range(2, 7)], 'number zero': broken(number=0), 'number text': broken(number='2')}
         for name, closed in cases.items():
             with self.subTest(name):
                 report = self.report(closed)
