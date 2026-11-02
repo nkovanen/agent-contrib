@@ -173,6 +173,17 @@ class BudgetTests(unittest.TestCase):
                     run(BudgetGitHub(), *argv)
                     self.assertEqual([call.args[0] for call in read_json.call_args_list], [str(task_path)])
 
+    def test_authorization_request_reads_its_contract_once(self):
+        from tests.test_authorization import candidate_task
+        task, client = candidate_task()
+        with tempfile.TemporaryDirectory() as directory:
+            task_path = Path(directory, 'task.json')
+            task_path.write_text(json.dumps(task))
+            with patch.object(core, 'read_json', wraps=core.read_json) as read_json:
+                code, result = run(client, 'authorization-request', str(task_path))
+            self.assertEqual(result['kind'], 'agent-contrib/authorization-request')
+            self.assertEqual([call.args[0] for call in read_json.call_args_list], [str(task_path)])
+
     def test_invalid_report_contract_is_rejected_before_budget_or_threshold(self):
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory, 'task.json')
