@@ -11,11 +11,19 @@ channel or runtime model provider is added.
 
 ### Added
 
-- Host-context schema **0.2** (#7, slice 1): the 0.1 sections unchanged, plus an
-  optional host-issued `overlap_dispositions` record. `verify` reports it as
-  `absent`, `not_evaluated` or `invalid` with its hash and binding errors; it waives
-  no overlap, changes no gate and makes no extra read. A 0.1 document carrying the
-  section and any other version fail closed.
+- Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
+  sections are unchanged, plus an optional host-issued `overlap_dispositions`
+  record. It is bound to the contract, mandate and credential, and pins each
+  disposed PR's identity, author, state, draft flag, head, `updated_at`,
+  content hash, match reason and the base-branch tip of the reviewed
+  comparison. `verify` re-reads every disposed PR and base tip (at most 40
+  GETs). It removes an overlap from blocking only when the match is the same
+  topical one and every bound observation still holds. Direct references,
+  contradictions, failed reads, the actor's own PRs, incomplete scans and
+  expired or invalid records block. Waived PRs stay listed, are reported in
+  `overlap_dispositions` and `waived_duplicates`, and are named in text output.
+  Host issuer requirements are documented. A 0.1 document carrying the section
+  and any other version fail closed.
 - Explicit task and evidence schema **0.2** (`prepare --schema-version 0.2`) for
   one same-repository candidate issue (#3). A human/host-issued mandate in
   host-context schema 0.1 (`verify --host-context-stdin`, at most 8 MiB, 5 s) is

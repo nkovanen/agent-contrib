@@ -175,7 +175,9 @@ Task schemas [0.1](agent_contribute/task.schema.json) and
   updates, force-push adoption and reopening are unsupported, and the host must
   retain the original publication head.
 - Discovery scans open PRs; publication preflight also scans exact-head
-  history. Timeline claims and file-level conflicts still need review.
+  history. Timeline claims and file-level conflicts still need review. Only a
+  host-issued disposition (host-context 0.2) can clear a topical overlap, and
+  only while the PR and base tip are unchanged; direct references never clear.
 - CI covers Linux with Python 3.10–3.14. Windows host-context input is
   unsupported and macOS is untested. No PyPI release or update channel.
 

@@ -149,10 +149,28 @@ non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 
 `instructions.resources` lists both task/evidence versions and host-context
 schemas 0.1 and 0.2. With a host-context 0.2 document, `verify` adds
-`overlap_dispositions`: `absent`, `not_evaluated` (the record's contract, mandate,
-credential, event, interval and entry bindings check out) or `invalid`, with the
-record hash and errors. It never waives an overlap or changes a gate, exit code or
-overlap list in this version, and makes no extra GitHub reads. Library callers may pass host context explicitly to `core.verify`;
+`overlap_dispositions` and `waived_duplicates`. The status is:
+- `absent`: no record;
+- `invalid`: a schema, binding or expiry error. Nothing is waived and no extra
+  read is made;
+- `evaluated`: the record's contract, mandate, credential, event, interval and
+  entry bindings check out.
+
+For an `evaluated` record, `verify` reads each disposed PR (`pulls/{n}`) and each
+distinct base-branch tip (`git/ref/heads/{ref}`): at most 20 PRs and 20 refs. It
+recomputes the match and reconciles it with the open-PR scan. It removes a PR
+from the blocking lists only when all of these hold:
+- the scan was complete;
+- the match is the same topical one (never a direct reference);
+- the author is not the credential actor;
+- every bound observation is equal (ID, URL, repository, author, state, draft,
+  head repository and SHA, `updated_at`, title/body/ref hash and base tip);
+- the record is still unexpired after all reads.
+
+A direct reference, contradiction or failed read seen in that read blocks. A
+waived PR stays in `duplicates`. Waivers never remove any other blocker; text
+output names them. A record that expires during the reads fails every stage
+closed. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
 
 ## Authorization request
@@ -1532,7 +1550,8 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `duplicates` | `duplicate`[] | Open PRs overlapping the issue now |
 | `api_budget` | `api_budget` (optional) |  |
 | `ci_observation` | `ci_observation` (optional) |  |
-| `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document; never changes a gate |
+| `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document |
+| `waived_duplicates` | `verify_waived_overlap`[] (optional) | Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them |
 
 #### `verify_0_2_rejected`
 
@@ -1608,15 +1627,16 @@ Provenance of the live inspect refresh
 
 #### `verify_overlap_dispositions`
 
-Host-context 0.2 overlap_dispositions report; this version waives no overlap
+Host-context 0.2 overlap_dispositions report; waives only topical overlaps whose bound observations still hold
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `status` | "absent" \| "not_evaluated" \| "invalid" | absent: no section; not_evaluated: its own bindings check out but no waiver is evaluated; invalid: schema or binding errors |
+| `status` | "absent" \| "evaluated" \| "invalid" | absent: no section; evaluated: bindings valid and each entry checked against fresh reads; invalid: schema, binding or expiry errors, nothing waived |
 | `trust` | "host-asserted" |  |
 | `sha256` | string or null | Canonical hash of the overlap_dispositions section; null when absent or the host context is invalid |
 | `errors` | string[] |  |
-| `note` | string |  |
+| `waived` | `verify_waived_overlap`[] |  |
+| `unused` | integer[] | Disposed PRs that match nothing now; informational |
 
 #### `verify_own_pr`
 
@@ -1739,5 +1759,21 @@ Host-asserted mandate checked against live credential facts; never proof of huma
 | `mandate_id` | string (optional) |  |
 | `event_reference` | string (optional) |  |
 | `event_text_sha256` | string (optional) |  |
+
+#### `verify_waived_overlap`
+
+A topical overlap waived by a host disposition at the observed PR state
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `repository` | string |  |
+| `number` | integer |  |
+| `url` | string |  |
+| `reason` | string |  |
+| `pr_id` | integer |  |
+| `head_sha` | string |  |
+| `base_tip_sha` | string |  |
+| `updated_at` | string |  |
+| `untrusted_rationale` | string | Host-supplied rationale, sanitized; untrusted text |
 
 <!-- output-reference:end -->

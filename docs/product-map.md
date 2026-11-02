@@ -73,6 +73,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [3] Requirements-ledger workflow, contract field mapping, local-only (implement-only) profile and coordinator relay rules in the installed workflow
 
 ### Partly implemented
+- [~] B3 Reviewed overlap dispositions bound to live PR state, host-context 0.2 ([#7](https://github.com/nkovanen/agent-contrib/issues/7)). Missing: a native host issuer that can produce the records
 - [~] B1 Ownership claims and cross-repository linked PRs, report only ([#5](https://github.com/nkovanen/agent-contrib/issues/5)). Missing: adoption into readiness gates
 - [~] B2 Possible prior fixes and rejected approaches, report only ([#6](https://github.com/nkovanen/agent-contrib/issues/6)). Missing: adoption into readiness gates
 - [~] C1 `inspect --ai-policy` excerpts with scan coverage ([#8](https://github.com/nkovanen/agent-contrib/issues/8)). Missing: a versioned machine-readable opt-out policy
@@ -86,7 +87,6 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 ## Planned
 
 - [ ] Bounded `discover --limit` display ([#1](https://github.com/nkovanen/agent-contrib/issues/1), draft [PR #2](https://github.com/nkovanen/agent-contrib/pull/2), not part of the candidate)
-- [ ] B3 Reviewed overlap dispositions bound to live PR state ([#7](https://github.com/nkovanen/agent-contrib/issues/7))
 - [ ] C2 Actor-verified approval labels (maintainer-applied only) ([#9](https://github.com/nkovanen/agent-contrib/issues/9))
 - [ ] C4 Passive verification GitHub Action for maintainers ([#11](https://github.com/nkovanen/agent-contrib/issues/11))
 - [ ] E2 Signed commits and SSH-signed evidence attestations ([#18](https://github.com/nkovanen/agent-contrib/issues/18))
@@ -104,7 +104,7 @@ prompt is not proof of human presence.
 1. Release v0.3.0 after the acceptance gate in [development status](development-status.md).
 2. Maintainer safety: C1 opt-out policy, a native issuer for F5, then gate adoption of B1/B2.
 3. Contributor ergonomics: G1 output schemas, #1.
-4. Lifecycle: F3, then F4 and B3.
+4. Lifecycle: F3, then F4; a native issuer for B3 alongside F5.
 5. Trust and adoption: E1 gating, C2, C4, E2.
 6. Scale and reach: G4 cache, G2, G3; H1 to measure A1.
 

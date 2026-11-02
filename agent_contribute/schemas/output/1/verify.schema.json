@@ -963,7 +963,15 @@
         },
         "overlap_dispositions": {
           "$ref": "#/$defs/verify_overlap_dispositions",
-          "description": "Present only for a host-context 0.2 document; never changes a gate"
+          "description": "Present only for a host-context 0.2 document"
+        },
+        "waived_duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_waived_overlap"
+          },
+          "maxItems": 20,
+          "description": "Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them"
         }
       },
       "required": [
@@ -1823,10 +1831,10 @@
           "type": "string",
           "enum": [
             "absent",
-            "not_evaluated",
+            "evaluated",
             "invalid"
           ],
-          "description": "absent: no section; not_evaluated: its own bindings check out but no waiver is evaluated; invalid: schema or binding errors"
+          "description": "absent: no section; evaluated: bindings valid and each entry checked against fresh reads; invalid: schema, binding or expiry errors, nothing waived"
         },
         "trust": {
           "type": "string",
@@ -1850,9 +1858,20 @@
           },
           "maxItems": 2147483647
         },
-        "note": {
-          "type": "string",
-          "maxLength": 2147483647
+        "waived": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_waived_overlap"
+          },
+          "maxItems": 20
+        },
+        "unused": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 20,
+          "description": "Disposed PRs that match nothing now; informational"
         }
       },
       "required": [
@@ -1860,10 +1879,68 @@
         "trust",
         "sha256",
         "errors",
-        "note"
+        "waived",
+        "unused"
       ],
       "additionalProperties": false,
-      "description": "Host-context 0.2 overlap_dispositions report; this version waives no overlap"
+      "description": "Host-context 0.2 overlap_dispositions report; waives only topical overlaps whose bound observations still hold"
+    },
+    "verify_waived_overlap": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "number": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "pr_id": {
+          "type": "integer"
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "base_tip_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "updated_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "untrusted_rationale": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "Host-supplied rationale, sanitized; untrusted text"
+        }
+      },
+      "required": [
+        "repository",
+        "number",
+        "url",
+        "reason",
+        "pr_id",
+        "head_sha",
+        "base_tip_sha",
+        "updated_at",
+        "untrusted_rationale"
+      ],
+      "additionalProperties": false,
+      "description": "A topical overlap waived by a host disposition at the observed PR state"
     }
   }
 }

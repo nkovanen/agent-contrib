@@ -21,6 +21,19 @@ def _list(title, items, limit=50):
     return out
 
 
+def _dispositions(result):
+    # A waiver can turn a gate green, so text never shows the gate without the exception behind it.
+    report = result.get('overlap_dispositions')
+    if not isinstance(report, dict):
+        return []
+    out = ['Overlap dispositions (host-asserted): ' + line(report.get('status', 'unknown'), 40)]
+    waived = report.get('waived') or []
+    if waived:
+        numbers = ', '.join('#' + line(item.get('number'), 12) for item in waived)
+        out.append(f'Overlaps waived by host disposition: {len(waived)} - PR {numbers}; see JSON overlap_dispositions')
+    return out + _list('Disposition errors', report.get('errors', []))
+
+
 def _verify(result, stage=None):
     if 'implementation_ready' in result:
         blockers = result.get('stage_blockers', {})
@@ -46,7 +59,7 @@ def _verify(result, stage=None):
                       if name != stage[0] and errors]
             if others:
                 out.append(f'Other stages (not required by --stage {selected}; lists in JSON): ' + ', '.join(others))
-        return out + _list('Errors', result.get('errors', []))
+        return out + _dispositions(result) + _list('Errors', result.get('errors', []))
     out = ['Gates:'] + [f'  {name}: {_flag(result.get(name))}' for name in
                         ('schema_valid', 'execution_ready', 'evidence_valid', 'upstream_submission_ready',
                          'fork_completion_ready')]

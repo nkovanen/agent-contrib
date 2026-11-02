@@ -211,7 +211,7 @@ def main(argv=None):
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
                       'supported_host_context_versions': list(core.HOST_CONTEXT_VERSIONS),
                       'host_authorization': ('host-asserted; actual human event must be retained outside worker control; '
-                                             'host-context 0.2 overlap dispositions are parsed but not evaluated'),
+                                             'host-context 0.2 overlap dispositions waive only bound topical overlaps'),
                       'workflow_markdown': importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8'),
                       'resources': {'task_schema': 'agent_contribute/task.schema.json',
                                     'evidence_schema': 'agent_contribute/evidence.schema.json',
