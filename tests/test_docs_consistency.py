@@ -36,6 +36,19 @@ class DocsConsistencyTests(unittest.TestCase):
                 self.assertNotRegex(path.read_text('utf-8'), r'@v0\.3\.0')
         self.assertIn('agent-contrib.git@v0.2.0', (ROOT / 'README.md').read_text('utf-8'))
 
+    def test_candidate_install_selects_the_candidate_before_the_skill_is_exported(self):
+        path_entry = 'export PATH="$HOME/.local/share/agent-contrib-candidate/bin:$PATH"'
+        for name in ('README.md', 'docs/installation.md'):
+            with self.subTest(doc=name):
+                text = (ROOT / name).read_text('utf-8')
+                self.assertIn(path_entry, text)
+                after = text[text.index(path_entry):]
+                self.assertIn('agent-contrib --version', after)
+                self.assertIn('PUSHED_FULL_COMMIT_SHA', text)
+                self.assertNotIn('/tmp/agent-contrib-candidate', text)
+        readme = (ROOT / 'README.md').read_text('utf-8')
+        self.assertLess(readme.index(path_entry), readme.index('agent-contrib skill --output'))
+
     def test_relative_links_resolve(self):
         for path in DOCS:
             for target in re.findall(r'\]\(([^)#\s]+)(?:#[^)]*)?\)', path.read_text('utf-8')):

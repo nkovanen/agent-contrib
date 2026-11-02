@@ -30,15 +30,23 @@ pipx install 'git+https://github.com/nkovanen/agent-contrib.git@v0.2.0'
 agent-contrib --version
 ```
 
-Pre-release v0.3.0 candidate, in its own environment. Use the full commit SHA
-of a reviewed candidate, or a clean local checkout of it:
+Pre-release v0.3.0 candidate, in its own environment. Replace
+`PUSHED_FULL_COMMIT_SHA` with the full SHA of a reviewed commit that has been
+pushed to GitHub (an unpushed commit cannot be fetched; see
+[installation](docs/installation.md#testing-the-unreleased-v030-candidate)):
 
 ```sh
-python3 -m venv ~/.local/share/agent-contrib-candidate
-~/.local/share/agent-contrib-candidate/bin/python -m pip install \
-  'git+https://github.com/nkovanen/agent-contrib.git@FULL_COMMIT_SHA'
-~/.local/share/agent-contrib-candidate/bin/agent-contrib --version   # 0.3.0
+python3 -m venv "$HOME/.local/share/agent-contrib-candidate"
+"$HOME/.local/share/agent-contrib-candidate/bin/python" -m pip install \
+  'git+https://github.com/nkovanen/agent-contrib.git@PUSHED_FULL_COMMIT_SHA'
+export PATH="$HOME/.local/share/agent-contrib-candidate/bin:$PATH"
+agent-contrib --version   # must print 0.3.0
 ```
+
+The Skill runs the unqualified `agent-contrib`, so the first one on PATH wins.
+Put that PATH entry in the environment that launches your agent (shell profile
+or harness configuration) and restart the agent; otherwise it keeps using
+v0.2.0.
 
 Authenticate with `gh auth login` if you haven't already. If the command isn't
 found, run `pipx ensurepath` and restart your terminal and agent.
