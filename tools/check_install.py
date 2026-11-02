@@ -152,8 +152,9 @@ def installed_check(source):
         assert redirected.read_bytes() == expected.encode("ascii"), name
 
     text_result = cli("--format", "text", "instructions")
-    assert "cli_version: " + __version__ in text_result
+    assert text_result.startswith(f"agent-contrib {__version__} workflow ")
     assert "JSON output is canonical" in text_result
+    assert "## Quick path" in text_result
     assert json.loads(cli("--format", "json", "instructions")) == instructions
 
     exported = Path.cwd() / "SKILL.md"

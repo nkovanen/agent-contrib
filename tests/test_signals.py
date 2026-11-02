@@ -44,6 +44,28 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result['hints'], ['src/thumb.rs', 'src/lib/decode.py'])
         self.assertTrue(result['explanation'])
 
+    def test_named_paths_missing_from_the_tree_are_reported_only(self):
+        text = ('Product map: `docs/product-map.md`; see src/thumb.rs, ./docs/gone.md and .github/workflows/ci.yml. '
+                'Not paths here: https://example.com/docs/x.md /etc/hosts.conf ../up/x.md github.com/o/r.md '
+                'File "/home/u/proj/src/lib/decode.py", README.md, v1.2.3, docs/a/, docs/product-map.md again, '
+                'src/thumb.rs, and/or read/write, docs/guide, docs/../x.md, docs//x.md, proj/src/thumb.rs.\n'
+                'Also ' + 'a/' * 150 + 'x.md ' + 'a/' * 148 + 'x.mdzz')
+        result = signals.location_hints(text, PATHS)
+        # Exact repository-relative comparison: an existing suffix (src/thumb.rs) does not hide proj/src/thumb.rs.
+        self.assertEqual(result['named_paths_missing'], ['docs/product-map.md', 'docs/gone.md', '.github/workflows/ci.yml',
+                                                         'proj/src/thumb.rs'])
+        self.assertEqual(signals.location_hints('Edit old/src/lib/decode.py and src/lib/decode.py', PATHS)
+                         ['named_paths_missing'], ['old/src/lib/decode.py'])
+        self.assertEqual(result['hints'], ['src/thumb.rs', 'src/lib/decode.py', 'README.md'])
+        self.assertEqual(signals.location_hints('docs/product-map.md', None)['named_paths_missing'], [])
+        self.assertEqual(signals.location_hints('plain words', PATHS)['named_paths_missing'], [])
+        many = signals.location_hints(' '.join('gone/f%d.rs' % i for i in range(100)), PATHS)['named_paths_missing']
+        self.assertEqual(many, ['gone/f%d.rs' % i for i in range(signals.MAX_HINTS)])
+        issue = {'title': 'See docs/product-map.md', 'body': '', 'comments': 0, 'updated_at': NOW.isoformat(),
+                 'created_at': NOW.isoformat(), 'author_association': 'NONE', 'labels': []}
+        without = dict(issue, title='See it')
+        self.assertEqual(signals.issue_signals(issue, PATHS, NOW)['score'], signals.issue_signals(without, PATHS, NOW)['score'])
+
     def test_traversal_strings_are_lookups_never_paths(self):
         result = signals.location_hints('../../../../etc/passwd /etc/shadow C:\\Windows\\x.dll', PATHS)
         self.assertEqual((result['value'], result['hints']), ('none', []))
@@ -211,6 +233,19 @@ class DiscoverSignalTests(unittest.TestCase):
             with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
                 self.assertEqual(cli.main(argv), 0)
             self.assertEqual('signals' in json.loads(output.getvalue())['issues'][0], expected)
+
+    def test_cli_reports_at_most_twenty_named_missing_paths(self):
+        class StaleGitHub(SignalGitHub):
+            def request(self, endpoint):
+                value = super().request(endpoint)
+                if endpoint.split('?')[0].endswith('/issues') and isinstance(value, list):
+                    value[1]['body'] += ' ' + ' '.join('gone/f%d.rs' % i for i in range(25))
+                return value
+        output = io.StringIO()
+        with patch.object(core, 'GitHub', return_value=StaleGitHub()), contextlib.redirect_stdout(output):
+            self.assertEqual(cli.main(['discover', 'acme/photos', '--signals']), 0)
+        issue = next(item for item in json.loads(output.getvalue())['issues'] if item['number'] == 12)
+        self.assertEqual(issue['signals']['code_location']['named_paths_missing'], ['gone/f%d.rs' % i for i in range(20)])
 
 
 

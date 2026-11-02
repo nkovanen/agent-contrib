@@ -76,9 +76,35 @@ def module_hint(token, index):
     return None
 
 
+def named_paths_missing(text, known):
+    """Repository-relative file paths the issue names that the snapshot tree lacks; a staleness cue, never a gate."""
+    scan, missing = text[:SCAN_LIMIT], []
+    for found in TOKEN.finditer(scan):
+        token, start = found.group().rstrip('.'), found.start()
+        if len(found.group()) == 300:
+            continue  # possibly cut by the token bound
+        before = scan[max(0, start - 3):start]
+        outer = before[:-2][-1:] if before.endswith('./') else before[:-1][-1:]
+        if before.endswith('.') or before.endswith('./'):
+            if outer and (outer.isalnum() or outer in '_./-:'):
+                continue  # ../traversal, a domain or another token's tail
+            token = '.' + token if before.endswith('.') else token
+        elif before[-1:] and (before[-1:] in '/-:' or before[-1:].isalnum()):
+            continue  # absolute path, URL or part of a longer word
+        parts = token.split('/')
+        if (len(parts) < 2 or '..' in parts or '' in parts or '.' in parts[0].lstrip('.') or
+                not re.fullmatch(r'[^.].*\.[A-Za-z0-9]{1,10}', parts[-1])):
+            continue
+        if token not in known and token not in missing:  # exact path; suffix matching is for hints only
+            missing.append(token)
+            if len(missing) == MAX_HINTS:
+                break
+    return [core.safe_text(path, 500) for path in missing]
+
+
 def location_hints(text, paths):
     if paths is None:
-        return {'value': 'unknown', 'hints': [],
+        return {'value': 'unknown', 'hints': [], 'named_paths_missing': [],
                 'explanation': 'Repository tree was not read completely; locations are unverified'}
     known = set(paths)
     basenames = {}
@@ -114,6 +140,7 @@ def location_hints(text, paths):
                 if len(hints) == MAX_HINTS:
                     break
     return {'value': 'found' if hints else 'none', 'hints': [core.safe_text(h, 500) for h in hints],
+            'named_paths_missing': named_paths_missing(text, known),
             'explanation': (f'{len(hints)} path(s) or module name(s) in the issue match the snapshot tree' if hints else
                             'No path, unique file name or module name in the issue matches the snapshot tree')}
 

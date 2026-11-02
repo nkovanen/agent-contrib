@@ -72,19 +72,22 @@ channel or runtime model provider is added.
   cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
   part), `verify --observe-ci` (#17, part) and `--report-budget` /
   `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
-  where documented.
+  where documented. `discover --signals` also lists
+  `code_location.named_paths_missing`: file paths the issue names that are not
+  in the snapshot tree, compared exactly (F13).
 - `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
   and lowers the score by 2 for each documented label group (on hold, needs a
   decision, not planned, explicit major-version bucket; negated labels do not
-  match) and for meta, tracking, roadmap
-  or WIP titles, whose maintainer point is no longer counted (E-08, E-09).
-  Default discover output and ordering are unchanged. An offline regression
-  replays the dogfood-2 click, ripgrep and hono rankings; precision@5 is
-  unchanged on it (1/5, 1/5, 0/5). `discover --signals --check-top N` (1-5)
-  reads bounded ownership signals for the top N only (one timeline and comment
-  page, 4 PR details each, 30 reads in all). A merged same-repository fix, a
-  fresh claim or an assignee moves a checked issue below every other candidate
-  that is not excluded or overlapping, with the reason listed. `signals.assignees` reports current assignees. Report only.
+  match) and for meta, tracking, roadmap or WIP titles, whose maintainer point
+  is no longer counted (E-08, E-09). Default discover output and ordering are
+  unchanged. An offline regression replays the dogfood-2 click, ripgrep and
+  hono rankings; precision@5 is unchanged on it (1/5, 1/5, 0/5).
+  `discover --signals --check-top N` (1-5) reads bounded ownership signals for
+  the top N only (one timeline and comment page, 4 PR details each, 30 reads in
+  all). A merged same-repository fix, a fresh claim or an assignee moves a
+  checked issue below every other candidate that is not excluded or
+  overlapping, with the reason listed. `signals.assignees` reports current
+  assignees. Report only.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
@@ -113,7 +116,17 @@ channel or runtime model provider is added.
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.
 - A heuristic overlap `reason` ends with the shared title words and checklist IDs
-  that triggered it. Matching and fields are unchanged.
+  that triggered it, and says when a shared ID such as `SHA-256` may name a
+  standard (R7-01). Matching and fields are unchanged; such overlaps still block.
+- A failed GitHub read says when it was HTTP 404 (not found or not visible to
+  this account) or HTTP 401 (not authenticated) instead of always "check gh
+  auth" (E-17). `gh` output is never echoed; codes and exits are unchanged.
+- Text `discover` shows each issue's overlapping-PR count, excluded flag and
+  (with `--signals`) score, plus overlapping and excluded totals that include
+  issues beyond the 20-line cap (F8).
+- `scope-check` warns when the default base is more than one commit behind
+  HEAD and out-of-scope paths changed, naming the base and suggesting `--base`
+  (F36). Violations and exit status are unchanged.
 - A global option placed after the subcommand is still a usage error; the
   message now says to move it before the subcommand. `discover` with no
   repository reports the missing `reference`.
@@ -162,9 +175,22 @@ channel or runtime model provider is added.
   `GIT_NO_LAZY_FETCH`, `GIT_PROTOCOL_FROM_USER=0` and `GIT_TERMINAL_PROMPT=0`.
   Previously a local clean filter, a `gpg.program` with `log.showSignature`, or
   a promisor `ext::` transport ran during status, diff, show or merge-base.
+- Git reads force `core.checkStat=default`, `core.trustctime=true`,
+  `core.ignoreStat=false` and `core.fileMode=true`, so relaxed checkout stat or
+  mode settings cannot hide a same-size edit or an executable-bit change.
+  `core.ignoreCase=true` on a case-sensitive filesystem is refused
+  (`unsafe_git_config`) because it hides case twins.
+- Untracked files are found with only per-directory `.gitignore` rules:
+  `.git/info/exclude` and a local `core.excludesFile` no longer hide an
+  untracked file from `verify`, `scope-check` or `evidence init`, and an
+  untracked `.gitignore` is always reported. A committed `.gitignore` still
+  applies.
 
 ### Fixed
 
+- In a shallow clone that lacks the base or its history, `verify`,
+  `scope-check` and `evidence init` now say so (`shallow_checkout`, with a
+  fetch hint) instead of a generic read or base error. They still fail closed.
 - Closed or missing stdout exits 1 quietly, including buffered errors and
   caller-provided write-only streams (#4). Help and version are unchanged.
 - Library `verify` of a schema-valid 0.1 contract with host context keeps
@@ -184,6 +210,8 @@ channel or runtime model provider is added.
     checkout, now fails with `index_flags`.
   - A checkout with the Git config keys listed under Security fails with
     `unsafe_git_config`.
+  - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
+    evidence dirty.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;
