@@ -25,6 +25,21 @@ RESOURCE_PATHS = (
     "schemas/0.2/task.schema.json",
     "schemas/0.2/evidence.schema.json",
     "schemas/host-context/0.1.schema.json",
+    "schemas/output/1/audit.schema.json",
+    "schemas/output/1/authorization-request.schema.json",
+    "schemas/output/1/discover.schema.json",
+    "schemas/output/1/drift.schema.json",
+    "schemas/output/1/error.schema.json",
+    "schemas/output/1/evidence-init.schema.json",
+    "schemas/output/1/feedback.schema.json",
+    "schemas/output/1/inspect.schema.json",
+    "schemas/output/1/instructions.schema.json",
+    "schemas/output/1/ownership.schema.json",
+    "schemas/output/1/pr-body.schema.json",
+    "schemas/output/1/prepare.schema.json",
+    "schemas/output/1/scope-check.schema.json",
+    "schemas/output/1/skill.schema.json",
+    "schemas/output/1/verify.schema.json",
     "instructions.md",
     "adapters/agent-contribute/SKILL.md",
 )
@@ -97,6 +112,8 @@ def installed_check(source):
     assert instructions["cli_version"] == "0.3.0"
     assert instructions["supported_schema_versions"] == ["0.1", "0.2"]
     assert instructions["automatic_updates"] is False
+    assert instructions["output_schema_version"] == "1"
+    assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:1:verify"
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
 
     # Exercise real installed entry points, including small buffered JSON errors.
@@ -199,7 +216,7 @@ def main():
             names = {name.split("/", 1)[1] for name in archive.getnames() if "/" in name}
         expected = {"pyproject.toml", "MANIFEST.in", "README.md", "NOTICE",
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
-                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py",
+                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
                         if file.is_file() and file.suffix in (".py", ".json") and "__pycache__" not in file.parts)

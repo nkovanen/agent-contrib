@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import audit, budget, ci, core, drift, feedback, multi, ownership, policy, prbody, remote, textfmt, workspace, __version__
+from . import audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody, remote, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -84,6 +84,9 @@ def prevalidate(args):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
     elif args.command == 'audit':
         core.parse_repository(args.repository)
+    elif args.command == 'authorization-request':
+        args.task = core.read_json(args.contract)  # read once; dispatch builds from this object
+        authrequest.check_contract(args.task)
     elif args.command in ('verify', 'drift', 'pr-body'):
         # Each file is read once; dispatch uses these objects, so a file changed later cannot change the route.
         args.evidence_data = None
@@ -104,7 +107,8 @@ def main(argv=None):
     parser = Parser(prog='agent-contrib',
                     description='Read-only GitHub agent contribution protocol. Output is JSON unless --format text.',
                     epilog='Exit status: 0 when the command succeeds and its gate passes; 1 when a gate is not passed, '
-                           'a read is incomplete or an error occurs; 2 for usage errors.')
+                           'a read is incomplete or an error occurs; 2 for usage errors. '
+                           'agent-contrib schema COMMAND prints the JSON Schema of that command\'s output.')
     parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument('--format', choices=('json', 'text'), default='json',
                         help='Output format (default json; text is an abridged summary). Give it before the subcommand')
@@ -136,6 +140,10 @@ def main(argv=None):
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
+    sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
+    sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
+                     help="Command whose output schema to print; 'error' is the error envelope, "
+                          "'evidence-init' is evidence init. Choices: " + ', '.join(outputs.SCHEMAS))
     sub = commands.add_parser('skill', help='Export the canonical agent Skill')
     sub.add_argument('--output', required=True, help='New file for SKILL.md; never overwritten')
     sub = commands.add_parser('verify', help='Check a contract and optional evidence against live GitHub state; '
@@ -150,18 +158,23 @@ def main(argv=None):
                           'not proof of human consent')
     sub.add_argument('--observe-ci', action='store_true',
                      help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub = commands.add_parser('authorization-request',
+                              help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
+    sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
     sub.add_argument('--base', metavar='REV',
-                     help='Base commit, branch or tag (default source.commit); must be an ancestor of HEAD')
+                     help='Full SHA, HEAD or refs/... name, optionally ~N/^N (default source.commit); '
+                          'must be an ancestor of HEAD')
     sub = commands.add_parser('evidence', help='Evidence file helpers').add_subparsers(
         dest='evidence_command', required=True, metavar='COMMAND').add_parser(
         'init', help='Write an unfilled evidence skeleton from observed Git facts; runs nothing')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout the evidence will describe')
     sub.add_argument('--base', required=True, metavar='REV',
-                     help='Base commit, branch or tag; must descend from source.commit and be an ancestor of HEAD')
+                     help='Full SHA, HEAD or refs/... name, optionally ~N/^N; must descend from source.commit '
+                          'and be an ancestor of HEAD')
     sub.add_argument('--output', required=True, help='New evidence file outside the checkout; never overwritten')
     sub = commands.add_parser('audit', help='Read-only maintainer report: policy, labels, instructions, issue quality')
     sub.add_argument('repository', help='owner/repo')
@@ -187,7 +200,7 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'skill', 'scope-check', 'evidence'):
+        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'scope-check', 'evidence'):
             raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
         prevalidate(args)
         if args.report_budget:
@@ -203,8 +216,13 @@ def main(argv=None):
                                     'evidence_schema': 'agent_contribute/evidence.schema.json',
                                     'task_schema_0.2': 'agent_contribute/schemas/0.2/task.schema.json',
                                     'evidence_schema_0.2': 'agent_contribute/schemas/0.2/evidence.schema.json',
-                                    'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json'},
+                                    'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json',
+                                    'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
+                      'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}
+            code = 0
+        elif args.command == 'schema':
+            result = outputs.output_schema(args.name)
             code = 0
         elif args.command == 'skill':
             adapter = importlib.resources.files('agent_contribute').joinpath('adapters/agent-contribute/SKILL.md').read_text('utf-8')
@@ -232,6 +250,9 @@ def main(argv=None):
                       'contract_sha256': verification.get('contract_sha256'),
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
+        elif args.command == 'authorization-request':
+            result = authrequest.build(args.task)
+            code = 0 if result.get('ready_for_issuance') is True else 1
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
@@ -298,7 +319,7 @@ def main(argv=None):
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:
-        result = {'error': {'code': exc.code, 'message': str(exc)}}
+        result = getattr(exc, 'payload', None) or {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}

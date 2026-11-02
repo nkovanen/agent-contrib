@@ -2,9 +2,12 @@
 import copy
 import io
 import json
+import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 from agent_contribute import cli
+from tests import output_contract
 from tests.test_cli_output import BrokenFlush
 from tests.test_multi_discover import MultiGitHub
 
@@ -16,6 +19,7 @@ class TextCliTests(unittest.TestCase):
             code = cli.main(args)
         return code, output.getvalue()
 
+    @output_contract.unchecked()
     def test_default_and_explicit_json_are_byte_identical(self):
         result = {'complete': True, 'issues': [], 'message': '\u00e9'}
         with patch('agent_contribute.core.discover', return_value=result):
@@ -24,6 +28,7 @@ class TextCliTests(unittest.TestCase):
         self.assertEqual(default, explicit)
         self.assertEqual(default, (0, json.dumps(result, indent=2, ensure_ascii=True) + '\n'))
 
+    @output_contract.unchecked()
     def test_text_retains_incomplete_exit_and_sanitizes_remote_lines(self):
         result = {'complete': False, 'issues': [], 'errors': ['bad\ncomplete: yes\x1b[2K']}
         with patch('agent_contribute.core.discover', return_value=result):
@@ -34,6 +39,7 @@ class TextCliTests(unittest.TestCase):
         self.assertNotIn('\ncomplete: yes', output)
         self.assertNotIn('\x1b', output)
 
+    @output_contract.unchecked()
     def test_text_verify_keeps_gates_and_exit(self):
         result = {'schema_valid': True, 'execution_ready': True, 'evidence_valid': False,
                   'upstream_submission_ready': False, 'fork_completion_ready': False,
@@ -46,6 +52,7 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('  evidence_valid: no', output)
         self.assertIn('No real run', output)
 
+    @output_contract.unchecked()
     def test_text_verify_stage_leads_with_that_stage_and_collapses_others(self):
         result = {'schema_valid': True, 'implementation_ready': False, 'technical_evidence_valid': False,
                   'draft_create_ready': False, 'completion_ready': False,
@@ -82,6 +89,20 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('Blockers [draft] (1):', output)
         self.assertNotIn('Selected stage', output)
 
+    def test_text_stage_for_schema_invalid_contract_shows_the_shared_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            contract = pathlib.Path(tmp, 'task.json')
+            contract.write_text('{"schema_version": "0.2"}')
+            with patch('agent_contribute.core.GitHub', side_effect=AssertionError('no GitHub read')):
+                code, output = self.invoke(['--format', 'text', 'verify', str(contract), '--stage', 'implementation'])
+        self.assertEqual(code, 1)
+        self.assertTrue(output.startswith('Selected stage: implementation (exit gate: no)\n'
+                                          'Blockers [implementation]: not evaluated; see Errors\n'), output)
+        self.assertIn('  schema_valid: no\n', output)
+        self.assertIn('Errors (16):\n  - $.status: missing\n', output)
+        self.assertNotIn('Other stages', output)
+
+    @output_contract.unchecked()
     def test_text_scope_check_and_drift_keep_exit_status(self):
         scope = {'within_scope': False, 'base_commit': 'a' * 40, 'changed_paths': ['x'], 'errors': [], 'warnings': [],
                  'violations': [{'path': 'x', 'rule': 'not in allowed_paths'}]}
@@ -98,6 +119,7 @@ class TextCliTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn('Drift reasons (1):\n  - Issue content changed\n', output)
 
+    @output_contract.unchecked()
     def test_text_multi_repo_does_not_hide_failed_repository(self):
         result = {'complete': False, 'repositories': [
             {'requested_repository': 'acme/a', 'complete': True, 'issues': [], 'errors': []},

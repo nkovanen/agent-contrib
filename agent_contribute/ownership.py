@@ -75,7 +75,9 @@ def ownership_signals(source, number, client, now=None):
                 core.require(origin.get('pull_request'), dict, 'cross-referenced pull request')
                 name, repo_id = remote.repository(origin.get('repository'), 'cross-referenced repository')
                 pr_number = remote.positive(origin.get('number'), 'cross-referenced PR number')
-                referenced[(name.casefold(), pr_number)] = (name, repo_id, pr_number)
+                known = referenced.setdefault((name.casefold(), pr_number), (name, repo_id, pr_number))
+                if known[1] != repo_id:  # one name/number, two numeric repositories: identity is unresolved
+                    errors.append(f'Conflicting repository IDs for cross-referenced PR {name}#{pr_number}')
             elif kind in ('assigned', 'unassigned'):
                 assignments.append({'event': kind, 'assignee': _login(event.get('assignee'), 'assignee'),
                                     'actor': _login(event.get('actor'), 'actor'),

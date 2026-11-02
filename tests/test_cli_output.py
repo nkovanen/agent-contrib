@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_contribute.cli import main
+from tests import output_contract
 
 
 class BrokenWrite(io.StringIO):
@@ -49,6 +50,7 @@ class OutputTests(unittest.TestCase):
                 self.assertEqual(result.stdout, b'')
                 self.assertEqual(result.stderr, b'')
 
+    @output_contract.unchecked()
     def test_write_only_stdout_preserves_json_bytes_and_statuses(self):
         for complete, code, literal in ((True, 0, 'true'), (False, 1, 'false')):
             with self.subTest(complete=complete):
@@ -110,6 +112,7 @@ class OutputTests(unittest.TestCase):
             except BrokenPipeError:
                 pass
 
+    @output_contract.unchecked()
     def test_writable_stringio_retains_json_bytes_and_read_statuses(self):
         for complete, code, literal in ((True, 0, 'true'), (False, 1, 'false')):
             with self.subTest(complete=complete):

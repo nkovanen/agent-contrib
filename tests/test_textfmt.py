@@ -115,6 +115,25 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('... 1 more issues in JSON output', text)
         self.assertNotIn('  #20 ', text)
 
+    def test_discovery_lines_show_overlap_exclusion_and_score_and_count_omitted_ones(self):
+        clean = {'number': 3, 'reference': 'acme/photos#3', 'untrusted_title': 'Clean', 'approval': {'status': 'candidate'},
+                 'exclusions': [], 'duplicates': [], 'signals': {'score': 4}}
+        issues = [dict(clean, number=n, reference=f'acme/photos#{n}') for n in range(3, 23)]
+        issues.append(dict(clean, number=8, reference='acme/photos#8', untrusted_title='Overlaps',
+                           duplicates=[{'url': 'u', 'reason': 'r'}], signals={'score': 2}))
+        issues.append(dict(clean, number=1, reference='acme/photos#1', untrusted_title='Excluded\nscore 9',
+                           exclusions=['label: wontfix'], duplicates=[{}, {}], signals={'score': 0}))
+        text = textfmt.render('discover', {'complete': True, 'issues': issues, 'errors': []})
+        self.assertIn('  acme/photos#3 [candidate] overlaps 0, excluded no, score 4: Clean\n', text)
+        self.assertIn('  ... 2 more issues in JSON output\n', text)
+        self.assertIn('Overlapping issues: 2 of 22; excluded issues: 1 of 22 (all issues, including omitted)\n', text)
+        self.assertNotIn('Overlaps', text)
+        plain = textfmt.render('discover', {'complete': True, 'errors': [], 'issues': [
+            dict(issues[-1], signals=None), dict(issues[-2])]})
+        self.assertIn('  acme/photos#1 [candidate] overlaps 2, excluded yes: Excluded score 9 -- label: wontfix\n', plain)
+        self.assertIn('  acme/photos#8 [candidate] overlaps 1, excluded no, score 2: Overlaps\n', plain)
+        self.assertNotIn('\nscore 9', plain)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))

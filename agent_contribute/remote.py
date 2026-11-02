@@ -1,11 +1,9 @@
 """Strict shape checks for remote fields the report commands consume. Wrong types raise; nothing becomes empty."""
-import re
 
-from .core import MAX_PAGES, ProtocolError, parse_repository, require
+from .core import MAX_PAGES, SHA, ProtocolError, parse_repository, require
 
 ASSOCIATIONS = {'COLLABORATOR', 'CONTRIBUTOR', 'FIRST_TIMER', 'FIRST_TIME_CONTRIBUTOR', 'MANNEQUIN', 'MEMBER',
                 'NONE', 'OWNER'}
-SHA = re.compile('[0-9a-f]{40}')
 
 
 def bad(what):

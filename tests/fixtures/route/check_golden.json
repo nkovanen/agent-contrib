@@ -1,0 +1,483 @@
+{
+ "base_not_default": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Candidate base ref must match the source default branch"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "9b6579c51ae1835742fe21c9f1e652e9a91d0ea7f991f90227e6830098eabe94",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "combined": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Only the same repository source/target/head route is supported",
+   "Execution mode is pending",
+   "Head and base refs must differ"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "c712c8adcaaa4658cfc25467a34b35b55f1d59819d321bb790f96c782f2abb3c",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "duplicate_requested": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Mandate actions are duplicated or exceed reviewed requested actions"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "410c2976d955fcfe71f1d9aaa5854b11389bdf25c14f9a31667d7e742a494887",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "head_equals_base": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Head and base refs must differ"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "a75e8abd2fcac1c3d106df82e44b765ae5421eea3fb552d6df6b2eb5f4ecd6e1",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "invalid_base_ref": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Invalid reviewed Git ref: base_ref",
+   "Candidate base ref must match the source default branch"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "8b159b81bc528ea531cdc6a83016e3a3ce3e27d02cbc43a239d322fc3b5f833c",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "invalid_head_ref": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Invalid reviewed Git ref: head_ref"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "c4576f02e4a668aff035ef1ecb9222f0eb44c1a1210fd6b53c4ba765151b9838",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "invalid_host_context": {
+  "actions": [],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Host context $.mandate: missing"
+  ],
+  "historical_valid": false,
+  "implement": false,
+  "mandate_sha256": null,
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "mode_pending": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Execution mode is pending"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "eb9af6b7c8b045ce7bc7e1d0a453a461a5283454c551bb5ebca73425735a62fb",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "no_mandate": {
+  "actions": [],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Missing human/host mandate"
+  ],
+  "historical_valid": false,
+  "implement": false,
+  "mandate_sha256": null,
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "other_head_id": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Only the same repository source/target/head route is supported"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "b90aac833d581ce9a7b5400f392c4b22c616e65ccaf35c56e8ac6dc3d6e04939",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "other_target": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": false,
+  "binding": null,
+  "create_draft": false,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [
+   "Only the same repository source/target/head route is supported"
+  ],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": false,
+  "implement": false,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "9b8a14e091bd4fbeef84d7f33e2430eda530a93be7081e7710c67f52ca6efd59",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ },
+ "valid": {
+  "actions": [
+   "implement",
+   "create_draft"
+  ],
+  "authorized": true,
+  "binding": {
+   "base_ref": "main",
+   "contract_sha256": "90ffd5c0e240bd2696cd06036bf00831f3acf88d4a4c400229d5757f32f97bc5",
+   "credential_actor_id": 7,
+   "expires_at": "2030-01-01T13:00:00+00:00",
+   "head_ref": "agent/bounds",
+   "head_repository": "acme/photos",
+   "head_repository_id": 101,
+   "issued_at": "2030-01-01T11:00:00+00:00",
+   "mandate_sha256": "ae992799b1f19cd7506f575e8cec52d9ebf816bcc9f10c9cdcd9b2ed54e52859",
+   "target_repository": "acme/photos",
+   "target_repository_id": 101
+  },
+  "create_draft": true,
+  "credential_actor": {
+   "id": 7,
+   "login": "human",
+   "type": "User"
+  },
+  "current_errors": [],
+  "errors": [],
+  "event_reference": "fixture://human-event-1",
+  "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "historical_valid": true,
+  "implement": true,
+  "mandate_id": "fixture-mandate-1",
+  "mandate_sha256": "ae992799b1f19cd7506f575e8cec52d9ebf816bcc9f10c9cdcd9b2ed54e52859",
+  "mandate_trust": "host-asserted",
+  "permission": {
+   "endpoint": "repos/acme/photos/collaborators/human/permission",
+   "role_name": "maintain",
+   "user_id": 7
+  },
+  "provenance": {
+   "endpoints": [
+    "user",
+    "repos/acme/photos/collaborators/human/permission",
+    "repos/acme/photos",
+    "repos/acme/photos/issues/12"
+   ],
+   "fetched_at": "2030-01-01T12:00:00+00:00"
+  },
+  "source_errors": []
+ }
+}

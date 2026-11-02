@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:1:error",
+  "title": "Error envelope",
+  "description": "Printed instead of a command result for usage, input and protocol errors.",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^(?:[a-z][a-z0-9_]*)(?![\\s\\S])",
+          "description": "Stable machine-readable code, for example usage or invalid_contract",
+          "maxLength": 2147483647
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable explanation; never contains remote text",
+          "maxLength": 2147483647
+        },
+        "schema_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647,
+          "description": "authorization-request invalid_contract only: the contract schema errors"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "additionalProperties": false
+}

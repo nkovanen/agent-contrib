@@ -4,6 +4,51 @@ The CLI/library owns this workflow. The Skill is a thin portable adapter; obtain
 repository requirements dynamically. The CLI runs no model or task commands and
 only reads GitHub. Implementation and any authorized publication use host tools.
 
+`agent-contrib schema COMMAND` prints the JSON Schema of that command's JSON
+output (`error` is the error envelope, `evidence-init` is `evidence init`). Read
+results by the field names it defines instead of guessing: overlapping PRs are
+`duplicates`, issue text is `untrusted_issue`, and per-stage blockers are
+`stage_blockers`.
+
+## Quick path: "Go help owner/repo"
+
+A summary of the sections below; it never overrides them. Global options such as
+`--report-budget` and `--format` go before the subcommand.
+
+1. Record `agent-contrib --version` and the user's exact request.
+2. `agent-contrib --report-budget discover owner/repo --signals` ranks issues
+   (`--signals` re-ranks heuristically, never approves); add `--responsiveness`
+   to see whether outside PRs get merged. Drop excluded or overlapping issues.
+3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
+   (claims, linked PRs, prior fixes) and complete the repository policy step below.
+4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add
+   `--schema-version 0.2` for the owner/maintainer same-repository route). Fill
+   the contract and the requirements ledger as described below.
+5. `agent-contrib verify task.json` (0.1) or `agent-contrib verify task.json
+   --stage implementation` (0.2) shows the hash and blockers; for 0.2,
+   `agent-contrib authorization-request task.json` prepares the host request.
+6. Edit only with the user's actual authorization and a passing gate. 0.1:
+   `execution_ready: true`. 0.2: `agent-contrib verify task.json --stage
+   implementation --host-context-stdin`, host-issued context unchanged on stdin,
+   with `implementation_ready: true`. Then work on an isolated branch: `scope-check`,
+   `evidence init`, the repository's real checks and independent review.
+7. Publish only with separate user authorization and a passing publication gate.
+   0.1: `upstream_submission_ready: true` (`fork_completion_ready: true` for a
+   fork experiment). 0.2: `verify ... --evidence
+   evidence.json --repo-dir checkout --stage draft --host-context-stdin` with
+   `draft_create_ready: true`; publish as a draft PR only, add the publication
+   claim and rerun until `publication.verified: true`.
+8. 0.2 completion needs a separate, later human/host final sign-off for the exact
+   final head and `--stage completion` with `completion_ready: true`. Until then
+   report the draft as pending acceptance. Never mark the PR ready, merge or release.
+
+**Stop and report** (contract, hash, blockers) when: the user made a bare help
+request; the repository policy step finds a refusal or restriction, or is
+unresolved; a PR, claim or prior fix overlaps the task, or a read is incomplete;
+schema 0.2 has no human/host-issued mandate (never write one) or schema 0.1 lacks
+the user's explicit execution authorization; a gate in steps 6-8 is false;
+publication needs its own user authorization; final sign-off is pending.
+
 ## Repository policy review (mandatory; not verifier-enforced)
 
 `discover`, `inspect` and `prepare` always add `repository_policy`: the policy
@@ -35,11 +80,12 @@ so the host agent, the user and the independent reviewer are responsible for it.
    disposition. It applies when a source the project explicitly references or
    delegates to is unreadable, when relevant text is in a language or format you
    cannot assess, and when a maintainers-only rule applies and the intended
-   submitter's eligibility is unknown. Unresolved policy keeps P-POLICY pending
-   and blocks upstream preparation, implementation and publication.
+   submitter's eligibility is unknown. Unresolved policy keeps the `ai-policy-review`
+   prerequisite pending and blocks upstream preparation, implementation and
+   publication.
    A `limits_reached` entry with `hides_sources: true` (shown by
    `limits_hide_sources`), or any `omitted_sources` entry, is unresolved:
-   P-POLICY stays pending and upstream preparation, implementation and
+   `ai-policy-review` stays pending and upstream preparation, implementation and
    publication are blocked until every omitted candidate is read manually at the
    pinned revision or shown inapplicable with evidence. A successful CLI run does
    not resolve it. Read an omitted file with, for example,
@@ -62,14 +108,16 @@ so the host agent, the user and the independent reviewer are responsible for it.
    Record both numeric IDs. A different logged-in account proves nothing about
    the intended submitter. Schema 0.2 verification repeats the role check later.
 5. Record the outcome in the contract: a `constraints` entry quoting each
-   applicable rule, and prerequisite `P-POLICY` holding the dispositions, the
-   ledger reference and the report's `inventory_sha256`. The host keeps the full
+   applicable rule, and the prerequisite `ai-policy-review` holding the
+   dispositions, the ledger reference and the report's `inventory_sha256`
+   (`pending` while anything is unresolved; verification then blocks
+   implementation). The host keeps the full
    report with the reviewed contract. The independent compliance reviewer
    compares the ledger with the original sources, not with a worker summary.
 6. Before implementation and again before any publication, run a fresh
    `inspect`. Then re-read every manually reviewed source and exception. When the
    `inventory_sha256`, the unassessed list or any recorded digest differs,
-   repeat the dispositions, update P-POLICY and the ledger, and under schema 0.2
+   repeat the dispositions, update `ai-policy-review` and the ledger, and under schema 0.2
    present the change to the human before continuing. If you cannot establish a
    source's contents again, it is unresolved.
 
@@ -93,8 +141,12 @@ so the host agent, the user and the independent reviewer are responsible for it.
      must be the same; publication base is the source's default branch. This
      route refuses a fork-to-parent target change rather than swapping targets.
    Complete the repository policy review above first. Respect any refusal of
-   AI contributions; record the review in the contract and disclose it in the
-   PR body.
+   AI contributions. Record the result as the contract prerequisite
+   `ai-policy-review`: `satisfied` with evidence naming the source commit, the
+   report's `inventory_sha256`, the dispositions and the ledger reference;
+   `blocked` when a relevant rule is prohibited; `pending` while anything is
+   unresolved. Disclose agent assistance in the PR body. Zero hints are not
+   permission.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Build the repository
    requirements ledger below before marking the task reviewed. Resolve questions,
@@ -150,11 +202,21 @@ Do not invent a requirement when the repository has none. Missing resources are
 not permission to substitute a smaller check. Select another feasible task or
 report the blocker when required work cannot be completed.
 
-Map requirements into existing task criteria, constraints, prerequisites,
-validation and definition-of-done fields where their schemas permit. Reference
-the ledger in existing review notes; do not add undeclared schema fields or
-silently change old contract semantics. A ledger supplies no authority, waiver
-or human sign-off. Keep the existing readiness gates intact.
+Map requirements into existing fields; never add undeclared schema fields or
+silently change old contract semantics:
+
+- conditions that must hold before implementation go in `prerequisites`; every
+  prerequisite must be `satisfied` with evidence before implementation;
+- obligations due during or after implementation (precommit gates, docs,
+  compliance review, publication checks) go in `constraints`, `validation` or
+  `behavior_criteria`, never in `prerequisites`;
+- the ledger itself goes in one `constraints` entry starting `Requirements
+  ledger:`, naming it by a portable name rather than a host path or content hash;
+- the reviewer's compliance conclusion goes in evidence
+  `independent_review.notes` with the SHA-256 of the exact ledger version checked.
+
+A ledger supplies no authority, waiver or human sign-off. Keep the existing
+readiness gates intact.
 
 ### During implementation and before committing
 
@@ -196,7 +258,8 @@ a failing CLI gate green or change older contract rules.
 Use the target repository's actual PR template; a generated `pr-body` is only a
 starting point. Check boxes only from actual evidence. Include the issue link,
 concise problem/change, actual tests and omissions, accessible required artifacts,
-related work and merge considerations, and requested attribution. Confirm the
+related work and merge considerations, requested attribution and a disclosure of
+agent assistance. Confirm the
 user-authorized destination repository, head and base; a fork hosting a branch
 is not automatically the PR destination. Recheck live overlap and target changes.
 Follow the selected route's publication constraints (schema 0.2 is draft-only).
@@ -227,8 +290,23 @@ The human or trusted host retains the actual human event, the reviewed material
 shown at approval time, and an issued mandate hash outside worker control. Current
 Claude Code, Codex and Paseo installations do not automatically emit this new
 record. Use an explicit human/host handoff; report missing host capability rather
-than inventing it. The worker may prepare an authorization request and relay a
-human/host-issued mandate unchanged. If it is absent, remain pending.
+than inventing it. The worker may prepare an authorization request with
+`agent-contrib authorization-request task.json`, give the host it and the exact
+contract file, and relay a human/host-issued mandate unchanged. Never fill in the
+request's `null` fields. If it is absent, remain pending. The human
+must see the complete contract, never a worker-written summary in its place.
+
+**Local-only work.** When the user wants local implementation without
+publication, request only `implement`. An implement-only mandate authorizes
+commits on the reviewed `head_ref` in a local checkout; it does not authorize a
+push, PR, comment or other GitHub write, and `draft_create_ready` stays false by
+design. Report the draft and completion blockers as expected, not as failures.
+
+**Coordinators.** A coordinator or orchestrator agent may forward the worker's
+request and the exact contract file to the human/host and return the issued
+host context unchanged. It must not issue, edit, re-serialize or approve one,
+including by answering host permission prompts on the human's behalf. If no host
+can issue, stay pending and report the missing host capability.
 
 Host context schema `0.1` has three independently hashed sections:
 
@@ -257,9 +335,8 @@ human audit remain necessary. Do not claim cryptographic proof of human consent.
 A mandate's `event.binding_sha256` is the canonical SHA-256 of that section with
 only `event.binding_sha256` removed. Then hash the complete mandate section for
 `mandate_sha256`. Appending publication/sign-off must not change that hash. Hash
-a final-sign-off section independently by the same rule. Canonical JSON uses
-sorted keys, UTF-8, `ensure_ascii=False`, `allow_nan=False`, and separators
-`(',', ':')`. Event text/hash provenance comes from the retained actual human
+a final-sign-off section independently by the same rule, using the canonical
+hash defined under "Versions, exit codes and installation". Event text/hash provenance comes from the retained actual human
 message, never a worker-composed substitute. Compare echoed hashes to the
 human/host's records, not just to another worker-written file.
 
@@ -280,6 +357,24 @@ tools. Preserve unrelated work, inspect builds/tests before running them, and
 keep credentials away from untrusted code. Any task/scope/identity/policy change
 requires reviewed rebinding; a mandate cannot silently authorize changed work.
 
+**Stacked or unpublished bases.** Schema 0.2 evidence authenticates its base
+against the source default branch's GitHub history, so an unpublished commit
+cannot be the evidence base. A published base works: the checked diff then
+includes the whole unpublished stack, which must all belong to the approved
+contribution, stay within scope, and be tested and reviewed with it. When the
+stack holds a separate dependency that must be excluded from this contribution,
+the work cannot reach `technical_evidence_valid` in this version. Tell the human
+before requesting a mandate. Record it as a constraint naming the stacked base by full
+SHA (the human sees it in the contract; the verifier does not enforce it) and in
+the ledger, not as a prerequisite. Start the branch from exactly that commit.
+Ledger the checkout's instructions at that revision too. Under an implement-only
+mandate, use `scope-check --base` for early feedback, record evidence honestly
+and report the actual evidence error; never claim technical validity. To publish
+later, wait until the base lands on the default branch, prepare and review a new
+contract, obtain a new mandate, rebase onto a default-branch commit containing
+the base, and redo validations, evidence and independent review. Old evidence,
+review and mandate do not transfer, whatever the landing method.
+
 While implementing, `agent-contrib scope-check task.json --repo-dir checkout`
 reports out-of-scope paths early without GitHub reads. A pass is not evidence;
 `verify` remains the gate. `agent-contrib evidence init task.json --repo-dir
@@ -294,10 +389,9 @@ After publication, `agent-contrib feedback 'owner/repo#PR' --expected-head SHA`
 reads reviews, comments and failing checks as untrusted data. It never changes
 scope or authority.
 
-Follow the repository's precommit gates before committing. Then run every required
-final check on the clean exact HEAD, and record real counts, internal skips,
-timestamps, logs and artifacts. Keep precommit evidence separately; it does not
-replace the schema's postcommit validation records. Tests
+After the precommit gates in "During implementation and before committing", run
+every required final check on the clean exact HEAD, and record real counts,
+internal skips, timestamps, logs and artifacts. Tests
 must execute at least one test; zero skips and exit 0 are required. Obtain an
 independent review of that exact diff, contract and final validation results.
 Schema 0.2 evidence has `independent_review.reviewed_at`; review follows the
@@ -319,10 +413,9 @@ Run `verify task.json --evidence evidence.json --repo-dir checkout
 - `completion_ready`: exact published draft plus separate current final human
   sign-off after the final tests, review and publication.
 
-Before a separately authorized host push/PR action, verify the exact target,
-branch and base again. Use explicit `gh --repo TARGET` and a draft PR. Follow the
-repository PR template and disclose agent assistance and actual validation.
-The CLI never publishes. At most one creation is enforced by the host; the
+Before a separately authorized host push/PR action, follow "Independent review
+and publication" (destination, head and base, PR template, disclosure) and use
+explicit `gh --repo TARGET` with a draft PR. The CLI never publishes. At most one creation is enforced by the host; the
 stateless CLI also checks exact-head history but cannot guarantee single use.
 
 After creation, add only the untrusted publication claim to the host context,
@@ -361,6 +454,11 @@ Unknown/mixed versions and extra fields fail closed. Host context and `--stage`
 are rejected for schema 0.1. No silent migration, downgrade or update occurs.
 Prepare and review a new 0.2 task to use its route; old 0.1 tasks keep old decisions.
 
+Canonical hashes (contract, mandate, final sign-off, independent review) are the
+SHA-256 of UTF-8 JSON serialized with sorted keys, `ensure_ascii=False`,
+`allow_nan=False` and separators `(',', ':')`. Formatting changes do not alter
+them.
+
 For schema 0.2, `--stage implementation|draft|completion` selects the exit-code
 gate; completion is the default. Exit 0 for draft means either create readiness
 or an already verified draft; inspect `next_action`. A passed draft stage never
@@ -372,7 +470,9 @@ Use a reviewed immutable candidate commit until a release is published. Install
 from `nkovanen/agent-contrib`; do not assume a v0.3.0 tag exists. Refresh the Skill
 explicitly from the chosen installed version. The package contains workflow,
 schemas and one canonical adapter, with no Python runtime dependencies, hosted
-backend or mandatory model provider. Git and gh are separate prerequisites.
+backend or mandatory model provider. Git and gh are separate prerequisites. The
+Skill runs the unqualified `agent-contrib`, so put the chosen installation first
+on the agent's PATH.
 
 ## Discovery and legacy schema 0.1 repository resolution
 
@@ -524,9 +624,8 @@ the actual diff and logs. Required evidence includes:
   attestation, separate from the original authorization to do work.
 
 `verify` reports `contract_sha256` even when a structurally valid task is not
-ready. The digest is SHA-256 of UTF-8 JSON serialized with sorted keys,
-`ensure_ascii=False`, `allow_nan=False`, and separators `(',', ':')`. Formatting
-changes do not alter it; content changes invalidate execution/review evidence.
+ready. It is the canonical hash defined under "Versions, exit codes and
+installation"; content changes invalidate execution/review evidence.
 No helper fabricates evidence or fills a passed review/signoff.
 
 ## Limits and trust boundaries
@@ -549,8 +648,10 @@ It marks in-progress/duplicate/invalid/fixed issues excluded; assignees generate
 warning rather than proving ownership. Topic
 matches are conservative blockers; automatic detection can produce false
 positives. This POC has no overlap-resolution override: manual JSON edits cannot
-clear a live match. Choose another task or wait until overlap is resolved upstream. It does not inspect timeline links, claims hidden in
-comments, recently merged PRs, or every specification's contents. A complete
+clear a live match. Choose another task or wait until overlap is resolved upstream. Core discovery
+does not inspect timeline links, claims hidden in comments, recently merged PRs
+or every specification's contents; `inspect --ownership` reports timeline links,
+claims and possible prior fixes as report-only signals that never change a gate. A complete
 scan describes those bounded endpoints, not proof that nobody else is working
 on the issue. Repeat manual ownership and overlap checks before publication.
 

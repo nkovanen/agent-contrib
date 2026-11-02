@@ -10,6 +10,7 @@ import os
 import stat
 import importlib.resources
 import json
+import math
 import re
 import subprocess
 import tempfile
@@ -22,6 +23,7 @@ VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
+SHA = re.compile('[0-9a-f]{40}')
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
                   'question', 'roadmap', 'backlog', 'in progress', 'duplicate', 'invalid',
                   'wontfix', "won't fix", 'needs info', 'fixed'}
@@ -61,8 +63,14 @@ def strict_json(text):
         return result
     def invalid_constant(_):
         raise ValueError('nonfinite number')
+    def finite_float(literal):
+        # Exponent overflow (1e999) parses to infinity without reaching parse_constant.
+        value = float(literal)
+        if value in (float('inf'), float('-inf')):
+            raise ValueError('nonfinite number')
+        return value
     try:
-        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant)
+        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant, parse_float=finite_float)
     except (ValueError, RecursionError) as exc:
         raise ProtocolError('invalid_json', 'Invalid JSON (including duplicate keys or excessive nesting)') from exc
     try:
@@ -128,7 +136,12 @@ class GitHub:
                 if transient and attempt < 2:
                     time.sleep(attempt + 1)
                     continue
-                # Never echo gh stderr: authentication errors can contain credentials.
+                # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
+                if re.search(r'\bHTTP 404\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or path '
+                                        'does not exist or is not visible to this gh account')
+                if re.search(r'\bHTTP 401\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET was not authenticated (HTTP 401); check gh auth status')
                 raise ProtocolError('api_error', 'GitHub GET failed; check gh auth, access and rate limits')
             except (OSError, subprocess.TimeoutExpired) as exc:
                 raise ProtocolError('transport_error', 'Could not run gh GET within 30 seconds') from exc
@@ -269,7 +282,7 @@ def repository_snapshot(repository, client, meta=None, commit=None):
     if commit is None:
         commit_data = require(client.request(f'repos/{repository}/commits/{quote(branch, safe="")}'), dict, 'commit')
         commit = require(commit_data.get('sha'), str, 'commit sha')
-    if not re.fullmatch('[0-9a-f]{40}', commit):
+    if not SHA.fullmatch(commit):
         raise ProtocolError('api_shape', 'Invalid default branch commit')
     snapshot = {'repository': canonical, 'default_branch': branch, 'commit': commit,
                 'fetched_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'complete': True,
@@ -418,7 +431,13 @@ def overlap_matches(words, ids):
         return title + ': ' + ', '.join(items[:limit]) + (f' and {len(items) - limit} more' if len(items) > limit else '')
     parts = ([listed('shared title words', words)] if len(words) >= 2 else []) + (
         [listed('shared checklist IDs', ids)] if ids else [])
+    # Explanation only: a standards-shaped ID may still be a real ticket, so the match keeps blocking.
+    parts += [f'{item} may name a standard, not a work item' for item in sorted(ids & STANDARD_TOKENS)[:10]]
     return '(' + '; '.join(parts) + ')'
+
+
+STANDARD_TOKENS = {'AES-128', 'AES-192', 'AES-256', 'CRC-32', 'ISO-8601', 'ISO-8859-1', 'RSA-2048', 'RSA-4096', 'SHA-1',
+                   'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512', 'SHA3-256', 'SHA3-512', 'UTF-16', 'UTF-32', 'UTF-8'}
 
 
 def ranking(issue, duplicates):
@@ -504,11 +523,12 @@ def inspect_issue(reference, client=None):
 
 def discover(repository, client=None, *, signals=False, responsiveness=False):
     client = client or GitHub()
-    result = discover_with_snapshot(repository, client, signals=signals)[0]
+    result, snapshot = discover_with_snapshot(repository, client, signals=signals)
     if responsiveness:
         from .signals import responsiveness as report
-        # Only a completed snapshot names the source to read; otherwise the report is unknown without a read.
-        result['repository_signals'] = {'responsiveness': report(result['repository'] if 'commit' in result else None, client)}
+        # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
+        source = snapshot['repository'] if snapshot is not None and snapshot['complete'] else None
+        result['repository_signals'] = {'responsiveness': report(source, client)}
     return result
 
 
@@ -596,36 +616,55 @@ def prepare(inspected, schema_version='0.1', client=None):
                           'Record explicit execution authorization separately from upstream approval.']}
 
 
-def schema_errors(value, schema, path='$', depth=0):
-    """Validate the subset of JSON Schema used by the bundled, closed schemas."""
+def schema_errors(value, schema, path='$', depth=0, root=None):
+    """Validate the subset of JSON Schema used by the bundled, closed schemas.
+
+    Objects are closed unless additionalProperties is a schema or true. Output
+    schemas also use type lists, null, number, anyOf and local #/$defs/ refs."""
     if depth > 30:
         return [path + ': excessive nesting']
+    root = schema if root is None else root
+    if '$ref' in schema:
+        prefix, marker, name = schema['$ref'].partition('#/$defs/')
+        if prefix or not marker:
+            raise ValueError('Only local #/$defs/ schema references are supported')
+        return schema_errors(value, root['$defs'][name], path, depth + 1, root)
     errors = []
+    if 'anyOf' in schema:
+        failures = [schema_errors(value, option, path, depth + 1, root) for option in schema['anyOf']]
+        if all(failures):  # Name the closest shape's errors so a mismatch stays diagnosable.
+            errors.extend([path + ': matches no allowed shape'] + min(failures, key=len))
     kind = schema.get('type')
     matches = {'object': isinstance(value, dict), 'array': isinstance(value, list),
                'string': isinstance(value, str), 'integer': type(value) is int,
-               'boolean': type(value) is bool}
-    if kind and not matches.get(kind, False):
-        return [path + ': expected ' + kind]
+               'boolean': type(value) is bool, 'null': value is None,
+               'number': type(value) is int or type(value) is float and math.isfinite(value)}
+    kinds = kind if isinstance(kind, list) else [kind] if kind else []
+    if kinds and not any(matches.get(item, False) for item in kinds):
+        return [path + ': expected ' + ' or '.join(kinds)]
+    kind = next((item for item in kinds if matches[item]), None)
     if 'const' in schema and (type(value) is not type(schema['const']) or value != schema['const']):
         errors.append(path + ': wrong constant or version')
     if 'enum' in schema and value not in schema['enum']:
         errors.append(path + ': unsupported value')
     if kind == 'object':
         properties = schema['properties']
+        extra = schema.get('additionalProperties', False)
         for key in schema['required']:
             if key not in value:
                 errors.append(path + '.' + key + ': missing')
-        if set(value) - set(properties):
+        if extra is False and set(value) - set(properties):
             errors.append(path + ': unknown properties')
         for key, item in value.items():
-            if key in properties:
-                errors.extend(schema_errors(item, properties[key], path + '.' + key, depth + 1))
+            subschema = properties.get(key, extra)
+            if isinstance(subschema, dict):
+                errors.extend(schema_errors(item, subschema, path + '.' + key, depth + 1, root))
     elif kind == 'array':
         if not schema.get('minItems', 0) <= len(value) <= schema.get('maxItems', 1000):
             errors.append(path + ': invalid list length')
-        for i, item in enumerate(value[:1000]):
-            errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1))
+            value = value[:1000]  # Already invalid; bound the item checks. An allowed length checks every item.
+        for i, item in enumerate(value):
+            errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1, root))
     elif kind == 'string':
         if schema.get('minLength', 0) > 0 and not value.strip():
             errors.append(path + ': must not be blank')
@@ -633,7 +672,7 @@ def schema_errors(value, schema, path='$', depth=0):
             errors.append(path + ': invalid string length')
         if 'pattern' in schema and not re.fullmatch(schema['pattern'], value):
             errors.append(path + ': invalid format')
-    elif kind == 'integer' and value < schema.get('minimum', value):
+    elif kind in ('integer', 'number') and value < schema.get('minimum', value):
         errors.append(path + ': below minimum')
     return errors
 
@@ -668,28 +707,107 @@ def git_read(directory, *args):
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
+        # A missing object must be a read error, never a fetch: GIT_NO_LAZY_FETCH (Git 2.44+) and
+        # protocol.allow=never; promisor config is refused by require_safe_config for older Git.
         env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_OPTIONAL_LOCKS='0',
-                   GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull)
+                   GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull, GIT_NO_LAZY_FETCH='1',
+                   GIT_PROTOCOL_FROM_USER='0', GIT_TERMINAL_PROMPT='0')
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
+                                 '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',
+                                 # Full stat and mode checks: relaxed checkout settings could hide an edit.
+                                 '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
+                                 '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
                                 capture_output=True, text=not nul_delimited, timeout=15, shell=False)
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
-        return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.strip()
+        # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
+        return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
 
 
+# Keys a read command could run as a program, or use to fetch, that -c cannot neutralize. Anything else in
+# local config is accepted: core.fsmonitor, core.hooksPath and log.showSignature are forced by git_read, and
+# credential/ssh/askpass/pager/editor/merge-driver settings are never reached by the fixed read commands.
+UNSAFE_CONFIG = re.compile(r'filter\..+|gpg(\..+)?\.program|diff\.external|diff\..+\.(command|textconv)'
+                           r'|extensions\.partialclone|remote\..+\.(promisor|partialclonefilter)|protocol\..+')
+
+
+def _case_insensitive(directory):
+    try:
+        return os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
+    except OSError:
+        return False
+
+
+def require_safe_config(directory):
+    """Effective checkout config, includes and includeIf resolved; listing it executes nothing."""
+    entries = git_read(directory, 'config', '--list', '--includes', '--show-scope', '-z').split('\0')
+    for scope, entry in zip(entries[::2], entries[1::2]):
+        key, _, value = entry.partition('\n')
+        key = key.lower()
+        # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
+        case_hiding = (key == 'core.ignorecase' and value.lower() not in ('false', 'no', 'off', '0') and
+                       not _case_insensitive(directory))
+        if scope != 'command' and (UNSAFE_CONFIG.fullmatch(key) or case_hiding):
+            raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(key, 200)}, which a read '
+                                'could run as a program or use to hide changes; remove it or use a fresh clone')
+
+
 def require_worktree_root(directory):
     """ls-tree, ls-files and untracked reads only cover the working directory, so a subdirectory would hide paths."""
-    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix') != 'true':
+    # Two lines: the work-tree flag and the prefix, which is empty only at the top level.
+    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix').split('\n') != ['true', '']:
         raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
 
 
-def implementation_paths(directory, base):
+def require_plain_index(directory):
+    """Status and diff honor assume-unchanged and skip-worktree, so a flagged tracked file can change unseen.
+    ls-files -v tags such entries lowercase or S/s; anything but H fails closed. The index is never modified."""
+    entries = git_read(directory, 'ls-files', '-v', '-z').split('\0')
+    if any(entry and not entry.startswith('H ') for entry in entries):
+        raise ProtocolError('index_flags', 'Index hides tracked paths (assume-unchanged, skip-worktree or sparse '
+                            'checkout); use a full checkout without these flags')
+
+
+def untracked_paths(directory):
+    """Untracked files under only the per-directory .gitignore rules a commit can carry. .git/info/exclude and
+    core.excludesFile are local and never hide a file. Untracked .gitignore files are listed unfiltered, so one
+    cannot ignore itself away."""
+    listed = git_read(directory, 'ls-files', '-z', '--others', '--exclude-per-directory=.gitignore')
+    listed += git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore')
+    return {path for path in listed.split('\0') if path}
+
+
+def shallow_or(directory, error):
+    """A failed base or ancestry read in a shallow clone usually means missing history; say so."""
+    try:
+        shallow = git_read(directory, 'rev-parse', '--is-shallow-repository') == 'true'
+    except ProtocolError:
+        shallow = False
+    return ProtocolError('shallow_checkout', 'Checkout is shallow and lacks the history needed to check the base; '
+                         'fetch more history (git fetch --unshallow or --deepen) and retry') if shallow else error
+
+
+def current_head(directory):
+    """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
+    names when the current branch is unborn or deleted, so later reads use this object ID instead."""
+    try:
+        head = git_read(directory, 'show-ref', '--verify', '--hash', 'HEAD')
+    except ProtocolError:
+        head = None
+    if not isinstance(head, str) or not SHA.fullmatch(head) or not git_read(
+            directory, 'cat-file', '-t', head) == 'commit':
+        raise ProtocolError('unborn_head', 'Checkout HEAD is unborn or not a commit; commit on a branch first')
+    return head
+
+
+def implementation_paths(directory, base, head=None):
+    head = head or current_head(directory)
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
-                                      '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, 'HEAD').split('\0') if path]
+                                      '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, head).split('\0') if path]
 
 
 def has_gitlink(directory, *revisions):
@@ -735,17 +853,24 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence was not recorded from a clean worktree')
     try:
         require_worktree_root(directory)
-        head = git_read(directory, 'rev-parse', 'HEAD')
-        tree = git_read(directory, 'rev-parse', 'HEAD^{tree}')
-        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
+        require_safe_config(directory)
+        require_plain_index(directory)
+        head = current_head(directory)
+        tree = git_read(directory, 'rev-parse', head + '^{tree}')
+        # The full ref, exactly: --short would accept refs/tags/NAME for a reviewed branch NAME.
+        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        if has_gitlink(directory, 'HEAD', evidence['base_commit']):
-            errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
-        dirty = git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all')
-        # A base from another checkout cannot satisfy this task, even with a matching string.
-        git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
-        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], 'HEAD')
-        changed = implementation_paths(directory, evidence['base_commit'])
+        dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
+                 untracked_paths(directory))
+        try:  # every read that needs the base commit and its history
+            if has_gitlink(directory, head, evidence['base_commit']):
+                errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
+            # A base from another checkout cannot satisfy this task, even with a matching string.
+            git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
+            git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        except ProtocolError as exc:
+            raise shallow_or(directory, exc) from None
+        changed = implementation_paths(directory, evidence['base_commit'], head)
         if not changed:
             errors.append('Implementation diff is empty')
         for violation in scope_violations(task['scope'], changed):
@@ -760,7 +885,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
                     targets.add(match.group(1).casefold())
         if task['execution']['target_repository'].casefold() not in targets:
             errors.append('Checkout has no GitHub remote matching the authorized target')
-        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', 'HEAD').replace('Z', '+00:00'))
+        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', head).replace('Z', '+00:00'))
         if dirty or head != evidence['git_head'] or tree != evidence['git_tree']:
             errors.append('Current checkout is dirty or differs from evidence HEAD/tree')
     except (ProtocolError, ValueError) as exc:
@@ -769,6 +894,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     for name in ('validations', 'criteria'):
         if not unique_ids(evidence[name]):
             errors.append('Evidence has duplicate ' + name + ' IDs')
+    # Schema 0.1 keeps its original, Python-version-dependent fromisoformat dialect; 0.2 uses the strict parser.
     parse_timestamp = lambda value: dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
     if schema_version == '0.2':
         from .authorization import timestamp as parse_timestamp

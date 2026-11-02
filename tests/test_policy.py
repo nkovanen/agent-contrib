@@ -588,6 +588,12 @@ class BoundTests(unittest.TestCase):
         for literal in patterns:
             with self.subTest(literal):
                 self.assertIsNone(re.search(r'\)[*+?{]', literal), 'quantified group risks backtracking')
+        from tests.regex_shape import nested_repeats
+        compiled = [value for value in vars(policy).values() if isinstance(value, re.Pattern)]
+        self.assertGreater(len(compiled), 3)
+        for pattern in compiled:
+            with self.subTest(pattern.pattern):
+                self.assertFalse(nested_repeats(pattern), 'nested repetition risks backtracking')
 
 
 class HiddenSourceTests(unittest.TestCase):
@@ -646,7 +652,7 @@ class HiddenSourceTests(unittest.TestCase):
         import importlib.resources
         text = ' '.join(importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8').split())
         clause = ('A `limits_reached` entry with `hides_sources: true` (shown by `limits_hide_sources`), or any '
-                  '`omitted_sources` entry, is unresolved: P-POLICY stays pending and upstream preparation, '
+                  '`omitted_sources` entry, is unresolved: `ai-policy-review` stays pending and upstream preparation, '
                   'implementation and publication are blocked until every omitted candidate is read manually at the '
                   'pinned revision or shown inapplicable with evidence. A successful CLI run does not resolve it.')
         self.assertIn(clause, text)
@@ -747,7 +753,8 @@ class WorkflowTests(unittest.TestCase):
     so an accidental edit of the installed resource is caught (RP-21). They cannot prove a host follows it."""
     REQUIRED = [
         # unresolved -> pending -> no upstream action
-        'Unresolved policy keeps P-POLICY pending and blocks upstream preparation, implementation and publication.',
+        'Unresolved policy keeps the `ai-policy-review` prerequisite pending and blocks upstream preparation, '
+        'implementation and publication.',
         '**STOP** upstream work when any relevant rule is prohibited or unresolved.',
         # no local waiver; exceptions come only from the source project's authority
         "The user's local authorization does not override the source project's policy: it can cover local "
@@ -764,14 +771,15 @@ class WorkflowTests(unittest.TestCase):
         "If you cannot establish a source's contents again, it is unresolved.",
         # hidden sources (RP-19)
         'A `limits_reached` entry with `hides_sources: true` (shown by `limits_hide_sources`), or any '
-        '`omitted_sources` entry, is unresolved: P-POLICY stays pending and upstream preparation, implementation and '
+        '`omitted_sources` entry, is unresolved: `ai-policy-review` stays pending and upstream preparation, '
+        'implementation and '
         'publication are blocked until every omitted candidate is read manually at the pinned revision or shown '
         'inapplicable with evidence. A successful CLI run does not resolve it.',
         # read first, even with no hints
         '1. Before ranking or preparing any task, read in full every scanned source, every hint in context, and every '
         'unassessed reference you can reach with your own read-only tools. Repeat this even when every count is zero.',
     ]
-    WEAKENING = ('optionally', 'if convenient', 'may skip', 'may mark p-policy satisfied', 'or the local user',
+    WEAKENING = ('optionally', 'if convenient', 'may skip', 'may mark', 'or the local user',
                  'is informational', 'any logged-in', 'when all relevant rules')
 
     @staticmethod
@@ -802,16 +810,17 @@ class WorkflowTests(unittest.TestCase):
     def test_guard_rejects_weakened_workflows(self):
         text = ' '.join(self.installed().split())
         mutants = {
-            'unresolved satisfies P-POLICY': text.replace('keeps P-POLICY pending and blocks',
-                                                          'may mark P-POLICY satisfied and never blocks'),
+            'unresolved satisfies ai-policy-review': text.replace(
+                'keeps the `ai-policy-review` prerequisite pending and blocks',
+                'may mark the `ai-policy-review` prerequisite satisfied and never blocks'),
             'STOP only when all prohibited': text.replace('when any relevant rule is prohibited or unresolved',
                                                           'when all relevant rules are prohibited'),
             'local user grants the exception': text.replace("from the source project's authority,",
                                                             "from the source project's authority or the local user,"),
             'freshness optional': text.replace('Before implementation and again before any publication, run a fresh',
                                                'Before implementation, optionally run a fresh'),
-            'hidden sources informational': text.replace('is unresolved: P-POLICY stays pending',
-                                                         'is informational: P-POLICY may proceed'),
+            'hidden sources informational': text.replace('is unresolved: `ai-policy-review` stays pending',
+                                                         'is informational: `ai-policy-review` may proceed'),
             'any maintainer account suffices': text.replace('A different logged-in account proves nothing about the '
                                                             'intended submitter.', 'Any logged-in maintainer account is enough.'),
             'steps reordered': text.replace(' 6. Before implementation', ' 0. Before implementation'),

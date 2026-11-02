@@ -147,7 +147,7 @@ def template_pointer(task, client):
             if entry.get('type') == 'blob' and TEMPLATE.fullmatch(path):
                 sha = entry.get('sha')
                 found.append({'path': core.safe_text(path, 500),
-                              'sha': sha if isinstance(sha, str) and re.fullmatch('[0-9a-f]{40}', sha) else None})
+                              'sha': sha if isinstance(sha, str) and core.SHA.fullmatch(sha) else None})
         return {'state': 'found' if found else 'none', 'templates': sorted(found, key=lambda t: t['path'])[:20]}
     except core.ProtocolError:
         return {'state': 'unknown', 'templates': []}

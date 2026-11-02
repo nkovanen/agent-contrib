@@ -4,6 +4,7 @@ from pathlib import Path
 
 from . import core
 
+REVISION = re.compile(r'(?P<name>[0-9a-f]{40}|HEAD|refs/[^~^:?*\[\\\s]+)(?P<suffix>(?:[~^][0-9]{0,9})*)')
 DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--no-renames', '--name-only', '-z')
 
 
@@ -15,23 +16,36 @@ def scope_check(task, directory, base=None):
         return result
     try:
         core.require_worktree_root(directory)
+        core.require_safe_config(directory)
+        core.require_plain_index(directory)
+        head = core.current_head(directory)
         default = base is None
-        base = result['base_commit'] = _base(task['source']['commit']) if default else resolve_base(directory, base)
+        base = result['base_commit'] = _base(task['source']['commit']) if default else _resolve(directory, base)
         try:
-            core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')
+            core.git_read(directory, 'merge-base', '--is-ancestor', base, head)
         except core.ProtocolError:
             if default:
                 result['warnings'].append('Default base source.commit is not an ancestor of HEAD; for stacked or '
                                           'rebased work pass --base REV naming the commit your change starts from')
-            raise core.ProtocolError('git_error', 'Base commit is missing or not an ancestor of HEAD') from None
-        if core.has_gitlink(directory, 'HEAD', base):
+            raise core.shallow_or(directory, core.ProtocolError(
+                'git_error', 'Base commit is missing or not an ancestor of HEAD')) from None
+        if core.has_gitlink(directory, head, base):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
-        paths = set(core.implementation_paths(directory, base))
+        paths = set(core.implementation_paths(directory, base, head))
         # Index, working tree and untracked files: everything a later commit could contain.
-        for args in (DIFF + ('--cached', base), DIFF + (base,), ('ls-files', '-z', '--others', '--exclude-standard')):
+        for args in (DIFF + ('--cached', base), DIFF + (base,)):
             paths.update(path for path in core.git_read(directory, *args).split('\0') if path)
+        paths.update(core.untracked_paths(directory))
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
         result['violations'] = sorted(core.scope_violations(task['scope'], paths), key=lambda item: item['path'])
+        if default and result['violations']:
+            # Report only: several commits plus violations often mean work stacked on unpublished commits.
+            behind = int(core.git_read(directory, 'rev-list', '--count', base + '..' + head))
+            if behind > 1:
+                result['warnings'].append(
+                    f'Default base source.commit {base} is {behind} commits behind HEAD and paths outside the scope '
+                    'changed; if your change is stacked on other unpublished commits, pass --base naming the commit '
+                    'it starts from (for example HEAD~1)')
     except core.ProtocolError as exc:
         errors.append(str(exc))
     result['within_scope'] = not errors and not result['violations']
@@ -45,16 +59,37 @@ def _base(base):
 
 
 def resolve_base(directory, rev):
-    """Resolve a caller's revision to a full commit with the same hardened, read-only Git environment."""
+    """Resolve an exact base with the hardened Git reader; no short names, so Git's name preferences never apply."""
     if not isinstance(rev, str) or not rev or rev.startswith('-') or len(rev) > 256 or any(
             char.isspace() or not char.isprintable() for char in rev):
-        raise core.ProtocolError('invalid_base', 'Base must be a SHA, branch or tag name; it cannot be blank, '
+        raise core.ProtocolError('invalid_base', 'Base must be a full SHA, HEAD or refs/... name; it cannot be blank, '
                                  'start with "-" or contain spaces or control characters')
+    match = REVISION.fullmatch(rev)
+    if not match:
+        raise core.ProtocolError('invalid_base', 'Base must be a full 40-character SHA, HEAD or a full ref name such as '
+                                 'refs/heads/NAME or refs/tags/NAME, optionally followed by ~N or ^N; convert an '
+                                 'abbreviated SHA with git rev-parse ABBREV')
+    name = match['name']
     try:
-        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet', rev + '^{commit}'))
+        # Capture the object ID first; the suffix then applies to it, never to a second name lookup.
+        # show-ref --verify is an exact lookup: an unborn HEAD fails instead of falling through to refs/*/HEAD.
+        oid = (core.git_read(directory, 'show-ref', '--verify', '--hash', name)
+               if name == 'HEAD' or name.startswith('refs/') else name)
+        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet',
+                                   _base(oid) + match['suffix'] + '^{commit}'))
     except core.ProtocolError:
-        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a SHA, branch or '
-                                 'tag (resolved locally with git rev-parse --verify REV^{commit})') from None
+        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a full SHA, HEAD '
+                                 'or an existing refs/... name') from None
+
+
+def _resolve(directory, rev):
+    """A well-formed base that does not resolve in a shallow clone is reported as missing history."""
+    try:
+        return resolve_base(directory, rev)
+    except core.ProtocolError as exc:
+        if isinstance(rev, str) and REVISION.fullmatch(rev):
+            raise core.shallow_or(directory, exc) from None
+        raise
 
 
 def evidence_skeleton(task, directory, base):
@@ -62,21 +97,24 @@ def evidence_skeleton(task, directory, base):
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
     core.require_worktree_root(directory)
-    base = resolve_base(directory, base)
+    core.require_safe_config(directory)
+    core.require_plain_index(directory)
+    head = core.current_head(directory)
+    base = _resolve(directory, base)
     try:
         core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
-        core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')
+        core.git_read(directory, 'merge-base', '--is-ancestor', base, head)
     except core.ProtocolError:
-        raise core.ProtocolError('base_history', 'Base must descend from source.commit and be an ancestor of HEAD') from None
-    if core.has_gitlink(directory, 'HEAD', base):
+        raise core.shallow_or(directory, core.ProtocolError(
+            'base_history', 'Base must descend from source.commit and be an ancestor of HEAD')) from None
+    if core.has_gitlink(directory, head, base):
         raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
     version = task['schema_version']
     attestation = {'status': 'pending', 'reviewer': '', 'git_head': '', 'contract_sha256': '', 'notes': ''}
     skeleton = {'schema_version': version, 'contract_sha256': core.canonical_hash(task),
-                'git_head': core.git_read(directory, 'rev-parse', 'HEAD'),
-                'git_tree': core.git_read(directory, 'rev-parse', 'HEAD^{tree}'), 'base_commit': base,
-                'worktree_clean': not core.git_read(directory, 'status', '--porcelain', '--untracked-files=all',
-                                                    '--ignore-submodules=all'),
+                'git_head': head, 'git_tree': core.git_read(directory, 'rev-parse', head + '^{tree}'), 'base_commit': base,
+                'worktree_clean': not (core.git_read(directory, 'status', '--porcelain', '--untracked-files=all',
+                                                     '--ignore-submodules=all') or core.untracked_paths(directory)),
                 'implementer': '',
                 'validations': [{'id': item['id'], 'argv': item['argv'], 'status': None, 'exit_code': None,
                                  'skipped': None, 'output': '', 'started_at': '', 'finished_at': '',

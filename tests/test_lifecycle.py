@@ -19,7 +19,7 @@ class Clock(dt.datetime):
 
 def absent_publication(*_):
     return {'status': 'absent', 'verified': False, 'creation_clear': True, 'own_pr': None,
-            'errors': [], 'provenance': {'fixture': True}}
+            'errors': [], 'provenance': {'publication_claim_trust': 'untrusted', 'authority_evaluated': False}}
 
 
 def own_publication(task, context, evidence):
@@ -31,7 +31,7 @@ def own_publication(task, context, evidence):
                               'head_sha': evidence['git_head'], 'contract_sha256': core.canonical_hash(task),
                               'mandate_sha256': core.canonical_hash(context['mandate'])}
     return {'status': 'own_draft', 'verified': True, 'creation_clear': False,
-            'own_pr': own, 'errors': [], 'provenance': {'fixture': True}}
+            'own_pr': own, 'errors': [], 'provenance': {'publication_claim_trust': 'untrusted', 'authority_evaluated': False}}
 
 
 def signoff(task, context, evidence):
@@ -134,6 +134,21 @@ class LifecycleTests(unittest.TestCase):
         self.client.prs.pop()
         self.task['source']['instructions_sha256'] = '0' * 64
         self.assertFalse(self.verify()['publication']['verified'])
+
+    def test_standards_shaped_ticket_overlap_blocks_schema_02_stages(self):
+        issue = self.client.request('repos/acme/photos/issues/12')
+        self.client.overrides['repos/acme/photos/issues/12'] = dict(issue, body=issue['body'] + ' Tracks SHA-1234.')
+        prepared = core.prepare(core.inspect_issue('acme/photos#12', self.client), schema_version='0.2', client=self.client)
+        self.task['source'] = dict(prepared['source'], commit=self.evidence['base_commit'])
+        self.rebind()
+        self.assertTrue(self.verify()['draft_create_ready'])
+        self.client.prs.append({'id': 3101, 'number': 31, 'title': 'Unrelated', 'body': 'Implements SHA-1234',
+                                'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'other'}})
+        result = self.verify()
+        self.assertEqual([item['number'] for item in result['duplicates']], [31])
+        self.assertFalse(result['implementation_ready'])
+        self.assertFalse(result['draft_create_ready'])
+        self.assertEqual(result['next_action'], 'resolve_blockers')
 
     def test_saved_duplicate_is_only_resolved_by_exact_live_identity(self):
         self.task['discovery']['duplicate_prs'] = [
