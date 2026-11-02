@@ -239,6 +239,32 @@ class LifecycleTests(unittest.TestCase):
         self.assertFalse(result['implementation_ready'])
 
 
+    def test_schema_02_validation_timestamps_use_the_strict_dialect(self):
+        # Each form parses with fromisoformat on some supported Python; the first two on all of them.
+        started = NOW - dt.timedelta(minutes=20)
+        for value in (started.strftime('%Y-%m-%d %H:%M:%S+00:00'), started.strftime('%Y-%m-%dT%H:%M+00:00'),
+                      started.strftime('%Y%m%dT%H%M%SZ'), started.strftime('%Y-%m-%dT%H:%M:%S+00:00:00')):
+            with self.subTest(value=value):
+                validation = self.evidence['validations'][0]
+                saved = validation['started_at']
+                validation['started_at'] = value
+                result = self.verify()
+                validation['started_at'] = saved
+                self.assertFalse(result['technical_evidence_valid'])
+                self.assertEqual(result['evidence_errors'], ['Validation timestamps must form a past interval with timezone'])
+        self.assertTrue(self.verify()['technical_evidence_valid'])
+
+    def test_duplicate_evidence_ids_cannot_hide_a_failed_entry(self):
+        for name, failed in [('validations', {'status': 'failed', 'exit_code': 1}), ('criteria', {'status': 'failed'})]:
+            with self.subTest(name=name):
+                saved = copy.deepcopy(self.evidence[name])
+                self.evidence[name] = [dict(saved[0], **failed), saved[0]]
+                result = self.verify()
+                self.evidence[name] = saved
+                self.assertFalse(result['technical_evidence_valid'])
+                self.assertEqual(result['evidence_errors'], ['Evidence has duplicate ' + name + ' IDs'])
+        self.assertTrue(self.verify()['technical_evidence_valid'])
+
 class IntegratedGitHub(CandidateGitHub):
     def __init__(self):
         super().__init__()
