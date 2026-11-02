@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core
+from . import authorization, core, dispositions
 
 
 def prepare_v2(inspected, client):
@@ -71,10 +71,11 @@ def human_signoff(task, context, evidence, authority, publication, review, now):
     result = {'valid': False, 'status': 'pending', 'trust': 'host-asserted', 'errors': [], 'sha256': None}
     if not isinstance(context, dict) or 'final_signoff' not in context:
         return result
-    if core.schema_errors(context, core.bundled_schema('host-context')):
+    schema = core.host_context_schema(context)
+    if core.schema_errors(context, schema):
         return dict(result, status='invalid', errors=['Host context schema is invalid'])
     record = context['final_signoff']
-    errors = core.schema_errors(record, core.bundled_schema('host-context')['properties']['final_signoff'])
+    errors = core.schema_errors(record, schema['properties']['final_signoff'])
     result.update(status='invalid', errors=errors)
     if errors:
         return result
@@ -172,8 +173,19 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result.update(user_authorization=authority, mandate_sha256=authority['mandate_sha256'])
     historical_errors = list(errors) + authority['errors']
     action_errors = historical_errors + authority['current_errors']
-    all_duplicates = live_duplicates + task['discovery']['duplicate_prs']
-    result['duplicates'] = live_duplicates
+    disposition, waived, observed = None, set(), []
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
+        if core.schema_errors(host_context, core.host_context_schema(host_context)):
+            disposition = dict(dispositions.report(), status='invalid', errors=['Host context schema is invalid'])
+        else:
+            disposition, waived, observed = dispositions.evaluate(task, host_context, authority, current, client,
+                                                                  dt.datetime.now(dt.timezone.utc))
+    # A disposition only ever removes the disposed topical entries; anything it observed blocks.
+    waived_items = [item for item in live_duplicates + task['discovery']['duplicate_prs']
+                    if item.get('repository') == source['repository'] and item['number'] in waived]
+    all_duplicates = [item for item in live_duplicates + task['discovery']['duplicate_prs']
+                      if item not in waived_items] + observed
+    result['duplicates'] = live_duplicates + [item for item in observed if item.get('observed_in')]
     implementation_errors = list(action_errors)
     if not authority['implement']:
         implementation_errors.append('Current implement action is not authorized')
@@ -243,4 +255,19 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         result['next_action'] = 'create_draft'
     elif result['implementation_ready']:
         result['next_action'] = 'implement'
+    if disposition is not None:
+        # Judge expiry again after every blocking read; a waiver that expired meanwhile fails closed.
+        expired = dispositions.expiry_errors(host_context['overlap_dispositions'], dt.datetime.now(dt.timezone.utc)) \
+            if disposition['status'] == 'evaluated' else []
+        if expired and disposition['waived']:
+            disposition.update(status='invalid', waived=[])
+            result['blocking_duplicates'] = result['blocking_duplicates'] + waived_items
+            for stage in ('implementation', 'draft', 'completion'):
+                result['stage_blockers'][stage].append(expired[0])
+            result.update(implementation_ready=False, draft_create_ready=False, completion_ready=False,
+                          next_action='resolve_blockers')
+            result['publication']['verified'] = False
+        disposition['errors'] = list(dict.fromkeys(disposition['errors'] + expired))
+        result['overlap_dispositions'] = disposition
+        result['waived_duplicates'] = disposition['waived']
     return result

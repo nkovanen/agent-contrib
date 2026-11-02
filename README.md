@@ -96,9 +96,14 @@ submit it there.
 ## Approval and authorization
 
 An ordinary issue is a **candidate**. Labels such as `help wanted` do not permit
-agent-generated work. A task is **maintainer-approved** only through an explicit
-`.agent-contrib.json` policy and a matching label; that v0 policy trusts everyone
-who can apply labels, including triagers. See [maintainer setup](docs/maintainers.md).
+agent-generated work. A task is **policy-approved** only through an explicit
+`.agent-contrib.json` policy and a configured label currently on the issue. The
+CLI checks the label; it does not verify who applied it. The policy trusts every
+account that can label issues (triage, write and higher, and automation with
+label access). Public issue events name an event actor, but an outside
+contributor cannot use them to verify that actor's maintainer authority or to
+bind a same-name event reliably to the current label.
+See [maintainer setup](docs/maintainers.md).
 
 Each contract uses one of two task schemas:
 
@@ -152,7 +157,7 @@ v0.2.0 has `discover`, `inspect`, `prepare`, `verify`, `instructions` and
 approval or authority and never change a readiness gate: `discover --signals`,
 `discover --responsiveness`, `discover --check-top`, `discover --repo-dir`,
 `inspect --ownership`, the AI-policy report (`inspect --ai-policy`),
-`verify --observe-ci` and `--report-budget`. `--signals` re-ranks candidates by
+`verify --observe-ci`, `verify --observe-signatures` and `--report-budget`. `--signals` re-ranks candidates by
 its score after exclusions, overlaps, known-bad issues (with `--repo-dir` or
 `--check-top`) and low likelihood; the others leave ordering unchanged.
 Put `--format text` before the command for an abridged summary; JSON is
@@ -177,7 +182,9 @@ Task schemas [0.1](agent_contribute/task.schema.json) and
   updates, force-push adoption and reopening are unsupported, and the host must
   retain the original publication head.
 - Discovery scans open PRs; publication preflight also scans exact-head
-  history. Timeline claims and file-level conflicts still need review.
+  history. Timeline claims and file-level conflicts still need review. Only a
+  host-issued disposition (host-context 0.2) can clear a topical overlap, and
+  only while the PR and base tip are unchanged; direct references never clear.
 - CI covers Linux with Python 3.10–3.14. Windows host-context input is
   unsupported and macOS is untested. No PyPI release or update channel.
 
@@ -191,7 +198,7 @@ The small [skill](agent_contribute/adapters/agent-contribute/SKILL.md) loads the
 workflow with `agent-contrib instructions` and holds no repository-specific
 rules. Both ship in one package with no Python runtime dependencies, hosted
 service or required model provider. CLI 0.3.0 supports task and evidence schemas
-0.1 and 0.2 and host-context 0.1; unknown versions fail closed. Schema 0.1
+0.1 and 0.2 and host-context 0.1 and 0.2; unknown versions fail closed. Schema 0.1
 formats are unchanged and its routes keep their meaning, apart from the
 hardening and message changes in the
 [compatibility notes](CHANGELOG.md#compatibility-notes). [Architecture](docs/architecture.md) has the details.

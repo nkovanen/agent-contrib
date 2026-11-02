@@ -62,6 +62,12 @@ installed workflow.
 The strict [host-context schema](../agent_contribute/schemas/host-context/0.1.schema.json)
 is an object with `schema_version: "0.1"` and a required `mandate`. Optional
 sections are omitted until available; `null` is not an absent section.
+[Host-context 0.2](../agent_contribute/schemas/host-context/0.2.schema.json) has
+the same sections, byte for byte, so a mandate's hash does not depend on the
+wrapper. It adds an optional, host-issued `overlap_dispositions` record (#7).
+It can waive only a topical overlap whose bound observations still hold (see
+[overlap dispositions](#overlap-dispositions-host-context-02)). Any other
+version, or a 0.1 document carrying the section, fails closed.
 
 | Section | Issuer and purpose |
 | --- | --- |
@@ -159,6 +165,66 @@ an unexpired mandate after revocation and replacement; a second draft creation;
 an approval arriving through an agent-callable API; and the post-expiry journey,
 where a timely draft created under the original mandate is still recognized and
 completed with a current sign-off while new actions stay refused.
+
+## Overlap dispositions (host-context 0.2)
+
+A host may issue an `overlap_dispositions` record (#7) saying that a specific
+**topical** overlap between this contract's issue and one open PR is
+`unrelated`. The record never covers an explicit reference to the issue, an
+incomplete open-PR scan, a closed PR, or the agent's own work. It is a separate
+human event with its own ID, nonce, interval (at most 24 hours) and event
+binding, bound to the contract hash, the mandate hash and the credential actor.
+Requirements 1, 3, 4, 5 and 7 above apply to it unchanged; it is repeatable
+while it is not revoked or superseded.
+
+Before issuing, the host:
+
+1. Reads the PR itself (`GET repos/{source}/pulls/{n}`) and renders its title,
+   body, head and base refs, state, draft flag, author and the match reason as
+   data. It never uses a worker or coordinator summary.
+2. Resolves the base-branch tip independently with
+   `GET repos/{source}/git/ref/heads/{base.ref}`, never the PR's `base.sha`,
+   which can lag the tip. This is `base_tip_sha`.
+3. Fetches `compare/{base_tip_sha}...{head_sha}` for the PR's current head and
+   shows the human the complete file list and every patch. The merge base is
+   the response's `merge_base_commit.sha`. A mutable diff link is not enough.
+4. Retains the exact material it showed: the canonical JSON of the comparison's `files`
+   items, in response order, each with exactly `filename`, `previous_filename`,
+   `status`, `sha` and `patch` (or `null`). It records the SHA-256 of those
+   bytes as `material_sha256`, then retains the approval text and the record
+   hash outside the worker's writable roots.
+5. Computes every bound field from its own reads, sets
+   `comparison.head_sha` to the bound head, and records the human's rationale.
+
+The host refuses to issue when:
+
+- the comparison is unavailable, or reports 300 files (GitHub's cap);
+- any changed file has no reviewable textual patch: binary files of every kind,
+  patches GitHub omits as too large, and source GitHub classifies as binary;
+- the PR is authored by the credential actor (this also refuses that account's
+  earlier human PRs);
+- the PR contains an explicit reference to the issue, or the human saw only an
+  incomplete open-PR scan.
+
+Re-issuing after any change to the PR or the base-branch tip is a new human
+event. `verify` re-reads every disposed PR and each base-branch tip, and waives
+an overlap only when every bound observation is still equal. Its result echoes
+the record hash for audit.
+
+Mandatory issuer tests:
+
+- a correct contract hash paired with a forged or stale summary;
+- a PR edited between review and issuance;
+- a truthful API response whose description misleads about its code;
+- a branch pushed while the human reviews (the record binds the reviewed head);
+- a saturated or truncated comparison (must not issue);
+- a PR whose `base.sha` differs from the base-branch tip (the host binds the tip
+  it resolved);
+- a binary executable or WebAssembly module (must not issue);
+- a source file GitHub reports without a patch (must not issue);
+- a mixed PR with reviewable text and one patchless file (must not issue);
+- replay of a revoked or superseded disposition;
+- an approval arriving through an agent-callable API.
 
 ## Reproduce hashes independently
 

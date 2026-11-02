@@ -23,11 +23,27 @@ Apply a designated label only to tasks with clear scope, acceptance criteria,
 validation and prohibited changes. Generic triage labels such as `bug`,
 `help wanted` and `good first issue` cannot be used as approval labels.
 
-**This policy delegates to every account GitHub permits to apply labels,
-including triagers.** v0 does not inspect the labeling actor's maintainer status.
-If you need narrower or signed approval, do not opt in under this policy yet;
-issues will remain candidates. A malformed or unreadable policy is unknown,
-not an invitation to proceed. Verification rereads current policy and labels.
+**The CLI checks that a configured label is currently present on the issue
+under the default-branch policy; it does not verify who applied it.** The policy
+therefore delegates approval to every account GitHub permits to label issues.
+It is suitable only if every principal who can label issues is trusted to
+approve agent work. That includes triage, write and higher roles, custom roles
+or grants that allow labelling, and any app or automation with label access. A
+dedicated label name restricts nothing, and removing triage access alone is not
+enough while an untrusted write collaborator or app can still label. If you
+need narrower or signed approval, do not opt in under this policy; issues stay
+candidates.
+
+Actor verification is not available, and this project offers no
+maintainer-only label policy ([#9](https://github.com/nkovanen/agent-contrib/issues/9)).
+GitHub's public REST data cannot establish who may approve: `labeled` events
+carry no role or author association and no durable label identity, and only a
+credential with push access can read a collaborator's role. For work by your
+own agents, use the schema 0.2 mandate route
+([host authorization](host-authorization.md)) instead of label approval.
+
+A malformed or unreadable policy is unknown, not an invitation to proceed.
+Verification rereads current policy and labels.
 
 Repository approval identifies eligible work; it does not authorize the
 contributor's local execution, open a PR, replace human review or promise

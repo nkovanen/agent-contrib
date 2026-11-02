@@ -236,6 +236,12 @@ commits on the reviewed `head_ref` in a local checkout; it does not authorize a
 push, PR, comment or other GitHub write, and `draft_create_ready` stays false by
 design. Report the draft and completion blockers as expected, not as failures.
 
+**Overlap dispositions.** A topical overlap (shared title words or checklist
+IDs) may be presented to the human for an `unrelated` disposition. The host
+issues it in host-context 0.2 under the rules in its documentation; direct
+references, incomplete scans, closed PRs and your own PRs are never waivable.
+The worker never writes, edits or completes an `overlap_dispositions` record.
+
 **Coordinators.** A coordinator or orchestrator agent may forward the worker's
 request and the exact contract file to the human/host and return the issued
 host context unchanged. It must not issue, edit, re-serialize or approve one,
@@ -383,7 +389,9 @@ AI review, successful CI or a coordinator message. Never merge or release.
 ## Versions, exit codes and installation
 
 CLI/library version is 0.3.0; task/evidence formats are independently versioned.
-Only exact versions 0.1 and 0.2 are supported. Host-context format is 0.1.
+Only exact versions 0.1 and 0.2 are supported. Host-context formats are 0.1
+and 0.2; 0.2 adds an optional host-issued `overlap_dispositions` record that can
+remove only a bound, still-identical topical overlap from blocking.
 Unknown/mixed versions and extra fields fail closed. Host context and `--stage`
 are rejected for schema 0.1. No silent migration, downgrade or update occurs.
 Prepare and review a new 0.2 task to use its route; old 0.1 tasks keep old decisions.
@@ -459,9 +467,12 @@ default branch:
 ```
 
 This precise policy delegates approval to **every account GitHub allows to
-apply issue labels**, including triagers. It does not claim the label actor is
-a maintainer. Repositories unwilling to delegate this broadly must not adopt
-this POC policy; label-actor-specific permission checks are not implemented. The separate schema
+apply issue labels**: triage, write and higher roles, and automation with label
+access. The CLI checks that a configured label is currently present; it does not
+verify who applied it. Public events name an event actor, but public REST data
+cannot verify that actor's authority or bind the event to the current label. Never report a policy label
+as maintainer approval. Repositories unwilling to delegate this broadly must not
+adopt this policy; no maintainer-only label policy exists. The separate schema
 0.2 candidate route verifies the current credential actor; it does not change
 this label policy or authenticate human consent. Generic
 triage labels are refused even if the policy lists them. Policy and instruction
