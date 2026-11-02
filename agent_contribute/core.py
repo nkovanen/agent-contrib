@@ -591,36 +591,51 @@ def prepare(inspected, schema_version='0.1', client=None):
                           'Record explicit execution authorization separately from upstream approval.']}
 
 
-def schema_errors(value, schema, path='$', depth=0):
-    """Validate the subset of JSON Schema used by the bundled, closed schemas."""
+def schema_errors(value, schema, path='$', depth=0, root=None):
+    """Validate the subset of JSON Schema used by the bundled, closed schemas.
+
+    Objects are closed unless additionalProperties is a schema or true. Output
+    schemas also use type lists, null, number, anyOf and local #/$defs/ refs."""
     if depth > 30:
         return [path + ': excessive nesting']
+    root = schema if root is None else root
+    if '$ref' in schema:
+        prefix, marker, name = schema['$ref'].partition('#/$defs/')
+        if prefix or not marker:
+            raise ValueError('Only local #/$defs/ schema references are supported')
+        return schema_errors(value, root['$defs'][name], path, depth + 1, root)
     errors = []
+    if 'anyOf' in schema and all(schema_errors(value, option, path, depth + 1, root) for option in schema['anyOf']):
+        errors.append(path + ': matches no allowed shape')
     kind = schema.get('type')
     matches = {'object': isinstance(value, dict), 'array': isinstance(value, list),
                'string': isinstance(value, str), 'integer': type(value) is int,
-               'boolean': type(value) is bool}
-    if kind and not matches.get(kind, False):
-        return [path + ': expected ' + kind]
+               'boolean': type(value) is bool, 'null': value is None, 'number': type(value) in (int, float)}
+    kinds = kind if isinstance(kind, list) else [kind] if kind else []
+    if kinds and not any(matches.get(item, False) for item in kinds):
+        return [path + ': expected ' + ' or '.join(kinds)]
+    kind = next((item for item in kinds if matches[item]), None)
     if 'const' in schema and (type(value) is not type(schema['const']) or value != schema['const']):
         errors.append(path + ': wrong constant or version')
     if 'enum' in schema and value not in schema['enum']:
         errors.append(path + ': unsupported value')
     if kind == 'object':
         properties = schema['properties']
+        extra = schema.get('additionalProperties', False)
         for key in schema['required']:
             if key not in value:
                 errors.append(path + '.' + key + ': missing')
-        if set(value) - set(properties):
+        if extra is False and set(value) - set(properties):
             errors.append(path + ': unknown properties')
         for key, item in value.items():
-            if key in properties:
-                errors.extend(schema_errors(item, properties[key], path + '.' + key, depth + 1))
+            subschema = properties.get(key, extra)
+            if isinstance(subschema, dict):
+                errors.extend(schema_errors(item, subschema, path + '.' + key, depth + 1, root))
     elif kind == 'array':
         if not schema.get('minItems', 0) <= len(value) <= schema.get('maxItems', 1000):
             errors.append(path + ': invalid list length')
         for i, item in enumerate(value[:1000]):
-            errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1))
+            errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1, root))
     elif kind == 'string':
         if schema.get('minLength', 0) > 0 and not value.strip():
             errors.append(path + ': must not be blank')
@@ -628,7 +643,7 @@ def schema_errors(value, schema, path='$', depth=0):
             errors.append(path + ': invalid string length')
         if 'pattern' in schema and not re.fullmatch(schema['pattern'], value):
             errors.append(path + ': invalid format')
-    elif kind == 'integer' and value < schema.get('minimum', value):
+    elif kind in ('integer', 'number') and value < schema.get('minimum', value):
         errors.append(path + ': below minimum')
     return errors
 
