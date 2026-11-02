@@ -3,10 +3,9 @@
 No signature program is ever run: no gpg, ssh-keygen, verify-commit or log --show-signature, all of which honour
 repository-configured programs. Local reads are plumbing (merge-base, rev-list, cat-file) through core.git_read.
 """
-import datetime as dt
 from urllib.parse import quote
 
-from . import core, remote
+from . import authorization, core, remote
 
 MAX_COMMITS = 1000
 SIGNATURE_HEADERS = (b'gpgsig ', b'gpgsig-sha256 ')
@@ -22,11 +21,12 @@ LOCAL_NOTICE = ('Header presence only. Nothing is verified locally, and any comm
 
 
 def _timestamp(value):
+    """The codebase's strict RFC3339 subset: 'T' separator, known offset, at most six fractional digits."""
     try:
-        parsed = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
-    except (AttributeError, TypeError, ValueError):
+        authorization.timestamp(value)
+    except ValueError:
         return False
-    return parsed.tzinfo is not None
+    return True
 
 
 def _unread(name, branch):

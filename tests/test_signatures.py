@@ -107,6 +107,21 @@ class GitHubVerificationTests(unittest.TestCase):
                 # Only a failed read, not a malformed answer, gets the unpushed-head hint.
                 self.assertEqual('not pushed' in part['errors'][0], name == 'failed')
 
+    def test_verification_time_must_be_strict_rfc3339(self):
+        # Review R6-04: fromisoformat accepted any single separator, so controls rode along in verified_at.
+        for value in ['2029-12-01\x1b00:00:00+00:00', '2029-12-01\u202e00:00:00+00:00', '2029-12-01\x0000:00:00+00:00',
+                      '2029-12-01\n00:00:00+00:00', '2029-12-01 00:00:00+00:00', '', '2029-12-01T00:00:00.1234567Z',
+                      '2029-12-01T00:00:00-00:00', '2029-12-01T00:00:00+24:00', '2029-12-01']:
+            with self.subTest(value=value):
+                client = SignatureGitHub(ready_contract()[1])
+                client.commit['verification'] = verification(True, 'valid', value)
+                part = observe(client)[0]['github_verification']
+                self.assertEqual((part['complete'], part['verified_at']), (False, None))
+        for value in ['2029-12-01T00:00:00Z', '2029-12-01T00:00:00.5+02:00']:
+            client = SignatureGitHub(ready_contract()[1])
+            client.commit['verification'] = verification(True, 'valid', value)
+            self.assertEqual(observe(client)[0]['github_verification']['verified_at'], value)
+
     def test_missing_or_invalid_evidence_head_reads_nothing(self):
         for evidence in [{}, {'git_head': 'HEAD'}, ['x'], {'git_head': 'A' * 40}]:
             with self.subTest(evidence=evidence):
