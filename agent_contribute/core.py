@@ -860,33 +860,73 @@ def _scratch_root(directory):
                         'set TMPDIR to a directory outside it')
 
 
+def _hash_chunks(paths, limit=500, size=60000):
+    chunk, used = [], 0
+    for path in paths:
+        if chunk and (len(chunk) >= limit or used + len(path) > size):
+            yield chunk
+            chunk, used = [], 0
+        chunk.append(path)
+        used += len(path) + 1
+    if chunk:
+        yield chunk
+
+
+def _regular_file(directory, path):
+    try:
+        return stat.S_ISREG(os.lstat(Path(directory, path)).st_mode)
+    except OSError:
+        return False
+
+
 def worktree_changes(directory, commit):
-    """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
-    temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
-    version = re.match(r'git version (\d+)\.(\d+)', git_read(directory, '--version'))
-    if not version or (int(version[1]), int(version[2])) < (2, 40):
-        raise ProtocolError('git_too_old', 'Git 2.40 or newer is required to compare worktree content without '
-                            'attribute conversions')
-    empty_tree = git_read(directory, 'hash-object', '-t', 'tree', '--stdin')  # stdin is empty; nothing is written
-    tracked = sum(int(fields[3]) for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0')
-                  if entry and (fields := entry.split('\t', 1)[0].split())[1] == 'blob')
+    """Tracked paths whose worktree bytes are neither the committed blob nor exactly what checkout writes for it.
+
+    A fresh temporary index outside the checkout has no stat cache, so its status hashes every tracked file and
+    reports deletions, type and mode changes. Status compares after clean conversion, which ident, eol and
+    working-tree-encoding can use to hide an edit, so every other regular file is also hashed raw
+    (hash-object --no-filters). A raw mismatch counts only if the bytes also differ from the commit's checkout
+    output (cat-file --filters), so a legitimately converted checkout stays clean. Attributes come only from the
+    checkout's .gitattributes files (a changed one is itself reported): info/attributes is refused,
+    core.attributesFile and system attributes are ignored, and autocrlf/eol are forced."""
+    blobs = []
+    for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0'):
+        if entry:
+            meta, path = entry.split('\t', 1)
+            mode, kind, oid, size = meta.split()
+            if kind == 'blob':
+                blobs.append((mode, oid, int(size), path))
+    tracked = sum(size for _, _, size, _ in blobs)
     budget = content_timeout(tracked)
-    with tempfile.TemporaryDirectory(dir=_scratch_root(directory)) as scratch:
-        index = os.path.join(scratch, 'index')
-        git_read(directory, 'read-tree', commit, index_file=index)
+
+    def timed(*args, **options):
         try:
-            # Byte-for-byte: attributes come from the empty tree and autocrlf is off, so ident, eol and
-            # working-tree-encoding conversions cannot make different bytes equal the commit.
-            listed = git_read(directory, '-c', 'core.autocrlf=false', '--attr-source=' + empty_tree, 'status',
-                              '--porcelain', '-z', '--no-renames', '--untracked-files=no', '--ignore-submodules=all',
-                              index_file=index, timeout=budget)
+            return git_read(directory, '-c', 'core.autocrlf=false', '-c', 'core.eol=lf', *args,
+                            timeout=budget, **options)
         except ProtocolError as exc:
             if exc.code != 'git_timeout':
                 raise
             raise ProtocolError('checkout_too_large_for_timeout', f'Hashing {tracked} tracked bytes did not finish '
                                 f'within {budget} s; the checkout is too large for the content check') from None
+
+    with tempfile.TemporaryDirectory(dir=_scratch_root(directory)) as scratch:
+        index = os.path.join(scratch, 'index')
+        git_read(directory, 'read-tree', commit, index_file=index)
+        listed = timed('status', '--porcelain', '-z', '--no-renames', '--untracked-files=no', '--ignore-submodules=all',
+                       index_file=index)
     # Porcelain v1 is 'XY path'; Y is the worktree against that index.
-    return {entry[3:] for entry in listed.split('\0') if len(entry) > 3 and entry[1] != ' '}
+    changed = {entry[3:] for entry in listed.split('\0') if len(entry) > 3 and entry[1] != ' '}
+    expected = {path: oid for mode, oid, _, path in blobs
+                if mode in ('100644', '100755') and path not in changed and _regular_file(directory, path)}
+    for chunk in _hash_chunks(sorted(expected)):
+        actual = timed('hash-object', '--no-filters', '--', *chunk).split('\n')
+        if len(actual) != len(chunk):
+            raise ProtocolError('git_error', 'Git evidence checkout read failed')
+        for path, oid in zip(chunk, actual):
+            if oid != expected[path] and Path(directory, path).read_bytes() != timed(
+                    'cat-file', '--filters', f'{commit}:{path}', raw=True):
+                changed.add(path)
+    return changed
 
 
 def current_head(directory):

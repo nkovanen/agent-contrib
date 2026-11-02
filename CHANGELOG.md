@@ -219,15 +219,15 @@ channel or runtime model provider is added.
   never starts a command inside a populated submodule with that submodule's own
   config. Previously scope-check reported the gitlink but still ran a
   submodule-configured clean filter.
-- The worktree content comparison is byte for byte: it reads attributes from
-  the empty tree (`--attr-source`, Git 2.40 or newer, otherwise
-  `git_too_old`) with `core.autocrlf=false`, and every read forces
-  `core.attributesFile` to `/dev/null`. A non-empty `.git/info/attributes`,
-  which `--attr-source` does not cover, is refused (`unsafe_git_attributes`).
-  `ident`, `eol`/`text` and `working-tree-encoding` conversions can no longer
-  make an edited file (for example code added inside `$Id: ...$`) match the
-  commit. Checkouts whose files differ from their blobs only by such a
-  conversion (for example CRLF working copies) now report as changed (R1-19).
+- Every tracked file's worktree bytes must equal either its committed blob or
+  exactly what checkout writes for it (`git cat-file --filters`, with
+  `core.autocrlf=false` and `core.eol=lf`). `ident`, `eol`/`text` and
+  `working-tree-encoding` conversions therefore cannot hide an edit (for
+  example code added inside `$Id: ...$`), while an untouched checkout with
+  legitimate committed conversions (an expanded `$Id`, CRLF `.bat` files,
+  UTF-16 sources) stays clean. Every read ignores `core.attributesFile`; a
+  non-empty `.git/info/attributes` is refused (`unsafe_git_attributes`). No
+  Git version beyond those already required is needed (R1-19, G-17, G-18).
 - Worktree content is compared with HEAD (and, for `scope-check`, the base)
   through a fresh temporary index outside the checkout, so a hand-edited stat
   cache in `.git/index` cannot hide an edit. The checkout's index is used only
@@ -285,9 +285,10 @@ channel or runtime model provider is added.
     `unsafe_git_config`.
   - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
     evidence dirty.
-  - Files that equal their blob only after an attribute or autocrlf conversion
-    now make evidence dirty; a non-empty `.git/info/attributes` fails with
-    `unsafe_git_attributes`; Git older than 2.40 fails with `git_too_old`.
+  - A file whose bytes match neither its blob nor its checkout output (for
+    example an edit hidden by `ident`, or a CRLF copy produced only by a local
+    `core.autocrlf`) now makes evidence dirty; a non-empty
+    `.git/info/attributes` fails with `unsafe_git_attributes`.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;
