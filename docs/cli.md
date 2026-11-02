@@ -218,8 +218,9 @@ a one-page sample of the most recently updated closed PRs, never full history:
   external PRs are present; otherwise `insufficient`, with the rate and median
   `null`.
 - `value: unknown`, `complete: false` and an error when the read fails, a page
-  or entry is malformed, or discovery did not complete its source snapshot (then
-  nothing is read).
+  or entry is malformed (including a missing `merged_at` field or a merge time
+  outside the PR's creation-to-close interval), or discovery did not complete
+  its source snapshot (then nothing is read).
 
 Each report has an `explanation`. No PR text is copied. The report never changes
 approval, exclusions, overlaps, ordering or discovery `complete`. As with

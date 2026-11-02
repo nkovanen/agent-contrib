@@ -182,12 +182,15 @@ def responsiveness(repository, client):
                 raise core.ProtocolError('api_shape', 'Closed PR author type or association is malformed')
             if created is None or closed is None or closed < created:
                 raise core.ProtocolError('api_shape', 'Closed PR timestamps are missing or inconsistent')
-            if pr.get('merged_at') is not None and _timestamp(pr.get('merged_at')) is None:
-                raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed')
+            if 'merged_at' not in pr:
+                raise core.ProtocolError('api_shape', 'Closed PR merge state is missing')
+            merged_at = None if pr['merged_at'] is None else _timestamp(pr['merged_at'])
+            if pr['merged_at'] is not None and (merged_at is None or not created <= merged_at <= closed):
+                raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed or outside its lifetime')
             if kind == 'Bot' or association in MAINTAINER_ASSOCIATIONS:
                 continue
             days.append((closed - created).total_seconds() / 86400)
-            merged += pr.get('merged_at') is not None
+            merged += merged_at is not None
     except core.ProtocolError as exc:
         report['errors'] = [str(exc)]
         report['explanation'] = 'Closed pull requests could not be read completely; responsiveness is unknown'

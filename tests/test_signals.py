@@ -307,7 +307,11 @@ class ResponsivenessTests(unittest.TestCase):
                  'user': broken(user=None), 'user type': broken(user={'type': 7}), 'association': broken(author_association=[]),
                  'closed missing': broken(closed_at=None), 'closed bad': broken(closed_at='soon'),
                  'naive': broken(closed_at='2029-12-05T00:00:00'), 'created after closed': broken(created_at='2030-02-01T00:00:00Z'),
-                 'merged type': broken(merged_at=5), 'merged bad': broken(merged_at='later')}
+                 'merged type': broken(merged_at=5), 'merged bad': broken(merged_at='later'),
+                 # Review R3-04: a missing field is not "unmerged", and a merge must lie within the PR's lifetime.
+                 'merged missing': [{k: v for k, v in pr.items() if k != 'merged_at'} for pr in broken()],
+                 'merged empty': broken(merged_at=''), 'merged before created': broken(merged_at='2028-01-01T00:00:00Z'),
+                 'merged after closed': broken(merged_at='2031-01-01T00:00:00Z')}
         for name, closed in cases.items():
             with self.subTest(name):
                 report = self.report(closed)
