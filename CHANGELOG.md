@@ -2,6 +2,8 @@
 
 ## 0.3.0 — unreleased
 
+- `--format text authorization-request` lists its preflight errors and
+  unresolved fields, so a request that is not ready says why (A2-08).
 - Schema 0.2 `verify` lists contract route errors (pending mode, invalid or
   equal refs, a different target or head repository) in its errors and every
   stage's blockers even without a host context, as `authorization-request`

@@ -98,6 +98,14 @@ def _scalars(result):
     return [f'{key}: {line(value)}' for key, value in result.items() if isinstance(value, (str, int, bool)) or value is None]
 
 
+def _authorization_request(result):
+    out = ['Ready for issuance: ' + _flag(result.get('ready_for_issuance')),
+           'Issued: no (unsigned request; not a mandate; grants nothing)',
+           'Contract SHA-256: ' + line(result.get('contract_sha256', ''), 64)]
+    return (out + _list('Preflight errors', result.get('preflight_errors', [])) +
+            _list('Unresolved fields', result.get('unresolved_fields', [])))
+
+
 def _scope_check(result):
     out = _scalars(result) + [f'Changed paths: {len(result.get("changed_paths", []))}']
     out += _list('Violations', (f'{line(item.get("path", ""), 200)} -- {line(item.get("rule", ""), 200)}'
@@ -149,7 +157,7 @@ def render(command, result, stage=None):
                 f"{', '.join(result['supported_host_context_versions'])}; JSON output is canonical)\n\n"
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
-            'drift': _drift}.get(command)
+            'drift': _drift, 'authorization-request': _authorization_request}.get(command)
     if body is None:
         out = _scalars(result)
     else:
