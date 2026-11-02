@@ -350,15 +350,12 @@ check incomplete instead of making extra requests.
 Reaching a cap, or a failed read, marks that check `complete: false`, and an
 incomplete `top_check` exits 1. A checked issue is demoted when it has a
 merged same-repository PR that references it exactly ("possibly already
-fixed"), a claim comment no older than 30 days, or a current assignee. A claim
-counts only when a non-maintainer writes it in the first person about this issue
-(`I'm working on this`, `can I take it`, `/assign`) outside code spans, fenced
-code, blockquotes and quotation marks; `I'm working on issue #999`, `I will take
-the tests` or a quoted example do not count. The `inspect --ownership` report keeps
-its broader patterns. It then
-moves below every other candidate that is not excluded or overlapping (known
-bad below unknown); relative order is otherwise kept and issues below the top N
-are never read. Each
+fixed") or a current assignee. Claim comments never demote: comment prose is
+untrusted and easy to misread (quoted instructions, code examples, other
+issues), so claims stay visible only in the report-only `inspect --ownership`
+output. A demoted issue then moves below every other candidate that is not
+excluded or overlapping (known bad below unknown); relative order is otherwise
+kept and issues below the top N are never read. Each
 demotion is listed in the issue's `top_check.demotions`. No maintainer
 "reserved" or "rejected" detector exists, so none is used. A clean or
 incomplete check proves nothing, gates and overlap are unchanged, and the
@@ -1074,7 +1071,7 @@ A repository in a multi-repository run whose discovery raised
 | `top_check.complete` | boolean | False when a read failed or a page, PR-detail or total read cap was reached |
 | `top_check.errors` | string[] |  |
 | `top_check.reads` | integer | GitHub reads made for this issue; at most 30 |
-| `top_check.demotions` | string[] | Merged same-repository fix, fresh claim comment or current assignee |
+| `top_check.demotions` | string[] | Merged same-repository fix or current assignee; claim comments never demote |
 
 #### `discover_multi`
 

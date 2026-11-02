@@ -72,13 +72,13 @@ class CheckTopTests(unittest.TestCase):
         client = CheckGitHub()
         code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '5')
         self.assertEqual(code, 0)
-        self.assertEqual([item['number'] for item in result['issues']], [4, 5, 6, 1, 2, 3, 7])
+        self.assertEqual([item['number'] for item in result['issues']], [2, 4, 5, 6, 1, 3, 7])
         checks = {item['number']: item.get('top_check') for item in result['issues']}
         self.assertIsNone(checks[6])
         self.assertIsNone(checks[7])
         self.assertEqual(checks[1]['demotions'], ['possibly already fixed by a merged same-repository PR: '
                                                   'https://github.com/acme/photos/pull/31'])
-        self.assertEqual(checks[2]['demotions'], ['claimed in a comment by carol 2 days ago'])
+        self.assertEqual(checks[2]['demotions'], [])  # a fresh claim comment is report-only
         self.assertEqual(checks[3]['demotions'], ['assigned to alice'])
         self.assertEqual((checks[4]['demotions'], checks[5]['demotions']), ([], []))
         self.assertTrue(all(checks[n]['complete'] for n in range(1, 6)))
@@ -91,29 +91,19 @@ class CheckTopTests(unittest.TestCase):
             entry = next(item for item in result['issues'] if item['number'] == number)
             self.assertEqual((entry['duplicates'], entry['exclusions'], entry['approval']['status']), ([], [], 'candidate'))
 
-    def test_only_unquoted_first_person_claims_by_non_maintainers_demote(self):
-        # Review R8-03: quoted, instructional, other-task and tests-only comments are not claims on this issue.
-        claim = 'claimed in a comment by carol 2 days ago'
-        cases = [("I'm working on this", 'NONE', [claim]), ('I am working on it now.', 'CONTRIBUTOR', [claim]),
-                 ('Can I take this?', 'NONE', [claim]), ('/assign', 'FIRST_TIME_CONTRIBUTOR', [claim]),
-                 ("Please do not post `I'm working on this` comments.", 'NONE', []),
-                 ('> I am working on this\n\nThat quotation is an example, not a claim.', 'NONE', []),
-                 ('```\nI am working on this\n```', 'NONE', []),
-                 ('Do not write "I am working on this" here.', 'NONE', []),
-                 ('I will take the tests, but please send your implementation PR.', 'NONE', []),
-                 ("I'm working on issue #999; this issue is still free.", 'NONE', []),
-                 ('Can I work on the documentation for #998 instead?', 'NONE', []),
-                 ("I'm not working on this.", 'NONE', []), ('Nobody is working on this.', 'NONE', []),
-                 ("I'm working on this", 'MEMBER', []), ("I'm working on this", 'OWNER', [])]
-        for body, association, expected in cases:
-            with self.subTest(body=body, association=association):
+    def test_claim_comments_never_demote(self):
+        # Coordinator decision after review R8-03/R8-07: claims are visible only in the ownership report.
+        for body, association in [("I'm working on this", 'NONE'), ('/assign', 'FIRST_TIME_CONTRIBUTOR'),
+                                  ('Can I take this?', 'CONTRIBUTOR'), ('\u201c' * 50000, 'NONE')]:
+            with self.subTest(body=body[:20]):
                 client = CheckGitHub()
                 client.timelines = {}
                 client.comments = {1: [dict(comment(10, body, FRESH), author_association=association)]}
                 code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '1')
-                check = next(item for item in result['issues'] if item['number'] == 1)['top_check']
-                self.assertEqual(check['demotions'], expected)
-                self.assertEqual(result['issues'][0]['number'], 1 if not expected else 2)
+                self.assertEqual(code, 0)
+                self.assertEqual(result['issues'][0]['number'], 1)
+                self.assertEqual(result['issues'][0]['top_check']['demotions'], [])
+        self.assertFalse(hasattr(signals, 'ranking_claim'))
 
     def test_smaller_n_checks_only_that_many_but_demotes_below_all(self):
         client = CheckGitHub()
@@ -199,7 +189,7 @@ class CheckTopTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn('Complete: yes\n', text)
         self.assertIn('Top check: complete no; checked 5 of 5; 11 GitHub reads (cap 30)\n', text)
-        self.assertIn('Top check demotions (3):\n  - acme/photos#1: possibly already fixed', text)
+        self.assertIn('Top check demotions (2):\n  - acme/photos#1: possibly already fixed', text)
         self.assertIn('Top check errors (1):\n  - acme/photos#4: Pagination reached the 1-page limit\n', text)
 
     def test_local_work_and_check_top_share_one_known_bad_sort(self):
@@ -211,12 +201,25 @@ class CheckTopTests(unittest.TestCase):
             client.commit = base
             code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '2', '--repo-dir', tmp)
         self.assertEqual(code, 0)
-        # 4 is locally referenced, so the top two checked are 1 and 2; all three known-bad issues sort together
+        # 4 is locally referenced, so the top two checked are 1 and 2; the known-bad 1 and 4 sort together
         # below the other candidates and above the overlapping 7.
-        self.assertEqual([item['number'] for item in result['issues']], [3, 5, 6, 1, 2, 4, 7])
-        self.assertEqual([item['number'] for item in result['issues'] if 'top_check' in item], [1, 2])
+        self.assertEqual([item['number'] for item in result['issues']], [2, 3, 5, 6, 1, 4, 7])
+        self.assertEqual(sorted(item['number'] for item in result['issues'] if 'top_check' in item), [1, 2])
         self.assertEqual(result['ordering'], core.KNOWN_BAD_ORDERING)
         self.assertFalse([call for call in ownership_reads(client) if '/issues/4/' in call])
+
+    def test_local_work_runs_before_choosing_the_top_n(self):
+        # Review mutant C-M07: with the first-ranked issue referenced locally, check-top must skip it.
+        from tests.test_local_work import checkout, commit
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            commit(git, 'Fix #1 and #4')
+            client = CheckGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '2', '--repo-dir', tmp)
+        self.assertEqual(sorted(item['number'] for item in result['issues'] if 'top_check' in item), [2, 3])
+        self.assertEqual([item['number'] for item in result['issues']], [2, 5, 6, 1, 3, 4, 7])
+        self.assertFalse([call for call in ownership_reads(client) if '/issues/1/' in call])
 
     def test_pr_detail_cap(self):
         client = CheckGitHub()

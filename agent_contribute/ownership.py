@@ -55,11 +55,8 @@ def _pull_detail(repository, repository_id, number, source, issue_number, client
             'merged_at': merged_at, 'closed_at': closed_at, 'exact_reference': exact}
 
 
-def ownership_signals(source, number, client, now=None, *, max_pages=core.MAX_PAGES, max_pr_details=MAX_PR_DETAILS,
-                      comments_out=None):
-    """The caps bound reads for discover --check-top; reaching either one makes the report incomplete.
-    comments_out, when given, receives the validated comments (body, association, age) for a stricter caller-side
-    predicate; nothing about them is added to the report."""
+def ownership_signals(source, number, client, now=None, *, max_pages=core.MAX_PAGES, max_pr_details=MAX_PR_DETAILS):
+    """The caps bound reads for discover --check-top; reaching either one makes the report incomplete."""
     now = now or dt.datetime.now(dt.timezone.utc)
     errors = []
     timeline = core.paginate(client, f'repos/{source}/issues/{number}/timeline', key=_event_key, max_pages=max_pages)
@@ -113,9 +110,6 @@ def ownership_signals(source, number, client, now=None, *, max_pages=core.MAX_PA
         except core.ProtocolError as exc:
             errors.append('Malformed comment: ' + str(exc))
             continue
-        if comments_out is not None:
-            comments_out.append({'body': body, 'author': author, 'author_association': association,
-                                 'age_days': _days(created, now)})
         for label, pattern in CLAIMS:
             match = pattern.search(body[:SCAN_LIMIT])
             if match:

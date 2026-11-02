@@ -207,8 +207,8 @@
                 "type": "string",
                 "maxLength": 2147483647
               },
-              "maxItems": 3,
-              "description": "Merged same-repository fix, fresh claim comment or current assignee"
+              "maxItems": 2,
+              "description": "Merged same-repository fix or current assignee; claim comments never demote"
             }
           },
           "required": [
