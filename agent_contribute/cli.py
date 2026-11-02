@@ -82,9 +82,11 @@ def prevalidate(args):
     elif args.command == 'audit':
         core.parse_repository(args.repository)
     elif args.command in ('verify', 'drift', 'pr-body'):
+        # Each file is read once; dispatch uses these objects, so a file changed later cannot change the route.
+        args.evidence_data = None
         if args.command == 'pr-body' and args.evidence:
-            core.read_json(args.evidence)
-        task = core.read_json(args.contract)
+            args.evidence_data = core.read_json(args.evidence)
+        task = args.task = core.read_json(args.contract)
         if args.command in ('drift', 'pr-body') and core.validate_contract(task):
             raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
         if args.command == 'verify':
@@ -92,7 +94,7 @@ def prevalidate(args):
             if version != '0.2' and (args.stage is not None or args.host_context_stdin):
                 raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
             if args.evidence:
-                core.read_json(args.evidence)
+                args.evidence_data = core.read_json(args.evidence)
 
 
 def main(argv=None):
@@ -224,8 +226,7 @@ def main(argv=None):
                       'warning': 'Skeleton only: fill every result from real runs and reviews; nothing was executed'}
             code = 0
         elif args.command == 'pr-body':
-            evidence = core.read_json(args.evidence) if args.evidence else None
-            body, verification = prbody.pr_body(core.read_json(args.contract), evidence, args.repo_dir,
+            body, verification = prbody.pr_body(args.task, args.evidence_data, args.repo_dir,
                                                 closes=args.closes, assistant=args.assistant)
             try:
                 with Path(args.output).open('x', encoding='utf-8', newline='') as handle:
@@ -253,7 +254,7 @@ def main(argv=None):
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
         elif args.command == 'drift':
-            result = drift.drift(core.read_json(args.contract))
+            result = drift.drift(args.task)
             code = 0 if result['complete'] and result['drifted'] is False else 1
         elif args.command == 'feedback':
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
@@ -277,9 +278,8 @@ def main(argv=None):
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
                           'warning': 'Draft saved; inspect and review before execution'}
         else:
-            task = core.read_json(args.contract)
+            task, evidence = args.task, args.evidence_data
             version = task.get('schema_version') if isinstance(task, dict) else None
-            evidence = core.read_json(args.evidence) if args.evidence else None
             if version == '0.2':
                 context = read_host_context_stdin() if args.host_context_stdin else None
                 result = core.verify(task, evidence, args.repo_dir, host_context=context)

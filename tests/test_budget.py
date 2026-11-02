@@ -133,6 +133,46 @@ class BudgetTests(unittest.TestCase):
                     self.assertEqual((code, result), (plain_code, plain))
                     self.assertEqual(client.calls, [])
 
+    def test_input_files_are_read_once_so_a_swap_during_the_budget_read_cannot_change_the_route(self):
+        # R1-09: the task validated before the rate_limit GET is the task that is dispatched.
+        from tests.test_authorization import candidate_task, host_context
+        from tests.test_protocol import evidence_checkout
+        with tempfile.TemporaryDirectory() as checkout, tempfile.TemporaryDirectory() as output:
+            legacy, _, evidence, _ = evidence_checkout(checkout)
+            candidate, client = candidate_task()
+            task_path, evidence_path = Path(output, 'task.json'), Path(output, 'evidence.json')
+            task_path.write_text(json.dumps(candidate))
+            evidence_path.write_text(json.dumps(evidence))
+            original = client.request
+
+            def request(endpoint):
+                if endpoint == 'rate_limit':
+                    task_path.write_text(json.dumps(legacy))  # a concurrent writer swaps in a valid 0.1 task
+                    return {'resources': {'core': dict(limit=5000, remaining=4000, used=1000, reset=1900000000)}}
+                return original(endpoint)
+
+            client.request = request
+            with patch.object(cli, 'read_host_context_stdin', return_value=host_context(candidate)) as stdin, \
+                    patch.object(core, 'read_json', wraps=core.read_json) as read_json:
+                code, result = run(client, '--report-budget', 'verify', str(task_path), '--stage', 'draft',
+                                   '--host-context-stdin', '--evidence', str(evidence_path), '--repo-dir', checkout)
+            self.assertEqual(result.get('schema_version'), '0.2', 'the swapped-in legacy task was dispatched')
+            self.assertTrue(stdin.called)
+            self.assertEqual(code, 1)
+            self.assertNotIn('upstream_submission_ready', result)
+            self.assertEqual(sorted(call.args[0] for call in read_json.call_args_list),
+                             sorted([str(evidence_path), str(task_path)]))
+
+    def test_drift_and_pr_body_read_each_input_file_once(self):
+        from tests.test_protocol import ready_contract
+        with tempfile.TemporaryDirectory() as directory:
+            task_path = Path(directory, 'task.json')
+            task_path.write_text(json.dumps(ready_contract()[0]))
+            for argv in (['drift', str(task_path)], ['pr-body', str(task_path), '--output', str(Path(directory, 'b.md'))]):
+                with self.subTest(command=argv[0]), patch.object(core, 'read_json', wraps=core.read_json) as read_json:
+                    run(BudgetGitHub(), *argv)
+                    self.assertEqual([call.args[0] for call in read_json.call_args_list], [str(task_path)])
+
     def test_invalid_report_contract_is_rejected_before_budget_or_threshold(self):
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory, 'task.json')
