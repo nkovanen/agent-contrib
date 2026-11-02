@@ -266,7 +266,8 @@ CHECK_PAGES = 1
 CHECK_PR_DETAILS = 4
 CHECK_READ_CAP = 30
 CHECK_TOP_NOTICE = ('Report only. Only the top N candidates were read (first timeline and comment page, at most '
-                    f'{CHECK_PR_DETAILS} cross-referenced PR details each) and re-ranked among themselves. An '
+                    f'{CHECK_PR_DETAILS} cross-referenced PR details each); a demoted one moves below every other '
+                    'candidate that is not excluded or overlapping. An '
                     'incomplete or clean check is unknown, never proof that an issue is free or unfixed.')
 
 
@@ -282,7 +283,7 @@ class _ReadCap:
 
 
 def check_top(result, client, n, now):
-    """Demote within the top n on existing precise detectors only: a merged same-repository PR with an exact
+    """Check only the top n; demote on existing precise detectors only: a merged same-repository PR with an exact
     reference, a claim comment no older than ownership.STALE_DAYS, or a current assignee."""
     from .ownership import ownership_signals
     source, capped, head = result['repository'], _ReadCap(client, CHECK_READ_CAP), result['issues'][:n]
@@ -298,8 +299,13 @@ def check_top(result, client, n, now):
             ['assigned to ' + ', '.join(issue['signals']['assignees'][:3])] if issue['signals']['assignees'] else [])
         issue['top_check'] = {'complete': report['complete'], 'errors': list(dict.fromkeys(report['errors'])),
                               'reads': capped.reads - before, 'demotions': reasons}
-    head.sort(key=lambda item: bool(item['top_check']['demotions']))  # stable: within n only
-    result['issues'][:n] = head
-    result['ordering'] += f'; then the top {n} re-ranked by --check-top demotions'
+    # Known-bad below unknown: a demoted issue moves below every other candidate, but stays above excluded or
+    # overlapping issues; relative order is otherwise kept, and nothing below the top n is read.
+    blocked = [bool(item['exclusions'] or item['duplicates']) for item in result['issues']]
+    demoted = [bool(item.get('top_check', {}).get('demotions')) for item in result['issues']]
+    result['issues'] = [item for _, _, item in sorted(zip(blocked, demoted, result['issues']),
+                                                      key=lambda entry: (entry[0], entry[1]))]
+    result['ordering'] += (f'; then any of the top {n} demoted by --check-top move below every other candidate '
+                           'that is not excluded or overlapping')
     return {'requested': n, 'checked': len(head), 'reads': capped.reads, 'read_cap': CHECK_READ_CAP,
             'complete': all(item['top_check']['complete'] for item in head), 'notice': CHECK_TOP_NOTICE}

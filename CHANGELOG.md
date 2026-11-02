@@ -81,9 +81,9 @@ channel or runtime model provider is added.
   replays the dogfood-2 click, ripgrep and hono rankings; precision@5 is
   unchanged on it (1/5, 1/5, 0/5). `discover --signals --check-top N` (1-5)
   reads bounded ownership signals for the top N only (one timeline and comment
-  page, 4 PR details each, 30 reads in all) and re-ranks those N: a merged
-  same-repository fix, a fresh claim or an assignee moves an issue down, with
-  the reason listed. `signals.assignees` reports current assignees. Report only.
+  page, 4 PR details each, 30 reads in all). A merged same-repository fix, a
+  fresh claim or an assignee moves a checked issue below every other candidate
+  that is not excluded or overlapping, with the reason listed. `signals.assignees` reports current assignees. Report only.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,

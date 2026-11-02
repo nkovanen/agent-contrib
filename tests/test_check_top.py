@@ -27,10 +27,11 @@ def comment(identity, body, created):
 
 class CheckGitHub(FakeGitHub):
     """Six equal-score issues. 1: merged same-repo fix. 2: fresh claim. 3: assigned. 4: merged fix elsewhere.
-    5: stale claim. 6: would be demoted, but is below the checked range."""
+    5: stale claim. 6: would be demoted, but is below the checked range. 7: overlaps an open PR, so it sorts last."""
     def __init__(self):
-        super().__init__()
-        self.issues = [issue(n, ['alice'] if n == 3 else ()) for n in range(1, 7)]
+        super().__init__(prs=[{'number': 70, 'title': 'Other', 'body': 'Fixes #7', 'head': None,
+                               'html_url': 'https://github.com/acme/photos/pull/70'}])
+        self.issues = [issue(n, ['alice'] if n == 3 else ()) for n in range(1, 8)]
         self.timelines = {1: [xref('acme/photos', 31)], 4: [xref('third/party', 9)], 6: [xref('acme/photos', 31)]}
         self.comments = {2: [comment(10, "I'm working on this", FRESH)],
                          5: [comment(11, "I'm working on this", '2020-01-01T00:00:00Z')]}
@@ -65,13 +66,14 @@ def ownership_reads(client):
 
 
 class CheckTopTests(unittest.TestCase):
-    def test_top_n_is_rechecked_and_reranked_only_within_n(self):
+    def test_demoted_top_n_issues_move_below_every_other_candidate(self):
         client = CheckGitHub()
         code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '5')
         self.assertEqual(code, 0)
-        self.assertEqual([item['number'] for item in result['issues']], [4, 5, 1, 2, 3, 6])
+        self.assertEqual([item['number'] for item in result['issues']], [4, 5, 6, 1, 2, 3, 7])
         checks = {item['number']: item.get('top_check') for item in result['issues']}
         self.assertIsNone(checks[6])
+        self.assertIsNone(checks[7])
         self.assertEqual(checks[1]['demotions'], ['possibly already fixed by a merged same-repository PR: '
                                                   'https://github.com/acme/photos/pull/31'])
         self.assertEqual(checks[2]['demotions'], ['claimed in a comment by carol 2 days ago'])
@@ -87,11 +89,11 @@ class CheckTopTests(unittest.TestCase):
             entry = next(item for item in result['issues'] if item['number'] == number)
             self.assertEqual((entry['duplicates'], entry['exclusions'], entry['approval']['status']), ([], [], 'candidate'))
 
-    def test_smaller_n_checks_and_moves_only_that_many(self):
+    def test_smaller_n_checks_only_that_many_but_demotes_below_all(self):
         client = CheckGitHub()
         client.comments = {}
         code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '2')
-        self.assertEqual([item['number'] for item in result['issues']], [2, 1, 3, 4, 5, 6])
+        self.assertEqual([item['number'] for item in result['issues']], [2, 3, 4, 5, 6, 1, 7])
         self.assertEqual([item['number'] for item in result['issues'] if 'top_check' in item], [2, 1])
         self.assertEqual(result['issues'][0]['top_check']['demotions'], [])
         self.assertFalse([call for call in ownership_reads(client) if '/issues/3/' in call])
@@ -104,7 +106,7 @@ class CheckTopTests(unittest.TestCase):
                 self.assertEqual(code, 0)
                 self.assertEqual(ownership_reads(client), [])
                 self.assertNotIn('top_check', result)
-                self.assertEqual([item['number'] for item in result['issues']], [1, 2, 3, 4, 5, 6])
+                self.assertEqual([item['number'] for item in result['issues']], [1, 2, 3, 4, 5, 6, 7])
 
     def test_per_issue_page_cap_and_total_read_cap_mark_checks_incomplete(self):
         client = CheckGitHub()

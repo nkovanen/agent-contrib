@@ -565,7 +565,7 @@
             "notice"
           ],
           "additionalProperties": false,
-          "description": "Present with --check-top N: bounded ownership reads for the top N, re-ranked among themselves"
+          "description": "Present with --check-top N: bounded ownership reads for the top N; a demoted one moves below every other candidate that is not excluded or overlapping"
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
