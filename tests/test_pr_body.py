@@ -114,6 +114,20 @@ class PRBodyTests(unittest.TestCase):
         self.assertNotRegex(body, r'(?<!\\)~')
         self.assertEqual(prbody.md('~~x~~ | y'), r'\~\~x\~\~ \| y')
 
+    def test_schema_02_evidence_claims_follow_technical_evidence_validity(self):
+        task, _ = ready_contract()
+        task.update(schema_version='0.2', source=candidate_task()[0]['source'])
+        evidence = fixed_evidence(task)
+        for technical, legacy, verified in [(True, None, True), (False, True, False)]:
+            with self.subTest(technical=technical, legacy=legacy):
+                verification = {'schema_valid': True, 'technical_evidence_valid': technical, 'stage_blockers': {}}
+                if legacy is not None:
+                    verification['evidence_valid'] = legacy
+                body = prbody.render(task, verification, evidence)
+                self.assertEqual('unverified claim' in body, not verified, body)
+                self.assertEqual('Supplied evidence did not pass `verify`' in body, not verified)
+                self.assertIn('(' + ('' if verified else 'unverified claim: ') + 'passed: Regression rejects 0x0)', body)
+
     def test_schema_02_shows_stage_gates_and_blockers(self):
         task, _ = candidate_task()
         verification = {'schema_valid': True, 'implementation_ready': True, 'technical_evidence_valid': False,
