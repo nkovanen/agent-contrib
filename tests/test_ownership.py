@@ -105,6 +105,31 @@ class OwnershipTests(unittest.TestCase):
         self.assertTrue(claims['dave']['stale'])
         self.assertEqual(claims['dave']['pattern'], '/assign command')
 
+    def test_claim_with_unknown_age_is_stale(self):
+        client = TimelineGitHub()
+        client.comments = [dict(client.comments[0], created_at='sometime last week')]
+        result = self.signals(client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertEqual([(c['author'], c['age_days'], c['stale']) for c in result['claims']], [('carol', None, True)])
+
+    def test_plain_issue_cross_reference_is_not_a_pull_request(self):
+        client = TimelineGitHub()
+        mention = xref('acme/photos', 50)
+        mention['source']['issue']['pull_request'] = None
+        client.timeline.append(mention)
+        result = self.signals(client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertNotIn(50, [p['number'] for p in result['cross_referenced_prs']])
+        self.assertFalse(any('/pulls/50' in call for call in client.calls))
+
+    def test_closed_pr_without_exact_reference_is_not_a_rejected_approach(self):
+        client = TimelineGitHub()
+        client.pulls['third/party/9'] = pull('third/party', 9, 'Fixes #12', 'closed')
+        result = self.signals(client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertEqual([(p['repository'], p['number']) for p in result['resolution_signals']['rejected_approaches']],
+                         [('acme/photos', 32)])
+
     def test_incomplete_or_malformed_reads_are_unknown(self):
         for failed in ['/timeline', '/issues/12/comments', 'repos/other/fork/pulls/4']:
             with self.subTest(failed=failed):

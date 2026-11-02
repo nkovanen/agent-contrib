@@ -256,6 +256,59 @@ class LifecycleTests(unittest.TestCase):
         self.boundary.assert_not_called()
 
 
+    def test_schema_02_validation_timestamps_use_the_strict_dialect(self):
+        # Each form parses with fromisoformat on some supported Python; the first two on all of them.
+        started = NOW - dt.timedelta(minutes=20)
+        for value in (started.strftime('%Y-%m-%d %H:%M:%S+00:00'), started.strftime('%Y-%m-%dT%H:%M+00:00'),
+                      started.strftime('%Y%m%dT%H%M%SZ'), started.strftime('%Y-%m-%dT%H:%M:%S+00:00:00')):
+            with self.subTest(value=value):
+                validation = self.evidence['validations'][0]
+                saved = validation['started_at']
+                validation['started_at'] = value
+                result = self.verify()
+                validation['started_at'] = saved
+                self.assertFalse(result['technical_evidence_valid'])
+                self.assertEqual(result['evidence_errors'], ['Validation timestamps must form a past interval with timezone'])
+        self.assertTrue(self.verify()['technical_evidence_valid'])
+
+    def test_duplicate_evidence_ids_cannot_hide_a_failed_entry(self):
+        for name, failed in [('validations', {'status': 'failed', 'exit_code': 1}), ('criteria', {'status': 'failed'})]:
+            with self.subTest(name=name):
+                saved = copy.deepcopy(self.evidence[name])
+                self.evidence[name] = [dict(saved[0], **failed), saved[0]]
+                result = self.verify()
+                self.evidence[name] = saved
+                self.assertFalse(result['technical_evidence_valid'])
+                self.assertEqual(result['evidence_errors'], ['Evidence has duplicate ' + name + ' IDs'])
+        self.assertTrue(self.verify()['technical_evidence_valid'])
+
+    def test_signoff_rejects_schema_invalid_final_evidence(self):
+        self.publish_fixture()
+        self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)
+        self.evidence['unexpected'] = True
+        result = self.verify()
+        self.assertFalse(result['technical_evidence_valid'])
+        self.assertFalse(result['completion_ready'])
+        self.assertEqual(result['human_signoff']['status'], 'invalid')
+        self.assertEqual(result['human_signoff']['errors'], ['Final signoff requires valid final evidence'])
+
+    def test_expired_mandate_is_reported_in_top_level_errors(self):
+        self.context['mandate'].update(issued_at=(NOW - dt.timedelta(hours=3)).isoformat(),
+                                      expires_at=(NOW - dt.timedelta(minutes=15)).isoformat())
+        self.context['mandate']['event']['binding_sha256'] = event_binding(self.context['mandate'])
+        result = self.verify(evidence=False)
+        self.assertTrue(result['user_authorization']['historical_valid'])
+        self.assertFalse(result['implementation_ready'])
+        self.assertEqual(result['errors'], ['Human/host mandate has expired for new actions'])
+
+    def test_prepared_duplicates_are_tagged_with_the_source_repository(self):
+        self.client.prs = [{'id': 3101, 'number': 31, 'title': 'Other', 'body': 'Fixes #12',
+                            'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'other'}}]
+        prepared = core.prepare(core.inspect_issue('acme/photos#12', self.client), schema_version='0.2', client=self.client)
+        self.assertEqual([(item.get('repository'), item['number']) for item in prepared['discovery']['duplicate_prs']],
+                         [('acme/photos', 31)])
+        self.assertEqual(core.validate_contract(prepared), [])
+
 class IntegratedGitHub(CandidateGitHub):
     def __init__(self):
         super().__init__()
@@ -681,3 +734,87 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertNotEqual(result['next_action'], 'implement')
         self.assertEqual(result['stage_blockers']['implementation'],
                          ['Issue overlaps an open or unresolved prepared PR'])
+
+    def test_each_reviewed_contract_gate_blocks_implementation_despite_valid_mandate(self):
+        pending = {'id': 'upstream', 'description': 'Upstream fix lands', 'status': 'satisfied', 'evidence': 'Merged'}
+        cases = [
+            # F1 (F5) names the failing prerequisite ID and status in the blocker.
+            ('prerequisites', [dict(pending, status='pending')],
+             'Prerequisites are not satisfied with evidence: upstream (pending)'),
+            ('prerequisites', [dict(pending, status='blocked')],
+             'Prerequisites are not satisfied with evidence: upstream (blocked)'),
+            ('prerequisites', [dict(pending, evidence=' ')],
+             'Prerequisites are not satisfied with evidence: upstream (satisfied without evidence)'),
+            ('discovery', False, 'Prepared discovery is incomplete'),
+            ('allowed_paths', ['src\\thumb.rs'], 'Scope patterns must be repository-relative without parent traversal'),
+            ('prohibited_paths', ['.github\\**'], 'Scope patterns must be repository-relative without parent traversal'),
+        ]
+        original = copy.deepcopy(self.task)
+        for key, value, message in cases:
+            with self.subTest(key=key, value=value):
+                self.task = copy.deepcopy(original)
+                if key == 'discovery':
+                    self.task['discovery']['complete'] = value
+                elif key == 'prerequisites':
+                    self.task['prerequisites'] = value
+                else:
+                    self.task['scope'][key] = value
+                self.rebind()
+                result = self.verify(evidence=False)
+                self.assertTrue(result['schema_valid'], result['errors'])
+                self.assertTrue(result['user_authorization']['authorized'])
+                self.assertFalse(result['implementation_ready'])
+                self.assertEqual(result['errors'], [message])
+        self.task = original
+        self.task['prerequisites'] = [pending]
+        self.rebind()
+        self.assertTrue(self.verify(evidence=False)['implementation_ready'])
+
+    def test_policy_content_change_with_same_present_state_requires_review(self):
+        policy = {'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
+                  'label_authority': 'repository-label-permission'}
+        self.client.policy = copy.deepcopy(policy)
+        prepared = core.prepare(core.inspect_issue('acme/photos#12', self.client), schema_version='0.2', client=self.client)
+        self.task['source'] = dict(prepared['source'], commit=self.evidence['base_commit'])
+        self.rebind()
+        self.assertTrue(self.verify(evidence=False)['implementation_ready'])
+        self.client.policy['agent_approved_labels'] = ['agent-other']
+        current = core.inspect_issue('acme/photos#12', self.client)
+        self.assertEqual(current['provenance']['policy_state'], 'present')
+        self.assertEqual(current['source']['instructions_sha256'], self.task['source']['instructions_sha256'])
+        result = self.verify(evidence=False)
+        self.assertFalse(result['implementation_ready'])
+        self.assertEqual(result['errors'], ['Source policy state/content changed; refresh and review contract'])
+
+    def test_schema_02_prepare_refuses_incomplete_or_changing_source_reads(self):
+        self.client.failed = {'repos/acme/photos/pulls?state=open&per_page=100&page=1'}
+        inspected = core.inspect_issue('acme/photos#12', self.client)
+        self.assertIn('source', inspected)
+        self.assertFalse(inspected['complete'])
+        with self.assertRaises(core.ProtocolError) as caught:
+            core.prepare(inspected, schema_version='0.2', client=self.client)
+        self.assertEqual(caught.exception.code, 'refresh_incomplete')
+        self.client.failed = set()
+        inspected = core.inspect_issue('acme/photos#12', self.client)
+        self.assertTrue(inspected['complete'], inspected['errors'])
+        issue = self.client.request('repos/acme/photos/issues/12')
+        self.client.overrides['repos/acme/photos/issues/12'] = dict(issue, body='Semantically different task')
+        with self.assertRaises(core.ProtocolError) as caught:
+            core.prepare(inspected, schema_version='0.2', client=self.client)
+        self.assertEqual(caught.exception.code, 'source_changed')
+
+    def test_blank_independent_reviewer_or_notes_cannot_pass_review(self):
+        for field in ('reviewer', 'notes'):
+            for blank in ('', '   '):
+                with self.subTest(field=field, blank=blank):
+                    review = self.evidence['independent_review']
+                    saved = review[field]
+                    review[field] = blank
+                    result = self.verify()
+                    review[field] = saved
+                    self.assertTrue(result['technical_evidence_valid'], result['evidence_errors'])
+                    self.assertFalse(result['independent_review']['valid'])
+                    self.assertFalse(result['draft_create_ready'])
+                    self.assertEqual(result['independent_review']['errors'],
+                                     ['Independent review is pending, failed, same implementer or stale'])
+        self.assertTrue(self.verify()['draft_create_ready'])

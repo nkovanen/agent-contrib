@@ -1,5 +1,6 @@
 """PR body rendering: golden output, inert untrusted text, no GitHub writes."""
 import contextlib
+import html
 import copy
 import io
 import json
@@ -97,6 +98,35 @@ class PRBodyTests(unittest.TestCase):
         self.assertFalse(any(line.startswith('#') and 'Heading' in line for line in body.splitlines()))
         self.assertIn('Fixes', visible)
         self.assertIn('@octocat', visible)
+
+    def test_entity_encoded_references_and_strikethrough_stay_inert(self):
+        task, _ = ready_contract()
+        hostile = ('&commat;octocat &num;12 acme/photos&num;3 https&colon;&sol;&sol;evil.example '
+                   '&#64;octocat &#x23;4 ~~verified~~ | x | y |')
+        task['objective'] = hostile
+        body = prbody.render(task, {'schema_valid': True, 'errors': [hostile], 'evidence_errors': []})
+        # After one HTML decoding pass, no entity may reintroduce a mention, reference or URL.
+        decoded = html.unescape(body.replace('Refs acme/photos#12', ''))
+        self.assertNotRegex(decoded, r'@[A-Za-z]')
+        self.assertNotRegex(decoded, r'#[0-9]')
+        self.assertNotRegex(decoded, r'https?://')
+        self.assertIn('&amp;commat;octocat', body)
+        self.assertNotRegex(body, r'(?<!\\)~')
+        self.assertEqual(prbody.md('~~x~~ | y'), r'\~\~x\~\~ \| y')
+
+    def test_schema_02_evidence_claims_follow_technical_evidence_validity(self):
+        task, _ = ready_contract()
+        task.update(schema_version='0.2', source=candidate_task()[0]['source'])
+        evidence = fixed_evidence(task)
+        for technical, legacy, verified in [(True, None, True), (False, True, False)]:
+            with self.subTest(technical=technical, legacy=legacy):
+                verification = {'schema_valid': True, 'technical_evidence_valid': technical, 'stage_blockers': {}}
+                if legacy is not None:
+                    verification['evidence_valid'] = legacy
+                body = prbody.render(task, verification, evidence)
+                self.assertEqual('unverified claim' in body, not verified, body)
+                self.assertEqual('Supplied evidence did not pass `verify`' in body, not verified)
+                self.assertIn('(' + ('' if verified else 'unverified claim: ') + 'passed: Regression rejects 0x0)', body)
 
     def test_schema_02_omits_authority_gates_it_cannot_reproduce(self):
         # pr-body has no host context, so 0.2 authority states would always read "unauthorized" (A1-12).

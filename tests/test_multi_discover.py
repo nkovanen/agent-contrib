@@ -1,5 +1,6 @@
 """Multi-repository discover: per-repository isolation, legacy single output, bounded input."""
 import contextlib
+import copy
 import io
 import json
 import pathlib
@@ -57,6 +58,17 @@ class MultiDiscoverTests(unittest.TestCase):
         self.assertTrue(all(e.startswith('broken/repo: ') for e in result['errors']))
         self.assertEqual({c['reference'] for c in result['candidates']}, {'acme/photos#12', 'person/photos#12'})
         self.assertTrue(all(c['complete'] for c in result['candidates']))
+
+    def test_candidate_from_incomplete_repository_is_incomplete(self):
+        partial = core.discover('acme/photos', FakeGitHub())
+        self.assertTrue(partial['issues'][0]['complete'])
+        partial.update(complete=False, errors=['Synthetic repository-level read failure'])
+        complete = core.discover('acme/photos', FakeGitHub())
+        with patch.object(core, 'discover', side_effect=[copy.deepcopy(partial), complete]):
+            result = multi.discover_many(['acme/photos', 'other/photos'], FakeGitHub())
+        self.assertFalse(result['complete'])
+        self.assertEqual([(c['repository'], c['complete']) for c in result['candidates']],
+                         [('acme/photos', False), ('other/photos', True)])
 
     def test_all_complete_and_deterministic_merged_order(self):
         first = run(MultiGitHub(), 'discover', 'person/photos', 'acme/photos', '--signals')[1]

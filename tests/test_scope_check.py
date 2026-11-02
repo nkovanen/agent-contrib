@@ -126,6 +126,43 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertFalse(result['within_scope'])
             self.assertEqual(result['warnings'], [])
 
+    def test_staged_then_deleted_file_is_still_checked(self):
+        # Only `git diff --cached` lists it: absent from base and worktree, but the next commit contains it.
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, _, git = self.checkout(tmp)
+            pathlib.Path(tmp, '.github').mkdir()
+            pathlib.Path(tmp, '.github/secret.yml').write_text('staged then deleted')
+            git('add', '.github/secret.yml')
+            pathlib.Path(tmp, '.github/secret.yml').unlink()
+            result = workspace.scope_check(task, tmp)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], [])
+            self.assertEqual(result['violations'], [{'path': '.github/secret.yml', 'rule': 'prohibited_paths: .github/**'}])
+
+    def test_base_must_be_full_sha_and_ancestor_of_head(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            # F1 resolves --base locally: an abbreviation is recorded as the full 40-hex commit, never as given,
+            # and one that names no commit is still rejected (W04 under the new behavior).
+            result = workspace.scope_check(task, tmp, evidence['base_commit'][:12])
+            self.assertEqual(result['base_commit'], evidence['base_commit'])
+            self.assertRegex(result['base_commit'], '^[0-9a-f]{40}$')
+            result = workspace.scope_check(task, tmp, 'f' * 12)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], ['Base does not name a commit in this checkout; give a SHA, branch or tag '
+                                                '(resolved locally with git rev-parse --verify REV^{commit})'])
+            git('checkout', '-q', '-b', 'side', evidence['base_commit'])
+            pathlib.Path(tmp, 'src').mkdir()
+            pathlib.Path(tmp, 'src/side.rs').write_text('unrelated history')
+            git('add', '.')
+            git('commit', '-q', '-m', 'side')
+            side = git('rev-parse', 'HEAD')
+            git('checkout', '-q', '-')
+            result = workspace.scope_check(task, tmp, side)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], ['Base commit is missing or not an ancestor of HEAD'])
+            self.assertTrue(workspace.scope_check(task, tmp, evidence['base_commit'])['within_scope'])
+
     def test_invalid_contract_reads_no_checkout(self):
         with patch.object(core, 'git_read') as git_read:
             result = workspace.scope_check({'schema_version': '0.1'}, '.')

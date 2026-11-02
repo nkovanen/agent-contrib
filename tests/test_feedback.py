@@ -127,6 +127,50 @@ class FeedbackTests(unittest.TestCase):
         self.assertFalse(result['changes_requested_by_trusted_association'], 'rename must not resurrect a request')
         self.assertEqual([(r['author']['login'], r['decision']) for r in result['reviews']], [('maint-renamed', None)])
 
+    def test_dismissal_clears_the_decision_itself(self):
+        client = PRGitHub()
+        client.reviews = [review(1, 'maint', 2, 'CHANGES_REQUESTED'), review(2, 'maint', 2, 'DISMISSED')]
+        result = feedback.feedback('acme/photos#30', client)
+        self.assertEqual([(r['latest_state'], r['decision']) for r in result['reviews']], [('DISMISSED', None)])
+
+    def test_bot_requests_never_count_even_with_trusted_association(self):
+        for login, kind in [('helper[bot]', 'User'), ('helper', 'Bot')]:
+            with self.subTest(login=login, kind=kind):
+                client = PRGitHub()
+                client.reviews = [review(1, login, 9, 'CHANGES_REQUESTED', 'MEMBER', kind)]
+                result = feedback.feedback('acme/photos#30', client)
+                self.assertTrue(result['complete'], result['errors'])
+                self.assertIs(result['reviews'][0]['author']['bot'], True)
+                self.assertEqual(result['reviews'][0]['decision'], 'CHANGES_REQUESTED')
+                self.assertFalse(result['changes_requested_by_trusted_association'])
+
+    def test_review_comment_is_outdated_without_position_or_on_another_commit(self):
+        client = PRGitHub()
+        base = {'user': user('maint', 2), 'author_association': 'MEMBER', 'path': 'src/a.rs', 'line': 4, 'body': 'x'}
+        client.review_comments = [dict(base, id=1, position=2, commit_id=HEAD),
+                                  dict(base, id=2, position=None, commit_id=HEAD),
+                                  dict(base, id=3, position=2, commit_id=OTHER)]
+        result = feedback.feedback('acme/photos#30', client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertEqual([c['outdated'] for c in result['review_comments']], [False, True, True])
+
+    def test_every_failing_conclusion_is_reported(self):
+        conclusions = sorted(feedback.CONCLUSIONS)
+        client = PRGitHub()
+        client.pages = {1: [run(100 + i, value, conclusion=value) for i, value in enumerate(conclusions)]}
+        result = feedback.feedback('acme/photos#30', client)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertEqual(sorted(r['name'] for r in result['checks']['failing']),
+                         ['action_required', 'cancelled', 'failure', 'stale', 'startup_failure', 'timed_out'])
+
+    def test_final_page_count_must_match_total_count(self):
+        client = PRGitHub()
+        client.totals = {1: 5}
+        result = feedback.feedback('acme/photos#30', client)
+        self.assertFalse(result['complete'])
+        self.assertFalse(result['checks']['complete'])
+        self.assertEqual(result['errors'], ['Check run count does not match total_count'])
+
     def test_injection_text_stays_sanitized_data(self):
         result = feedback.feedback('acme/photos#30', PRGitHub())
         body = result['review_comments'][0]['untrusted_body']
