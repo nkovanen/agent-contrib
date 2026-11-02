@@ -4,6 +4,8 @@ import contextlib
 import copy
 import io
 import json
+import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -71,6 +73,30 @@ class OwnershipIdentityTests(unittest.TestCase):
         result = self.collision(0)
         self.assertTrue(result['complete'], result['errors'])
         self.assertEqual(len(result['cross_referenced_prs']), 1)
+
+
+class DiscoverNameTests(unittest.TestCase):
+    def test_repository_file_is_parsed_once_even_if_it_changes_during_the_budget_read(self):
+        from tests.test_resolution import RepositoryGitHub
+        with tempfile.TemporaryDirectory() as directory:
+            listing = pathlib.Path(directory, 'repos.txt')
+            listing.write_text('acme/photos\n')
+            client = RepositoryGitHub()
+            original = client.request
+
+            def request(endpoint):
+                if endpoint == 'rate_limit':
+                    listing.write_text('person/photos\n')  # swapped after validation, before dispatch
+                    return {'resources': {'core': dict(limit=5000, remaining=4000, used=1000, reset=1900000000)}}
+                return original(endpoint)
+
+            client.request = request
+            output = io.StringIO()
+            with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
+                cli.main(['--report-budget', 'discover', '--repositories-file', str(listing)])
+        result = json.loads(output.getvalue())
+        self.assertEqual(result['requested_repository'], 'acme/photos')
+        self.assertEqual(result['proposed_target_repository'], 'acme/photos')
 
 if __name__ == '__main__':
     unittest.main()
