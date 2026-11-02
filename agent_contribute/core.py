@@ -684,14 +684,16 @@ def git_read(directory, *args):
                                 capture_output=True, text=not nul_delimited, timeout=15, shell=False)
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
-        return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.strip()
+        # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
+        return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
 
 
 def require_worktree_root(directory):
     """ls-tree, ls-files and untracked reads only cover the working directory, so a subdirectory would hide paths."""
-    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix') != 'true':
+    # Two lines: the work-tree flag and the prefix, which is empty only at the top level.
+    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix').split('\n') != ['true', '']:
         raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
 
 
@@ -769,7 +771,8 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         require_plain_index(directory)
         head = current_head(directory)
         tree = git_read(directory, 'rev-parse', head + '^{tree}')
-        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
+        # The full ref, exactly: --short would accept refs/tags/NAME for a reviewed branch NAME.
+        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
         if has_gitlink(directory, head, evidence['base_commit']):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')

@@ -2,6 +2,10 @@
 
 ## 0.3.0 — unreleased
 
+- Schema 0.2 `verify` requires the full symbolic HEAD to equal
+  `refs/heads/` plus the reviewed `head_ref`, so a same-named tag or a branch
+  name differing only by trailing Unicode whitespace no longer matches. Git
+  output now loses only its trailing newline, never other whitespace (R1-15).
 - `verify`, `scope-check` and `evidence init` fail closed with `index_flags`
   when the index marks tracked paths assume-unchanged or skip-worktree
   (including sparse checkouts), since status and diff would hide their changes
