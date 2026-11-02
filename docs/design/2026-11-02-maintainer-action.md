@@ -1,8 +1,8 @@
 # Passive verification GitHub Action for maintainers (#11): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, revision 2. Hostile review round 1 (MA-01 to MA-06) is
-  resolved in [Review resolution](#review-resolution). Slice 1 is implemented
+- Status: proposal, revision 3. Hostile review rounds 1 (MA-01 to MA-06) and 2
+  (MA-07 to MA-10) are resolved in [Review resolution](#review-resolution). Slice 1 is implemented
   on `rsi/maintainer-action`; later slices are not.
 - Base: `76632f8` (unreleased v0.3.0 candidate; task/evidence schemas 0.1 and
   0.2, host-context 0.1, output schemas 1).
@@ -42,7 +42,9 @@ sections. Every check is `match`, `mismatch` or `not evaluated`, with a reason.
 **Documents**
 - The contract parses and matches its bundled task schema (0.1 or 0.2).
 - The evidence parses and matches the evidence schema of the same version.
-  Missing evidence is reported as not evaluated, never as consistent.
+  This is validated on its own, even when the contract is invalid. An
+  unsupported contract version makes the row not evaluated. Missing evidence
+  makes the run not checked, never consistent.
 
 **PR route binding (event payload against contract), MA-02**
 - The PR's base repository is the workflow repository (`GITHUB_REPOSITORY`).
@@ -61,9 +63,11 @@ sections. Every check is `match`, `mismatch` or `not evaluated`, with a reason.
   - `execution.target_repository` must equal the base repository.
   - Schema 0.1 has no head repository, head ref or base ref fields. These are
     reported as "not bound by schema 0.1", not as matches.
-- A missing or deleted head repository (`head.repo` null), or any missing
-  payload field, is not evaluated. It is never inferred from the local
-  checkout's origin.
+- A deleted head repository (`head.repo` null) adds a not-evaluated "Head
+  repository is known" row for both schema versions, so the result can't be
+  "No inconsistency found". An absent `head.repo` key, or any other missing
+  payload field, is a malformed payload and the run is not checked. The head
+  repository is never inferred from the local checkout's origin.
 
 **Evidence binding (evidence against PR head and contract)**
 - `evidence.git_head` equals the payload's `head.sha` and the checkout's
@@ -71,8 +75,11 @@ sections. Every check is `match`, `mismatch` or `not evaluated`, with a reason.
 - `evidence.git_tree` equals the tree of that commit.
 - `evidence.contract_sha256` equals the canonical hash of the contract block.
 - `evidence.base_commit` is an ancestor of the head, and `source.commit` is an
-  ancestor of `evidence.base_commit`. A commit missing from the checkout's
-  history is not evaluated, not a mismatch.
+  ancestor of `evidence.base_commit`.
+  - Ancestry is decided by `rev-list --count older --not newer`: zero means
+    match, a positive count means mismatch.
+  - These are not evaluated, never a mismatch: a commit missing from the
+    history, a shallow checkout, or a failed or unexpected read.
 - `evidence.worktree_clean` is reported as the recorded self-attested value.
 
 **Scope**
@@ -469,7 +476,13 @@ schema or library change. Maintainer docs (`docs/maintainers.md`,
    - checkout has `persist-credentials: false`, `submodules: false`,
      `lfs: false` and `ref: ${{ github.event.pull_request.head.sha }}`.
 
-   Each rule has a seeded bad variant that the lint must reject. `actionlint`
+   The files may use only plain keys and plain list items. A quoted, complex
+   or otherwise unsupported key, or a block scalar, is rejected, so a `'run'`
+   key cannot hide. The example workflow's steps must be exactly the pinned
+   checkout followed by this action, with no `run` key; `action.yml` has
+   exactly one step. Each rule has a seeded bad variant that the lint must
+   reject. Each rule is also tested on its own, so redundant rules cannot mask
+   each other. `actionlint`
    and `zizmor` remain manual release-review tools; the hand-written lint
    covers only these two owned files.
 
@@ -498,4 +511,8 @@ excerpts, `pr-body` emitting the blocks, shallow fetches.
 | MA-04 (M) CODEOWNERS alone does not require review | Accepted (GitHub docs) | Exact merge-protection settings, CODEOWNERS owning itself, bypass caveat, run approval separate from merge approval, all-external approval, and the required-workflow `edited` limitation. |
 | MA-05 (M) the rate guard did not bound reads | Reproduced: 144 reads after a 100-remaining guard | Slice 1 makes no API reads. Slice 2 needs a read cap, no short rate-limit retries, a documented worst case and a pagination fixture. |
 | MA-06 (L) a green job implied consistency | Accepted | Job status carries no meaning; the step always exits 0. "No inconsistency found" needs every check to match. Missing evidence, errors and unavailable checks are "not checked". `fail-on` and outputs are deferred to slice 5. |
+| MA-07 (M) null or absent `head.repo` gave "No inconsistency found" on schema 0.1 | Reproduced with the real build/render path | The head-repository rule now applies before either schema branch. A null value is not evaluated; an absent key is a malformed payload. End-to-end tests cover both. |
+| MA-08 (L) skipped evidence validation was shown as `match` | Reproduced: an invalid contract with 11-error evidence showed `match` | Evidence is validated independently against the contract's supported version. An unsupported version is not evaluated. |
+| MA-09 (L) a failed Git read became an ancestry `mismatch` | Reproduced by fault injection | `rev-list --count` decides. Read failures, unexpected output and shallow history are not evaluated. Fault-injection and depth-2 shallow-clone tests added. |
+| MA-10 (L) quoted keys and extra steps passed the lint | Reproduced: the three surviving mutants | Plain-key grammar, no block scalars, an exact two-step allowlist for the workflow, one step for the action. New seeded variants, isolated-rule tests and grammar unit tests. |
 | Reviewer notes | Accepted | No untrusted log output (removes the `::` and `##[` classes); bullet lists instead of tables; checkout-path confinement; HEAD must equal payload SHA; merge compatibility listed as not evaluated; no-block PRs are skipped with no summary; slice-1 cut as proposed. |
