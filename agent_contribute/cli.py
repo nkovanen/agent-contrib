@@ -161,6 +161,9 @@ def main(argv=None):
     sub = commands.add_parser('authorization-request',
                               help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
     sub.add_argument('contract', help='Task contract JSON file')
+    sub = commands.add_parser('lint', help='Offline check of a contract against its schema and the reviewed-contract '
+                                           'rules; no GitHub or Git reads')
+    sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
@@ -200,7 +203,7 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'scope-check', 'evidence'):
+        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence'):
             raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
         prevalidate(args)
         if args.report_budget:
@@ -230,6 +233,9 @@ def main(argv=None):
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
+        elif args.command == 'lint':
+            result = core.lint(core.read_json(args.contract))
+            code = 0 if result['reviewed'] else 1
         elif args.command == 'scope-check':
             result = workspace.scope_check(core.read_json(args.contract), args.repo_dir, args.base)
             code = 0 if result['within_scope'] else 1

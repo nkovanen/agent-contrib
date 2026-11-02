@@ -31,6 +31,9 @@ channel or runtime model provider is added.
   binding pre-filled from the contract and live reads and every human-only field
   `null`. It validates the full schema before any read, labels its diagnostics
   untrusted, contains no display summary and cannot pass as host context.
+- `lint task.json` (F17): offline contract check against the bundled schema and
+  the reviewed-contract rules, with no GitHub or Git reads; exit 0 only for a
+  schema-valid reviewed contract.
 - `scope-check` (#15): offline check of committed, staged, unstaged and untracked
   paths with the same scope evaluator as `verify`.
 - `evidence init` (#14): an evidence skeleton with only observed Git facts and

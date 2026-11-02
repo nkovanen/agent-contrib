@@ -34,6 +34,7 @@ RESOURCE_PATHS = (
     "schemas/output/1/feedback.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
+    "schemas/output/1/lint.schema.json",
     "schemas/output/1/ownership.schema.json",
     "schemas/output/1/pr-body.schema.json",
     "schemas/output/1/prepare.schema.json",

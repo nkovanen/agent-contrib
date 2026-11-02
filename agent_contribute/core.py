@@ -937,6 +937,20 @@ def reviewed_contract_errors(task, schema_version):
     return errors
 
 
+def lint(task):
+    """Offline contract checks (F17): the bundled schema, then the reviewed-contract rules verify applies first."""
+    errors = validate_contract(task)
+    version = task.get('schema_version') if isinstance(task, dict) else None
+    result = {'schema_version': safe_text(version, 20) if isinstance(version, str) else None, 'schema_valid': not errors,
+              'schema_errors': errors, 'review_errors': [], 'reviewed': False, 'contract_sha256': None,
+              'network': 'No GitHub or Git reads. Live source, approval, overlap, authorization and evidence checks '
+                         'still need verify.'}
+    if not errors:
+        result.update(contract_sha256=canonical_hash(task), review_errors=reviewed_contract_errors(task, version))
+        result['reviewed'] = not result['review_errors']
+    return result
+
+
 def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None):
     if isinstance(task, dict) and task.get('schema_version') == '0.2':
         from .lifecycle import verify as verify_v2

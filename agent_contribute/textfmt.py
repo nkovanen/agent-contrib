@@ -98,6 +98,11 @@ def _scope_check(result):
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
 
 
+def _lint(result):
+    return (_scalars(result) + _list('Schema errors', result.get('schema_errors', [])) +
+            _list('Review errors', result.get('review_errors', [])))
+
+
 def _drift(result):
     # Reasons mirror exactly what sets drifted; other observed changes are listed apart as informational.
     issue, branch = result.get('issue') or {}, result.get('default_branch') or {}
@@ -136,7 +141,7 @@ def render(command, result, stage=None):
     if 'error' in result:
         return f'error [{line(result["error"].get("code", ""), 60)}]: {line(result["error"].get("message", ""))}\n'
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
-            'drift': _drift}.get(command)
+            'drift': _drift, 'lint': _lint}.get(command)
     if body is None:
         out = _scalars(result)
     else:

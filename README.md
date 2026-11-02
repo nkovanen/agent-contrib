@@ -135,6 +135,7 @@ agent-contrib verify task.json --evidence evidence.json --repo-dir ./checkout
 | `prepare` | Write a draft contract (schema 0.1, or 0.2 when selected) |
 | `verify` | Check a contract and evidence against live GitHub; never runs validation commands. Schema 0.2 adds `--stage` and `--host-context-stdin` |
 | `authorization-request` | Schema 0.2: unsigned request with the mandate bindings pre-filled; grants nothing |
+| `lint` | Offline check of a contract against its schema and the reviewed-contract rules |
 | `scope-check` | Offline check of local changes against the contract scope |
 | `evidence init` | Unfilled evidence skeleton from observed Git facts |
 | `drift` | What changed since the contract was prepared |

@@ -28,6 +28,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
 | `agent-contrib authorization-request task.json` | Schema 0.2 only: an unsigned request with every mandate binding pre-filled from the contract and live reads and every human-only field `null`. Grants nothing; exit 1 when not ready |
+| `agent-contrib lint task.json` | Offline contract check: bundled task schema, then the reviewed-contract rules `verify` applies first; exit 0 only for a schema-valid reviewed contract. No GitHub or Git reads |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base REV]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base REV --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
@@ -164,6 +165,18 @@ The request deliberately contains no scope, path, objective, criteria or
 validation summary. The host renders the complete contract from the file it
 hashes, issues the record, and the worker relays it unchanged. The request is not
 host context: piping it to `verify --host-context-stdin` fails schema validation.
+
+## Offline contract lint
+
+`lint task.json` reads one contract and nothing else. It validates it against
+the bundled task schema for its `schema_version` (unknown versions fail), and
+for a schema-valid contract it applies the same reviewed-contract rules that
+`verify` checks: reviewed status with no open questions, required fields,
+concrete repository-relative scope, unique IDs, a definition of done covering
+every criterion and validation, complete prepared discovery and satisfied
+prerequisites. `reviewed` (and exit 0) means only that the contract is ready
+for `verify`. It says nothing about the live issue, approval, overlap,
+authorization or evidence, and it never runs validation argv.
 
 ## Offline scope check
 
@@ -750,6 +763,20 @@ One of `inspect_result`, `issue_unresolved`.
 | `resources.output_schemas` | string | Package directory of these output schemas; agent-contrib schema COMMAND prints one |
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
+
+### `lint`
+
+`agent-contrib schema lint` · Offline contract check: bundled task schema, then the reviewed-contract rules. No GitHub or Git reads; never readiness or authorization.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | string or null | The contract's schema_version when it is a string, else null |
+| `schema_valid` | boolean |  |
+| `schema_errors` | string[] |  |
+| `review_errors` | string[] | Reviewed-contract blockers; empty when the schema is invalid |
+| `reviewed` | boolean | Schema valid with no review errors; sets the exit status |
+| `contract_sha256` | string or null | Canonical contract hash; null when the schema is invalid |
+| `network` | string |  |
 
 ### `ownership`
 
