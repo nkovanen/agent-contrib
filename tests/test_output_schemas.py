@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import io
 import copy
+import importlib.util
 import json
 import pathlib
 import unittest
@@ -216,6 +217,36 @@ class ContractHookTests(unittest.TestCase):
         verify = outputs.output_schema('verify')
         self.assertEqual(core.schema_errors(result, {'$ref': '#/$defs/verify_0_2_rejected'}, root=verify), [])
         self.assertTrue(core.schema_errors(result, {'$ref': '#/$defs/verify_0_2'}, root=verify))
+
+
+def reference_tool():
+    path = pathlib.Path(__file__).resolve().parents[1] / 'tools' / 'output_reference.py'
+    spec = importlib.util.spec_from_file_location('output_reference', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class DocsReferenceTests(unittest.TestCase):
+    def test_cli_docs_reference_matches_the_schemas(self):
+        tool = reference_tool()
+        self.assertEqual(tool.current()[1], tool.render(),
+                         'docs/cli.md output reference is stale; run python tools/output_reference.py --write')
+        self.assertEqual(tool.main([]), 0)
+
+    def test_reference_changes_when_a_field_is_renamed(self):
+        tool = reference_tool()
+        original = outputs.output_schema
+
+        def renamed(name):
+            schema = original(name)
+            if name == 'inspect':
+                fields = schema['$defs']['inspect_result']['properties']
+                fields['issue'] = fields.pop('untrusted_issue')
+            return schema
+        with patch.object(outputs, 'output_schema', renamed):
+            self.assertNotEqual(tool.current()[1], tool.render())
+            self.assertEqual(tool.main([]), 1)
 
 
 if __name__ == '__main__':

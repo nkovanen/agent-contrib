@@ -2,6 +2,15 @@
 
 ## 0.3.0 — unreleased
 
+- Versioned JSON Schemas for every command's JSON output ship in
+  `schemas/output/1/` (#24). `agent-contrib schema COMMAND` prints one (`error`
+  is the error envelope), `instructions` reports `output_schema_version` and the
+  directory, and `docs/cli.md` has a field reference generated from them. Every
+  output the test suite produces is validated against its schema. Output values
+  do not carry the version, so existing results are unchanged; a shape change
+  bumps it. The bundled validator gained `null`, `number`, type lists, `anyOf`,
+  local `$ref` and `additionalProperties` maps, which the task, evidence and
+  host-context schemas do not use.
 - Schema 0.2 authorization requires the collaborator-permission login to be a
   valid ASCII GitHub login before its case-insensitive comparison, so Unicode
   confusables such as `ſ` or the Kelvin sign no longer match (R1-08).
