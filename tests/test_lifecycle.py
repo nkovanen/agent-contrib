@@ -238,6 +238,16 @@ class LifecycleTests(unittest.TestCase):
         result = self.verify(evidence=False)
         self.assertFalse(result['implementation_ready'])
 
+    def test_local_branch_differing_only_in_case_is_a_different_ref(self):
+        # Git refs are case-sensitive; Agent/bounds is not the reviewed agent/bounds (round 1b B9).
+        self.assertTrue(self.verify()['technical_evidence_valid'])
+        head = self.git('rev-parse', 'HEAD')
+        self.git('update-ref', 'refs/heads/Agent/bounds', head)
+        self.git('symbolic-ref', 'HEAD', 'refs/heads/Agent/bounds')
+        result = self.verify()
+        self.assertEqual(result['evidence_errors'], ['Checkout branch differs from reviewed head ref'])
+        self.assertFalse(result['technical_evidence_valid'])
+
     def test_unread_exact_head_history_is_reported_as_not_checked(self):
         unchecked = 'Exact-head PR history not checked: requires a valid mandate'
         self.context['mandate']['event']['binding_sha256'] = '0' * 64
