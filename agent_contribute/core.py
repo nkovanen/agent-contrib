@@ -135,7 +135,12 @@ class GitHub:
                 if transient and attempt < 2:
                     time.sleep(attempt + 1)
                     continue
-                # Never echo gh stderr: authentication errors can contain credentials.
+                # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
+                if re.search(r'\bHTTP 404\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or path '
+                                        'does not exist or is not visible to this gh account')
+                if re.search(r'\bHTTP 401\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET was not authenticated (HTTP 401); check gh auth status')
                 raise ProtocolError('api_error', 'GitHub GET failed; check gh auth, access and rate limits')
             except (OSError, subprocess.TimeoutExpired) as exc:
                 raise ProtocolError('transport_error', 'Could not run gh GET within 30 seconds') from exc

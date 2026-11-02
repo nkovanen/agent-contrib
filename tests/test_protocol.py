@@ -313,6 +313,27 @@ class TransportTests(unittest.TestCase):
         self.assertLessEqual(sum(x.args[0] for x in sleep.call_args_list), 6)
         self.assertNotIn('SECRET', str(raised.exception))
 
+    def test_not_found_and_authentication_failures_have_distinct_messages(self):
+        cases = [(b'gh: Not Found (HTTP 404) token=SECRET', 'GitHub GET found nothing (HTTP 404): the repository, issue '
+                  'or path does not exist or is not visible to this gh account'),
+                 (b'gh: Bad credentials (HTTP 401) token=SECRET', 'GitHub GET was not authenticated (HTTP 401); '
+                  'check gh auth status'),
+                 (b'gh: Resource not accessible (HTTP 403) token=SECRET', 'GitHub GET failed; check gh auth, access '
+                  'and rate limits'),
+                 (b'error connecting to api.github.com token=SECRET', 'GitHub GET failed; check gh auth, access and '
+                  'rate limits'),
+                 (b'gh: Not Found (HTTP 4040)', 'GitHub GET failed; check gh auth, access and rate limits')]
+        for stderr, message in cases:
+            with self.subTest(stderr=stderr):
+                def failure(argv, **kwargs):
+                    kwargs['stderr'].write(stderr)
+                    return subprocess.CompletedProcess(argv, 1)
+                with patch('subprocess.run', side_effect=failure) as run, \
+                        self.assertRaises(core.ProtocolError) as raised:
+                    core.GitHub().request('repos/acme/missing')
+                self.assertEqual((raised.exception.code, str(raised.exception)), ('api_error', message))
+                self.assertEqual(run.call_count, 1)
+
 
 @unittest.skipUnless(AVAILABLE, 'implementation absent')
 class VerificationTests(unittest.TestCase):

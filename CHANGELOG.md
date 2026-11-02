@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- A failed GitHub read now says when it was HTTP 404 (not found or not visible
+  to this account) or HTTP 401 (not authenticated) instead of always "check gh
+  auth" (E-17). `gh` output is still never echoed; codes and exits are unchanged.
 - `discover --signals` adds `code_location.named_paths_missing`: file paths the
   issue names that are not in the snapshot tree (F13). Report only; score and
   ordering are unchanged.
