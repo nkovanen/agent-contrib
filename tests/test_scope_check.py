@@ -107,7 +107,7 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertEqual(result['base_commit'], evidence['base_commit'])
             self.assertTrue(result['within_scope'], result)
             head, branch = evidence['git_head'], git('symbolic-ref', 'HEAD')
-            for rev, lookup in [('HEAD~1', ('rev-parse', '--verify', '--quiet', 'HEAD')),
+            for rev, lookup in [('HEAD~1', ('show-ref', '--verify', '--hash', 'HEAD')),
                                 (branch + '~1', ('show-ref', '--verify', '--hash', branch))]:
                 with self.subTest(rev=rev), patch.object(core, 'git_read', wraps=core.git_read) as git_read:
                     self.assertEqual(workspace.resolve_base(tmp, rev), evidence['base_commit'])
@@ -179,6 +179,29 @@ class ScopeCheckTests(unittest.TestCase):
                                                timeout=10, cwd=pathlib.Path(__file__).resolve().parent.parent)
                     self.assertEqual(completed.returncode, code)
             self.assertEqual(json.loads(completed.stdout)['base_commit'], base)
+
+    def test_unborn_head_is_refused_even_with_a_shadowing_head_ref(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            base = evidence['base_commit']
+            git('update-ref', 'refs/tags/HEAD', base)
+            git('checkout', '-q', '--detach')
+            self.assertEqual(workspace.resolve_base(tmp, 'HEAD'), evidence['git_head'])
+            git('update-ref', '-d', 'refs/tags/HEAD')
+            git('checkout', '-q', '--orphan', 'unborn')
+            git('rm', '-rq', '--cached', '.')
+            for shadow in ('refs/tags/HEAD', 'refs/heads/HEAD'):
+                with self.subTest(shadow=shadow):
+                    git('update-ref', shadow, base)
+                    # Raw rev-parse falls through to the shadow ref when the real HEAD is unborn.
+                    self.assertEqual(git('rev-parse', '--verify', 'HEAD'), base)
+                    for rev in ('HEAD', 'HEAD~0'):
+                        with self.assertRaises(core.ProtocolError) as raised:
+                            workspace.resolve_base(tmp, rev)
+                        self.assertEqual(raised.exception.code, 'invalid_base')
+                        result = workspace.scope_check(task, tmp, rev)
+                        self.assertEqual((result['within_scope'], result['base_commit']), (False, None))
+                    git('update-ref', '-d', shadow)
 
     def test_ref_moving_after_lookup_does_not_change_the_selected_commit(self):
         with tempfile.TemporaryDirectory() as tmp:

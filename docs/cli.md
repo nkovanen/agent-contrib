@@ -132,10 +132,12 @@ full 40-character SHA, `HEAD`, or a full ref name such as `refs/heads/NAME` or
 `refs/tags/NAME`, each optionally followed by `~N` or `^N` (for example
 `HEAD~3` or `refs/heads/base~1`). Short branch or tag names, abbreviated SHAs
 (convert with `git rev-parse ABBREV`), pseudo-refs other than `HEAD` and other
-revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths, ranges) are refused, so
-Git's preference among same-named refs never chooses the base. A `refs/...` name
-is looked up exactly with `git show-ref --verify`; the object ID is captured
-first, then the suffix and `^{commit}` are applied to it with `git rev-parse`.
+revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths, ranges) are refused.
+`HEAD` and `refs/...` names are looked up exactly with `git show-ref --verify`,
+never through Git's short-name lookup, so a same-named ref such as
+`refs/tags/HEAD` cannot stand in for them; an unborn `HEAD` is refused. The
+object ID is captured first, then the suffix and `^{commit}` are applied to it
+with `git rev-parse`.
 Every read uses the same hook, fsmonitor and replacement-object protections as
 other Git reads, and nothing under `.git` is opened directly. `base_commit`
 reports the full SHA. A value that is blank, starts with `-` or contains

@@ -58,12 +58,9 @@ def resolve_base(directory, rev):
     name = match['name']
     try:
         # Capture the object ID first; the suffix then applies to it, never to a second name lookup.
-        if name == 'HEAD':
-            oid = core.git_read(directory, 'rev-parse', '--verify', '--quiet', 'HEAD')
-        elif name.startswith('refs/'):
-            oid = core.git_read(directory, 'show-ref', '--verify', '--hash', name)  # exact name, no DWIM
-        else:
-            oid = name
+        # show-ref --verify is an exact lookup: an unborn HEAD fails instead of falling through to refs/*/HEAD.
+        oid = (core.git_read(directory, 'show-ref', '--verify', '--hash', name)
+               if name == 'HEAD' or name.startswith('refs/') else name)
         return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet',
                                    _base(oid) + match['suffix'] + '^{commit}'))
     except core.ProtocolError:
