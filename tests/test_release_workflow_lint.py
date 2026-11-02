@@ -15,6 +15,7 @@ ACTIONS = {'build': ['actions/checkout', 'actions/setup-python', 'actions/upload
 PUBLISH_PERMISSIONS = ['contents: read', 'id-token: write', 'attestations: write']
 # The only expression in the file outside if:/environment: values: the release tag, passed to run: through env:.
 TAG_ENV = 'RELEASE_TAG: ${{ github.event.release.tag_name }}'
+BUILD_FRONTEND = 'python -m pip install build==1.6.1'
 
 
 def job(lines, name):
@@ -54,6 +55,21 @@ def lint(text):
                 if 'uses:' in step[0]]
         if [action for action in used if action in allowed] != used or not set(allowed) <= set(used):
             errors.append(f'{name} uses exactly ' + ', '.join(allowed))
+    # The job holding the PyPI identity runs exactly download, attest, publish, in that order, and no shell (REL-02).
+    publish_steps = steps(publish) or []
+    if [step[0].split('uses:', 1)[1].split('@')[0].strip() if 'uses:' in step[0] else None
+            for step in publish_steps] != ACTIONS['publish'] or 'run' in keys(publish):
+        errors.append('publish steps must be exactly download-artifact, attest-build-provenance, pypi-publish')
+    for action in ('upload-artifact', 'download-artifact'):
+        step = next((step for step in steps(build if action == 'upload-artifact' else publish) or []
+                     if f'actions/{action}@' in step[0]), [])
+        settings = {line.strip() for line in step[1:]}
+        if not {'name: dist', 'path: dist/'} <= settings:
+            errors.append(f'{action} must hand over the dist artifact (name: dist, path: dist/)')
+    if 'digest-mismatch' in keys(lines):
+        errors.append('download-artifact keeps its default digest-mismatch: error')
+    if [value for value in run_values(build) if 'pip install' in value] != [BUILD_FRONTEND]:
+        errors.append('the build frontend is installed exactly as ' + BUILD_FRONTEND)
     checkout = next((i for i, line in enumerate(lines) if 'uses: actions/checkout@' in line), None)
     settings = [line.strip() for line in block(lines[checkout + 1:], 'with', indent(lines[checkout]) + 2) or []] \
         if checkout is not None else []
@@ -116,7 +132,23 @@ MUTANTS = {
     'persisted credentials': ('          persist-credentials: false\n', '          persist-credentials: true\n'),
     'no tag check': ('run: python3 -I tools/release_check.py --release --tag "$RELEASE_TAG"', 'run: python3 -I tools/release_check.py'),
     'publish without build': ('    needs: build\n', ''),
+    # REL-02: the privileged job's order and shell boundary, and the artifact and frontend bindings.
+    'publish shell step': ('      - uses: actions/attest-build-provenance@',
+                           '      - run: python -m pip install unreviewed-package\n      - uses: actions/attest-build-provenance@'),
+    'publish before attest': ('      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2\n'
+                              '        with:\n          subject-path: dist/*\n'
+                              '      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3\n',
+                              '      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3\n'
+                              '      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2\n'
+                              '        with:\n          subject-path: dist/*\n'),
+    'download name': ('          name: dist\n          path: dist/\n      - uses: actions/attest',
+                      '          name: other\n          path: dist/\n      - uses: actions/attest'),
+    'unpinned frontend': ('run: python -m pip install build==1.6.1', 'run: python -m pip install build'),
+    'digest ignored': ('          name: dist\n          path: dist/\n      - uses: actions/attest',
+                       '          name: dist\n          path: dist/\n          digest-mismatch: ignore\n      - uses: actions/attest'),
     # Each of these is rejected by one rule only.
+    'extra build action': ('      - uses: actions/upload-artifact@',
+                           '      - uses: someone/helper@0123456789abcdef0123456789abcdef01234567\n      - uses: actions/upload-artifact@'),
     'build contents write': ('    timeout-minutes: 20\n', '    timeout-minutes: 20\n    permissions:\n      contents: write\n'),
     'expression in env only': ('        run: python -m unittest discover -v\n',
                                '        run: python -m unittest discover -v\n        env:\n'
