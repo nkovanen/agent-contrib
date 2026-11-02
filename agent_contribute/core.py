@@ -27,6 +27,14 @@ SHA = re.compile('[0-9a-f]{40}')
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
                   'question', 'roadmap', 'backlog', 'in progress', 'duplicate', 'invalid',
                   'wontfix', "won't fix", 'needs info', 'fixed'}
+# Every newly prepared contract starts with the installed workflow's policy review as a pending prerequisite,
+# so dropping it is a visible contract edit; existing contracts are not reinterpreted.
+POLICY_REVIEW_PREREQUISITE = {
+    'id': 'ai-policy-review',
+    'description': ('Repository policy review (installed workflow): read repository_policy and every source it lists; '
+                    'record each disposition, the ledger reference and inventory_sha256 here. Keep pending while '
+                    'anything is unresolved; blocked when the source project refuses this work.'),
+    'status': 'pending', 'evidence': ''}
 EXCLUDED_LABELS = {'duplicate', 'invalid', 'wontfix', "won't fix", 'in progress', 'needs info', 'fixed'}
 
 
@@ -604,7 +612,8 @@ def prepare(inspected, schema_version='0.1', client=None):
     return {'schema_version': VERSION, 'status': 'draft', 'source': inspected['source'],
             'scope': {'allowed_paths': [], 'prohibited_paths': []},
             'objective': '', 'behavior_criteria': [], 'code_locations': [], 'constraints': [],
-            'prohibited_changes': [], 'validation': [], 'prerequisites': [], 'approval': inspected['approval'],
+            'prohibited_changes': [], 'validation': [], 'prerequisites': [dict(POLICY_REVIEW_PREREQUISITE)],
+            'approval': inspected['approval'],
             'execution': {'mode': 'pending', 'target_repository': target, 'authorized_by': '', 'authorization_evidence': ''},
             'discovery': {'complete': inspected['complete'], 'duplicate_prs': inspected['duplicates'],
                           'warnings': (inspected['warnings'] + inspected['errors'] + inspected['exclusions'])[:100]},

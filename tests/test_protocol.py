@@ -82,6 +82,9 @@ class FakeGitHub:
 def ready_contract():
     client = FakeGitHub({'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'], 'label_authority': 'repository-label-permission'}, ['agent-ok'])
     task = core.prepare(core.inspect_issue('acme/photos#12', client))
+    # A contract reviewed before prepare added the pending ai-policy-review prerequisite: existing contracts and
+    # their verify goldens are unchanged. New contracts must satisfy or visibly remove it (tests/test_policy.py).
+    task['prerequisites'] = []
     task.update(status='reviewed', objective='Reject out-of-bounds thumbnails',
                 behavior_criteria=[{'id': 'bounds', 'description': 'Malformed dimensions return an error'}],
                 code_locations=['src/thumb.rs'], constraints=['Preserve valid thumbnails'],

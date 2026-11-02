@@ -17,6 +17,7 @@ from urllib.parse import quote, unquote, urlsplit
 
 from . import core
 
+REVIEW_PREREQUISITE = core.POLICY_REVIEW_PREREQUISITE
 MAX_REQUESTS = 25  # source metadata + tree + 12 files, owner metadata + commit + tree + 8 files
 MAX_SOURCE_FILES = 12
 MAX_OWNER_FILES = 8

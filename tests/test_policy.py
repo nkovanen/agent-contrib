@@ -770,6 +770,9 @@ class WorkflowTests(unittest.TestCase):
         '6. Before implementation and again before any publication, run a fresh `inspect`. Then re-read every '
         'manually reviewed source and exception.',
         "If you cannot establish a source's contents again, it is unresolved.",
+        # the prepared default prerequisite stays visible
+        '`prepare` adds this prerequisite as `pending`; do not delete it, because deleting it is a contract edit the '
+        'human reviewer must see.',
         # hidden sources (RP-19)
         'A `limits_reached` entry with `hides_sources: true` (shown by `limits_hide_sources`), or any '
         '`omitted_sources` entry, is unresolved: `ai-policy-review` stays pending and upstream preparation, '
@@ -936,3 +939,27 @@ class IdentityTests(unittest.TestCase):
         by = {s['identity_sha256']: s for s in result['sources_scanned']}
         flags = sorted((s['path_truncated'], s['path_sanitized']) for s in by.values())
         self.assertEqual(flags, [(False, True), (True, False)])
+
+
+class PolicyPrerequisiteTests(unittest.TestCase):
+    """Newly prepared contracts carry the policy review as a pending prerequisite; dropping it is a visible edit."""
+    def test_prepare_adds_a_pending_ai_policy_review_for_both_schemas(self):
+        from tests.test_authorization import CandidateGitHub
+        client = CandidateGitHub()
+        inspected = core.inspect_issue('acme/photos#12', client)
+        for task in (core.prepare(inspected), core.prepare(inspected, schema_version='0.2', client=client)):
+            with self.subTest(schema=task['schema_version']):
+                self.assertEqual(core.validate_contract(task), [])
+                review = [p for p in task['prerequisites'] if p['id'] == 'ai-policy-review']
+                self.assertEqual(len(review), 1)
+                self.assertEqual((review[0]['status'], review[0]['evidence']), ('pending', ''))
+                self.assertIn('repository_policy', review[0]['description'])
+
+    def test_pending_review_blocks_readiness_until_satisfied_with_evidence(self):
+        from tests.test_protocol import ready_contract
+        task, client = ready_contract()
+        task['prerequisites'] = [policy.REVIEW_PREREQUISITE.copy()]
+        self.assertIn('Prerequisites are not satisfied with evidence: ai-policy-review (pending)',
+                      core.verify(task, client=client)['errors'])
+        task['prerequisites'][0].update(status='satisfied', evidence='Ledger R1-R3; inventory_sha256 abc; no refusal')
+        self.assertFalse([e for e in core.verify(task, client=client)['errors'] if 'ai-policy-review' in e])

@@ -111,7 +111,9 @@ so the host agent, the user and the independent reviewer are responsible for it.
    applicable rule, and the prerequisite `ai-policy-review` holding the
    dispositions, the ledger reference and the report's `inventory_sha256`
    (`pending` while anything is unresolved; verification then blocks
-   implementation). The host keeps the full
+   implementation). `prepare` adds this prerequisite as `pending`; do not delete
+   it, because deleting it is a contract edit the human reviewer must see. The
+   host keeps the full
    report with the reviewed contract. The independent compliance reviewer
    compares the ledger with the original sources, not with a worker summary.
 6. Before implementation and again before any publication, run a fresh

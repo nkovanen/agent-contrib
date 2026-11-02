@@ -201,6 +201,11 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- `prepare` (task schemas 0.1 and 0.2) now writes the prerequisite
+  `ai-policy-review` with status `pending` into every new contract, so a policy
+  review must be recorded (`satisfied` with evidence, or `blocked`) or visibly
+  removed before verification can pass. Previously prepared contracts and their
+  verification decisions are unchanged; the draft output of `prepare` differs.
 - CLI/library versions follow semantic versioning; task, evidence and
   host-context schema versions are independent. Supported sets: task/evidence
   0.1 and 0.2, host-context 0.1. Unknown versions fail closed; nothing is
