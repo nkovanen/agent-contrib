@@ -3,6 +3,7 @@ import contextlib
 import importlib.util
 import io
 import pathlib
+import re
 import shutil
 import tempfile
 import unittest
@@ -63,17 +64,32 @@ class VersionAgreementTests(unittest.TestCase):
         self.edit(root, 'agent_contribute/instructions.md', 'CLI/library version is', 'CLI version:')
         self.assertTrue(release_check.problems(root))
 
+    def set_heading(self, root, state):
+        """Give the copied CHANGELOG an explicit first-heading state, whatever the checkout's is (REL-01)."""
+        path = root / 'CHANGELOG.md'
+        text = path.read_text('utf-8')
+        heading = re.search(r'(?m)^## .*$', text)
+        path.write_text(text[:heading.start()] + f'## {release_check.version(root)} — {state}' + text[heading.end():],
+                        'utf-8')
+
     def test_changelog_heading_and_release_mode(self):
         root = self.copy()
+        self.set_heading(root, 'unreleased')
+        self.assertEqual(release_check.problems(root), [])
+        self.assertTrue(any('dated' in problem for problem in release_check.problems(root, release=True)))
+        self.set_heading(root, '2026-11-03')
+        self.assertEqual(release_check.problems(root, release=True), [])
+        for state in ('soon', '2026-99-99', '0000-00-00', '2026-02-30', '26-11-03'):
+            with self.subTest(state=state):
+                self.set_heading(root, state)
+                self.assertTrue(release_check.problems(root))
+
+    def test_a_dated_release_checkout_passes_every_check(self):
+        root = self.copy()
+        self.set_heading(root, '2026-11-03')
         version = release_check.version(root)
         self.assertEqual(release_check.problems(root), [])
-        unreleased = release_check.problems(root, release=True)
-        if release_check.changelog_state(root) == 'unreleased':
-            self.assertTrue(any('dated' in problem for problem in unreleased), unreleased)
-        self.edit(root, 'CHANGELOG.md', f'## {version} — unreleased', f'## {version} — 2026-11-03')
-        self.assertEqual(release_check.problems(root, release=True), [])
-        self.edit(root, 'CHANGELOG.md', f'## {version} — 2026-11-03', f'## {version} — soon')
-        self.assertTrue(release_check.problems(root))
+        self.assertEqual(release_check.problems(root, release=True, tag='v' + version), [])
 
     def test_tag_must_name_the_version(self):
         version = release_check.version(ROOT)

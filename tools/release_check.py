@@ -7,6 +7,7 @@
 Prints one line per problem and exits 1 if there is any. It reads files only.
 """
 import argparse
+import datetime
 import re
 import sys
 from pathlib import Path
@@ -46,8 +47,14 @@ def problems(root=ROOT, release=False, tag=None):
             if not values:
                 found.append(f'{relative}: no version statement matching {pattern!r}; update the file or this checker')
             found += [f'{relative}: states {value}, pyproject.toml states {expected}' for value in values if value != expected]
-    if release and changelog_state(root) == 'unreleased':
+    state = changelog_state(root)
+    if release and state == 'unreleased':
         found.append('CHANGELOG.md: the release heading must be dated (## X.Y.Z — YYYY-MM-DD), not unreleased')
+    elif state and state != 'unreleased':
+        try:
+            datetime.date.fromisoformat(state)
+        except ValueError:
+            found.append(f'CHANGELOG.md: heading date {state} is not a calendar date')
     if tag is not None and tag != 'v' + expected:
         found.append(f'release tag must be v{expected}')
     return found
