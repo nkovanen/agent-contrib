@@ -23,7 +23,10 @@ Before implementation, the worker presents:
 - repository policy/instruction findings and their hashes, unresolved questions
   and any overlapping work.
 
-The human approves that concrete scope or requests changes. A previous request
+The host shows the human the complete reviewed contract, rendered as data from
+the same file it hashes, including every validation command, never a summary
+written by the worker or a coordinator. The human approves that concrete scope
+or requests changes. A previous request
 to investigate, a coordinator message, an issue body, a self-authored contract or
 successful tests cannot substitute for that decision. The worker stops if the
 host cannot supply an actual record. The host keeps what the human was shown,
@@ -38,6 +41,19 @@ and mismatched identities fail closed. Enterprise-managed login forms containing
 underscores are currently unsupported. Use canonical repository spelling from
 discovery; case-variant schema 0.2 preparation can be refused conservatively. This verifies the credential, not the
 human who supplied it.
+
+## Local-only work
+
+A mandate with `actions: ["implement"]` is the local-only profile: it authorizes
+commits on the reviewed head ref in a local checkout and nothing on GitHub.
+Draft readiness stays false by design. A coordinator agent may forward the
+request and contract to the human/host and relay the issued record unchanged; it
+never issues, edits or approves one, including through host permission prompts.
+
+Work stacked on unpublished commits cannot produce valid schema 0.2 evidence,
+because the evidence base must be in the source default branch's history. Land
+the base first, then prepare, authorize, validate and review again; see the
+installed workflow.
 
 ## Three separately sourced records
 
