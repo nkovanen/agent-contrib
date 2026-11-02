@@ -527,8 +527,10 @@ status.
   - Writes are atomic and private (0600), and eviction touches only valid
     entry names.
   - Without POSIX ownership checks or `dir_fd` support, the cache is bypassed.
-- Entries are at most 8 MiB. The total is kept under 256 MiB by deleting the
-  oldest entries. Delete the directory to clear it; any cache error falls back
+- Entries are at most 8 MiB. After each store the total is brought under
+  256 MiB by deleting the oldest entries. Entries another invocation removes
+  meanwhile are skipped, so concurrent commands may exceed the total briefly,
+  but once they finish the last eviction pass has seen every stored entry. Delete the directory to clear it; any cache error falls back
   to the live read.
 - `--report-budget` counts only the live reads that remain. The cache is active
   for one invocation; library callers never inherit it.

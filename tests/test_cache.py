@@ -513,6 +513,74 @@ class EvictionTests(CacheTestCase):
         self.assertEqual(self.entries(), sorted('blob-' + blob(fake.files[n]) for n in names[1:]))
         self.assertEqual(cache.TOTAL_LIMIT, 256 * 1024 * 1024)
 
+    def test_an_entry_vanishing_mid_scan_does_not_abort_eviction(self):
+        # Review R10-03: a concurrent eviction deleting an entry between listing and stat aborted the whole pass;
+        # one deleted after its stat was still counted, so the pass evicted more than needed.
+        for timing in ('before stat', 'after stat'):
+            with self.subTest(timing=timing):
+                self.vanish_during_scan(timing)
+                for path in self.root.iterdir():
+                    path.unlink()
+
+    def vanish_during_scan(self, timing):
+        fake = ContentGitHub()
+        names = ['AGENTS.md', 'CLAUDE.md', 'README.md', 'CONTRIBUTING.md']
+        for number, name in enumerate(names):
+            fake.files[name] = bytes([65 + number]) * 40
+        store, _ = self.store(fake)
+        for number, name in enumerate(names[:3]):  # X, Y, W, oldest first
+            store.observe(self.contents(name), fake.request(self.contents(name)))
+            os.utime(self.root / ('blob-' + blob(fake.files[name])), (1000 + number, 1000 + number))
+        vanishing = 'blob-' + blob(fake.files[names[0]])
+        real_scandir = cache.os.scandir
+
+        class Listing:
+            def __init__(self, fd):
+                self.inner = real_scandir(fd)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                self.inner.close()
+
+            def __iter__(self):
+                for entry in self.inner:
+                    if timing == 'before stat' and entry.name == vanishing:
+                        os.unlink(self.root / vanishing)  # another invocation's eviction wins the race
+                    yield entry
+                    if timing == 'after stat' and entry.name == vanishing:
+                        os.unlink(self.root / vanishing)
+        Listing.root = self.root
+        with patch.object(cache, 'TOTAL_LIMIT', 100), patch.object(cache.os, 'scandir', Listing):
+            store.observe(self.contents(names[3]), fake.request(self.contents(names[3])))
+        remaining = {p.name: p.stat().st_size for p in self.root.iterdir()}
+        self.assertLessEqual(sum(remaining.values()), 100)
+        self.assertEqual(sorted(remaining), sorted('blob-' + blob(fake.files[n]) for n in names[2:]),
+                         'the oldest surviving entry is evicted despite the vanished one')
+
+    def test_an_undeletable_entry_still_counts_toward_the_total(self):
+        fake = ContentGitHub()
+        names = ['AGENTS.md', 'CLAUDE.md', 'README.md', 'CONTRIBUTING.md']
+        for number, name in enumerate(names):
+            fake.files[name] = bytes([65 + number]) * 40
+        store, _ = self.store(fake)
+        for number, name in enumerate(names[:3]):
+            store.observe(self.contents(name), fake.request(self.contents(name)))
+            os.utime(self.root / ('blob-' + blob(fake.files[name])), (1000 + number, 1000 + number))
+        stuck, real_unlink = 'blob-' + blob(fake.files[names[0]]), cache.os.unlink
+
+        def unlink(name, *args, **kwargs):
+            if name == stuck:
+                raise PermissionError('busy')
+            return real_unlink(name, *args, **kwargs)
+        self.assertIsNotNone(store._root())  # acquire first: a patched os.unlink is not in os.supports_dir_fd
+        with patch.object(cache, 'TOTAL_LIMIT', 100), patch.object(cache.os, 'unlink', unlink):
+            store.observe(self.contents(names[3]), fake.request(self.contents(names[3])))
+        remaining = {p.name: p.stat().st_size for p in self.root.iterdir()}
+        self.assertLessEqual(sum(remaining.values()), 100)
+        self.assertEqual(sorted(remaining), sorted([stuck, 'blob-' + blob(fake.files[names[3]])]))
+
     def test_eviction_touches_only_valid_entry_names(self):
         store, fake = self.store()
         self.root.mkdir(mode=0o700, parents=True)

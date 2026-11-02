@@ -193,18 +193,23 @@ class Cache:
         entries = []
         with os.scandir(self._fd) as listing:
             for entry in listing:
-                if ENTRY.fullmatch(entry.name) and entry.is_file(follow_symlinks=False):
-                    info = entry.stat(follow_symlinks=False)
-                    entries.append((info.st_mtime, entry.name, info.st_size))
+                try:
+                    if ENTRY.fullmatch(entry.name) and entry.is_file(follow_symlinks=False):
+                        info = entry.stat(follow_symlinks=False)
+                        entries.append((info.st_mtime, entry.name, info.st_size))
+                except FileNotFoundError:  # another invocation evicted it meanwhile; it no longer counts
+                    continue
         total = sum(size for _, _, size in entries)
         for _, name, size in sorted(entries):
             if total <= TOTAL_LIMIT:
                 break
             try:
                 os.unlink(name, dir_fd=self._fd)
-                total -= size
-            except OSError:
+            except FileNotFoundError:  # already gone, so it no longer counts either
                 pass
+            except OSError:
+                continue
+            total -= size
 
 
 def _private_group(gid, uid):
