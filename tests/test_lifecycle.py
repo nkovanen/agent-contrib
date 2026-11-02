@@ -728,3 +728,19 @@ class IntegratedLifecycleTests(unittest.TestCase):
         with self.assertRaises(core.ProtocolError) as caught:
             core.prepare(inspected, schema_version='0.2', client=self.client)
         self.assertEqual(caught.exception.code, 'source_changed')
+
+    def test_blank_independent_reviewer_or_notes_cannot_pass_review(self):
+        for field in ('reviewer', 'notes'):
+            for blank in ('', '   '):
+                with self.subTest(field=field, blank=blank):
+                    review = self.evidence['independent_review']
+                    saved = review[field]
+                    review[field] = blank
+                    result = self.verify()
+                    review[field] = saved
+                    self.assertTrue(result['technical_evidence_valid'], result['evidence_errors'])
+                    self.assertFalse(result['independent_review']['valid'])
+                    self.assertFalse(result['draft_create_ready'])
+                    self.assertEqual(result['independent_review']['errors'],
+                                     ['Independent review is pending, failed, same implementer or stale'])
+        self.assertTrue(self.verify()['draft_create_ready'])
