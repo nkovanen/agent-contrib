@@ -711,3 +711,20 @@ class IntegratedLifecycleTests(unittest.TestCase):
         result = self.verify(evidence=False)
         self.assertFalse(result['implementation_ready'])
         self.assertEqual(result['errors'], ['Source policy state/content changed; refresh and review contract'])
+
+    def test_schema_02_prepare_refuses_incomplete_or_changing_source_reads(self):
+        self.client.failed = {'repos/acme/photos/pulls?state=open&per_page=100&page=1'}
+        inspected = core.inspect_issue('acme/photos#12', self.client)
+        self.assertIn('source', inspected)
+        self.assertFalse(inspected['complete'])
+        with self.assertRaises(core.ProtocolError) as caught:
+            core.prepare(inspected, schema_version='0.2', client=self.client)
+        self.assertEqual(caught.exception.code, 'refresh_incomplete')
+        self.client.failed = set()
+        inspected = core.inspect_issue('acme/photos#12', self.client)
+        self.assertTrue(inspected['complete'], inspected['errors'])
+        issue = self.client.request('repos/acme/photos/issues/12')
+        self.client.overrides['repos/acme/photos/issues/12'] = dict(issue, body='Semantically different task')
+        with self.assertRaises(core.ProtocolError) as caught:
+            core.prepare(inspected, schema_version='0.2', client=self.client)
+        self.assertEqual(caught.exception.code, 'source_changed')
