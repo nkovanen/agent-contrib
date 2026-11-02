@@ -115,6 +115,74 @@ class DriftTests(unittest.TestCase):
         with self.assertRaises(core.ProtocolError):
             drift.drift({'schema_version': '0.1'}, FakeGitHub())
 
+    def assert_single_reason(self, result, reason):
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertIs(result['drifted'], True)
+        reasons = {'issue': result['issue']['changed'], 'instructions': result['instructions']['changed'],
+                   'policy': result['policy']['changed'], 'overlap': bool(result['overlap']['added']),
+                   'branch': result['default_branch']['stored_branch'] != result['default_branch']['current_branch']}
+        self.assertEqual([key for key, value in reasons.items() if value], [reason])
+
+    def test_new_overlapping_pr_alone_is_drift(self):
+        task, client = ready_contract()
+        client.prs = [{'number': 40, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/40'}]
+        result = drift.drift(task, client)
+        self.assert_single_reason(result, 'overlap')
+        self.assertEqual(result['overlap']['added'], ['https://github.com/acme/photos/pull/40'])
+
+    def test_default_branch_rename_alone_is_drift(self):
+        task, client = ready_contract()
+        original = client.request
+        def request(endpoint):
+            path = endpoint.split('?')[0]
+            if path == 'repos/acme/photos':
+                return dict(original(endpoint), default_branch='trunk')
+            if path.endswith('/commits/trunk'):
+                return original(endpoint.replace('/commits/trunk', '/commits/main'))
+            return original(endpoint)
+        client.request = request
+        result = drift.drift(task, client)
+        self.assert_single_reason(result, 'branch')
+        self.assertEqual((result['default_branch']['stored_branch'], result['default_branch']['current_branch']),
+                         ('main', 'trunk'))
+        self.assertFalse(result['default_branch']['advanced'])
+
+    def test_schema_02_policy_hash_change_alone_is_drift(self):
+        task, client = candidate_task()
+        client.policy = {'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
+                         'label_authority': 'repository-label-permission'}
+        result = drift.drift(task, client)
+        self.assert_single_reason(result, 'policy')
+        self.assertEqual((result['policy']['stored_approval'], result['policy']['current_approval']),
+                         ('candidate', 'candidate'))
+        self.assertNotEqual(result['policy']['stored_policy_sha256'], result['policy']['current_policy_sha256'])
+
+    def test_pinned_baseline_with_different_aggregate_hash_is_incomplete(self):
+        # E.g. instruction-path rules changed between CLI versions: the pinned re-read succeeds but differs.
+        task, client = ready_contract()
+        task['source']['instructions_sha256'] = '0' * 64
+        result = drift.drift(task, client)
+        self.assertFalse(result['complete'])
+        self.assertFalse(result['instructions']['baseline_verified'])
+        self.assertEqual(result['errors'], ['Pinned instruction baseline could not be reconstructed to the stored hash'])
+        self.assertEqual(result['instructions']['modified'], [])
+
+    def test_failed_live_pr_listing_is_incomplete_even_with_verified_baseline(self):
+        task, client = ready_contract()
+        original, pulls = client.request, []
+        def request(endpoint):
+            if '/pulls' in endpoint:
+                pulls.append(endpoint)
+                if len(pulls) == 1:
+                    raise core.ProtocolError('api_error', 'Synthetic live PR listing failure')
+            return original(endpoint)
+        client.request = request
+        result = drift.drift(task, client)
+        self.assertTrue(result['instructions']['baseline_verified'])
+        self.assertIs(result['drifted'], False)
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['errors'], ['Synthetic live PR listing failure'])
+
     def test_cli_never_rewrites_contract(self):
         task, client = ready_contract()
         advance(client, {'AGENTS.md': 'weakened rules'})
