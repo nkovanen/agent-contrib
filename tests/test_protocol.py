@@ -225,6 +225,19 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared checklist IDs: ABC-TWO)')
         self.assertEqual(sorted(finding), ['number', 'reason', 'url'])
 
+    def test_standard_identifiers_are_not_checklist_ids_but_project_ids_still_match(self):
+        standards = 'Uses SHA-256, SHA3-512, MD5-1, UTF-8, UTF-16, ISO-8601, ISO-8859-1, RFC-3339, AES-256, HTTP-2 and TLS-13'
+        index = core.index_prs([{'number': 2, 'title': 'Add discover limit', 'html_url': 'url', 'head': None,
+                                 'body': standards + '; tracks PROJ-123, CVE-2024-12345, ABC-FEATURE-ID and SHA-ROTATION'}])
+        issue = {'number': 8, 'title': 'Verify tarball digests', 'body': standards}
+        self.assertEqual(core.duplicate_prs('acme/photos', issue, index), [])
+        for token in ('PROJ-123', 'CVE-2024-12345', 'ABC-FEATURE-ID', 'SHA-ROTATION'):
+            with self.subTest(token=token):
+                issue['body'] = standards + ' and ' + token
+                [finding] = core.duplicate_prs('acme/photos', issue, index)
+                self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually '
+                                                    f'(shared checklist IDs: {token})')
+
     def test_failed_pr_policy_or_tree_reads_cannot_be_complete(self):
         for path in ['/pulls', '/git/trees', '/contents/AGENTS.md', '/labels']:
             client = FakeGitHub()

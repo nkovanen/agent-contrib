@@ -60,7 +60,10 @@ unresolved, with errors and `complete: false`.
 A heuristic overlap's `reason` ends with what triggered it: the shared title
 words (two or more) and/or shared checklist IDs, sorted, at most ten of each with
 a count of the rest. An explicit issue reference keeps its own reason. The
-duplicate entry fields are unchanged.
+duplicate entry fields are unchanged. Checklist IDs are uppercase tokens such as
+`PROJ-123`, `CVE-2024-12345` or `ABC-FEATURE-ID`. A standards, algorithm or
+encoding name followed only by numbers (`SHA-256`, `UTF-8`, `ISO-8601`,
+`RFC-3339`, `TLS-13`) is not an ID, so sharing one is not an overlap.
 
 Use the `reference` emitted by discovery for subsequent commands. It keeps the
 requested spelling; schema 0.2 `prepare` refuses a case variant of the canonical

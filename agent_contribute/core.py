@@ -397,14 +397,25 @@ def index_prs(prs):
         local.update(int(n) for n in re.findall(r'(?:^|[/_-])([1-9][0-9]{0,9})(?=[/_-]|$)', branch))
         index.append({'number': number, 'url': safe_text(url, 500), 'references': references,
                       'local': local, 'words': set(re.findall(r'[a-z][a-z0-9]{3,}', title.lower())),
-                      'checklist': set(re.findall(r'\b[A-Z][A-Z0-9]{1,15}(?:-[A-Z0-9]{1,20}){1,5}\b', text))})
+                      'checklist': checklist_ids(text)})
     return index
+
+
+# Algorithm, encoding, protocol and standards names (SHA-256, UTF-8, ISO-8601) look like IDs but name no work item.
+STANDARD_PREFIXES = {'AES', 'ANSI', 'CRC', 'DES', 'ECMA', 'HTTP', 'IEC', 'IEEE', 'ISO', 'MD4', 'MD5', 'RFC', 'RSA',
+                     'SHA', 'SHA1', 'SHA2', 'SHA3', 'SSL', 'TLS', 'UCS', 'UTF'}
+
+
+def checklist_ids(text):
+    ids = set(re.findall(r'\b[A-Z][A-Z0-9]{1,15}(?:-[A-Z0-9]{1,20}){1,5}\b', text))
+    return {item for item in ids if not (item.split('-')[0] in STANDARD_PREFIXES and
+                                         all(part.isdigit() for part in item.split('-')[1:]))}
 
 
 def duplicate_prs(repository, issue, index, *, pr_repository=None):
     number = issue['number']
     words = set(re.findall(r'[a-z][a-z0-9]{3,}', issue['title'].lower())) - {'with', 'from', 'this', 'that', 'when', 'fixes'}
-    checklist = set(re.findall(r'\b[A-Z][A-Z0-9]{1,15}(?:-[A-Z0-9]{1,20}){1,5}\b', issue['title'] + '\n' + issue['body']))
+    checklist = checklist_ids(issue['title'] + '\n' + issue['body'])
     findings = []
     for pr in index:
         direct = ((repository.casefold(), number) in pr['references'] or
