@@ -67,7 +67,13 @@ closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where
 it would hide case twins, and accepted where the filesystem really ignores case.
 Worktree content is compared with a commit through a fresh temporary index
 outside the checkout, so the checkout's stat cache is never trusted; every
-tracked file is hashed on each run.
+tracked file is hashed on each run. That comparison is byte for byte: attributes
+come from the empty tree and `core.autocrlf` is off, so `ident`, `eol`/`text`
+and `working-tree-encoding` conversions never make different bytes equal the
+commit, and a checkout with converted (for example CRLF) working copies reports
+them as changed. It needs Git 2.40 or newer (`git_too_old` otherwise). A
+non-empty `.git/info/attributes` is refused with `unsafe_git_attributes`, and
+`core.attributesFile` is always ignored.
 
 `agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
 and option of the installed version. Exit status is 0 when a command succeeds and

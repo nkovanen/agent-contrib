@@ -727,6 +727,7 @@ def git_read(directory, *args, index_file=None, raw=False, timeout=15):
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
                                  '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',
+                                 '-c', 'core.attributesFile=' + os.devnull,
                                  # Full stat and mode checks: relaxed checkout settings could hide an edit.
                                  '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
@@ -782,6 +783,16 @@ def require_safe_config(directory):
     if unsafe:
         raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(unsafe[0], 200)}, which a read '
                             'could run as a program or use to hide changes; remove it or use a fresh clone')
+    # --attr-source does not cover $GIT_DIR/info/attributes, so any rule there is refused.
+    attributes = Path(directory, git_read(directory, 'rev-parse', '--git-path', 'info/attributes'))
+    if attributes.exists() or attributes.is_symlink():
+        try:
+            rules = [line.strip() for line in read_regular(attributes, MAX_BYTES).decode('utf-8').splitlines()]
+        except (OSError, UnicodeError):
+            rules = ['unreadable']
+        if any(rule and not rule.startswith('#') for rule in rules):
+            raise ProtocolError('unsafe_git_attributes', 'Checkout sets local Git attributes in info/attributes, '
+                                'which could change how files are compared; remove them or use a fresh clone')
 
 
 def require_worktree_root(directory):
@@ -830,6 +841,11 @@ def content_timeout(tracked_bytes):
 def worktree_changes(directory, commit):
     """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
     temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
+    version = re.match(r'git version (\d+)\.(\d+)', git_read(directory, '--version'))
+    if not version or (int(version[1]), int(version[2])) < (2, 40):
+        raise ProtocolError('git_too_old', 'Git 2.40 or newer is required to compare worktree content without '
+                            'attribute conversions')
+    empty_tree = git_read(directory, 'hash-object', '-t', 'tree', '--stdin')  # stdin is empty; nothing is written
     tracked = sum(int(fields[3]) for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0')
                   if entry and (fields := entry.split('\t', 1)[0].split())[1] == 'blob')
     budget = content_timeout(tracked)
@@ -837,8 +853,11 @@ def worktree_changes(directory, commit):
         index = os.path.join(scratch, 'index')
         git_read(directory, 'read-tree', commit, index_file=index)
         try:
-            listed = git_read(directory, 'status', '--porcelain', '-z', '--no-renames', '--untracked-files=no',
-                              '--ignore-submodules=all', index_file=index, timeout=budget)
+            # Byte-for-byte: attributes come from the empty tree and autocrlf is off, so ident, eol and
+            # working-tree-encoding conversions cannot make different bytes equal the commit.
+            listed = git_read(directory, '-c', 'core.autocrlf=false', '--attr-source=' + empty_tree, 'status',
+                              '--porcelain', '-z', '--no-renames', '--untracked-files=no', '--ignore-submodules=all',
+                              index_file=index, timeout=budget)
         except ProtocolError as exc:
             if exc.code != 'git_timeout':
                 raise

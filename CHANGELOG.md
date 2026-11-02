@@ -183,6 +183,15 @@ channel or runtime model provider is added.
   never starts a command inside a populated submodule with that submodule's own
   config. Previously scope-check reported the gitlink but still ran a
   submodule-configured clean filter.
+- The worktree content comparison is byte for byte: it reads attributes from
+  the empty tree (`--attr-source`, Git 2.40 or newer, otherwise
+  `git_too_old`) with `core.autocrlf=false`, and every read forces
+  `core.attributesFile` to `/dev/null`. A non-empty `.git/info/attributes`,
+  which `--attr-source` does not cover, is refused (`unsafe_git_attributes`).
+  `ident`, `eol`/`text` and `working-tree-encoding` conversions can no longer
+  make an edited file (for example code added inside `$Id: ...$`) match the
+  commit. Checkouts whose files differ from their blobs only by such a
+  conversion (for example CRLF working copies) now report as changed (R1-19).
 - Worktree content is compared with HEAD (and, for `scope-check`, the base)
   through a fresh temporary index outside the checkout, so a hand-edited stat
   cache in `.git/index` cannot hide an edit. The checkout's index is used only
@@ -224,6 +233,9 @@ channel or runtime model provider is added.
     `unsafe_git_config`.
   - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
     evidence dirty.
+  - Files that equal their blob only after an attribute or autocrlf conversion
+    now make evidence dirty; a non-empty `.git/info/attributes` fails with
+    `unsafe_git_attributes`; Git older than 2.40 fails with `git_too_old`.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;
