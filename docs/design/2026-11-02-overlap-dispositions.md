@@ -1,8 +1,8 @@
 # Reviewed overlap dispositions (#7): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, revision 3. Hostile review rounds 1 (RO-01 to RO-06) and 2
-  (RO-07) are resolved in [Review resolution](#review-resolution). Slice 1
+- Status: proposal, revision 4. Hostile review rounds 1 to 3 (RO-01 to RO-08)
+  are resolved in [Review resolution](#review-resolution). Slice 1
   (inert plumbing) is implemented on this branch.
 - Base: `rsi/v03-land` at `44bf2d5` (unreleased v0.3.0 candidate: task/evidence
   schemas 0.1 and 0.2, host-context 0.1).
@@ -387,9 +387,16 @@ never a waiver.
     - it presents the full file list and patches as retained material,
       identified by base tip, merge base and head SHAs.
 
-    A mutable diff link is not enough. The host does not issue when the
-    comparison is unavailable, saturated (300 files, GitHub's cap) or missing a
-    patch for a non-binary file.
+    A mutable diff link is not enough. The host does not issue when:
+    - the comparison is unavailable, or saturated (300 files, GitHub's cap);
+    - **any** changed file lacks a reviewable textual patch (RO-08). That
+      includes binary files of every kind (executables, WebAssembly, archives,
+      images, fonts), patches GitHub omits as too large, and source files that
+      GitHub classifies as binary.
+
+    A file name plus a blob hash is not reviewable code. Supporting binary
+    review (for example a host-side rendered or decompiled view) would need its
+    own design and is out of scope.
   - it retains that exact material with the event, and records its hash as
     `comparison.material_sha256`;
   - it computes every bound field from its own reads;
@@ -406,6 +413,11 @@ never a waiver.
   - a branch pushed while the human reviews, where the record must bind the
     reviewed head;
   - a truncated comparison, which must not issue;
+  - a PR adding or changing a binary executable or WebAssembly module (shown
+    only as file name and blob hash): must not issue (RO-08);
+  - a PR whose source file GitHub reports without a patch (treated as binary or
+    too large): must not issue (RO-08);
+  - a mixed PR with reviewable text and one patchless file: must not issue;
   - a PR whose `base.sha` differs from the base branch tip: the host binds the
     tip it resolved itself.
 
@@ -564,6 +576,8 @@ Each slice is independently shippable and gets its own hostile review.
 ## Out of scope
 
 - Schema 0.1 dispositions: there is no host channel, and the issue requires one.
+- Dispositions for PRs containing any file without a reviewable textual patch,
+  including binaries (RO-08).
 - Waiving direct references, incomplete scans, closed or merged PRs, or the
   agent's own non-exact-head drafts. Use #21 (draft updates) or close the PR.
 - File-level conflict analysis: overlap remains a title/reference heuristic.
@@ -603,4 +617,13 @@ finding. Slice 1 was judged safe to continue.
 | ID | Severity | Verdict | Independent check | Change in revision 3 |
 | --- | --- | --- | --- | --- |
 | RO-07 | Medium | Confirmed | `git merge-base 44bf2d5 4a130a5` and `git merge-base 5f7378f 4a130a5` differ with the head fixed, so a moving base changes the merge base. Revision 2 claimed the opposite and bound no base tip. The PR object's `base.sha` is also not guaranteed to be the current tip. | Removed the false invariant. Each comparison binds `base_tip_sha`, resolved independently from `git/ref/heads/{base.ref}`, plus the merge base and head. Verification rereads the tip once per distinct base ref and re-blocks on any change. The retained material's encoding is now defined (canonical JSON of the `files` items). The issuer refuses saturated (300-file) or patchless comparisons. Read bound updated to at most 40 logical GETs. Tests 9a added. The schema field was added to slice 1 before freezing it (`c7f7a8c`). |
+
+### Round 3 (revision 4)
+
+Round 3 against revision 3 (`b2be3b2`) found slice 1 shippable and closed
+RO-07. It raised one design finding.
+
+| ID | Severity | Verdict | Independent check | Change in revision 4 |
+| --- | --- | --- | --- | --- |
+| RO-08 | Medium | Confirmed | Revision 3 refused only a missing patch "for a non-binary file". A competing WebAssembly blob or a binary executable would therefore be shown as a file name and hash, and could be approved without anyone reviewing its behavior. | The issuer refuses when any changed file lacks a reviewable textual patch: all binaries, oversized patches, and source GitHub classifies as binary. Host tests added for a binary executable or WebAssembly module, a patchless source file, and a mixed PR. Binary review is out of scope. Waiver evaluation is unchanged: its checks are host-side issuance rules, and the bound `material_sha256` covers the retained file list. |
 
