@@ -460,7 +460,10 @@ the source when the target is blank. It has three parts:
   `execution.base_ref` or else `source.default_branch`. `required` is true when
   an active ruleset rule of type `required_signatures` applies, and
   `ruleset_ids` lists those rulesets. `false` means only that no visible active
-  ruleset requires signatures. `classic_branch_protection` is always
+  ruleset requires signatures. Each rule type must be one of GitHub's documented
+  lowercase rule types. A malformed type makes the part unknown. So does a
+  well-formed but unrecognized type, unless an exact `required_signatures` rule
+  is also present. `classic_branch_protection` is always
   `not_observed`, because reading it needs admin access, and ruleset bypass
   actors are not visible either.
 - `local_commits` (only with `--repo-dir`; otherwise `not_requested`): the

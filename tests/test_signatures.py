@@ -135,6 +135,13 @@ class GitHubVerificationTests(unittest.TestCase):
         self.assertEqual(client.calls, [])
 
 
+def observe_type(kind):
+    client = SignatureGitHub(ready_contract()[1])
+    client.rules.append({'type': kind, 'ruleset_id': 7})
+    part = observe(client)[0]['required_signatures']
+    return part['complete'], part['required']
+
+
 class RequiredSignatureTests(unittest.TestCase):
     def test_required_signature_rule_and_ruleset_ids(self):
         client = SignatureGitHub(ready_contract()[1])
@@ -151,6 +158,48 @@ class RequiredSignatureTests(unittest.TestCase):
         plain, _ = observe()
         self.assertEqual((plain['required_signatures']['required'], plain['required_signatures']['ruleset_ids']), (False, []))
         self.assertEqual(plain['required_signatures']['classic_branch_protection'], 'not_observed')
+
+    def test_malformed_or_unrecognized_rule_types_are_never_a_confident_negative(self):
+        # Review R6-05: any string type counted, so '' or 'required_signatures ' gave required: false, complete.
+        for kind in ['', 'required_signatures ', '\u202erequired_signatures', 'Required_Signatures', 'required-signatures',
+                     'x' * 101, 'future_rule']:
+            with self.subTest(kind=kind):
+                client = SignatureGitHub(ready_contract()[1])
+                client.rules.append({'type': kind, 'ruleset_id': 7})
+                part = observe(client)[0]['required_signatures']
+                self.assertEqual((part['complete'], part['required'], part['ruleset_ids']), (False, None, None))
+                self.assertTrue(part['errors'])
+        for kind in ['', 'required_signatures ', '\u202erequired_signatures', 'Required_Signatures', 'x' * 101]:
+            with self.subTest(malformed_beside_exact=kind):  # malformed data voids the read, even beside a real rule
+                client = SignatureGitHub(ready_contract()[1])
+                client.rules += [{'type': kind, 'ruleset_id': 7}, {'type': 'required_signatures', 'ruleset_id': 8}]
+                part = observe(client)[0]['required_signatures']
+                self.assertEqual((part['complete'], part['required']), (False, None))
+        self.assertEqual(observe_type('x' * 100), (False, None), 'a well-formed unknown type of 100 characters')
+        client = SignatureGitHub(ready_contract()[1])
+        client.rules += [{'type': 'future_rule', 'ruleset_id': 7}, {'type': 'required_signatures', 'ruleset_id': 8}]
+        part = observe(client)[0]['required_signatures']
+        self.assertEqual((part['complete'], part['required'], part['ruleset_ids']), (True, True, [8]),
+                         'an exact required_signatures rule is certain even beside an unrecognized type')
+        client = SignatureGitHub(ready_contract()[1])
+        client.rules = [{'type': kind, 'ruleset_id': i} for i, kind in enumerate(sorted(signatures.RULE_TYPES - {'required_signatures'}), 1)]
+        part = observe(client)[0]['required_signatures']
+        self.assertEqual((part['complete'], part['required']), (True, False))
+
+    def test_a_rule_on_a_later_page_counts(self):
+        client = SignatureGitHub(ready_contract()[1])  # Review R6-M01
+        client.rules = [{'type': 'creation', 'ruleset_id': i} for i in range(1, 101)] + [
+            {'type': 'required_signatures', 'ruleset_id': 500}]
+        part = observe(client)[0]['required_signatures']
+        self.assertEqual((part['complete'], part['required'], part['ruleset_ids']), (True, True, [500]))
+
+    def test_every_documented_reason_passes_through(self):
+        for reason in sorted(signatures.REASONS):  # Review R6-M02
+            with self.subTest(reason=reason):
+                client = SignatureGitHub(ready_contract()[1])
+                client.commit['verification'] = verification(reason == 'valid', reason)
+                self.assertEqual(observe(client)[0]['github_verification']['reason'], reason)
+        self.assertEqual(len(signatures.REASONS), 15)
 
     def test_base_ref_is_used_and_quoted(self):
         task, base = candidate_task()

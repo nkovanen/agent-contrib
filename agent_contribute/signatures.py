@@ -3,6 +3,7 @@
 No signature program is ever run: no gpg, ssh-keygen, verify-commit or log --show-signature, all of which honour
 repository-configured programs. Local reads are plumbing (merge-base, rev-list, cat-file) through core.git_read.
 """
+import re
 from urllib.parse import quote
 
 from . import authorization, core, remote
@@ -13,6 +14,14 @@ SIGNATURE_HEADERS = (b'gpgsig ', b'gpgsig-sha256 ')
 REASONS = {'valid', 'unsigned', 'unknown_key', 'bad_email', 'unverified_email', 'no_user', 'expired_key',
            'not_signing_key', 'unknown_signature_type', 'malformed_signature', 'invalid', 'gpgverify_error',
            'gpgverify_unavailable', 'bad_cert', 'ocsp_pending'}
+# GitHub's documented ruleset rule types. A malformed type, or a well-formed one outside this set, leaves the
+# requirement undetermined unless an exact required_signatures rule is also present.
+RULE_TYPES = {'creation', 'update', 'deletion', 'required_linear_history', 'merge_queue', 'required_deployments',
+              'required_signatures', 'pull_request', 'required_status_checks', 'non_fast_forward',
+              'commit_message_pattern', 'commit_author_email_pattern', 'committer_email_pattern',
+              'branch_name_pattern', 'tag_name_pattern', 'file_path_restriction', 'max_file_path_length',
+              'file_extension_restriction', 'max_file_size', 'workflows', 'code_scanning', 'copilot_code_review'}
+RULE_TYPE = re.compile(r'[a-z][a-z0-9_]{0,99}')
 NOTICE = ('Observation only, not approval: it changes no gate or exit status. GitHub "verified" means a signature '
           'matched a key registered to a GitHub account; it does not show who wrote, tested, reviewed or approved the '
           'work. Ruleset bypass actors and classic branch protection are not visible.')
@@ -70,15 +79,20 @@ def required_signatures(client, target, branch):
     listing = core.paginate(client, f'repos/{target}/rules/branches/{quote(branch, safe="")}',
                             key=lambda rule: f"{rule.get('type')}\0{rule.get('ruleset_id')}")
     errors = list(listing['errors'])
-    ids = []
+    ids, unrecognized = [], False
     try:
         for rule in listing['items']:
             kind = remote.text(rule.get('type'), 'rule type')
+            if not RULE_TYPE.fullmatch(kind):
+                remote.bad('rule type')
             identity = remote.positive(rule.get('ruleset_id'), 'ruleset ID')
+            unrecognized = unrecognized or kind not in RULE_TYPES
             if kind == 'required_signatures':
                 ids.append(identity)
     except core.ProtocolError as exc:
         errors.append(str(exc))
+    if not errors and unrecognized and not ids:
+        errors.append('Unrecognized rule type; a signature requirement cannot be ruled out')
     if errors:  # paginate reports every incomplete read as an error
         part['errors'] = errors
         return part
