@@ -52,7 +52,7 @@ def scope_check(task, directory, base=None):
 
 
 def _base(base):
-    if not isinstance(base, str) or not re.fullmatch('[0-9a-f]{40}', base):
+    if not isinstance(base, str) or not core.SHA.fullmatch(base):
         raise core.ProtocolError('invalid_base', 'Base must be a full lowercase 40-character commit SHA')
     return base
 
