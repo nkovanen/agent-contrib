@@ -1,0 +1,343 @@
+"""Commit-signature observations (#18, part): report only, strict shapes, no signature programs, never a gate."""
+import contextlib
+import copy
+import io
+import json
+import os
+import pathlib
+import stat
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from agent_contribute import cli, core, signatures
+from tests.test_authorization import candidate_task
+from tests.test_protocol import ready_contract
+
+HEAD = 'a' * 40
+
+
+def verification(verified=False, reason='unsigned', verified_at=None):
+    return {'verified': verified, 'reason': reason, 'signature': 'SIGNATURE-MARKER', 'payload': 'PAYLOAD-MARKER',
+            'verified_at': verified_at}
+
+
+class SignatureGitHub:
+    """Answers the two signature endpoints; everything else goes to the wrapped fixture client."""
+    def __init__(self, base, head=HEAD):
+        self.base, self.calls, self.failed = base, [], set()
+        self.commit = {'sha': head, 'message': 'MESSAGE-MARKER', 'verification': verification()}
+        self.rules = [{'type': 'pull_request', 'ruleset_id': 5, 'ruleset_source_type': 'Repository',
+                       'ruleset_source': 'acme/photos'}]
+
+    def request(self, endpoint):
+        if '/git/commits/' in endpoint or '/rules/branches/' in endpoint:
+            self.calls.append(endpoint)
+            if any(key in endpoint for key in self.failed):
+                raise core.ProtocolError('api_error', 'GitHub read failed')
+            if '/git/commits/' in endpoint:
+                return copy.deepcopy(self.commit)
+            page = int(endpoint.rsplit('page=', 1)[1])
+            return copy.deepcopy(self.rules[(page - 1) * 100:page * 100])
+        return self.base.request(endpoint)
+
+
+def without_times(value):
+    """Read timestamps differ between two runs; everything else must match exactly."""
+    if isinstance(value, dict):
+        return {k: without_times(v) for k, v in value.items() if k not in ('fetched_at', 'read_at', 'checked_at')}
+    if isinstance(value, list):
+        return [without_times(v) for v in value]
+    return value
+
+
+def observe(client=None, evidence=None, task=None, repo_dir=None):
+    task = task or ready_contract()[0]
+    client = client or SignatureGitHub(ready_contract()[1])
+    return signatures.observe(task, {'git_head': HEAD} if evidence is None else evidence, repo_dir, client), client
+
+
+class GitHubVerificationTests(unittest.TestCase):
+    def test_reports_verification_without_signature_payload_or_message(self):
+        client = SignatureGitHub(ready_contract()[1])
+        client.commit['verification'] = verification(True, 'valid', '2029-12-01T00:00:00Z')
+        result, _ = observe(client)
+        part = result['github_verification']
+        self.assertEqual({k: part[k] for k in ('complete', 'verified', 'reason', 'verified_at')},
+                         {'complete': True, 'verified': True, 'reason': 'valid', 'verified_at': '2029-12-01T00:00:00Z'})
+        self.assertIn('repos/acme/photos/git/commits/' + HEAD, client.calls)
+        text = json.dumps(result)
+        for marker in ('SIGNATURE-MARKER', 'PAYLOAD-MARKER', 'MESSAGE-MARKER'):
+            self.assertNotIn(marker, text)
+        self.assertIn('not approval', result['notice'])
+        self.assertIn('not approval', part['verified_means'])
+        unsigned, _ = observe()
+        self.assertEqual((unsigned['github_verification']['verified'], unsigned['github_verification']['reason']),
+                         (False, 'unsigned'))
+
+    def test_unknown_reason_is_not_echoed(self):
+        client = SignatureGitHub(ready_contract()[1])
+        client.commit['verification'] = verification(False, '\x1b[31mtrust me')
+        result, _ = observe(client)
+        self.assertEqual(result['github_verification']['reason'], 'unrecognized')
+        self.assertTrue(result['github_verification']['complete'])
+        self.assertNotIn('trust me', json.dumps(result))
+
+    def test_malformed_or_failed_reads_are_unknown(self):
+        cases = {'failed': lambda c: c.failed.add('/git/commits/'),
+                 'other commit': lambda c: c.commit.update(sha='b' * 40),
+                 'not an object': lambda c: setattr(c, 'commit', ['x']),
+                 'no verification': lambda c: c.commit.pop('verification'),
+                 'verified text': lambda c: c.commit['verification'].update(verified='true'),
+                 'reason missing': lambda c: c.commit['verification'].update(reason=None),
+                 'bad time': lambda c: c.commit['verification'].update(verified_at='soon'),
+                 'naive time': lambda c: c.commit['verification'].update(verified_at='2029-12-01T00:00:00'),
+                 'verified but not valid': lambda c: c.commit['verification'].update(verified=True, reason='unsigned'),
+                 'valid but not verified': lambda c: c.commit['verification'].update(verified=False, reason='valid')}
+        for name, change in cases.items():
+            with self.subTest(name):
+                client = SignatureGitHub(ready_contract()[1])
+                change(client)
+                result, _ = observe(client)
+                part = result['github_verification']
+                self.assertEqual((part['complete'], part['verified'], part['reason']), (False, None, None))
+                self.assertTrue(part['errors'])
+                self.assertFalse(result['complete'])
+                # Only a failed read, not a malformed answer, gets the unpushed-head hint.
+                self.assertEqual('not pushed' in part['errors'][0], name == 'failed')
+
+    def test_missing_or_invalid_evidence_head_reads_nothing(self):
+        for evidence in [{}, {'git_head': 'HEAD'}, ['x'], {'git_head': 'A' * 40}]:
+            with self.subTest(evidence=evidence):
+                client = SignatureGitHub(ready_contract()[1])
+                result = signatures.observe(ready_contract()[0], evidence, None, client)
+                self.assertFalse(result['complete'])
+                self.assertTrue(result['errors'])
+                self.assertEqual(client.calls, [])
+        client = SignatureGitHub(ready_contract()[1])
+        self.assertFalse(signatures.observe(ready_contract()[0], None, None, client)['complete'])
+        self.assertEqual(client.calls, [])
+
+
+class RequiredSignatureTests(unittest.TestCase):
+    def test_required_signature_rule_and_ruleset_ids(self):
+        client = SignatureGitHub(ready_contract()[1])
+        client.rules += [{'type': 'required_signatures', 'ruleset_id': 9, 'ruleset_source_type': 'Organization',
+                          'ruleset_source': 'acme'},
+                         {'type': 'required_signatures', 'ruleset_id': 3, 'ruleset_source_type': 'Repository',
+                          'ruleset_source': 'acme/photos'}]
+        result, _ = observe(client)
+        part = result['required_signatures']
+        self.assertEqual({k: part[k] for k in ('complete', 'required', 'ruleset_ids', 'branch', 'classic_branch_protection')},
+                         {'complete': True, 'required': True, 'ruleset_ids': [3, 9], 'branch': 'main',
+                          'classic_branch_protection': 'not_observed'})
+        self.assertIn('repos/acme/photos/rules/branches/main?per_page=100&page=1', client.calls)
+        plain, _ = observe()
+        self.assertEqual((plain['required_signatures']['required'], plain['required_signatures']['ruleset_ids']), (False, []))
+        self.assertEqual(plain['required_signatures']['classic_branch_protection'], 'not_observed')
+
+    def test_base_ref_is_used_and_quoted(self):
+        task, base = candidate_task()
+        task['execution']['base_ref'] = 'release/1.x'
+        client = SignatureGitHub(base)
+        result = signatures.observe(task, {'git_head': HEAD}, None, client)
+        self.assertEqual(result['required_signatures']['branch'], 'release/1.x')
+        self.assertIn('repos/acme/photos/rules/branches/release%2F1.x?per_page=100&page=1', client.calls)
+        legacy, base = ready_contract()
+        legacy['source']['default_branch'] = 'trunk'
+        client = SignatureGitHub(base)
+        signatures.observe(legacy, {'git_head': HEAD}, None, client)
+        self.assertIn('repos/acme/photos/rules/branches/trunk?per_page=100&page=1', client.calls)
+
+    def test_malformed_partial_or_failed_rules_are_unknown(self):
+        def full_pages(c):
+            c.rules = [{'type': 'creation', 'ruleset_id': i} for i in range(1, 4001)]
+        cases = {'failed': lambda c: c.failed.add('/rules/branches/'),
+                 'type missing': lambda c: c.rules.append({'ruleset_id': 4}),
+                 'type not text': lambda c: c.rules.append({'type': 7, 'ruleset_id': 4}),
+                 'id missing': lambda c: c.rules.append({'type': 'required_signatures'}),
+                 'id bool': lambda c: c.rules.append({'type': 'required_signatures', 'ruleset_id': True}),
+                 'id zero': lambda c: c.rules.append({'type': 'required_signatures', 'ruleset_id': 0}),
+                 'repeated': lambda c: c.rules.append(dict(c.rules[0])),
+                 'entry not object': lambda c: c.rules.append('required_signatures'),
+                 'page limit': full_pages}
+        for name, change in cases.items():
+            with self.subTest(name):
+                client = SignatureGitHub(ready_contract()[1])
+                change(client)
+                result, _ = observe(client)
+                part = result['required_signatures']
+                self.assertEqual((part['complete'], part['required'], part['ruleset_ids']), (False, None, None))
+                self.assertTrue(part['errors'])
+                self.assertEqual(part['classic_branch_protection'], 'not_observed')
+
+
+class LocalCommitTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.repo = self.directory.name
+
+    def git(self, *argv, stdin=None):
+        return subprocess.run(['git', '-C', self.repo, '-c', 'user.name=Test', '-c', 'user.email=test@example.org', *argv],
+                              input=stdin, capture_output=True, text=True, check=True).stdout.strip()
+
+    def build(self, signed=(False, True, False)):
+        self.git('init', '-q')
+        self.git('commit', '-q', '--allow-empty', '-m', 'base')
+        base = head = self.git('rev-parse', 'HEAD')
+        tree = self.git('rev-parse', 'HEAD^{tree}')
+        commits = []
+        for number, is_signed in enumerate(signed):
+            header = f'tree {tree}\nparent {head}\nauthor A <a@e> {number} +0000\ncommitter A <a@e> {number} +0000\n'
+            if is_signed:
+                header += 'gpgsig -----BEGIN PGP SIGNATURE-----\n \n FORGED\n -----END PGP SIGNATURE-----\n'
+            head = self.git('hash-object', '-t', 'commit', '-w', '--stdin', stdin=header + f'\nchange {number}\n')
+            commits.append(head)
+        self.git('update-ref', 'refs/heads/main', head)
+        return base, head, commits
+
+    def local(self, base, head, **kwargs):
+        return observe(evidence={'git_head': head, 'base_commit': base}, repo_dir=self.repo, **kwargs)[0]['local_commits']
+
+    def test_header_presence_per_commit_oldest_first(self):
+        base, head, commits = self.build()
+        part = self.local(base, head)
+        self.assertEqual(part['commits'], [{'sha': commits[0], 'signature_header': 'absent'},
+                                           {'sha': commits[1], 'signature_header': 'present'},
+                                           {'sha': commits[2], 'signature_header': 'absent'}])
+        self.assertEqual((part['complete'], part['with_header'], part['without_header'], part['limit']), (True, 1, 2, 1000))
+        self.assertIn('presence', part['notice'])
+
+    def test_sha256_signature_header_counts(self):
+        self.git('init', '-q')
+        self.git('commit', '-q', '--allow-empty', '-m', 'base')
+        base, tree = self.git('rev-parse', 'HEAD'), self.git('rev-parse', 'HEAD^{tree}')
+        content = (f'tree {tree}\nparent {base}\nauthor A <a@e> 1 +0000\ncommitter A <a@e> 1 +0000\n'
+                   'gpgsig-sha256 -----BEGIN SSH SIGNATURE-----\n FORGED\n -----END SSH SIGNATURE-----\n\nmessage\n')
+        head = self.git('hash-object', '-t', 'commit', '-w', '--stdin', stdin=content)
+        self.assertEqual(self.local(base, head)['commits'], [{'sha': head, 'signature_header': 'present'}])
+
+    def test_header_text_in_the_message_is_not_a_signature(self):
+        self.git('init', '-q')
+        self.git('commit', '-q', '--allow-empty', '-m', 'base')
+        base, tree = self.git('rev-parse', 'HEAD'), self.git('rev-parse', 'HEAD^{tree}')
+        content = (f'tree {tree}\nparent {base}\nauthor A <a@e> 1 +0000\ncommitter A <a@e> 1 +0000\n'
+                   '\ngpgsig -----BEGIN PGP SIGNATURE----- in the message\n')
+        head = self.git('hash-object', '-t', 'commit', '-w', '--stdin', stdin=content)
+        self.assertEqual(self.local(base, head)['commits'], [{'sha': head, 'signature_header': 'absent'}])
+
+    def test_over_the_cap_is_incomplete_not_truncated(self):
+        base, head, _ = self.build((False, False, False))
+        with patch.object(signatures, 'MAX_COMMITS', 2):
+            part = self.local(base, head)
+        self.assertEqual((part['complete'], part['commits'], part['with_header'], part['without_header'], part['limit']),
+                         (False, None, None, None, 2))
+        self.assertTrue(part['errors'])
+        with patch.object(signatures, 'MAX_COMMITS', 3):
+            self.assertTrue(self.local(base, head)['complete'])
+
+    def test_non_ancestor_missing_or_invalid_bases_are_incomplete(self):
+        base, head, commits = self.build()
+        self.git('checkout', '-q', '--orphan', 'other')
+        self.git('commit', '-q', '--allow-empty', '-m', 'unrelated')
+        unrelated = self.git('rev-parse', 'HEAD')
+        for name, (start, end) in {'not an ancestor': (unrelated, head), 'reversed': (head, base),
+                                   'missing object': ('c' * 40, head), 'missing head': (base, 'd' * 40),
+                                   'no base': (None, head), 'short base': (base[:12], head),
+                                   'option-like base': ('--octopus', head)}.items():
+            with self.subTest(name):
+                calls, real = [], core.git_read
+                with patch.object(core, 'git_read', lambda directory, *args: calls.append(args) or real(directory, *args)):
+                    result = observe(SignatureGitHub(ready_contract()[1], head=end),
+                                     evidence={'git_head': end, 'base_commit': start}, repo_dir=self.repo)[0]
+                part = result['local_commits']
+                self.assertTrue(result['github_verification']['complete'] and result['required_signatures']['complete'])
+                self.assertEqual((part['complete'], part['commits'], result['complete']), (False, None, False))
+                self.assertTrue(part['errors'])
+                if name in ('no base', 'short base', 'option-like base'):
+                    self.assertEqual(calls, [], 'an invalid base must never reach Git')
+
+    def test_empty_range_is_complete(self):
+        base, _, _ = self.build(())
+        part = self.local(base, base)
+        self.assertEqual((part['complete'], part['commits'], part['with_header'], part['without_header']), (True, [], 0, 0))
+
+    def test_not_requested_without_repo_dir(self):
+        result, client = observe()
+        self.assertEqual(result['local_commits'], {'status': 'not_requested'})
+        self.assertTrue(result['complete'])
+
+    def test_hostile_repository_config_runs_no_signature_program(self):
+        base, head, _ = self.build()
+        marker = pathlib.Path(self.repo, 'ran')
+        script = pathlib.Path(self.directory.name, 'evil.sh')
+        script.write_text('#!/bin/sh\ntouch "%s"\nexit 0\n' % marker)
+        script.chmod(script.stat().st_mode | stat.S_IEXEC)
+        for key in ('gpg.program', 'gpg.openpgp.program', 'gpg.ssh.program', 'gpg.x509.program', 'core.fsmonitor',
+                    'core.pager', 'pager.cat-file', 'pager.rev-list'):
+            self.git('config', key, str(script))
+        self.git('config', 'log.showSignature', 'true')
+        calls = []
+        real = core.git_read
+
+        def recording(directory, *args):
+            calls.append(args)
+            return real(directory, *args)
+
+        with patch.object(core, 'git_read', recording):
+            part = self.local(base, head)
+        self.assertTrue(part['complete'], part.get('errors'))
+        self.assertFalse(marker.exists())
+        self.assertEqual({args[0] for args in calls}, {'merge-base', 'rev-list', 'cat-file'})
+        self.assertNotIn('subprocess', vars(signatures))
+        for args in calls:
+            self.assertFalse({'--show-signature', 'verify-commit', '--pretty', '--format'} & set(args), args)
+
+
+class ReportOnlyTests(unittest.TestCase):
+    def run_verify(self, task, base, flags, evidence=None, stage=(), failed=()):
+        with tempfile.TemporaryDirectory() as tmp:
+            contract = pathlib.Path(tmp, 'task.json')
+            contract.write_text(json.dumps(task))
+            path = pathlib.Path(tmp, 'e.json')
+            path.write_text(json.dumps(evidence or {'git_head': HEAD}))
+            client = SignatureGitHub(base)
+            client.failed.update(failed)
+            output = io.StringIO()
+            with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
+                code = cli.main(['verify', str(contract), '--evidence', str(path), *stage, *flags])
+            return code, json.loads(output.getvalue()), client
+
+    def test_opt_in_for_both_schemas_changes_no_gate_exit_or_read(self):
+        for name, (task, base), stage in [('0.1', ready_contract(), ()), ('0.2', candidate_task(), ('--stage', 'implementation'))]:
+            with self.subTest(schema=name):
+                plain_code, plain, plain_client = self.run_verify(task, base, [], stage=stage)
+                code, observed, client = self.run_verify(task, base, ['--observe-signatures'], stage=stage)
+                self.assertEqual(code, plain_code)
+                self.assertNotIn('signature_observation', plain)
+                self.assertEqual(plain_client.calls, [])
+                self.assertEqual(len(client.calls), 2)
+                report = observed.pop('signature_observation')
+                self.assertTrue(report['complete'], report['errors'])
+                self.assertEqual(without_times(observed), without_times(plain))
+
+    def test_failed_observation_still_changes_nothing(self):
+        task, base = ready_contract()
+        plain_code, plain, _ = self.run_verify(task, base, [])
+        code, observed, _ = self.run_verify(task, base, ['--observe-signatures'], failed=('/git/commits/', '/rules/'))
+        self.assertEqual(code, plain_code)
+        self.assertFalse(observed.pop('signature_observation')['complete'])
+        self.assertEqual(without_times(observed), without_times(plain))
+
+    def test_schema_invalid_contract_gets_no_observation(self):
+        task, base = ready_contract()
+        task['schema_version'] = '9.9'
+        _, result, client = self.run_verify(task, base, ['--observe-signatures'])
+        self.assertNotIn('signature_observation', result)
+        self.assertEqual(client.calls, [])
+
+
+if __name__ == '__main__':
+    unittest.main()

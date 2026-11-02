@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
+from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, signatures, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -153,6 +153,9 @@ def main(argv=None):
                           'not proof of human consent')
     sub.add_argument('--observe-ci', action='store_true',
                      help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub.add_argument('--observe-signatures', action='store_true',
+                     help='Add report-only commit-signature observations for the evidence range; never verifies '
+                          'locally or changes the exit status')
     sub = commands.add_parser('authorization-request',
                               help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
     sub.add_argument('contract', help='Task contract JSON file')
@@ -302,6 +305,8 @@ def main(argv=None):
                 code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
             if args.observe_ci and result.get('schema_valid') is True:
                 result['ci_observation'] = ci.observe(task, evidence)  # report only; code is already decided
+            if args.observe_signatures and result.get('schema_valid') is True:
+                result['signature_observation'] = signatures.observe(task, evidence, args.repo_dir)  # report only
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:

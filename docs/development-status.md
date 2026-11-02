@@ -25,6 +25,7 @@ The Skill stays portable and all GitHub operations in the CLI remain read-only.
 | #8 | Located AI-policy excerpts with explicit scan coverage | A versioned machine-readable refusal policy; excerpts are not a policy verdict |
 | #16 | Aggregate issue/policy/overlap drift and pinned per-file instruction comparison | Historical per-component issue baselines in a new task schema |
 | #17 | Exact-head CI observations | Required-check declarations and readiness enforcement |
+| #18 | Opt-in, report-only signature observations: GitHub verification of the evidence head, required-signature rulesets and local header presence | Contract-required verified heads and ssh-keygen evidence attestations |
 | #24 | Opt-in text CLI summaries | Output JSON Schemas and an explicit output-schema version |
 | #25 | Literal POSIX path and containment regressions | Working Windows host-context input and tested Windows/macOS CI |
 | #27 | Optional rate-limit budget reports and a minimum-budget guard | Authenticated, freshness-aware response caching |
@@ -35,7 +36,7 @@ CI success into evidence that the required contract checks ran.
 ## Deferred
 
 Overlap dispositions (#7), actor-specific label approval (#9), a reusable Action
-(#11), signed evidence (#18), draft updates (#21), a new fork route (#22) and
+(#11), signed evidence attestations (#18), draft updates (#21), a new fork route (#22) and
 mandate issuance (#23) need separate trust-boundary designs; for #23, issuer
 requirements are specified; no native issuer ships. In particular, fork
 ownership is not permission to publish upstream, and a local interactive prompt

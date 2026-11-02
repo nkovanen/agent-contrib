@@ -167,6 +167,7 @@ for unfinished parts and [the command reference](docs/cli.md) for exact outputs.
 | Start an unfilled evidence record | `evidence init task.json --repo-dir checkout --base REV --output evidence.json` |
 | Review changes since preparation | `drift task.json` |
 | Observe CI without changing readiness | `verify task.json --evidence evidence.json --observe-ci` |
+| Observe commit signatures without changing readiness | `verify task.json --evidence evidence.json --repo-dir checkout --observe-signatures` |
 | Prepare a description for human review | `pr-body task.json --output body.md` |
 | Read reviews and checks on an existing PR | `feedback 'owner/repo#123'` |
 

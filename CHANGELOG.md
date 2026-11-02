@@ -2,6 +2,13 @@
 
 ## 0.3.0 — unreleased
 
+- Add opt-in `verify --observe-signatures` (#18, part). It is report only and
+  covers GitHub's verification of the evidence head (labelled as not approval),
+  active `required_signatures` rulesets on the base branch, and, with
+  `--repo-dir`, signature-header presence for each commit in
+  `base_commit..git_head`, capped at 1000. It never runs gpg, ssh-keygen or
+  `verify-commit` and changes no gate or exit status. Signed evidence
+  attestations are still deferred.
 - `verify`, `scope-check` and `evidence init` capture HEAD once with an exact
   lookup and use that commit for every tree, diff, ancestry, gitlink and
   timestamp read (R4-05). An unborn or deleted current branch, or a HEAD naming
