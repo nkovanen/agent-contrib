@@ -467,6 +467,13 @@ the `agent_contribute.aipolicy` module no longer exist.
   fit the size bound, hints go first, then unassessed entries, then long source
   paths are shortened, and finally source records are left out. Each step is
   recorded as a `report size: ...` limit.
+- **Identity.** Every source, omitted candidate and unassessed entry has
+  `identity_sha256`, a hash of its original repository and path (or URL) as
+  read from GitHub. Displayed paths can be shortened (`path_truncated`,
+  `what_truncated`) or sanitized of control and format characters
+  (`path_sanitized`, `what_sanitized`), so two entries can look alike. The
+  identity, not the display text, is what deduplication and `inventory_sha256`
+  use.
 - **`omitted_sources` and `hides_sources`.** A policy candidate that a file,
   byte or request limit left unread is named in `omitted_sources` (at most 50,
   with its repository, path, kind and reason; overflow is counted). Each
@@ -1477,6 +1484,8 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `sources_scanned[].sha256` | string |  |
 | `sources_scanned[].kind` | "ai_policy" \| "agent_instructions" \| "contributing" \| "pr_template" \| "community" \| "readme" \| "instruction" |  |
 | `sources_scanned[].notes` | string[] |  |
+| `sources_scanned[].path_sanitized` | boolean |  |
+| `sources_scanned[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
 | `unassessed` | object[] |  |
 | `unassessed[].what` | string |  |
 | `unassessed[].reason` | string |  |
@@ -1484,12 +1493,16 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `unassessed[].line` | integer or null |  |
 | `unassessed[].link_text` | string or null |  |
 | `unassessed[].what_truncated` | boolean |  |
+| `unassessed[].what_sanitized` | boolean |  |
+| `unassessed[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
 | `omitted_sources` | object[] |  |
 | `omitted_sources[].repository` | string |  |
 | `omitted_sources[].path` | string |  |
 | `omitted_sources[].path_truncated` | boolean |  |
 | `omitted_sources[].kind` | "ai_policy" \| "agent_instructions" \| "contributing" \| "pr_template" \| "community" \| "readme" \| "instruction" |  |
 | `omitted_sources[].reason` | "file limit" \| "scan byte limit" \| "request limit" |  |
+| `omitted_sources[].path_sanitized` | boolean |  |
+| `omitted_sources[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
 | `limits_reached` | object[] |  |
 | `limits_reached[].limit` | string |  |
 | `limits_reached[].not_reported` | integer |  |

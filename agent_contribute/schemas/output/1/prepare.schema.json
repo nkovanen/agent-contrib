@@ -389,6 +389,16 @@
                   "type": "string",
                   "maxLength": 2147483647
                 }
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
               }
             },
             "required": [
@@ -399,7 +409,9 @@
               "commit",
               "sha256",
               "kind",
-              "notes"
+              "notes",
+              "path_sanitized",
+              "identity_sha256"
             ],
             "additionalProperties": false
           }
@@ -441,6 +453,16 @@
               },
               "what_truncated": {
                 "type": "boolean"
+              },
+              "what_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
               }
             },
             "required": [
@@ -449,7 +471,9 @@
               "from",
               "line",
               "link_text",
-              "what_truncated"
+              "what_truncated",
+              "what_sanitized",
+              "identity_sha256"
             ],
             "additionalProperties": false
           }
@@ -490,6 +514,16 @@
                   "scan byte limit",
                   "request limit"
                 ]
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
               }
             },
             "required": [
@@ -497,7 +531,9 @@
               "path",
               "path_truncated",
               "kind",
-              "reason"
+              "reason",
+              "path_sanitized",
+              "identity_sha256"
             ],
             "additionalProperties": false
           }

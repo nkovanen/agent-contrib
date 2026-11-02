@@ -447,7 +447,8 @@ class InventoryTests(unittest.TestCase):
         result = policy.report('acme/photos', 'b' * 40, [], client, default_branch='main')
         self.assertEqual(result['unassessed'][0], {'what': 'acme/photos', 'reason': 'repository tree not read',
                                                    'from': None, 'line': None, 'link_text': None,
-                                                   'what_truncated': False})
+                                                   'what_truncated': False, 'what_sanitized': False,
+                                                   'identity_sha256': core.canonical_hash('acme/photos')})
 
 
 class BoundTests(unittest.TestCase):
@@ -874,3 +875,64 @@ class MalformedReferenceTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(len(result['repositories']), 2)
         self.assertTrue(all('repository_policy' in r for r in result['repositories']))
+
+
+class IdentityTests(unittest.TestCase):
+    """RP-23: identities are the original repository and path, never the shortened or sanitized display text."""
+    LONG = 'docs/' + 'a' * 600
+
+    def test_long_prefix_renames_change_the_inventory(self):
+        one, _ = report({self.LONG + '/AI_POLICY.md': 'No LLM output.'})
+        two, _ = report({self.LONG + '/AI_POLICY_v2.md': 'No LLM output.'})
+        self.assertEqual([s['path'] for s in one['sources_scanned']], [s['path'] for s in two['sources_scanned']])
+        self.assertNotEqual(one['sources_scanned'][0]['identity_sha256'], two['sources_scanned'][0]['identity_sha256'])
+        self.assertNotEqual(one['inventory_sha256'], two['inventory_sha256'])
+
+    def test_omitted_long_paths_stay_distinct(self):
+        base = {f'AI_POLICY_{n:02d}.md': 'x' for n in range(12)}
+        one, _ = report({**base, self.LONG + '/CONTRIBUTING.md': 'x'})
+        two, _ = report({**base, self.LONG + '/CONTRIBUTING-2.md': 'x'})
+        self.assertEqual([o['path'] for o in one['omitted_sources']], [o['path'] for o in two['omitted_sources']])
+        self.assertNotEqual(one['omitted_sources'][0]['identity_sha256'], two['omitted_sources'][0]['identity_sha256'])
+        self.assertNotEqual(one['inventory_sha256'], two['inventory_sha256'])
+
+    def test_stripped_filename_characters_keep_both_entries(self):
+        client = PolicyGitHub({'AI_POLICY.md': 'x', 'AI_POLICY​.md': 'y'})
+        original = client.request
+        def request(endpoint):
+            value = original(endpoint)
+            if '/contents/' in endpoint:  # both files are not UTF-8
+                data = b'\xff\xfe AI-generated contributions are prohibited'
+                value = {'encoding': 'base64', 'content': base64.b64encode(data).decode(),
+                         'sha': hashlib.sha1(b'blob %d\x00' % len(data) + data).hexdigest()}
+            return value
+        client.request = request
+        blobs = {}
+        def tree(endpoint):
+            value = request(endpoint)
+            if '/git/trees/' in endpoint:
+                data = b'\xff\xfe AI-generated contributions are prohibited'
+                for entry in value['tree']:
+                    entry['sha'] = hashlib.sha1(b'blob %d\x00' % len(data) + data).hexdigest()
+            return value
+        client.request = tree
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        entries = [u for u in result['unassessed'] if u['reason'] == 'not UTF-8 text']
+        self.assertEqual(len(entries), 2, 'a stripped zero-width character must not merge two files')
+        self.assertEqual({u['what'] for u in entries}, {'AI_POLICY.md'})
+        self.assertEqual(sorted(u['what_sanitized'] for u in entries), [False, True])
+        self.assertEqual(len({u['identity_sha256'] for u in entries}), 2)
+
+    def test_report_size_shortening_keeps_identities(self):
+        component = '\U0001f600' * 60
+        instructions = [{'path': f'{n:02d}/' + '/'.join([component] * 7) + '/AGENTS.md', 'sha256': '1' * 64,
+                         'untrusted_text': 'Build.'} for n in range(60)]
+        result, _ = report({}, instructions=instructions)
+        self.assertIn('report size: shortened paths', {item['limit'] for item in result['limits_reached']})
+        self.assertEqual(len({s['identity_sha256'] for s in result['sources_scanned']}), 60)
+
+    def test_display_alterations_are_flagged(self):
+        result, _ = report({self.LONG + '/AI_POLICY.md': 'x', 'docs/AI_POLICY‮.md': 'y'})
+        by = {s['identity_sha256']: s for s in result['sources_scanned']}
+        flags = sorted((s['path_truncated'], s['path_sanitized']) for s in by.values())
+        self.assertEqual(flags, [(False, True), (True, False)])

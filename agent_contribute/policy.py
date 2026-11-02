@@ -233,7 +233,7 @@ class _Report:
         self.client, self.requests, self.skipped = client, 0, 0
         self.sources, self.texts, self.unassessed, self.limits = [], [], [], {}
         self.seen, self.keys = set(), []  # every identity noted; identities of retained entries (aligned)
-        self.omitted = []
+        self.omitted, self.scanned = [], set()  # scanned: original (repository, path) identities
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -244,9 +244,10 @@ class _Report:
         return self.client.request(endpoint)
 
     def note(self, what, reason, origin=None, line=None, link_text=None, key=None):
-        """key is the full identity (repository and path, or URL); the displayed what may be shortened."""
-        what = core.safe_text(str(what), len(str(what)))
-        key = key or what
+        """key is the original identity (repository and path, or URL); what is display text, possibly altered."""
+        raw = str(what)
+        what = core.safe_text(raw, len(raw))
+        key = key or raw
         if key in self.seen:
             return
         self.seen.add(key)
@@ -256,17 +257,16 @@ class _Report:
         self.keys.append(key)
         self.unassessed.append({'what': what[:IDENTIFIER_CHARS], 'reason': reason, 'from': origin, 'line': line,
                                 'link_text': core.safe_text(link_text, EXCERPT_CHARS) if link_text else None,
-                                'what_truncated': len(what) > IDENTIFIER_CHARS})
+                                'what_truncated': len(what) > IDENTIFIER_CHARS, 'what_sanitized': what != raw,
+                                'identity_sha256': _identity(key)})
 
     def omit(self, repository, path, kind, reason):
         """A policy candidate a limit kept unread: named (bounded), never only counted (RP-19)."""
         if len(self.omitted) >= MAX_OMITTED:
             self.limit('omitted sources not listed')
             return
-        shown = core.safe_text(path, len(path))
-        self.omitted.append({'repository': repository, 'path': shown[:IDENTIFIER_CHARS],
-                             'path_truncated': len(shown) > IDENTIFIER_CHARS, 'kind': kind or 'instruction',
-                             'reason': reason})
+        self.omitted.append({'repository': repository, **_display(path), 'kind': kind or 'instruction',
+                             'reason': reason, 'identity_sha256': _identity((repository.casefold(), path))})
 
     def limit(self, name, count=1):
         self.limits[name] = self.limits.get(name, 0) + count
@@ -293,14 +293,14 @@ class _Report:
         result = scan(text, path)
         notes = ([f'paragraphs with non-Latin script not assessed: {result["non_latin_paragraphs"]}']
                  if result['non_latin_paragraphs'] else [])
-        shown = core.safe_text(path, len(path))
-        self.sources.append({'origin': origin, 'repository': repository, 'path': shown[:IDENTIFIER_CHARS],
-                             'path_truncated': len(shown) > IDENTIFIER_CHARS,
+        self.sources.append({'origin': origin, 'repository': repository, **_display(path),
+                             'identity_sha256': _identity((repository.casefold(), path)),
                              'commit': commit, 'sha256': digest, 'kind': kind or 'instruction', 'notes': notes})
+        self.scanned.add((repository.casefold(), path))
         self.texts.append((path, result))
 
     def fetch(self, origin, repository, commit, path, blob, kind):
-        shown = core.safe_text(path, len(path))  # note() shortens the display; the full path is the identity
+        label, key = (path if origin == 'repository' else f'{repository}:{path}'), (repository.casefold(), path)
         try:
             value = core.require(self.get(f'repos/{repository}/contents/{quote(path, safe="/")}?ref={commit}'),
                                  dict, 'file')
@@ -311,18 +311,17 @@ class _Report:
             self.omit(repository, path, kind, 'request limit')
             return
         except (core.ProtocolError, ValueError, binascii.Error):
-            self.note(shown if origin == 'repository' else f'{repository}:{shown}', 'read failed')
+            self.note(label, 'read failed', key=key)
             return
-        label = shown if origin == 'repository' else f'{repository}:{shown}'
         if len(data) > MAX_FILE_BYTES:
-            self.note(label, 'exceeds 200 kB')
+            self.note(label, 'exceeds 200 kB', key=key)
         elif not _pinned(blob, value.get('sha'), data):
-            self.note(label, 'content did not match the pinned tree entry')
+            self.note(label, 'content did not match the pinned tree entry', key=key)
         else:
             try:
                 text = data.decode('utf-8')
             except UnicodeError:
-                self.note(label, 'not UTF-8 text')
+                self.note(label, 'not UTF-8 text', key=key)
                 return
             self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data))
 
@@ -334,8 +333,7 @@ class _Report:
                     _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
                 continue
             if _format(path) not in SCANNED_FORMATS:
-                shown = core.safe_text(path, len(path))
-                self.note(shown if origin == 'repository' else f'{repository}:{shown}', 'unsupported format',
+                self.note(path if origin == 'repository' else f'{repository}:{path}', 'unsupported format',
                           key=(repository.casefold(), path))
                 continue
             found.append((KIND_ORDER.index(kind), path, blob, kind))
@@ -346,6 +344,18 @@ class _Report:
             self.omit(repository, path, kind, 'file limit')
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
+
+
+def _identity(key):
+    """SHA-256 of an original identity: [repository, path] as read from GitHub, or a URL string."""
+    return core.canonical_hash(key if isinstance(key, str) else list(key))
+
+
+def _display(path):
+    """Display fields for a path: sanitized, shortened, and flags saying either happened."""
+    shown = core.safe_text(path, len(path))
+    return {'path': shown[:IDENTIFIER_CHARS], 'path_truncated': len(shown) > IDENTIFIER_CHARS,
+            'path_sanitized': shown != path}
 
 
 def _pinned(blob, reported, data):
@@ -442,7 +452,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     refs = {repository.casefold(): [r for r in (commit, default_branch) if r]}
     if owner:
         refs[owner[0].casefold()] = [owner[1], owner[2]]
-    scanned = {(s['repository'].casefold(), s['path']) for s in state.sources}
+    scanned = state.scanned
     hints = []
     for index, (source, (path, result)) in enumerate(zip(state.sources, state.texts)):
         hints += [dict(hint, source=index) for hint in result['hints']]
@@ -473,11 +483,11 @@ def report(repository, commit, instructions, client, *, default_branch=None):
         result['limits_hide_sources'] = bool(result['omitted_sources']) or any(
             item['hides_sources'] for item in result['limits_reached'])
         result['inventory_sha256'] = core.canonical_hash({
-            'sources': sorted([{k: s[k] for k in ('origin', 'repository', 'path', 'sha256')} for s in result['sources_scanned']],
-                              key=lambda s: (s['origin'], s['repository'], s['path'])),
+            # Original identities, never display text, which may be shortened or sanitized (RP-23).
+            'sources': sorted([s['origin'], s['identity_sha256'], s['sha256']] for s in result['sources_scanned']),
             # Full identities, not the shortened display text (RP-20); state.keys is aligned with retained entries.
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
-            'omitted_sources': sorted([o['repository'], o['path'], o['reason']] for o in result['omitted_sources']),
+            'omitted_sources': sorted([o['identity_sha256'], o['reason']] for o in result['omitted_sources']),
             'limits_reached': result['limits_reached']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
