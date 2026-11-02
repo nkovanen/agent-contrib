@@ -29,7 +29,10 @@ def _verify(result, stage=None):
             # An explicit --stage leads with its own exit gate; other stages' blockers do not apply to it.
             selected, passed = line(stage[0], 40), stage[1]
             out = [f'Selected stage: {selected} (exit gate: {_flag(passed)})']
-            out += _list(f'Blockers [{selected}]', blockers.get(stage[0], [])) or [f'Blockers [{selected}]: none']
+            if stage[0] not in blockers:  # e.g. schema errors returned before any stage was evaluated
+                out.append(f'Blockers [{selected}]: not evaluated; see Errors')
+            else:
+                out += _list(f'Blockers [{selected}]', blockers[stage[0]]) or [f'Blockers [{selected}]: none']
         out += ['Gates:'] + [f'  {name}: {_flag(result.get(name))}' for name in
                              ('schema_valid', 'implementation_ready', 'technical_evidence_valid', 'draft_create_ready',
                               'completion_ready')]

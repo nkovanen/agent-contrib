@@ -89,10 +89,12 @@
   unchanged.
 - Heuristic overlap reasons name the shared title words and checklist IDs that
   triggered the match. Duplicate entry fields and matching are unchanged.
-- `scope-check --base` and `evidence init --base` accept any local revision,
-  resolved with hardened `git rev-parse --verify 'REV^{commit}'`; option-like
-  values are refused. `scope-check` adds a `warnings` list and warns when the
-  default base is not an ancestor of HEAD.
+- `scope-check --base` and `evidence init --base` accept a full SHA, `HEAD` or
+  an exact `refs/...` name, optionally followed by `~N`/`^N` (previously only a
+  full SHA). Short branch/tag names, abbreviated SHAs, other pseudo-refs and
+  other revision syntax are refused with a conversion hint. `scope-check`
+  adds a `warnings` list and warns when the default base is not an ancestor of
+  HEAD.
 - `agent-contrib --help` describes every command and option, including input
   constraints and exit status; the description no longer claims JSON-only output.
 - A global option given after the subcommand is still a usage error, but the

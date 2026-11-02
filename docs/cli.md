@@ -134,12 +134,21 @@ that is the same host-asserted boundary as the CLI, not a privileged API.
 `verify` uses for evidence. It reads only the local checkout: committed changes
 from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
 and untracked files that are not ignored. Renames report both paths. The base
-must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts any local
-revision (SHA, abbreviated SHA, branch or tag), resolved in the checkout with
-`git rev-parse --verify 'REV^{commit}'` under the same hook, fsmonitor and
-replacement-object protections as other Git reads; `base_commit` reports the
-full SHA. A value that is blank, starts with `-` or contains whitespace or
-control characters is refused. When the default base is not an ancestor of HEAD,
+must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts exactly a
+full 40-character SHA, `HEAD`, or a full ref name such as `refs/heads/NAME` or
+`refs/tags/NAME`, each optionally followed by `~N` or `^N` (for example
+`HEAD~3` or `refs/heads/base~1`). Short branch or tag names, abbreviated SHAs
+(convert with `git rev-parse ABBREV`), pseudo-refs other than `HEAD` and other
+revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths, ranges) are refused.
+`HEAD` and `refs/...` names are looked up exactly with `git show-ref --verify`,
+never through Git's short-name lookup, so a same-named ref such as
+`refs/tags/HEAD` cannot stand in for them; an unborn `HEAD` is refused. The
+object ID is captured first, then the suffix and `^{commit}` are applied to it
+with `git rev-parse`.
+Every read uses the same hook, fsmonitor and replacement-object protections as
+other Git reads, and nothing under `.git` is opened directly. `base_commit`
+reports the full SHA. A value that is blank, starts with `-` or contains
+whitespace or control characters is refused. When the default base is not an ancestor of HEAD,
 `warnings` suggests passing `--base` for stacked or rebased work; the result
 still fails. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
@@ -448,7 +457,9 @@ counted. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that
-exit. JSON still contains every stage. `scope-check` lists each violating path
+exit. When schema validation fails before any stage is evaluated, the stage
+line reads `not evaluated; see Errors` and the schema errors follow. JSON still
+contains every stage. `scope-check` lists each violating path
 and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
 informational changes (an advanced default branch, PRs no longer open) apart.
 Other commands show top-level

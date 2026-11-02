@@ -4,6 +4,7 @@ from pathlib import Path
 
 from . import core
 
+REVISION = re.compile(r'(?P<name>[0-9a-f]{40}|HEAD|refs/[^~^:?*\[\\\s]+)(?P<suffix>(?:[~^][0-9]{0,9})*)')
 DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--no-renames', '--name-only', '-z')
 
 
@@ -45,16 +46,27 @@ def _base(base):
 
 
 def resolve_base(directory, rev):
-    """Resolve a caller's revision to a full commit with the same hardened, read-only Git environment."""
+    """Resolve an exact base with the hardened Git reader; no short names, so Git's name preferences never apply."""
     if not isinstance(rev, str) or not rev or rev.startswith('-') or len(rev) > 256 or any(
             char.isspace() or not char.isprintable() for char in rev):
-        raise core.ProtocolError('invalid_base', 'Base must be a SHA, branch or tag name; it cannot be blank, '
+        raise core.ProtocolError('invalid_base', 'Base must be a full SHA, HEAD or refs/... name; it cannot be blank, '
                                  'start with "-" or contain spaces or control characters')
+    match = REVISION.fullmatch(rev)
+    if not match:
+        raise core.ProtocolError('invalid_base', 'Base must be a full 40-character SHA, HEAD or a full ref name such as '
+                                 'refs/heads/NAME or refs/tags/NAME, optionally followed by ~N or ^N; convert an '
+                                 'abbreviated SHA with git rev-parse ABBREV')
+    name = match['name']
     try:
-        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet', rev + '^{commit}'))
+        # Capture the object ID first; the suffix then applies to it, never to a second name lookup.
+        # show-ref --verify is an exact lookup: an unborn HEAD fails instead of falling through to refs/*/HEAD.
+        oid = (core.git_read(directory, 'show-ref', '--verify', '--hash', name)
+               if name == 'HEAD' or name.startswith('refs/') else name)
+        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet',
+                                   _base(oid) + match['suffix'] + '^{commit}'))
     except core.ProtocolError:
-        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a SHA, branch or '
-                                 'tag (resolved locally with git rev-parse --verify REV^{commit})') from None
+        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a full SHA, HEAD '
+                                 'or an existing refs/... name') from None
 
 
 def evidence_skeleton(task, directory, base):
