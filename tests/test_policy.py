@@ -691,23 +691,83 @@ if __name__ == '__main__':
 
 
 class WorkflowTests(unittest.TestCase):
-    """The decision is a workflow obligation; the installed instructions must state it completely."""
-    def test_instructions_define_the_mandatory_policy_review(self):
+    """The decision is a workflow obligation. These guards pin its normative clauses, not just its vocabulary,
+    so an accidental edit of the installed resource is caught (RP-21). They cannot prove a host follows it."""
+    REQUIRED = [
+        # unresolved -> pending -> no upstream action
+        'Unresolved policy keeps P-POLICY pending and blocks upstream preparation, implementation and publication.',
+        '**STOP** upstream work when any relevant rule is prohibited or unresolved.',
+        # no local waiver; exceptions come only from the source project's authority
+        "The user's local authorization does not override the source project's policy: it can cover local "
+        'experimentation, never upstream publication.',
+        "(d) **source-authorized exception**: written permission from the source project's authority, with link and "
+        'provenance;',
+        # intended-actor eligibility
+        "eligibility needs a fresh read-only observation before preparation: the intended submitting account's "
+        'numeric identity (`gh api user`, run by that account) and its exact `admin` or `maintain` `role_name`',
+        'A different logged-in account proves nothing about the intended submitter.',
+        # freshness before implementation and publication
+        '6. Before implementation and again before any publication, run a fresh `inspect`. Then re-read every '
+        'manually reviewed source and exception.',
+        "If you cannot establish a source's contents again, it is unresolved.",
+        # hidden sources (RP-19)
+        'A `limits_reached` entry with `hides_sources: true` (shown by `limits_hide_sources`), or any '
+        '`omitted_sources` entry, is unresolved: P-POLICY stays pending and upstream preparation, implementation and '
+        'publication are blocked until every omitted candidate is read manually at the pinned revision or shown '
+        'inapplicable with evidence. A successful CLI run does not resolve it.',
+        # read first, even with no hints
+        '1. Before ranking or preparing any task, read in full every scanned source, every hint in context, and every '
+        'unassessed reference you can reach with your own read-only tools. Repeat this even when every count is zero.',
+    ]
+    WEAKENING = ('optionally', 'if convenient', 'may skip', 'may mark p-policy satisfied', 'or the local user',
+                 'is informational', 'any logged-in', 'when all relevant rules')
+
+    @staticmethod
+    def section(text):
+        text = ' '.join(text.split())
+        start = text.index('## Repository policy review (mandatory; not verifier-enforced)')
+        return text[start:text.index('## Start with discovery', start)]
+
+    def violations(self, text):
+        section = self.section(text)
+        problems = [f'missing clause: {clause[:60]}' for clause in self.REQUIRED if clause not in section]
+        problems += [f'weakening phrase: {word}' for word in self.WEAKENING if word in section.casefold()]
+        numbers = [section.find(f' {n}. ') for n in range(1, 7)]
+        if -1 in numbers or numbers != sorted(numbers):
+            problems.append('steps 1-6 are missing or out of order')
+        return problems
+
+    def installed(self):
         import importlib.resources
-        text = ' '.join(importlib.resources.files('agent_contribute').joinpath('instructions.md')
-                        .read_text('utf-8').split())
-        section = text[text.index('## Repository policy review'):]
-        section = section[:section.index('## ', 3)]
+        return importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8')
+
+    def test_installed_workflow_states_every_obligation(self):
+        text = self.installed()
+        self.assertEqual(self.violations(text), [])
         self.assertLess(text.index('## Repository policy review'), text.index('3. Choose the supported route'))
-        for phrase in ('mandatory', 'not verifier-enforced', 'repository_policy', 'before ranking or preparing',
-                       'false positive', 'inapplicable', 'compliant constrained workflow',
-                       'source-authorized exception', 'prohibited', '`unresolved`', 'P-POLICY',
-                       "does not override the source project's policy", 'STOP', 'admin', 'maintain',
-                       'intended submitting account', 'retrieval time', 'inventory_sha256',
-                       'even when every count is zero', 'never_inspected'):
-            with self.subTest(phrase):
-                self.assertIn(phrase.casefold(), section.casefold())
         self.assertNotIn('--ai-policy', text, 'the report is default-on; the old flag is not workflow guidance')
+
+    def test_guard_rejects_weakened_workflows(self):
+        text = ' '.join(self.installed().split())
+        mutants = {
+            'unresolved satisfies P-POLICY': text.replace('keeps P-POLICY pending and blocks',
+                                                          'may mark P-POLICY satisfied and never blocks'),
+            'STOP only when all prohibited': text.replace('when any relevant rule is prohibited or unresolved',
+                                                          'when all relevant rules are prohibited'),
+            'local user grants the exception': text.replace("from the source project's authority,",
+                                                            "from the source project's authority or the local user,"),
+            'freshness optional': text.replace('Before implementation and again before any publication, run a fresh',
+                                               'Before implementation, optionally run a fresh'),
+            'hidden sources informational': text.replace('is unresolved: P-POLICY stays pending',
+                                                         'is informational: P-POLICY may proceed'),
+            'any maintainer account suffices': text.replace('A different logged-in account proves nothing about the '
+                                                            'intended submitter.', 'Any logged-in maintainer account is enough.'),
+            'steps reordered': text.replace(' 6. Before implementation', ' 0. Before implementation'),
+        }
+        for name, mutant in mutants.items():
+            with self.subTest(name):
+                self.assertNotEqual(mutant, text, 'mutant did not apply')
+                self.assertTrue(self.violations(mutant), name)
 
 
 MALFORMED = ('See the [AI policy](https://[) and [rules](https://evil／policy.example/contributing) and '
