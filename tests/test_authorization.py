@@ -247,6 +247,23 @@ class AuthorizationTests(unittest.TestCase):
         self.assertFalse(result['historical_valid'])
         self.assertIn('Reviewed issue identity changed', result['errors'])
 
+    def test_each_route_field_must_name_the_source_repository(self):
+        for key, value in [('target_repository', 'acme/other'), ('head_repository', 'acme/other'),
+                           ('target_repository_id', 102), ('head_repository_id', 102)]:
+            with self.subTest(key=key):
+                task, client = candidate_task()
+                task['execution'][key] = value
+                result = self.check(task, client, host_context(task))
+                self.assertFalse(result['historical_valid'])
+                self.assertEqual(result['errors'], ['Only the same repository source/target/head route is supported'])
+
+    def test_repository_owner_login_must_match_the_canonical_name(self):
+        task, client = candidate_task()
+        client.metadata['owner']['login'] = 'mallory'
+        result = self.check(task, client, host_context(task))
+        self.assertFalse(result['historical_valid'])
+        self.assertEqual(result['errors'], ['Repository ID, canonical name or owner is unresolved'])
+
     def test_mandate_actions_cannot_exceed_reviewed_requested_actions(self):
         task, client = candidate_task()
         task['execution']['requested_actions'] = ['implement']
