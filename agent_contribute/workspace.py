@@ -16,10 +16,7 @@ def scope_check(task, directory, base=None):
     if errors:
         return result
     try:
-        core.require_worktree_root(directory)
-        core.require_safe_config(directory)
-        core.require_plain_index(directory)
-        head = core.current_head(directory)
+        head = core.open_checkout(directory)
         default = base is None
         base = result['base_commit'] = _base(task['source']['commit']) if default else _resolve(directory, base)
         try:
@@ -98,10 +95,7 @@ def evidence_skeleton(task, directory, base):
     """Prefill only facts Git observes; results stay unfilled so the draft cannot validate."""
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
-    core.require_worktree_root(directory)
-    core.require_safe_config(directory)
-    core.require_plain_index(directory)
-    head = core.current_head(directory)
+    head = core.open_checkout(directory)
     base = _resolve(directory, base)
     try:
         core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
@@ -115,9 +109,7 @@ def evidence_skeleton(task, directory, base):
     attestation = {'status': 'pending', 'reviewer': '', 'git_head': '', 'contract_sha256': '', 'notes': ''}
     skeleton = {'schema_version': version, 'contract_sha256': core.canonical_hash(task),
                 'git_head': head, 'git_tree': core.git_read(directory, 'rev-parse', head + '^{tree}'), 'base_commit': base,
-                'worktree_clean': not (core.git_read(directory, 'status', '--porcelain', '--untracked-files=all',
-                                                     '--ignore-submodules=all') or core.untracked_paths(directory)
-                                    or core.worktree_changes(directory, head)),
+                'worktree_clean': not core.worktree_dirty(directory, head),
                 'implementer': '',
                 'validations': [{'id': item['id'], 'argv': item['argv'], 'status': None, 'exit_code': None,
                                  'skipped': None, 'output': '', 'started_at': '', 'finished_at': '',
