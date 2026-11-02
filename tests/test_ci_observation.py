@@ -147,5 +147,24 @@ class CIObservationTests(unittest.TestCase):
                 self.assertEqual(plain[key], observed[key])
 
 
+
+class ObservationTargetTests(unittest.TestCase):
+    """A2-05: both observers share one prelude; with an invalid target neither names a head it did not observe."""
+    def test_invalid_target_or_head_leaves_head_sha_null_in_both_observers(self):
+        from agent_contribute import ci, core, signatures
+        task = {'source': {'repository': 'acme/photos', 'default_branch': 'main'},
+                'execution': {'target_repository': 'not a repository'}}
+        evidence = {'git_head': 'a' * 40}
+        for observe in (ci.observe, signatures.observe):
+            with self.subTest(observer=observe.__module__):
+                result = observe(task, evidence, client=object())
+                self.assertEqual((result['head_sha'], result['complete']), (None, False))
+                self.assertEqual(len(result['errors']), 1)
+                result = observe(dict(task, execution=None), {'git_head': 'bad'}, client=object())
+                self.assertEqual((result['head_sha'], result['errors']), (None, ['No valid evidence git_head to observe']))
+        self.assertEqual(core.observation_target(dict(task, execution={}), evidence),
+                         ({}, 'acme/photos', 'a' * 40, None))
+
+
 if __name__ == '__main__':
     unittest.main()

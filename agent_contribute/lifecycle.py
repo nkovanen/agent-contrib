@@ -141,6 +141,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result.update(contract_sha256=digest, source_identity={key: source[key] for key in
                   ('repository', 'repository_id', 'owner_id', 'issue', 'issue_id')}, live_complete=False)
     errors.extend(core.reviewed_contract_errors(task, '0.2'))
+    # Contract-only route checks hold with or without a mandate (A2-02); authorization.check repeats them for its
+    # own historical validity, so its copies are not listed twice below.
+    route = authorization.route_errors(task)
+    errors.extend(route)
     current = None
     live_duplicates = []
     try:
@@ -171,7 +175,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         errors.append('Live GitHub refresh failed: ' + str(exc))
     authority = authorization.check(task, host_context, client, now)
     result.update(user_authorization=authority, mandate_sha256=authority['mandate_sha256'])
-    historical_errors = list(errors) + authority['errors']
+    historical_errors = list(errors) + [error for error in authority['errors'] if error not in route]
     action_errors = historical_errors + authority['current_errors']
     disposition, waived, observed = None, set(), []
     if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':

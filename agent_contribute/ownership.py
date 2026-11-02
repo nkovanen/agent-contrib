@@ -21,13 +21,6 @@ def _event_key(item):
     return item['id'] if type(item.get('id')) is int else core.canonical_hash(item)
 
 
-def _days(value, now):
-    try:
-        return max(0, (now - dt.datetime.fromisoformat(value.replace('Z', '+00:00'))).days)
-    except (AttributeError, TypeError, ValueError, OverflowError):
-        return None
-
-
 def _login(value, what):
     return core.safe_text(remote.user(value, what)['login'], 100)
 
@@ -116,7 +109,7 @@ def ownership_signals(source, number, client, now=None, *, max_pages=core.MAX_PA
             match = pattern.search(body[:SCAN_LIMIT])
             if match:
                 start = max(0, match.start() - 80)
-                age = _days(created, now)
+                age = remote.days(created, now)
                 claims.append({'pattern': label, 'author': author, 'author_association': association,
                                'age_days': age, 'stale': age is None or age > STALE_DAYS,
                                'untrusted_excerpt': core.safe_text(body[start:start + 280], 280)})

@@ -161,6 +161,16 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- `--observe-ci` and `--observe-signatures` share one target/head prelude.
+  With an evidence head but an invalid target repository,
+  `ci_observation.head_sha` is now `null`, like `signature_observation`, since
+  nothing was observed at that head. A missing `execution` object no longer
+  raises in the CI observer. Readiness and exit codes are unchanged (A2-05).
+- The installed workflow runs `drift` before any authorization request and
+  before publication, and names `--observe-ci`/`--observe-signatures` as
+  report-only (A2-10).
+- `--format text authorization-request` lists its preflight errors and
+  unresolved fields, so a request that is not ready says why (A2-08).
 - Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
   repository; merged PRs elsewhere move to `downstream_references` (E-11: a
   downstream workaround was reported as a possible fix). Cross-referenced PRs
@@ -279,6 +289,11 @@ channel or runtime model provider is added.
   `temp_dir_error` instead of an unstructured input error (G-20).
 - Every Git read sets `GIT_ATTR_NOSYSTEM=1`, so a system-wide gitattributes file
   cannot shape how checkout files are compared (G-19).
+- Schema 0.2 `verify` lists contract route errors (pending mode, invalid or
+  equal refs, a different target or head repository) in its errors and every
+  stage's blockers even without a host context, as `authorization-request`
+  already did. With a mandate they appear once. Only blockers are added
+  (A2-02).
 - The temporary index for the content check is created under a temporary root
   whose real path is outside the worktree and its Git directories (falling
   back from `TMPDIR` to `/tmp` or `/var/tmp`, else `unsafe_temp_dir`), so a

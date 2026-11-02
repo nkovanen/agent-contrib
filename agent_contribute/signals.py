@@ -5,7 +5,7 @@ import functools
 import re
 import statistics
 
-from . import core
+from . import core, remote
 
 SCAN_LIMIT = 65536
 MAX_HINTS = 20
@@ -15,7 +15,7 @@ MARKERS = {'checklist': re.compile(r'(?m)^[ \t]{0,8}[-*] \[[ xX]\]'),
            'expected/actual sections': re.compile(r'(?im)^[ \t#>*_]{0,8}(expected|actual)\b'),
            'reproduction steps': re.compile(r'(?i)\b(steps to reproduce|to reproduce|reproduction)\b'),
            'code block': re.compile(r'```')}
-MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
+MAINTAINER_ASSOCIATIONS = remote.MAINTAINER_ASSOCIATIONS
 # One unbounded class: each match is a complete run, never cut short. module_hint validates the segments.
 # Identifier characters outside \w (combining marks, ℘, ·) are not matched; _adjoins refuses such names whole.
 MODULE_TOKEN = re.compile(r'[\w.:]+')
@@ -152,20 +152,13 @@ def acceptance_clarity(text):
             'explanation': 'Structure found: ' + ', '.join(found) if found else 'No checklist, expected/actual, reproduction steps or code block'}
 
 
-def _days(value, now):
-    try:
-        return max(0, (now - dt.datetime.fromisoformat(value.replace('Z', '+00:00'))).days)
-    except (AttributeError, TypeError, ValueError, OverflowError):
-        return None
-
-
 def _count(value):
     return value if type(value) is int and value >= 0 else None
 
 
 def activity(issue, now):
     reactions = issue.get('reactions')
-    value = {'age_days': _days(issue.get('created_at'), now), 'updated_days': _days(issue.get('updated_at'), now),
+    value = {'age_days': remote.days(issue.get('created_at'), now), 'updated_days': remote.days(issue.get('updated_at'), now),
              'comments': _count(issue.get('comments')),
              'reactions': _count(reactions.get('total_count')) if isinstance(reactions, dict) else None}
     return {'value': value, 'explanation': 'From the issue list payload; missing or malformed fields are null'}
@@ -181,6 +174,8 @@ def maintainer_signal(issue):
 
 
 def _timestamp(value):
+    # Deliberately lax, unlike authorization.timestamp: a report-only sample tolerates any timezone-aware
+    # fromisoformat form (wider on Python 3.11+), and a value it rejects makes the report incomplete, never a gate.
     try:
         parsed = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
     except (AttributeError, TypeError, ValueError):
@@ -221,6 +216,7 @@ def responsiveness(repository, client):
             merged_at = None if pr['merged_at'] is None else _timestamp(pr['merged_at'])
             if pr['merged_at'] is not None and (merged_at is None or not created <= merged_at <= closed):
                 raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed or outside its lifetime')
+            # Only user.type marks a bot here; remote.user also treats a '[bot]' login suffix as a bot (A2-06).
             if kind == 'Bot' or association in MAINTAINER_ASSOCIATIONS:
                 continue
             days.append((closed - created).total_seconds() / 86400)

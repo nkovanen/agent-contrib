@@ -781,7 +781,9 @@ line reads `not evaluated; see Errors` and the schema errors follow. JSON still
 contains every stage. `scope-check` lists each violating path
 and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
 informational changes (an advanced default branch, PRs no longer open) apart.
-`instructions` prints a version line and then the
+`authorization-request` shows whether the request is ready for issuance, that it
+is unsigned and grants nothing, the contract hash, and each preflight error and
+unresolved field. `instructions` prints a version line and then the
 workflow Markdown unchanged, so it can be read without unwrapping JSON. Other
 commands show top-level scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.

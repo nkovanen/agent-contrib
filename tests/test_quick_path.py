@@ -94,6 +94,22 @@ class QuickPathGateTests(unittest.TestCase):
         self.assertIn('Never mark the PR ready, merge or release', final)
 
 
+class DriftAndObservationTests(unittest.TestCase):
+    """A2-10: the workflow names drift where a stale contract matters, and the observation flags as report-only."""
+    def test_quick_path_runs_drift_before_authorization_and_publication(self):
+        self.assertIn('Run `agent-contrib drift task.json` before asking for any authorization', steps()[5])
+        self.assertIn('Rerun `drift` first', steps()[7])
+        self.assertIn('`--observe-ci`/`--observe-signatures` are optional reports', steps()[7])
+
+    def test_detail_explains_drift_and_report_only_observations(self):
+        text = ' '.join(resource('instructions.md').split())
+        for phrase in ('`drifted: true` means re-review and re-prepare the contract',
+                       'exit 1 with `complete: false` means the change is unknown, which is not a pass',
+                       'They never change gates or the exit code'):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+
 class DeduplicationTests(unittest.TestCase):
     def test_canonical_json_recipe_and_precommit_rule_are_stated_once(self):
         text = ' '.join(resource('instructions.md').split())

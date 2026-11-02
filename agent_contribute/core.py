@@ -1003,6 +1003,36 @@ def current_head(directory):
     return head
 
 
+def observation_target(task, evidence):
+    """Shared prelude of the report-only verify observers: (execution, target, head, error).
+
+    head is None whenever error is set, so an observer never names a head it did not observe."""
+    execution = task.get('execution') or {}
+    target = execution.get('target_repository') or task['source']['repository']
+    head = evidence.get('git_head') if isinstance(evidence, dict) else None
+    if not isinstance(head, str) or not SHA.fullmatch(head):
+        return execution, target, None, 'No valid evidence git_head to observe'
+    try:
+        parse_repository(target)
+    except ProtocolError as exc:
+        return execution, target, None, str(exc)
+    return execution, target, head, None
+
+
+def open_checkout(directory):
+    """The hardened entry every evidence checkout reader uses, in this order; returns the captured HEAD."""
+    require_worktree_root(directory)
+    require_safe_config(directory)
+    require_plain_index(directory)
+    return current_head(directory)
+
+
+def worktree_dirty(directory, head):
+    """Tracked, untracked or content-only changes against the captured HEAD (short-circuits in this order)."""
+    return bool(git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
+                untracked_paths(directory) or worktree_changes(directory, head))
+
+
 def implementation_paths(directory, base, head=None):
     # Commit-to-commit only: no worktree is read, so no submodule command can start, and =none keeps gitlink
     # paths visible to the scope check. Every index or worktree diff/status uses --ignore-submodules=all.
@@ -1064,16 +1094,12 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     if not evidence['worktree_clean']:
         errors.append('Evidence was not recorded from a clean worktree')
     try:
-        require_worktree_root(directory)
-        require_safe_config(directory)
-        require_plain_index(directory)
-        head = current_head(directory)
+        head = open_checkout(directory)
         tree = git_read(directory, 'rev-parse', head + '^{tree}')
         # The full ref, exactly: --short would accept refs/tags/NAME for a reviewed branch NAME.
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
-                 untracked_paths(directory) or worktree_changes(directory, head))
+        dirty = worktree_dirty(directory, head)
         try:  # every read that needs the base commit and its history
             if has_gitlink(directory, head, evidence['base_commit']):
                 errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')

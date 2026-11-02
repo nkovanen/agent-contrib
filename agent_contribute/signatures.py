@@ -136,22 +136,14 @@ def local_commits(directory, base, head):
 
 
 def observe(task, evidence, repo_dir=None, client=None):
-    execution = task.get('execution') or {}
-    target = execution.get('target_repository') or task['source']['repository']
+    execution, target, head, error = core.observation_target(task, evidence)
     branch = execution.get('base_ref') or task['source']['default_branch']
-    result = {'repository': target, 'head_sha': None, 'complete': False, 'github_verification': None,
+    result = {'repository': target, 'head_sha': head, 'complete': False, 'github_verification': None,
               'required_signatures': None, 'local_commits': {'status': 'not_requested'}, 'errors': [],
               'notice': NOTICE}
-    head = evidence.get('git_head') if isinstance(evidence, dict) else None
-    if not isinstance(head, str) or not core.SHA.fullmatch(head):
-        result['errors'].append('No valid evidence git_head to observe')
+    if error:
+        result['errors'].append(error)
         return result
-    try:
-        core.parse_repository(target)
-    except core.ProtocolError as exc:
-        result['errors'].append(str(exc))
-        return result
-    result['head_sha'] = head
     client = client or core.GitHub()
     reads = {'github_verification': lambda: github_verification(client, target, head),
              'required_signatures': lambda: required_signatures(client, target, branch)}
