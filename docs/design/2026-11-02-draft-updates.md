@@ -1,7 +1,7 @@
 # Updating a recognized draft after review (#21): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, **revision 2**. Review round 1 (DU-01 to DU-05) is resolved in [Review resolution](#review-resolution). Design only; no code in this change.
+- Status: proposal, **revision 3**. Review rounds 1 and 2 (DU-01 to DU-07) are resolved in [Review resolution](#review-resolution). Design only; no code in this change.
 - Base: `rsi/v03-land` at `e454848` (unreleased v0.3.0 candidate: task and evidence schemas 0.1 and 0.2, host-context 0.1 and 0.2).
 - Issue: [#21](https://github.com/nkovanen/agent-contrib/issues/21), product-map key F3. Depends on #3. Uses #20 (`feedback`).
 
@@ -83,12 +83,14 @@ Comparisons use GitHub `compare/{x}...{y}` on full SHAs, interpreting only `stat
 | State | Required facts | `draft_update.status` / `next_action` | Stage exit 0 |
 | --- | --- | --- | --- |
 | No record | as today | (absent) / as today | as today |
-| **Round open** | `U` and `I(F)` below, record current | `implement` / `implement_update` | implementation |
+| **Round open** | `U` and `I(F)` below, record current. Evidence is not consulted. | `implement` / `implement_update` | implementation |
 | **Ready to push** | round open, plus `T(E)`, plus `E` strictly descends from `F` locally, plus no merge commits in `F..E` | `push` / `push_update` | draft |
 | **Updated draft recognized** | `U`, `I(P)` with `P == E`, `P != F`, `compare F...P == ahead`, `T(E)`, no merge commits in `F..E` | `recognized` / `none`; `publication.verified: true` | draft; completion with a valid sign-off |
-| **Blocked** | anything else: `P` is neither `F` nor `E`, `P == F == E`, `diverged` or `behind`, a forbidden event, a wrong PR, stale evidence, an expired record before the push, an invalid record | `blocked` or `invalid` / `resolve_blockers` | none |
+| **Blocked** | anything else: `P` is neither `F` nor `E` (when evidence is supplied), `diverged` or `behind`, a forbidden event, a wrong PR, stale evidence at a pushed head, an expired record before the push, an invalid record | `blocked` or `invalid` / `resolve_blockers` | none |
 
-**Unchanged draft is not an update.** `P == F == E` with old evidence is never "recognized" under a record (DU-03). Without a record, the unchanged draft at `A` is recognized exactly as today. For the post-round audit, see Host lifecycle.
+**Unchanged draft is not an update.** With `P == F`, any supplied evidence (including old evidence at `E == F`) is ignored for round open. Such a call reports round open, or blocked if `U` or `I(F)` fails, and never push, updated recognition or completion (DU-03). Without a record, the unchanged draft at `A` is recognized exactly as today.
+
+**`A...F` may be `identical`** in every state, including updated recognition after the first round (`A == F`). Only `F...P` must be `ahead` for recognition.
 
 ### `U`: authority and source facts (shared)
 
@@ -99,7 +101,7 @@ All of these are required. Only the original mandate's expiry is waived.
 3. The `draft_update` record is schema-valid, and every binding, the event hash and the distinct identities hold.
 4. Currency: `issued_at <= now < expires_at` is required for round open and ready to push, judged after every blocking read. After the push, the record may have expired.
 5. Overlaps: `without_own(live_duplicates + prepared_duplicates, own)` is empty, where `own` is the PR identified in `I`. Every unrelated or prepared overlap still blocks. `overlap_dispositions` stays inert and never waives anything.
-6. The verify result is void if the host's status for the mandate or the record is `revoked` or `superseded`. This is a host rule; the stateless CLI cannot see it.
+6. **Operative round only (DU-02).** The result echoes the record's hash. It is operative only if that hash equals the host's **current-round pointer** for (contract, mandate, PR) and the mandate is not `revoked` or `superseded`. Otherwise it is void for every gate: round open, push, recognition and completion. This is a host rule; the stateless CLI cannot see the pointer.
 
 ### `I(X)`: identity of the own draft at head `X`, with no evidence needed
 
@@ -107,13 +109,17 @@ All of these are required. Only the original mandate's expiry is waived.
 2. The exact head/base history has exactly one PR, the claimed one. List and detail agree. It is open, draft and unmerged, authored by the bound actor, with an unchanged route and URL, created inside the mandate interval.
 3. Live `P == X`. Then `compare A...X` is `identical` or `ahead`, and `compare A...F` is `identical` or `ahead`.
 4. Timeline: the paginated `repos/{repo}/issues/{n}/timeline` has no `head_ref_force_pushed`, `head_ref_deleted`, `head_ref_restored`, `closed`, `reopened`, `merged`, `ready_for_review` or `convert_to_draft` event.
-5. After the timeline and compare reads, a second detail read must show the same head SHA, PR ID, state and draft flag, so there is no mid-read race.
+5. **Final re-read (DU-07).** After the timeline and compare reads, the PR detail is read again and parsed with the full publication shape validation (`pr_identity._pr_facts(detail=True)`). The resulting **complete normalized facts** must equal those from the first read:
+   - both repository names and IDs, the head and base refs, and the URL;
+   - the PR number and ID, the author, the head SHA, the creation and merge facts, and the state and draft flag.
+
+   The route is then rechecked against the original binding (`_route_matches`). A base retarget, head move or malformed detail visible to the final read blocks. Snapshots are still not atomic; a change after the final read needs re-verification.
 
 ### `T(E)`: fresh technical evidence at `E`
 
 1. `core.check_evidence` passes unchanged, with `git_head == E`, a clean worktree, the reviewed `head_ref`, scope, and validations after `E`'s committer time.
 2. **Update-only base rule (DU-04):** `evidence.base_commit == task.source.commit` exactly. A newer authenticated base, which is allowed for creation, blocks an update. If creation used a newer base, the update needs a re-prepared contract.
-3. **Update-only history rule:** `rev-list --merges F..E` is empty, through the hardened `core.git_read`. A merge of the newer default branch, or of anything else, blocks even when its net paths are allowed. Non-merge commits are judged by the existing path scope and the independent review.
+3. **Update-only history rule:** `rev-list --merges --max-count=1 F..E` is empty, through the hardened `core.git_read`. It stops at the first merge, and a traversal error fails closed. A merge of the newer default branch, or of anything else, blocks even when its net paths are allowed. Non-merge commits are judged by the existing path scope and the independent review.
 4. Every validation's `started_at` is at or after `draft_update.issued_at`.
 5. The independent review is valid at `E`: bound to `E` and the contract, by a reviewer other than the implementer, and after the validations (existing rule).
 
@@ -124,25 +130,32 @@ The legacy no-record path keeps today's base and scope behaviour unchanged.
 These extend "Status and action-time checks" in `docs/host-authorization.md`. They ship with slice 1, before any authority-bearing slice (DU-02).
 
 1. **Status per `draft_update_sha256`:** `active`, `consumed`, `revoked` or `superseded`. Expiry ends permission for new actions only.
-2. **Current round.** At most one round per (contract, mandate, PR) is `active`. Before issuing a new round, the host marks the previous round `superseded`: it must be `consumed` and its updated head observed as recognized. Otherwise the host `revoke`s it. Revoking also stops the worker's session for that round.
+2. **Current-round pointer.** Per (contract, mandate, PR) the host keeps exactly one pointer to the current round.
+   - Only the record it points to is operative for any gate (`U.6`).
+   - Opening a new round first marks the previous round `superseded` and moves the pointer. A `superseded` record is **archival**: kept for audit, operative for nothing. Completion of the previous head, including with an already-issued final sign-off, is no longer possible: the host marks any unconsumed sign-off for it void.
+   - Revoking an unconsumed current round stops the worker's session for it. The host may then explicitly restore the pointer to the previous consumed round, as a recorded host decision.
+   - A worker-supplied record never moves the pointer.
 3. **Issuing a round.**
    - The host renders the approval view from its own copy of the contract, plus the live PR, plus `F` (read from the live PR at issuance), plus the reviewed feedback it chooses to show.
    - It states the delegation: scope, the PR and ref, **one push**, and the window.
    - It retains the view, the approval text and the record hash outside worker-writable roots.
-4. **Consuming the push (single use).** The host pushes only when all of these hold:
-   - `verify --stage draft` reports `push_update` for exact head `E` under an `active`, unexpired round;
-   - the push is exactly `E` to `refs/heads/{head_ref}` as a fast-forward (never `--force`);
-   - the round is still `active` at push time.
+4. **Consuming the push: an exclusive, durable reservation (DU-06).** A round's status moves `active` → `reserved(F→E)` → `consumed`, or `active` → `reserved(F→E)` → `revoked`.
+   1. Under an exclusive host lock keyed to the round, protected against concurrent consumers and concurrent revoke or replacement, the host checks that the round is current, `active` and unexpired. It checks that a `verify --stage draft` result reports `push_update` for exact head `E`. It then durably records `reserved(F→E)` before any remote operation. A second consumer finds the round `reserved` and stops.
+   2. It submits one conditional update: `git push --force-with-lease=refs/heads/{head_ref}:{F} {remote} {E}:refs/heads/{head_ref}`. The lease makes the update fail unless the remote tip is exactly `F`, so the predecessor must be `F` itself, not any ancestor of `E`. Because `E` strictly descends from `F`, it is a fast-forward and records no force-push event. A plain `--force` is never used.
+   3. Reconciliation, still under the lock:
+      - **Success:** a live read shows `P == E`; mark the round `consumed` and retain `F`, `E` and the push time.
+      - **Clear failure, live `P == F`:** the reservation stays `reserved(F→E)`. The host may retry only this exact operation.
+      - **Uncertain outcome** (timeout, lost response, crash after the remote update): fail closed and stay `reserved`. Reconcile by reading the live head: `P == E` means consumed; `P == F` means not pushed. Anything else revokes the round and goes to audit.
 
-   It then marks the round `consumed`, and retains `F`, `E` and the push time.
-5. **Recognition and completion** accept a round that is `consumed`, or `superseded` after consumption, and never one that is `revoked`. The `verify` result must echo the round's hash. A result that echoes a `revoked` round, or an `active` round whose push was never consumed, is void for recognition.
+      A reservation never returns to `active`, and it never admits another candidate head.
+5. **Recognition and completion** accept only the **current** round, and only once it is `consumed` with its retained `E` equal to the live head. A result echoing any other hash is void: `superseded`, `revoked`, or a current round still `active` or `reserved`.
 6. **Final sign-off ordering.** The host issues final sign-off for head `E` only after all of these:
-   - it observed a `verify` result with `draft_update.status: recognized` for exactly `E` under the latest consumed round;
+   - it observed a `verify` result with `draft_update.status: recognized` for exactly `E`, echoing the **current** round's hash, after that round was `consumed`;
    - the independent review at `E` is valid;
    - its own retained push time for `E`.
 
    The CLI additionally checks `final_signoff.issued_at > draft_update.issued_at`, plus the existing review ordering. The push time itself is host data.
-7. **Audit.** The live PR head and `GET repos/{repo}/pulls/{n}/commits` are compared with the retained creation head and every consumed round's `F` and `E`. A head that no consumed round explains voids acceptance.
+7. **Audit.** The host retains the exact chain: the creation head `A`, then each consumed round's `F → E`. Each `F` must equal the previous tip, and the live head must equal the last retained `E`. A head the chain does not explain voids acceptance. `GET repos/{repo}/pulls/{n}/commits` is **not** used as an inventory: GitHub returns at most 250 commits there. It is only a cross-check that fails closed when it reaches that limit.
 
 ## Interplay
 
@@ -163,16 +176,18 @@ These extend "Status and action-time checks" in `docs/host-authorization.md`. Th
 
 | Attack or race | Outcome |
 | --- | --- |
-| A second push under the same record (`P = E`, new `E2`) | The pre-push gate needs `P == F`, so no `push_update`. A host that pushes anyway violates single use. Recognition at `E2` cannot distinguish this statelessly, so the host audit (rule 7) voids it. |
+| A second push under the same record (`P = E`, new `E2`) | The pre-push gate needs `P == F`, so no `push_update`. The host's reservation is already `consumed` and refuses. An out-of-band push fails the audit chain (rule 7). |
+| Two consumers race with `E1 < E2` from the same `F` | The exclusive reservation admits one. The other finds `reserved` or `consumed`. The lease (`F`) makes a late second push fail even outside the lock. |
+| A crash or lost response after the remote update | The round stays `reserved(F→E)` and is reconciled from the live head. It never reopens for another candidate. |
 | Reusing a record for another PR, contract or mandate | Bound IDs and hashes differ: invalid. |
-| An old genuine round `U1` supplied after `U2` (rollback) | The CLI accepts the bindings, but the host status `superseded` or `revoked` voids the result (rule 5). Only the current round's hash is valid. |
-| A no-op round (`P == F == E`, old evidence) | Blocked: an update needs `P != F`, and the validations must post-date the round. |
+| An old genuine round `U1` supplied after `U2` (rollback), with `U2` active, reserved or consumed | The CLI accepts `U1`'s bindings, but the echoed hash is not the current-round pointer, so the result is void for every gate (`U.6`, rule 5). `U1`'s unconsumed sign-off was voided when `U2` opened (rule 2). |
+| A no-op round (`P == F == E`, old evidence) | At most round open. Never push, recognition or completion: an update needs `P != F`, and the validations must post-date the round. |
 | Someone else pushes to the branch | `P` is neither `F` nor `E`, or the evidence doesn't match `P`: blocked. |
 | A force push, ref delete or restore, close or reopen, ready-for-review | A forbidden timeline event blocks, even when the final head descends. |
 | A retarget of the base and back | Only the current base identity is checked (`base_ref_changed` is on the issue-events endpoint, not the timeline). Historical retargeting is prevented and audited by the host; it does not change the tested tree. |
 | A merge of the newer base, including one with only allowed paths | Blocked by the update-only base rule and the no-merges rule. |
 | A false creation head `A` in the claim | It must be an ancestor of `F` and `P`. Rewriting is caught by the timeline. The host retains the true `A`. |
-| A head that moves during the reads | The second detail read must match, otherwise blocked. Snapshots are not atomic, so re-verify. |
+| A head move or base retarget during the reads | The full normalized final re-read and route recheck block it (`I.5`). Snapshots are not atomic, so re-verify after the final read. |
 
 ## Read bounds and parsing
 
@@ -184,7 +199,8 @@ These extend "Status and action-time checks" in `docs/host-authorization.md`. Th
   - Event types not on the denylist are allowed, because GitHub adds types.
 
   The denylist plus host prevention is the stated guarantee. A successful listing is an observation, not an authenticated event log.
-- **Compare.** Only full SHAs, in the stated order; only `status` is interpreted. It is never cached: the content cache's allowlist excludes it.
+- **Compare.** Only full SHAs, in the stated order; only `status` is interpreted. Requirement for any response cache, present or future: compare, PR, timeline and other mutable or authority-bearing reads are never served from a cache. The opt-in content cache in #27 serves only blob-verified file contents.
+- **Coexistence.** Whole-context schema validation and the pairwise event-identity rules apply to every present section. A valid-shaped `overlap_dispositions` section stays report-only, as in the baseline.
 - **Expiry.** The record and final sign-off are evaluated after every blocking read. The host re-checks the round's status at push time.
 
 ## Compatibility
@@ -198,11 +214,11 @@ These extend "Status and action-time checks" in `docs/host-authorization.md`. Th
 
 All tests use fixtures: fake PR, compare, timeline and detail responses, and temporary Git repositories. **State-table cases**, each asserting the state, `next_action` and stage exits:
 
-1. `A = F = P = E` (old evidence) under a record: blocked, never recognized.
-2. `A < F = P = E`: blocked.
+1. `A = F = P = E` (old evidence) under a record: round open at most; never push, recognized or completion.
+2. `A < F = P = E`: as 1.
 3. `A = F = P`, `E > F`, with fresh evidence: push.
 4. `P = E > F`, fresh: recognized.
-5. `P = E = F`: blocked.
+5. `P = E = F` with a non-current record: blocked.
 6. `P > E`, and `P` unrelated: blocked.
 
 **Authority:**
@@ -225,22 +241,29 @@ All tests use fixtures: fake PR, compare, timeline and detail responses, and tem
 
 14. Each forbidden timeline event alone. Pagination at the limit. A repeated identity. A malformed item. A `committed` item without a SHA.
 15. Compare `diverged` or `behind`, for both `A...F` and `F...P`; compare errors; a malformed status.
-16. A head moving between the first and second detail reads.
+16. Between the first and final detail reads: a head move, a base retarget to another branch with every other fact equal, and a malformed final detail. Each blocks.
 
 **Sign-off:**
 
 17. A sign-off for `A` after the update; a sign-off issued before the round; a valid sign-off at the recognized `E` completes.
 
+**Host issuer** (reviewed when an issuer ships; documented in slice 1):
+
+21. `U1` consumed, then `U2` active: supplying `U1` with its unexpired sign-off is void. The same after `U2` is consumed.
+22. Parallel consumers with `E1 < E2`: exactly one push.
+23. A crash after the remote update, and a lost response: the round stays `reserved` and reconciles from the live head, with no second candidate.
+24. A lease failure when the remote tip is not `F`.
+
 **Other:**
 
 18. Unchanged prerequisites, policy, instructions and route each still block in every update state. Missing evidence blocks push and recognition but not round open.
 19. Without a record: byte-identical JSON and GET traces versus the parent.
-20. Mutants, each to be killed: drop `P != F`; accept `identical` for `F...P`; drop the merge rule; drop base equality; waive all `current_errors` instead of mandate expiry only; drop own-only overlap filtering; drop the second detail read; drop the sign-off ordering rule.
+20. Mutants, each to be killed: drop `P != F`; accept `identical` for `F...P`; drop the merge rule; drop base equality; waive all `current_errors` instead of mandate expiry only; drop own-only overlap filtering; reduce the final re-read to head, ID, state and draft; drop the route recheck; drop the sign-off ordering rule.
 
 ## Slices
 
 1. **Inert schema plus host requirements.** The host-context 0.2 `draft_update` section, record checks (bindings, event, interval, pairwise identities), and `status: not_evaluated`. The output schema key. The **issuer requirements above** go into `docs/host-authorization.md`. No gate change.
-2. **Recognition after a push.** The `I`, `T`, compare, timeline, second-read, base and merge rules. `publication.verified` at the updated head. Sign-off ordering.
+2. **Recognition after a push.** The `I`, `T`, compare, timeline, full final re-read, base and merge rules. `publication.verified` at the updated head. Sign-off ordering. This slice is authority-bearing. It ships only together with the slice 1 host obligations (pointer, reservation, audit), and successful historical recognition grants no new publication capability.
 3. **Pre-push readiness.** `implement_update` and `push_update` with the complete conjunctions, and the stage gates and text summaries.
 4. **Workflow.** The `instructions.md` loop, and `authorization-request --draft-update` (an unsigned envelope, `null` human fields, an approval view rendered by the host). An acceptance trial with a real host-issued round.
 
@@ -250,8 +273,17 @@ All tests use fixtures: fake PR, compare, timeline and detail responses, and tem
 | --- | --- | --- |
 | DU-01: multiple pushes conflict with the pre-push gate | Confirmed. With `F = A`, a second push has `P = B != F`, so `push_update` fails, yet revision 1's recognition row accepted `P = E = C`. | D2 changed to **one host-consumed push per record**. The only authorized transition is `F` to `E` after `push_update`. A further round needs a new record from the recognized head. The replay table states the stateless limit and the host audit that voids an unauthorized second push. |
 | DU-02: no host lifecycle for the record | Confirmed. `host-authorization.md` tracks status per mandate only. A rollback to an older genuine round was undetectable, and sign-off could precede the push. | Normative issuer rules: status per record hash (active, consumed, revoked, superseded), one current round, supersession only after consumption and recognition, single-use push, void results for revoked or superseded rounds, sign-off after observed recognition of `E`, and an audit of every consumed round. These ship in slice 1, before authority-bearing code. The CLI adds `final_signoff.issued_at > draft_update.issued_at`. |
-| DU-03: a no-op was accepted as an update | Confirmed. `A = F = P = E` with old evidence passed every revision 1 predicate. | Recognition now needs `P == E`, `P != F` and `compare F...P == ahead`. `identical` is allowed only for `A...F`, and only in the open and push states. Validations must start after the round's `issued_at`. Cases 1–6 pin the boundary. |
+| DU-03: a no-op was accepted as an update | Confirmed. `A = F = P = E` with old evidence passed every revision 1 predicate. | Recognition now needs `P == E`, `P != F` and `compare F...P == ahead`. `identical` is allowed only for `A...F` (in every state, including the first updated recognition where `A == F`), never for `F...P` in recognition. Validations must start after the round's `issued_at`. Cases 1–6 pin the boundary. |
 | DU-04: the claimed base and merge rejection was not real | Confirmed against `core.check_evidence` (`core.py:878-916`): a newer authenticated base is accepted, and scope is path-only. | Update-only rules: `evidence.base_commit == task.source.commit` exactly, and no merge commits in `F..E` (hardened `rev-list --merges`). The claim that the path scope rejects such merges is removed. Legacy behaviour is unchanged. Test 13 covers a merge with only allowed paths. |
 | DU-05: incomplete update-readiness conditions | Confirmed. The implementation gate (`lifecycle.py:228-252`) also needs a current mandate, `implement`, and no duplicates (the own PR counts). | Complete conjunctions `U`, `I(X)` and `T(E)`. Only the original mandate's expiry is waived. Historical validity and `create_draft` are required, and the record must be current. Own-PR-only exemption via `without_own`; every unrelated or prepared overlap still blocks; dispositions stay inert. Identity at `F` needs no evidence. Tests 7, 11 and 18 cover these. |
 | Attack surface: event coverage, retargeting, timeline identities, compare, races | Accepted. | `ready_for_review` and `merged` were added to the denylist. Retargeting is narrowed to current base identity plus host prevention. Typed timeline identities and minimum shapes. Compare uses status only and is never cached. A second detail read after the added reads. Expiry is judged after blocking reads and again at push time. |
 | Attack surface: `to_head` semantics | Accepted. | D3: no exact `to_head` approval. The approval view states the delegation (scope, PR and ref, one push, window). The exact published content is bound by evidence, independent review and final sign-off at `E`, the sign-off issued after the host observed `E`'s publication. This is not advertised as exact-content consent. |
+
+### Round 2
+
+| Finding | Verified | Resolution |
+| --- | --- | --- |
+| DU-02 (narrowed): `superseded` was both accepted and void | Confirmed. Revision 2's `U.6` voided `superseded`, but host rule 5 accepted `superseded` after consumption for completion. | One **current-round pointer** per (contract, mandate, PR). Only the pointed-to record is operative for any gate; `superseded` is archival only. Opening a new round voids the previous head's unconsumed sign-off. Pointer restore after revoking an unconsumed round is an explicit host decision. Rules 2, 5 and 6, `U.6` and the replay row now agree. Host tests 21 cover `U1` consumed with `U2` active and with `U2` consumed. |
+| DU-06: check, push, then consume was not exclusive | Confirmed. Two consumers could each pass the `active` check and push `E1`, then `E2`, both fast-forwards. | An exclusive, durable reservation `active → reserved(F→E) → consumed / revoked` under a lock keyed to the round, recorded before the push. `--force-with-lease=…:{F}` makes the remote predecessor exactly `F`. Uncertain outcomes fail closed and reconcile from the live head. A reservation never returns to `active` or admits another head. Tests 22–24. |
+| DU-07: the final re-read checked only four fields | Confirmed. A base retarget leaves head SHA, ID, state and draft equal. | `I.5` re-parses the final detail with the full `_pr_facts(detail=True)` validation, requires equality of all normalized facts, and rechecks the route against the binding. Test 16 adds the retarget and malformed-detail cases; mutant list updated. |
+| Notes: state table, `A...F`, commits endpoint, merge check, cache wording, coexistence, slice 2 | Accepted. | Round open ignores evidence (old `P == F == E` gives at most round open). `A...F` may be `identical` in every state. The audit uses the retained exact `F → E` chain; the 250-commit `pulls/{n}/commits` is only a fail-closed cross-check. The merge check uses `--max-count=1`. No-cache is stated as a requirement for any cache. Whole-context validation and pairwise identities still apply. Slice 2 ships only with the slice 1 host obligations. |
