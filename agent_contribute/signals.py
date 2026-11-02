@@ -20,6 +20,7 @@ MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
 MODULE_TOKEN = re.compile(r'(?<![A-Za-z0-9_./\\:-])[A-Za-z_][A-Za-z0-9_.:]{0,299}')
 MODULE_SEPARATOR = re.compile(r'::|\.')
 MAX_SEGMENTS = 16
+MAX_TOKEN = 300
 RUST_PREFIXES = {'crate', 'self', 'super'}
 PACKAGE_FILES = {'__init__.py', 'mod.rs'}
 AMBIGUOUS = object()
@@ -28,7 +29,11 @@ MIN_EXTERNAL = 5
 
 @functools.lru_cache(maxsize=1)
 def module_index(paths):
-    """Module suffix (two or more segments, slash-joined) -> its single file, or AMBIGUOUS. One build per tree."""
+    """Module suffix -> its single file, or AMBIGUOUS. One build per tree.
+
+    Only queryable suffixes are stored: 2 to MAX_SEGMENTS segments and at most MAX_TOKEN characters,
+    so memory stays linear in the tree size however deep its paths are.
+    """
     index = {}
     for path in paths:
         parts = path.split('/')
@@ -40,9 +45,10 @@ def module_index(paths):
         if name in PACKAGE_FILES or stem == 'index':
             keys.append(parts[:-1])
         for key in keys:
-            for start in range(len(key) - 1):
+            for start in range(max(0, len(key) - MAX_SEGMENTS), len(key) - 1):
                 suffix = '/'.join(key[start:])
-                index[suffix] = path if index.get(suffix, path) == path else AMBIGUOUS
+                if len(suffix) <= MAX_TOKEN:
+                    index[suffix] = path if index.get(suffix, path) == path else AMBIGUOUS
     return index
 
 

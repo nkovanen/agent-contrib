@@ -196,6 +196,21 @@ class ModuleNameTests(unittest.TestCase):
             signals.issue_signals({'title': 't', 'body': text}, paths, NOW)
             self.assertLess(time.monotonic() - started, 2.0)
 
+    def test_deep_trees_index_only_queryable_suffixes(self):
+        # Review R3-01: indexing every suffix of 10000 depth-300 paths took GiBs; only <= 16 segments are queryable.
+        paths = ['/'.join(['a'] * 300 + ['m%d.py' % i]) for i in range(10000)]
+        started = time.monotonic()
+        self.assertEqual(signals.location_hints('x.y', paths)['value'], 'none')
+        self.assertLess(time.monotonic() - started, 2.0)
+        index = signals.module_index(tuple(paths))
+        self.assertLessEqual(len(index), len(paths) * (signals.MAX_SEGMENTS - 1))
+        # The deepest queryable suffix still resolves (output hints are separately truncated to 500 characters).
+        self.assertEqual(signals.module_hint('.'.join(['a'] * 15 + ['m7']), index), paths[7])
+        long_names = ('p' * 200 + '/' + 'q' * 200 + '.py',)
+        self.assertEqual(signals.module_index(long_names), {}, 'suffixes longer than any token are never stored')
+        near_limit = 'p' * 140 + '/' + 'q' * 140 + '.py'
+        self.assertEqual(self.hints('p' * 140 + '.' + 'q' * 140, [near_limit]), [near_limit])
+
     def test_tree_index_is_reused_across_issues(self):
         paths = ['p%d/q%d/m%d.py' % (i, i, i) for i in range(20000)]
         started = time.monotonic()
