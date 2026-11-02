@@ -93,6 +93,17 @@ def _discover(result):
                                              for reason in item.get('demotions', [])))
         out += _list('Top check errors', (f'{line(ref, 200)}: {error}' for ref, item in checked
                                           for error in item.get('errors', [])))
+    report = (result.get('repository_signals') or {}).get('responsiveness')
+    if isinstance(report, dict):
+        out.append(f'Responsiveness: {line(report.get("value", "unknown"), 20)} (complete {_flag(report.get("complete"))}): '
+                   f'{line(report.get("explanation", ""))}')
+    local = result.get('local_work')
+    if isinstance(local, dict):
+        numbers = [item.get('number') for item in local.get('issues', []) if isinstance(item, dict)]
+        out.append(f'Local work: {len(numbers)} issue(s) referenced by {line(local.get("commits_scanned"), 10)} scanned '
+                   f'local commit(s) (complete {_flag(local.get("complete"))})' +
+                   (': ' + line(', '.join(f'#{number}' for number in numbers[:50])) if numbers else ''))
+        out += _list('Local work errors', local.get('errors', []))
     return out + _list('Errors', result.get('errors', []))
 
 

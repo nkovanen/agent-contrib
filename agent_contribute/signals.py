@@ -355,13 +355,9 @@ def check_top(result, client, n, now):
             ['assigned to ' + ', '.join(issue['signals']['assignees'][:3])] if issue['signals']['assignees'] else [])
         issue['top_check'] = {'complete': report['complete'], 'errors': list(dict.fromkeys(report['errors'])),
                               'reads': capped.reads - before, 'demotions': reasons}
-    # Known-bad below unknown: a demoted issue moves below every other candidate, but stays above excluded or
-    # overlapping issues; relative order is otherwise kept, and nothing below the top n is read.
-    blocked = [bool(item['exclusions'] or item['duplicates']) for item in result['issues']]
-    demoted = [bool(item.get('top_check', {}).get('demotions')) for item in result['issues']]
-    result['issues'] = [item for _, _, item in sorted(zip(blocked, demoted, result['issues']),
-                                                      key=lambda entry: (entry[0], entry[1]))]
-    result['ordering'] += (f'; then any of the top {n} demoted by --check-top move below every other candidate '
-                           'that is not excluded or overlapping')
+    # Known-bad below unknown, through the one discover sort key shared with --repo-dir local work: a demoted issue
+    # moves below every other candidate but stays above excluded or overlapping issues; nothing below the top n is read.
+    result['issues'].sort(key=lambda item: core.issue_order(item, True))
+    result['ordering'] = core.KNOWN_BAD_ORDERING
     return {'requested': n, 'checked': len(head), 'reads': capped.reads, 'read_cap': CHECK_READ_CAP,
             'complete': all(item['top_check']['complete'] for item in head), 'notice': CHECK_TOP_NOTICE}

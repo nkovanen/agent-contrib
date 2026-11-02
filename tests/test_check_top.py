@@ -5,6 +5,7 @@ import datetime as dt
 import io
 import json
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -200,6 +201,22 @@ class CheckTopTests(unittest.TestCase):
         self.assertIn('Top check: complete no; checked 5 of 5; 11 GitHub reads (cap 30)\n', text)
         self.assertIn('Top check demotions (3):\n  - acme/photos#1: possibly already fixed', text)
         self.assertIn('Top check errors (1):\n  - acme/photos#4: Pagination reached the 1-page limit\n', text)
+
+    def test_local_work_and_check_top_share_one_known_bad_sort(self):
+        from tests.test_local_work import checkout, commit
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            commit(git, 'Fix #4')
+            client = CheckGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '2', '--repo-dir', tmp)
+        self.assertEqual(code, 0)
+        # 4 is locally referenced, so the top two checked are 1 and 2; all three known-bad issues sort together
+        # below the other candidates and above the overlapping 7.
+        self.assertEqual([item['number'] for item in result['issues']], [3, 5, 6, 1, 2, 4, 7])
+        self.assertEqual([item['number'] for item in result['issues'] if 'top_check' in item], [1, 2])
+        self.assertEqual(result['ordering'], core.KNOWN_BAD_ORDERING)
+        self.assertFalse([call for call in ownership_reads(client) if '/issues/4/' in call])
 
     def test_pr_detail_cap(self):
         client = CheckGitHub()

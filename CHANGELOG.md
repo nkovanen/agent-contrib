@@ -11,6 +11,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
+  referenced by local commits that are not in the source default branch, read
+  with the hardened Git reader and capped at 500 commits. With `--signals`,
+  referenced issues rank below the other candidates that are not excluded or
+  overlapping.
 - Explicit task and evidence schema **0.2** (`prepare --schema-version 0.2`) for
   one same-repository candidate issue (#3). A human/host-issued mandate in
   host-context schema 0.1 (`verify --host-context-stdin`, at most 8 MiB, 5 s) is
@@ -113,6 +118,15 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- The workflow recommends deterministic, countable acceptance criteria over
+  wall-clock limits unless the repository defines the benchmark (F26).
+- Text `discover` shows a responsiveness line with `--responsiveness` (F23) and
+  a local-work line with `--repo-dir`.
+- The workflow's Quick path step 3 runs `inspect --ownership --ai-policy` and
+  names the repository policy step's sections (F43, F44).
+- Evidence-base and reviewed-source history errors name the base SHA, the
+  repository, its default branch and the tip commit it was compared with, plus
+  the comparison status or read error (F19). Conditions are unchanged.
 - The prerequisite blocker names each failing prerequisite, for example
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.
@@ -181,6 +195,11 @@ channel or runtime model provider is added.
   mode settings cannot hide a same-size edit or an executable-bit change.
   `core.ignoreCase=true` on a case-sensitive filesystem is refused
   (`unsafe_git_config`) because it hides case twins.
+- `scope-check` stops on a gitlink before any index or worktree diff, and every
+  index or worktree diff and status passes `--ignore-submodules=all`, so Git
+  never starts a command inside a populated submodule with that submodule's own
+  config. Previously scope-check reported the gitlink but still ran a
+  submodule-configured clean filter.
 - Untracked files are found with only per-directory `.gitignore` rules:
   `.git/info/exclude` and a local `core.excludesFile` no longer hide an
   untracked file from `verify`, `scope-check` or `evidence init`, and an

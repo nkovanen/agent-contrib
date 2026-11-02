@@ -252,6 +252,10 @@ class LifecycleTests(unittest.TestCase):
         self.client.compare_status = 'ahead'
         result = self.verify(evidence=False)
         self.assertFalse(result['implementation_ready'])
+        self.client.commit = 'c' * 40
+        self.assertIn('Reviewed source commit is not in current source default-branch history: base '
+                      f'{self.task["source"]["commit"]} is ahead of acme/photos default branch main at {"c" * 40}',
+                      self.verify(evidence=False)['stage_blockers']['implementation'])
 
     def test_local_branch_differing_only_in_case_is_a_different_ref(self):
         # Git refs are case-sensitive; Agent/bounds is not the reviewed agent/bounds (round 1b B9).

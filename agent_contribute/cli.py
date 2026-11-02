@@ -81,6 +81,8 @@ def prevalidate(args):
                                            len(args.names) != 1):
             raise core.ProtocolError('usage', f'--check-top needs --signals, one repository and N from 1 to '
                                      f'{signals.CHECK_TOP_MAX}')
+        if args.repo_dir is not None and len(args.names) != 1:
+            raise core.ProtocolError('usage', '--repo-dir with discover supports one repository')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
     elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
         core.parse_issue(args.reference)
@@ -136,6 +138,9 @@ def main(argv=None):
                              help='With --signals and one repository: read ownership signals (one timeline and comment '
                                   'page, at most 4 PR details) for the top N (1-5) and re-rank only those N; report only')
             sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
+            sub.add_argument('--repo-dir', metavar='CHECKOUT',
+                             help='One repository only: report issues referenced by local commits not in the source '
+                                  'default branch (with --signals they rank below other candidates); report only')
         else:
             sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
         if command == 'inspect':
@@ -293,10 +298,15 @@ def main(argv=None):
             names = args.names
             if args.check_top is not None:
                 options['check_top'] = args.check_top
+            if args.repo_dir is not None:
+                options['repo_dir'] = args.repo_dir
             result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
             code = 0 if result['complete'] else 1
-            if args.check_top is not None:  # an incomplete opted-in report is a nonzero exit, as for --responsiveness
+            # An incomplete opted-in report is a nonzero exit, as for --responsiveness.
+            if args.check_top is not None:
                 code = code or (0 if result.get('top_check', {}).get('complete') else 1)
+            if args.repo_dir is not None:
+                code = code or (0 if result['local_work']['complete'] else 1)
             if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
                 reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
                 code = code or (0 if all(r and r['complete'] for r in reports) else 1)

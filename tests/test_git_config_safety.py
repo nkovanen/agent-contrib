@@ -127,6 +127,38 @@ class LegacyConfigSafetyTests(unittest.TestCase):
             self.assertTrue(workspace.scope_check(task, root)['within_scope'])
 
 
+class SubmoduleConfigTests(unittest.TestCase):
+    # G-12: a populated submodule's own config must never run, whatever the superproject config says.
+    def populated_submodule(self, root, git, outside):
+        script, marker = marker_script(outside, 'submodule_filter')
+        sub = pathlib.Path(root, 'src', 'sub')
+        sub.mkdir()
+        inner = lambda *argv: subprocess.run(['git', '-C', str(sub), '-c', 'user.name=T', '-c', 'user.email=t@e',
+                                              *argv], check=True, capture_output=True)
+        inner('init', '-q')
+        pathlib.Path(sub, 'a').write_text('a')
+        inner('add', 'a')
+        inner('commit', '-q', '-m', 'sub')
+        pathlib.Path(sub, '.git', 'info').mkdir(exist_ok=True)
+        pathlib.Path(sub, '.git', 'info', 'attributes').write_text('* filter=x\n')
+        inner('config', 'filter.x.clean', str(script))
+        os.utime(pathlib.Path(sub, 'a'), (978307200, 978307200))
+        git('add', 'src/sub')
+        return marker
+
+    def test_no_gate_runs_a_submodule_program(self):
+        gitlink = 'Submodule/gitlink evidence is unsupported; no submodule commands were run'
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as outside:
+            task, client, evidence, git = evidence_checkout(root)
+            marker = self.populated_submodule(root, git, outside)
+            self.assertEqual(workspace.scope_check(task, root)['errors'], [gitlink])
+            self.assertFalse(marker.exists(), 'scope-check ran the submodule filter')
+            self.assertIn(gitlink, core.verify(task, evidence, root, client)['evidence_errors'])
+            with self.assertRaises(core.ProtocolError):
+                workspace.evidence_skeleton(task, root, evidence['base_commit'])
+            self.assertFalse(marker.exists(), 'a gate ran the submodule filter')
+
+
 class CandidateConfigSafetyTests(unittest.TestCase):
     setUp = test_lifecycle.LifecycleTests.setUp
     verify = test_lifecycle.LifecycleTests.verify

@@ -376,10 +376,26 @@ precision@5 on that snapshot (click 1/5, ripgrep 1/5, hono 0/5 before and
 after): most remaining false candidates are design debates, already fixed or
 not this project's bug, with no label or title cue.
 
-Ordering stays exclusions first, then overlaps, then low success likelihood;
+Ordering stays exclusions first, then overlaps; with `--repo-dir` or
+`--check-top` the next key is known-bad issues (locally referenced or demoted by
+the check), which rank below every other candidate. Then low success likelihood;
 only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
+
+`discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
+`local_work` object for unpublished local work. It lists the issue numbers
+referenced as `#N` or `owner/repo#N` (the source repository only)
+in the messages of commits reachable from the checkout's HEAD but not from the
+snapshot's source default-branch commit. It reads the newest 500 commits at most
+and 64 KiB of each message, with the hardened Git reader after the worktree-root
+and checkout-config checks. A missing base commit (the CLI never fetches), an
+unsafe config, a subdirectory or more than 500 commits make it incomplete,
+which exits 1. With `--signals`, each issue gets `signals.local_work`
+(`referenced`, `none` or `unknown`), and a referenced issue ranks below every
+other candidate that is not excluded or overlapping. Its score, gates and
+exclusions are unchanged. Without `--signals` the issue order is unchanged. A
+reference is not proof that the work is done.
 
 ## Repository responsiveness
 
@@ -599,7 +615,8 @@ It is a summary: discovery shows at most 20 issues per repository, each with its
 overlapping-PR count, whether it is excluded and (with `--signals`) its score,
 followed by overlapping and excluded counts over all issues; lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
-counted. Multi-repository discovery includes every repository's completeness and
+counted. Discovery adds one line each for `--responsiveness` and `--repo-dir` local
+work when requested. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that
@@ -1119,6 +1136,7 @@ One repository was resolved and read
 | `top_check.read_cap` | integer | at most 30 |
 | `top_check.complete` | boolean | Every checked issue was read completely; false sets exit 1 |
 | `top_check.notice` | string |  |
+| `local_work` | `local_work` (optional) |  |
 | `api_budget` | `api_budget` (optional) |  |
 
 #### `discover_unresolved`
@@ -1137,6 +1155,7 @@ The repository could not be resolved or its snapshot read
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `local_work` | `local_work` (optional) |  |
 
 #### `duplicate`
 
@@ -1324,6 +1343,10 @@ Added by --signals; report-only heuristics, never approval
 | `demotion` | object | Documented label and title demotions; each subtracts 2 from the score |
 | `demotion.value` | "demoted" \| "none" |  |
 | `demotion.reasons` | string[] | One entry per matched label group or meta-like title |
+| `local_work` | object (optional) | Present with --repo-dir; a referenced issue ranks below other candidates that are not excluded or overlapping |
+| `local_work.value` | "referenced" \| "none" \| "unknown" |  |
+| `local_work.commits` | string[] |  |
+| `local_work.explanation` | string |  |
 | `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1, not for a meta-like title) - 2 per demotion, floored at 0 |
 
 #### `issue_unresolved`
@@ -1350,6 +1373,23 @@ Completeness of one paginated GitHub list read
 | `complete` | boolean |  |
 | `pages` | integer |  |
 | `errors` | string[] |  |
+
+#### `local_work`
+
+Present with --repo-dir: issues referenced by local commits not in the source default branch; report only
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean | False when the checkout or base could not be read or the commit limit was reached; sets exit 1 |
+| `head` | string or null |  |
+| `base` | string or null | Source default-branch commit of the snapshot |
+| `commits_scanned` | integer |  |
+| `commit_limit` | integer |  |
+| `issues` | object[] |  |
+| `issues[].number` | integer |  |
+| `issues[].commits` | string[] |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `metadata_read`
 
