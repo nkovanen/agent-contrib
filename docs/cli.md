@@ -48,6 +48,15 @@ untracked-file reads there would omit the rest of the checkout. They also refuse
 index with assume-unchanged or skip-worktree entries, including any sparse
 checkout, because Git status and diff would hide changes to those files. The
 index is only read, never changed; clear the flags or use a full checkout.
+A checkout whose effective Git config (including `include`/`includeIf` files)
+sets a key a read could run as a program or use to fetch is refused with
+`unsafe_git_config`: `filter.*`, `gpg.program` and `gpg.*.program`,
+`diff.external`, `diff.*.command`, `diff.*.textconv`,
+`extensions.partialClone`, `remote.*.promisor`, `remote.*.partialCloneFilter`
+and `protocol.*`. Git reads also force `log.showSignature=false` and
+`protocol.allow=never` and disable lazy fetching, so a missing object is a read
+error, never a fetch. Credential, SSH, askpass, pager, editor and merge-driver
+settings are not refused because none of the fixed read commands reaches them.
 
 `agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
 and option of the installed version. Exit status is 0 when a command succeeds and

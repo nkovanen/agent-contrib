@@ -16,6 +16,7 @@ def scope_check(task, directory, base=None):
         return result
     try:
         core.require_worktree_root(directory)
+        core.require_safe_config(directory)
         core.require_plain_index(directory)
         head = core.current_head(directory)
         default = base is None
@@ -76,6 +77,7 @@ def evidence_skeleton(task, directory, base):
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
     core.require_worktree_root(directory)
+    core.require_safe_config(directory)
     core.require_plain_index(directory)
     head = core.current_head(directory)
     base = resolve_base(directory, base)

@@ -41,8 +41,12 @@ security maintenance commitment.
   publication. See [host authorization](docs/host-authorization.md).
 - Evidence is self-attested consistency data, not signed proof. Independent
   review and real human authorization remain necessary outside the verifier.
-- Local Git reads disable hooks, fsmonitor, replacement objects and external
-  diff/textconv execution paths. Artifact reads require bounded regular files
+- Local Git reads disable hooks, fsmonitor, replacement objects, external
+  diff/textconv, signature display and lazy fetching (no protocol is allowed). They
+  refuse (`unsafe_git_config`) a checkout whose effective config, including
+  `include`/`includeIf` files, sets `filter.*`, a `gpg` program, `diff.external`,
+  `diff.*.command`/`textconv`, partial-clone or promisor settings, or `protocol.*`.
+  Artifact reads require bounded regular files
   inside the checkout. This is not a sandbox for a hostile checkout or Git binary;
   use isolation and keep credentials away from code you execute.
 - Unknown schema versions, malformed or incomplete API results, unsupported
