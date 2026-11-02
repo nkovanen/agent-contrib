@@ -117,6 +117,8 @@ def main(argv=None):
             sub.add_argument('reference', nargs='*', help='owner/repo; give 2-20 for a multi-repository run')
             sub.add_argument('--signals', action='store_true',
                              help='Add report-only code-location, clarity, activity and maintainer signals')
+            sub.add_argument('--responsiveness', action='store_true',
+                             help='Add a report-only repository responsiveness report from one read of recently closed PRs')
             sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
         else:
             sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
@@ -257,11 +259,13 @@ def main(argv=None):
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
-            if len(args.names) == 1:
-                result = core.discover(args.names[0], signals=True) if args.signals else core.discover(args.names[0])
-            else:
-                result = multi.discover_many(args.names, signals=args.signals)
+            options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
+            names = args.names
+            result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
             code = 0 if result['complete'] else 1
+            if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
+                reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
+                code = code or (0 if all(r and r['complete'] for r in reports) else 1)
         elif args.command in ('inspect', 'prepare'):
             result = core.inspect_issue(args.reference)
             code = 0 if result['complete'] else 1

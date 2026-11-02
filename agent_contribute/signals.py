@@ -1,6 +1,9 @@
-"""Opt-in deterministic ranking signals from data discover already read. Heuristics, never approval."""
+"""Opt-in deterministic signals. Issue signals use data discover already read; repository
+responsiveness makes one extra closed-PR read. Heuristics, never approval."""
 import datetime as dt
+import functools
 import re
+import statistics
 
 from . import core
 
@@ -13,6 +16,48 @@ MARKERS = {'checklist': re.compile(r'(?m)^[ \t]{0,8}[-*] \[[ xX]\]'),
            'reproduction steps': re.compile(r'(?i)\b(steps to reproduce|to reproduce|reproduction)\b'),
            'code block': re.compile(r'```')}
 MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
+# Same shape as TOKEN; the lookbehind keeps dotted names inside paths for the path matcher.
+MODULE_TOKEN = re.compile(r'(?<![A-Za-z0-9_./\\:-])[A-Za-z_][A-Za-z0-9_.:]{0,299}')
+MODULE_SEPARATOR = re.compile(r'::|\.')
+MAX_SEGMENTS = 16
+RUST_PREFIXES = {'crate', 'self', 'super'}
+PACKAGE_FILES = {'__init__.py', 'mod.rs'}
+AMBIGUOUS = object()
+MIN_EXTERNAL = 5
+
+
+@functools.lru_cache(maxsize=1)
+def module_index(paths):
+    """Module suffix (two or more segments, slash-joined) -> its single file, or AMBIGUOUS. One build per tree."""
+    index = {}
+    for path in paths:
+        parts = path.split('/')
+        name = parts[-1]
+        if '.' not in name.lstrip('.'):
+            continue
+        stem = name.rsplit('.', 1)[0]
+        keys = [parts[:-1] + [stem]]
+        if name in PACKAGE_FILES or stem == 'index':
+            keys.append(parts[:-1])
+        for key in keys:
+            for start in range(len(key) - 1):
+                suffix = '/'.join(key[start:])
+                index[suffix] = path if index.get(suffix, path) == path else AMBIGUOUS
+    return index
+
+
+def module_hint(token, index):
+    segments = MODULE_SEPARATOR.split(token)[:MAX_SEGMENTS]
+    if not all(segment.isidentifier() for segment in segments):
+        return None
+    if '::' in token and segments[0] in RUST_PREFIXES:
+        segments = segments[1:]
+    # The longest prefix naming any module decides; trailing segments are members. Never fall back past ambiguity.
+    for end in range(len(segments), 1, -1):
+        match = index.get('/'.join(segments[:end]))
+        if match is not None:
+            return None if match is AMBIGUOUS else match
+    return None
 
 
 def location_hints(text, paths):
@@ -37,9 +82,23 @@ def location_hints(text, paths):
             hints.append(match)
             if len(hints) == MAX_HINTS:
                 break
+    if len(hints) < MAX_HINTS:
+        index = None
+        for found in MODULE_TOKEN.finditer(text, 0, SCAN_LIMIT):
+            if text[found.end():found.end() + 1] in ('/', '\\'):
+                continue
+            token = found.group().rstrip('.:')
+            if '.' not in token and '::' not in token:
+                continue
+            index = index if index is not None else module_index(tuple(paths))
+            match = module_hint(token, index)
+            if match and match not in hints:
+                hints.append(match)
+                if len(hints) == MAX_HINTS:
+                    break
     return {'value': 'found' if hints else 'none', 'hints': [core.safe_text(h, 500) for h in hints],
-            'explanation': (f'{len(hints)} path(s) named in the issue exist in the snapshot tree' if hints else
-                            'No path or unique file name in the issue matches the snapshot tree')}
+            'explanation': (f'{len(hints)} path(s) or module name(s) in the issue match the snapshot tree' if hints else
+                            'No path, unique file name or module name in the issue matches the snapshot tree')}
 
 
 def acceptance_clarity(text):
@@ -75,6 +134,62 @@ def maintainer_signal(issue):
              'maintainer' if association in MAINTAINER_ASSOCIATIONS else 'other')
     return {'value': value, 'explanation': 'Issue author association is ' +
             (core.safe_text(association, 40) if isinstance(association, str) else 'not reported')}
+
+
+def _timestamp(value):
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo is not None else None
+
+
+def responsiveness(repository, client):
+    """Opt-in repository-level report from one page of recently closed PRs. A sample, never full history."""
+    endpoint = f'repos/{repository}/pulls?state=closed&sort=updated&direction=desc&per_page=100'
+    report = {'repository': repository, 'endpoint': endpoint, 'complete': False, 'value': 'unknown',
+              'sample_size': None, 'external_closed': None, 'external_merged': None, 'external_merge_rate': None,
+              'median_days_to_close': None, 'minimum_external': MIN_EXTERNAL, 'errors': []}
+    if repository is None:
+        report.update(endpoint=None, errors=['Discovery did not complete a source snapshot; closed PRs were not read'],
+                      explanation='Responsiveness is unknown because discovery did not resolve the source repository')
+        return report
+    try:
+        page = client.request(endpoint)
+        if not isinstance(page, list) or len(page) > 100:
+            raise core.ProtocolError('api_shape', 'Expected one bounded closed-PR list page')
+        days, merged = [], 0
+        for pr in page:
+            if not isinstance(pr, dict) or not isinstance(pr.get('user'), dict):
+                raise core.ProtocolError('api_shape', 'Closed PR entry lacks a user object')
+            kind, association = pr['user'].get('type'), pr.get('author_association')
+            created, closed = _timestamp(pr.get('created_at')), _timestamp(pr.get('closed_at'))
+            if not isinstance(kind, str) or not isinstance(association, str):
+                raise core.ProtocolError('api_shape', 'Closed PR author type or association is malformed')
+            if created is None or closed is None or closed < created:
+                raise core.ProtocolError('api_shape', 'Closed PR timestamps are missing or inconsistent')
+            if pr.get('merged_at') is not None and _timestamp(pr.get('merged_at')) is None:
+                raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed')
+            if kind == 'Bot' or association in MAINTAINER_ASSOCIATIONS:
+                continue
+            days.append((closed - created).total_seconds() / 86400)
+            merged += pr.get('merged_at') is not None
+    except core.ProtocolError as exc:
+        report['errors'] = [str(exc)]
+        report['explanation'] = 'Closed pull requests could not be read completely; responsiveness is unknown'
+        return report
+    report.update(complete=True, sample_size=len(page), external_closed=len(days), external_merged=merged)
+    if len(days) < MIN_EXTERNAL:
+        report.update(value='insufficient', explanation=(
+            f'{len(days)} external PR(s) among the {len(page)} most recently updated closed PRs; '
+            f'at least {MIN_EXTERNAL} are needed for a rate'))
+        return report
+    report.update(value='measured', external_merge_rate=round(merged / len(days), 3),
+                  median_days_to_close=round(statistics.median(days), 1), explanation=(
+                      f'{merged} of {len(days)} external PRs among the {len(page)} most recently updated closed PRs '
+                      'were merged. External excludes OWNER, MEMBER, COLLABORATOR and bot authors. One-page sample, '
+                      'not full history; a heuristic, never approval'))
+    return report
 
 
 def issue_signals(issue, paths, now):
