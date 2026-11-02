@@ -435,11 +435,16 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
+                  "base_tip_sha",
                   "base_sha",
                   "head_sha",
                   "material_sha256"
                 ],
                 "properties": {
+                  "base_tip_sha": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{40}$"
+                  },
                   "base_sha": {
                     "type": "string",
                     "pattern": "^[0-9a-f]{40}$"

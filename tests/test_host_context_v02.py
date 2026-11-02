@@ -27,7 +27,8 @@ def section_for(task, context, number=31, author_id=8):
                   'match_reason': 'Potential title/checklist overlap; review manually (shared title words: bounds, thumbnail)',
                   'pr_state': 'open', 'draft': False, 'head_repository_id': 101, 'head_sha': 'c' * 40,
                   'updated_at': '2029-12-31T00:00:00Z', 'content_sha256': 'd' * 64,
-                  'comparison': {'base_sha': 'e' * 40, 'head_sha': 'c' * 40, 'material_sha256': 'f' * 64},
+                  'comparison': {'base_tip_sha': 'b' * 40, 'base_sha': 'e' * 40, 'head_sha': 'c' * 40,
+                                 'material_sha256': 'f' * 64},
                   'rationale': 'Reviewed code: a renderer refactor, unrelated to the bounds check'}],
               'event': {'kind': 'human', 'reference': 'fixture://disposition-event', 'text_sha256': 'a' * 64,
                         'binding_sha256': '0' * 64}}
@@ -74,6 +75,8 @@ class HostContextSchemaTests(unittest.TestCase):
             ('draft type', lambda s: s['dispositions'][0].update(draft='false')),
             ('head sha', lambda s: s['dispositions'][0].update(head_sha='C' * 40)),
             ('comparison extra', lambda s: s['dispositions'][0]['comparison'].update(diff_url='x')),
+            ('no base tip', lambda s: s['dispositions'][0]['comparison'].pop('base_tip_sha')),
+            ('base tip format', lambda s: s['dispositions'][0]['comparison'].update(base_tip_sha='main')),
             ('missing author', lambda s: s['dispositions'][0].pop('author_id')),
             ('extra field', lambda s: s.update(waive_all=True)),
             ('event kind', lambda s: s['event'].update(kind='host')),
