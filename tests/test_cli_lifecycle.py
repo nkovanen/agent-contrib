@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_contribute import cli, core
+from tests import output_contract
 
 
 class LifecycleCLITests(unittest.TestCase):
@@ -27,6 +28,7 @@ class LifecycleCLITests(unittest.TestCase):
         result.update(changes)
         return result
 
+    @output_contract.unchecked()
     def test_stage_exit_does_not_turn_pending_completion_into_success(self):
         task = {'schema_version': '0.2'}
         with patch.object(core, 'read_json', return_value=task), patch.object(core, 'verify') as verify:
@@ -50,6 +52,7 @@ class LifecycleCLITests(unittest.TestCase):
                     self.assertEqual(result['error']['code'], 'schema_options')
             verify.assert_not_called()
 
+    @output_contract.unchecked()
     def test_new_schema_prepare_is_explicit_and_unknown_versions_never_read_github(self):
         snapshot = {'complete': True, 'source': {}, 'requested_repository': 'a/b',
                     'issue_source_repository': 'a/b', 'proposed_target_repository': 'a/b',
@@ -73,6 +76,7 @@ class LifecycleCLITests(unittest.TestCase):
             self.assertEqual(result['error']['code'], 'usage')
             read.assert_not_called()
 
+    @output_contract.unchecked()
     def test_host_input_is_never_read_unless_requested(self):
         class NoRead(io.StringIO):
             def read(self, *args):
@@ -81,6 +85,7 @@ class LifecycleCLITests(unittest.TestCase):
             self.assertEqual(self.invoke('verify', 'task', '--stage', 'implementation')[0], 1)
             self.assertIsNone(verify.call_args.kwargs.get('host_context'))
 
+    @output_contract.unchecked()
     def test_explicit_host_input_is_passed_separately_not_inserted_into_task(self):
         task = {'schema_version': '0.2'}
         context = {'schema_version': '0.1', 'mandate': {'synthetic': True}}

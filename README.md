@@ -144,6 +144,7 @@ agent-contrib verify task.json --evidence evidence.json --repo-dir ./checkout
 | `ownership` | Claims, cross-referenced PRs and possible prior fixes for one issue |
 | `instructions` | The installed workflow and supported schema versions |
 | `skill` | Export the canonical Skill file |
+| `schema` | Print the JSON Schema of a command's JSON output |
 
 v0.2.0 has `discover`, `inspect`, `prepare`, `verify`, `instructions` and
 `skill`; the other commands are new in the v0.3.0 candidate. Optional reports

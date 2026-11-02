@@ -10,7 +10,8 @@ source-linked repository requirements ledger before implementation and have an
 independent reviewer check compliance before publication. Passing tests or CLI
 gates alone does not establish compliance.
 
-Use `agent-contrib --help` for the installed command surface. Delegate discovery,
+Use `agent-contrib --help` for the installed command surface and
+`agent-contrib schema COMMAND` for the fields of its JSON output. Delegate discovery,
 inspection, contract preparation and evidence verification to `agent-contrib discover`, `inspect`, `prepare` and `verify` as directed by the workflow.
 Perform implementation through your ordinary tools within the user's actual
 authority. Report the CLI's observed results and unresolved gates.

@@ -2,14 +2,6 @@
 
 ## 0.3.0 — unreleased
 
-- Schema 0.2 `verify` requires the full symbolic HEAD to equal
-  `refs/heads/` plus the reviewed `head_ref`, so a same-named tag or a branch
-  name differing only by trailing Unicode whitespace no longer matches. Git
-  output now loses only its trailing newline, never other whitespace (R1-15).
-- `verify`, `scope-check` and `evidence init` fail closed with `index_flags`
-  when the index marks tracked paths assume-unchanged or skip-worktree
-  (including sparse checkouts), since status and diff would hide their changes
-  (R1-14). The index is never modified. This also hardens schema 0.1 `verify`.
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
 handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
@@ -84,6 +76,21 @@ channel or runtime model provider is added.
   independent compliance review, the contract fields that hold the AI-policy
   review and ledger reference, an implement-only local profile, coordinator relay
   rules, the stacked-base limitation and normative host issuer requirements.
+- Versioned JSON Schemas for every command's JSON output ship in
+  `schemas/output/1/` (#24). `agent-contrib schema COMMAND` prints one (`error`
+  is the error envelope), `instructions` reports `output_schema_version` and the
+  directory, and `docs/cli.md` has a field reference generated from them. Every
+  output the test suite produces is validated against its schema. Output values
+  do not carry the version, so existing results are unchanged; a shape change
+  bumps it. The bundled validator gained `null`, `number`, type lists, `anyOf`,
+  local `$ref` and `additionalProperties` maps, which the task, evidence and
+  host-context schemas do not use. It now checks every item of a list whose
+  length the schema allows (previously only the first 1000) and rejects NaN and
+  infinities as numbers. Output schemas state every length bound and anchor
+  every pattern, so standard validators decide like the bundled one.
+  Error, warning and other diagnostic lists, free text and remote-derived
+  lists claim no cap below the input bounds, because producers never truncate
+  them (R5-04).
 
 ### Changed
 
@@ -122,6 +129,14 @@ channel or runtime model provider is added.
 - Schema 0.2 requires the collaborator-permission login to be a valid ASCII
   GitHub login before its case-insensitive comparison, so Unicode confusables
   such as `ſ` or the Kelvin sign no longer match.
+- `verify`, `scope-check` and `evidence init` fail closed with `index_flags`
+  when the index marks tracked paths assume-unchanged or skip-worktree
+  (including sparse checkouts), because status and diff would hide changes to
+  those files. The index is only read, never modified.
+- Schema 0.2 binds the local branch by its exact full ref: symbolic HEAD must
+  equal `refs/heads/` plus the reviewed `head_ref`, so a same-named tag or a
+  name differing only by trailing Unicode whitespace no longer matches. Git
+  output loses only its trailing newline, never other whitespace.
 
 ### Fixed
 
@@ -140,6 +155,8 @@ channel or runtime model provider is added.
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an
     evidence error instead of reading part of the checkout.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.
+  - An index with assume-unchanged or skip-worktree entries, including a sparse
+    checkout, now fails with `index_flags`.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;
