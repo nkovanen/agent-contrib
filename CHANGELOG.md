@@ -58,6 +58,8 @@
   of the 2-20 multi-repository bound. Exit status stays 2.
 - `--format text` for `scope-check` lists violating paths, warnings and errors;
   for `drift` it lists each drift reason and informational changes separately.
+- `pr-body` shows the CLI's own `next_action` values exactly in a code span
+  (previously `resolve_blockers` was escaped); other values stay neutralized.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

@@ -5,6 +5,7 @@ import re
 from . import core, __version__
 
 KEYWORD = re.compile(r'(?i)\b(clos|fix|resolv)(?=(?:e|es|ed|s)?\b)')
+NEXT_ACTIONS = ('none', 'implement', 'create_draft', 'resolve_blockers')
 
 
 def md(value, limit=2000):
@@ -80,7 +81,9 @@ def render(task, verification, evidence=None, *, closes=False, assistant=None, t
     if v2:
         for name in ('implementation_ready', 'technical_evidence_valid', 'draft_create_ready', 'completion_ready'):
             lines.append(_gate(name, verification.get(name)))
-        lines.append('- `next_action`: ' + md(verification.get('next_action', 'unknown')))
+        action = verification.get('next_action', 'unknown')
+        # The CLI's own enum is shown exactly; anything else is still neutralized as untrusted text.
+        lines.append('- `next_action`: ' + (f'`{action}`' if action in NEXT_ACTIONS else md(action)))
         blockers = [(stage, error) for stage, errors in verification.get('stage_blockers', {}).items() for error in errors]
     else:
         for name in ('execution_ready', 'evidence_valid', 'upstream_submission_ready', 'fork_completion_ready'):

@@ -105,9 +105,19 @@ class PRBodyTests(unittest.TestCase):
                         'stage_blockers': {'implementation': [], 'draft': ['Independent review is pending'],
                                            'completion': ['Final human signoff is pending or invalid']}}
         body = prbody.render(task, verification)
-        for line in ['- `implementation_ready`: yes', '- `draft_create_ready`: no', '- `next_action`: implement',
+        for line in ['- `implementation_ready`: yes', '- `draft_create_ready`: no', '- `next_action`: `implement`',
                      '- draft: Independent review is pending', '- completion: Final human signoff is pending or invalid']:
             self.assertIn(line + '\n', body)
+
+    def test_next_action_enum_is_exact_and_other_values_stay_neutralized(self):
+        task, _ = candidate_task()
+        for value in ('resolve_blockers', 'create_draft', 'implement', 'none'):
+            with self.subTest(value=value):
+                body = prbody.render(task, {'schema_valid': True, 'next_action': value})
+                self.assertIn('- `next_action`: `' + value + '`\n', body)
+        body = prbody.render(task, {'schema_valid': True, 'next_action': 'Fixes #1 `x`'})
+        self.assertIn('- `next_action`: ' + prbody.md('Fixes #1 `x`') + '\n', body)
+        self.assertNotIn('`next_action`: `F', body)
 
     def test_argv_is_exact_unambiguous_data(self):
         task, _ = ready_contract()
