@@ -281,6 +281,12 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- Schema 0.1 `verify` on a draft whose execution mode is `pending` and whose
+  target is blank now reports "Execution target not yet chosen (execution mode
+  is pending)" instead of "Execution target repository is invalid". The
+  decision is unchanged; a non-blank invalid target keeps the old message
+  (N-05). The installed workflow's requirements ledger also names CLA and DCO
+  sign-offs as human-submitter obligations.
 - `prepare` (task schemas 0.1 and 0.2) now writes the prerequisite
   `ai-policy-review` with status `pending` into every new contract, so a policy
   review must be recorded (`satisfied` with evidence, or `blocked`) or visibly

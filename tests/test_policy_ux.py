@@ -1,0 +1,181 @@
+"""Policy UX follow-ups from external evaluation 2 (N-01, N-02, N-04, N-05)."""
+import contextlib
+import importlib.resources
+import io
+import json
+import re
+import unittest
+from unittest.mock import patch
+
+from agent_contribute import cli, core, policy, textfmt
+from tests.test_policy import PolicyGitHub, SOURCE_COMMIT, report
+
+STOP_KINDS = {'possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction'}
+
+
+def installed_workflow():
+    return importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8')
+
+
+class HintNoiseTests(unittest.TestCase):
+    """N-04: less noise, never fewer stop-class hints."""
+    def test_community_files_count_only_at_root_github_or_docs(self):
+        files = {'SECURITY.md': 'x', '.github/SECURITY.md': 'x', 'docs/SECURITY.md': 'x', 'docs/governance.md': 'x',
+                 'doc/source/reference/security.rst': 'x', 'docs/dev/governance/governance.rst': 'x',
+                 'docs/support-multiple-versions.md': 'x', 'pkg/support.md': 'x', 'src/CODE_OF_CONDUCT.rst': 'x',
+                 'deep/dir/CONTRIBUTING.md': 'x', 'deep/dir/AI_POLICY.md': 'x'}
+        result, _ = report(files)
+        scanned = {s['path'] for s in result['sources_scanned']}
+        self.assertEqual(scanned, {'SECURITY.md', '.github/SECURITY.md', 'docs/SECURITY.md', 'docs/governance.md',
+                                   'docs/support-multiple-versions.md', 'deep/dir/CONTRIBUTING.md',
+                                   'deep/dir/AI_POLICY.md'})
+        owner, _ = report({}, {'docs/x/SECURITY.md': 'x', 'docs/SUPPORT.md': 'x'})
+        self.assertEqual({s['path'] for s in owner['sources_scanned']}, {'docs/SUPPORT.md'})
+
+    def test_ai_and_agent_hints_rank_above_pr_only_hints(self):
+        files = {'README.md': 'Pull requests are only reviewed on Fridays.',
+                 'CONTRIBUTING.md': 'Contributions must include tests.\n\nNo AI-generated pull requests.\n\n'
+                                    'Autonomous agents are not allowed.',
+                 'SECURITY.md': 'Do not open a pull request for vulnerabilities.'}
+        result, _ = report(files)
+        order = [(h['kind'], result['sources_scanned'][h['source']]['path'], h['line']) for h in result['hints']]
+        self.assertEqual(order[0][0], 'possible_agent_restriction')
+        self.assertEqual(order[1][0], 'possible_ai_restriction')
+        pr = [o for o in order if o[0] == 'possible_pr_restriction']
+        self.assertEqual(pr[0][1:], ('CONTRIBUTING.md', 3), 'a PR hint with AI context ranks first among PR hints')
+        self.assertEqual(pr[1][1:], ('CONTRIBUTING.md', 1), 'then PR hints from policy files')
+        self.assertEqual({p[1] for p in pr[2:]}, {'README.md', 'SECURITY.md'}, 'PR-only hints elsewhere come last')
+        self.assertEqual(order[-1][0], 'ai_mention')
+        self.assertFalse([h for h in result['hints'] if set(h) - {'id', 'kind', 'line', 'heading', 'untrusted_excerpt',
+                                                                  'source'}])
+
+    def test_stop_class_hints_are_kept_before_mentions(self):
+        text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(40))
+        result, _ = report({'CONTRIBUTING.md': text}, {})
+        kinds = [h['kind'] for h in result['hints']]
+        self.assertEqual(sum(k in STOP_KINDS for k in kinds), 80, 'every restriction hint is kept')
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertEqual(limits['hints']['not_reported'], 20)
+        self.assertFalse(limits['hints']['hides_sources'])
+        self.assertFalse(result['limits_hide_sources'])
+
+    def test_dropping_a_stop_class_hint_is_a_hiding_limit(self):
+        text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(60))
+        result, _ = report({'CONTRIBUTING.md': text}, {})
+        self.assertTrue(all(h['kind'] in STOP_KINDS for h in result['hints']))
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertEqual(limits['restriction hints']['not_reported'], 120 - policy.MAX_HINTS)
+        self.assertTrue(limits['restriction hints']['hides_sources'])
+        self.assertTrue(result['limits_hide_sources'])
+
+    def test_report_size_drops_mentions_before_restrictions(self):
+        text = '\n\n'.join(('No AI number %d. ' % n) + 'pad ' * 60 for n in range(30))
+        with patch.object(policy, 'MAX_REPORT_BYTES', 9000):
+            result, _ = report({'CONTRIBUTING.md': text}, {})
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertIn('report size: hints', limits)
+        self.assertFalse(limits['report size: hints']['hides_sources'])
+        if 'report size: restriction hints' in limits:
+            self.assertTrue(limits['report size: restriction hints']['hides_sources'])
+            self.assertTrue(result['limits_hide_sources'])
+        self.assertNotIn('ai_mention', [h['kind'] for h in result['hints']])
+
+
+class TextHintTests(unittest.TestCase):
+    """N-01: text output shows the sentences that justify a stop."""
+    def policy_report(self, files=None, owner=None):
+        return report(files or {'CONTRIBUTING.md': 'Thanks!\n\nAI-generated PRs are closed\x1b[2K on sight.\n\n'
+                                                  'Autonomous agents are not allowed.\n\n'
+                                                  'Pull requests are limited to maintainers.'}, owner or {})[0]
+
+    def test_inspect_text_lists_restriction_hints_with_locations(self):
+        text = textfmt.render('inspect', {'reference': 'acme/photos#12', 'repository_policy': self.policy_report()})
+        lines = text.splitlines()
+        at = next(n for n, line in enumerate(lines) if line.startswith('Policy:'))
+        shown = [line for line in lines[at:] if line.startswith('  ! ')]
+        self.assertEqual(shown[0], '  ! possible_agent_restriction acme/photos:CONTRIBUTING.md:5 -- '
+                                   'Autonomous agents are not allowed.')
+        self.assertIn('  ! possible_ai_restriction acme/photos:CONTRIBUTING.md:3 -- '
+                      'AI-generated PRs are closed on sight.', shown)
+        self.assertNotIn('\x1b', text)
+
+    def test_text_hint_list_is_bounded_and_counts_the_rest(self):
+        files = {'CONTRIBUTING.md': '\n\n'.join('No AI-generated patch %d.' % n for n in range(9))}
+        text = textfmt.render('inspect', {'repository_policy': self.policy_report(files)})
+        self.assertEqual(sum(line.startswith('  ! ') for line in text.splitlines()), textfmt.POLICY_HINT_LINES)
+        self.assertIn(f'(+{18 - textfmt.POLICY_HINT_LINES} more restriction hints in JSON repository_policy.hints)', text)
+
+    def test_no_restriction_hints_says_so_without_implying_permission(self):
+        text = textfmt.render('inspect', {'repository_policy': self.policy_report({'README.md': 'A library.'})})
+        self.assertIn('  No restriction hints; this is not permission.', text)
+
+    def test_discover_and_prepare_text_show_the_hints(self):
+        rp = self.policy_report()
+        for command, result in (('discover', {'repository': 'acme/photos', 'issues': [], 'repository_policy': rp}),
+                                ('prepare', {'output': 'task.json', 'repository_policy': rp})):
+            with self.subTest(command):
+                self.assertIn('  ! possible_agent_restriction acme/photos:CONTRIBUTING.md:5', textfmt.render(command, result))
+
+    def test_long_excerpts_and_paths_stay_one_bounded_line(self):
+        long_path = 'docs/' + 'p' * 400 + '/AI_POLICY.md'
+        rp = self.policy_report({long_path: 'Autonomous agents are not allowed. ' + 'x ' * 400})
+        line = next(l for l in textfmt.render('inspect', {'repository_policy': rp}).splitlines() if l.startswith('  ! '))
+        self.assertLessEqual(len(line), 400)
+
+
+class QuickPathTests(unittest.TestCase):
+    """N-02: the Quick path stop rule and order match the policy section."""
+    def quick_path(self):
+        text = installed_workflow()
+        start = text.index('## Quick path')
+        return text[start:text.index('\n## ', start + 1)].rstrip('\n')
+
+    def test_stop_rule_matches_the_policy_section(self):
+        quick = ' '.join(self.quick_path().split())
+        self.assertIn('the repository policy step finds a relevant rule that is prohibited or unresolved', quick)
+        self.assertNotIn('refusal or restriction', quick)
+        section = ' '.join(installed_workflow().split())
+        self.assertIn('**STOP** upstream work when any relevant rule is prohibited or unresolved.', section)
+
+    def test_policy_step_comes_before_ranking_and_selection(self):
+        quick = ' '.join(self.quick_path().split())
+        policy_at = quick.index('complete the repository policy step below')
+        self.assertLess(policy_at, quick.index('Drop excluded or overlapping issues'))
+        self.assertLess(policy_at, quick.index("inspect 'owner/repo#N' --ownership"))
+        self.assertIn('Before ranking or selecting', quick)
+
+    def test_constrained_mode_needs_the_users_commitment(self):
+        quick = ' '.join(self.quick_path().split())
+        self.assertIn('first ask the user to commit to that mode', quick)
+        section = ' '.join(installed_workflow().split())
+        self.assertIn('valid only where the policy permits that mode and after the user commits to it;', section)
+
+    def test_quick_path_stays_short(self):
+        self.assertLessEqual(len(self.quick_path().splitlines()), 40)
+
+
+class FreshDraftMessageTests(unittest.TestCase):
+    """N-05: a fresh draft's pending target is 'not yet chosen', not 'invalid'; the ledger covers CLA/DCO."""
+    def test_pending_draft_reports_target_not_yet_chosen(self):
+        from tests.test_protocol import FakeGitHub
+        client = FakeGitHub()
+        task = core.prepare(core.inspect_issue('acme/photos#12', client))
+        errors = core.verify(task, client=client)['errors']
+        self.assertIn('Execution target not yet chosen (execution mode is pending)', errors)
+        self.assertNotIn('Execution target repository is invalid', errors)
+        self.assertFalse(core.verify(task, client=client)['execution_ready'])
+
+    def test_a_malformed_target_is_still_invalid(self):
+        from tests.test_protocol import ready_contract
+        task, client = ready_contract()
+        task['execution']['target_repository'] = 'not a repository'
+        self.assertIn('Execution target repository is invalid', core.verify(task, client=client)['errors'])
+
+    def test_requirements_ledger_names_cla_and_dco(self):
+        text = ' '.join(installed_workflow().split())
+        self.assertIn('contributor agreements such as a CLA or DCO sign-off, which the human submitter must complete',
+                      text)
+
+
+if __name__ == '__main__':
+    unittest.main()

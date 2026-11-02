@@ -1174,7 +1174,10 @@ def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None
         else:
             errors.append('Execution mode is pending')
     except ProtocolError:
-        errors.append('Execution target repository is invalid')
+        # A fresh draft has mode pending and no target: say so rather than calling it invalid (message only).
+        errors.append('Execution target not yet chosen (execution mode is pending)'
+                      if execution['mode'] == 'pending' and not execution['target_repository'].strip()
+                      else 'Execution target repository is invalid')
     result['execution_ready'] = not errors
     if evidence is not None:
         result['evidence_errors'] = check_evidence(task, evidence, repo_dir, digest,

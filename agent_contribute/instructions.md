@@ -201,7 +201,8 @@ Use one row per applicable rule, not one blanket 'instructions read' checkbox:
 Cover required gates and their order; dependencies, pinned fixtures, licenses
 and build prerequisites; scoped coding/security rules; regression tests;
 required documentation, changelog and gap/parity trackers; visual or performance
-evidence; attribution and contributor agreements; branch/base conventions; and
+evidence; attribution and contributor agreements such as a CLA or DCO
+sign-off, which the human submitter must complete; branch/base conventions; and
 every applicable PR-template item. Record a reason for each not-applicable item.
 Do not invent a requirement when the repository has none. Missing resources are
 not permission to substitute a smaller check. Select another feasible task or
