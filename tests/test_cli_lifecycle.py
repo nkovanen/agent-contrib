@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import cli, core
+from agent_contribute import cli, core, policy
 from tests import output_contract
 
 
@@ -57,7 +57,8 @@ class LifecycleCLITests(unittest.TestCase):
         snapshot = {'complete': True, 'source': {}, 'requested_repository': 'a/b',
                     'issue_source_repository': 'a/b', 'proposed_target_repository': 'a/b',
                     'resolution_provenance': {}, 'reference': 'a/b#1'}
-        with tempfile.TemporaryDirectory() as tmp, patch.object(core, 'inspect_issue', return_value=snapshot) as inspect, patch.object(core, 'prepare', return_value={'status': 'draft'}) as prepare:
+        with tempfile.TemporaryDirectory() as tmp, patch.object(core, 'inspect_issue', return_value=snapshot) as inspect, patch.object(core, 'prepare', return_value={'status': 'draft'}) as prepare, \
+                patch.object(policy, 'for_inspected', return_value={}):  # the stub snapshot has no source to report on
             self.assertEqual(self.invoke('prepare', 'a/b#1', '--output', str(Path(tmp)/'old.json'))[0], 0)
             self.assertEqual(prepare.call_args.kwargs.get('schema_version', '0.1'), '0.1')
             self.assertEqual(self.invoke('prepare', 'a/b#1', '--schema-version', '0.2', '--output', str(Path(tmp)/'new.json'))[0], 0)

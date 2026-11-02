@@ -34,6 +34,8 @@ class MultiDiscoverTests(unittest.TestCase):
     def test_single_repository_output_is_the_legacy_output(self):
         for argv in (['discover', 'acme/photos'],):
             code, result = run(FakeGitHub(), *argv)
+            # The CLI adds only the default-on, report-only repository_policy to the core result.
+            self.assertEqual(result.pop('repository_policy')['report'], 'policy-report/1')
             direct = core.discover('acme/photos', FakeGitHub())
             for value in (result, direct):
                 value.pop('fetched_at')

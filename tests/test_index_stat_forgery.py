@@ -1,9 +1,12 @@
 """A forged stat cache in the checkout's index cannot hide an edit (G-14): worktree content is judged
 against a commit with a fresh temporary index outside the checkout."""
 import hashlib
+import json
 import os
 import pathlib
 import struct
+import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -65,6 +68,49 @@ class IndexStatForgeryTests(unittest.TestCase):
             self.assertEqual(sorted(p.name for p in pathlib.Path(root, '.git').iterdir() if p.name.startswith('index')),
                              ['index'])
 
+
+    def test_temporary_index_never_lands_inside_the_checkout_even_with_tmpdir_there(self):
+        # R1-20: a TMPDIR inside .git (or the worktree) must not receive the scratch index.
+        child = (
+            'import json, sys\n'
+            'from agent_contribute import core\n'
+            'seen = []\n'
+            'real = core.git_read\n'
+            'def record(directory, *args, **options):\n'
+            '    if options.get("index_file"): seen.append(options["index_file"])\n'
+            '    return real(directory, *args, **options)\n'
+            'core.git_read = record\n'
+            'changes = core.worktree_changes(sys.argv[1], sys.argv[2])\n'
+            'print(json.dumps({"changes": sorted(changes), "seen": seen}))\n')
+        with tempfile.TemporaryDirectory() as root:
+            task, client, evidence, git = evidence_checkout(root)
+            for inside in (pathlib.Path(root, '.git', 'env-scratch'), pathlib.Path(root, 'scratch')):
+                with self.subTest(tmpdir=inside.name):
+                    inside.mkdir(exist_ok=True)
+                    env = dict(os.environ, TMPDIR=str(inside), PYTHONPATH=str(pathlib.Path(__file__).parents[1]))
+                    out = subprocess.run([sys.executable, '-c', child, root, evidence['git_head']], env=env,
+                                         capture_output=True, text=True, check=True).stdout
+                    result = json.loads(out)
+                    self.assertEqual(result['changes'], [])
+                    self.assertTrue(result['seen'])
+                    for path in result['seen']:
+                        resolved = pathlib.Path(path).resolve()
+                        self.assertFalse(resolved.is_relative_to(pathlib.Path(root).resolve()), path)
+                    self.assertEqual(list(inside.iterdir()), [])
+                    inside.rmdir()
+            # A linked worktree's Git directories lie outside it; a TMPDIR there is refused too.
+            with tempfile.TemporaryDirectory() as parent:
+                linked = pathlib.Path(parent, 'linked')
+                git('worktree', 'add', '-q', '--detach', str(linked), evidence['git_head'])
+                inside = pathlib.Path(root, '.git', 'linked-scratch')
+                inside.mkdir()
+                env = dict(os.environ, TMPDIR=str(inside), PYTHONPATH=str(pathlib.Path(__file__).parents[1]))
+                result = json.loads(subprocess.run([sys.executable, '-c', child, str(linked), evidence['git_head']],
+                                                   env=env, capture_output=True, text=True, check=True).stdout)
+                self.assertTrue(result['seen'])
+                for path in result['seen']:
+                    self.assertFalse(pathlib.Path(path).resolve().is_relative_to(pathlib.Path(root, '.git').resolve()), path)
+                git('worktree', 'remove', '--force', str(linked))
 
 if __name__ == '__main__':
     unittest.main()

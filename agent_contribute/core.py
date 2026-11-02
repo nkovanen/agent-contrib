@@ -28,6 +28,14 @@ SHA = re.compile('[0-9a-f]{40}')
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
                   'question', 'roadmap', 'backlog', 'in progress', 'duplicate', 'invalid',
                   'wontfix', "won't fix", 'needs info', 'fixed'}
+# Every newly prepared contract starts with the installed workflow's policy review as a pending prerequisite,
+# so dropping it is a visible contract edit; existing contracts are not reinterpreted.
+POLICY_REVIEW_PREREQUISITE = {
+    'id': 'ai-policy-review',
+    'description': ('Repository policy review (installed workflow): read repository_policy and every source it lists; '
+                    'record each disposition, the ledger reference and inventory_sha256 here. Keep pending while '
+                    'anything is unresolved; blocked when the source project refuses this work.'),
+    'status': 'pending', 'evidence': ''}
 EXCLUDED_LABELS = {'duplicate', 'invalid', 'wontfix', "won't fix", 'in progress', 'needs info', 'fixed'}
 
 
@@ -605,7 +613,8 @@ def prepare(inspected, schema_version='0.1', client=None):
     return {'schema_version': VERSION, 'status': 'draft', 'source': inspected['source'],
             'scope': {'allowed_paths': [], 'prohibited_paths': []},
             'objective': '', 'behavior_criteria': [], 'code_locations': [], 'constraints': [],
-            'prohibited_changes': [], 'validation': [], 'prerequisites': [], 'approval': inspected['approval'],
+            'prohibited_changes': [], 'validation': [], 'prerequisites': [dict(POLICY_REVIEW_PREREQUISITE)],
+            'approval': inspected['approval'],
             'execution': {'mode': 'pending', 'target_repository': target, 'authorized_by': '', 'authorization_evidence': ''},
             'discovery': {'complete': inspected['complete'], 'duplicate_prs': inspected['duplicates'],
                           'warnings': (inspected['warnings'] + inspected['errors'] + inspected['exclusions'])[:100]},
@@ -727,6 +736,7 @@ def git_read(directory, *args, index_file=None, raw=False, timeout=15):
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
                                  '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',
+                                 '-c', 'core.attributesFile=' + os.devnull,
                                  # Full stat and mode checks: relaxed checkout settings could hide an edit.
                                  '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
@@ -782,6 +792,16 @@ def require_safe_config(directory):
     if unsafe:
         raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(unsafe[0], 200)}, which a read '
                             'could run as a program or use to hide changes; remove it or use a fresh clone')
+    # --attr-source does not cover $GIT_DIR/info/attributes, so any rule there is refused.
+    attributes = Path(directory, git_read(directory, 'rev-parse', '--git-path', 'info/attributes'))
+    if attributes.exists() or attributes.is_symlink():
+        try:
+            rules = [line.strip() for line in read_regular(attributes, MAX_BYTES).decode('utf-8').splitlines()]
+        except (OSError, UnicodeError):
+            rules = ['unreadable']
+        if any(rule and not rule.startswith('#') for rule in rules):
+            raise ProtocolError('unsafe_git_attributes', 'Checkout sets local Git attributes in info/attributes, '
+                                'which could change how files are compared; remove them or use a fresh clone')
 
 
 def require_worktree_root(directory):
@@ -827,18 +847,39 @@ def content_timeout(tracked_bytes):
     return min(CONTENT_TIMEOUT_CEILING, CONTENT_TIMEOUT_FLOOR + tracked_bytes // CONTENT_HASH_RATE)
 
 
+def _scratch_root(directory):
+    """A temporary root whose real path is outside the worktree and its Git directories; TMPDIR may point inside."""
+    forbidden = [Path(directory).resolve()] + [
+        Path(directory, git_read(directory, 'rev-parse', option)).resolve()
+        for option in ('--absolute-git-dir', '--git-common-dir')]
+    for candidate in (tempfile.gettempdir(), '/tmp', '/var/tmp'):
+        root = Path(candidate).resolve()
+        if root.is_dir() and not any(root == path or root.is_relative_to(path) for path in forbidden):
+            return str(root)
+    raise ProtocolError('unsafe_temp_dir', 'No temporary directory outside the checkout is available; '
+                        'set TMPDIR to a directory outside it')
+
+
 def worktree_changes(directory, commit):
     """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
     temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
+    version = re.match(r'git version (\d+)\.(\d+)', git_read(directory, '--version'))
+    if not version or (int(version[1]), int(version[2])) < (2, 40):
+        raise ProtocolError('git_too_old', 'Git 2.40 or newer is required to compare worktree content without '
+                            'attribute conversions')
+    empty_tree = git_read(directory, 'hash-object', '-t', 'tree', '--stdin')  # stdin is empty; nothing is written
     tracked = sum(int(fields[3]) for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0')
                   if entry and (fields := entry.split('\t', 1)[0].split())[1] == 'blob')
     budget = content_timeout(tracked)
-    with tempfile.TemporaryDirectory() as scratch:
+    with tempfile.TemporaryDirectory(dir=_scratch_root(directory)) as scratch:
         index = os.path.join(scratch, 'index')
         git_read(directory, 'read-tree', commit, index_file=index)
         try:
-            listed = git_read(directory, 'status', '--porcelain', '-z', '--no-renames', '--untracked-files=no',
-                              '--ignore-submodules=all', index_file=index, timeout=budget)
+            # Byte-for-byte: attributes come from the empty tree and autocrlf is off, so ident, eol and
+            # working-tree-encoding conversions cannot make different bytes equal the commit.
+            listed = git_read(directory, '-c', 'core.autocrlf=false', '--attr-source=' + empty_tree, 'status',
+                              '--porcelain', '-z', '--no-renames', '--untracked-files=no', '--ignore-submodules=all',
+                              index_file=index, timeout=budget)
         except ProtocolError as exc:
             if exc.code != 'git_timeout':
                 raise
