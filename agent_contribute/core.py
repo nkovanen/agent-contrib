@@ -703,7 +703,8 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args, index_file=None):
+def git_read(directory, *args, index_file=None, raw=False):
+    """raw=True returns Git's exact output bytes: no decoding and no newline conversion (object parsing)."""
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
@@ -723,9 +724,11 @@ def git_read(directory, *args, index_file=None):
                                  # POSIX has symlinks: a file standing in for a tracked symlink is a change.
                                  *(('-c', 'core.symlinks=true') if os.name == 'posix' else ()),
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
-                                capture_output=True, text=not nul_delimited, timeout=15, shell=False)
+                                capture_output=True, text=not (nul_delimited or raw), timeout=15, shell=False)
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
+        if raw:
+            return result.stdout
         # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
         return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
     except (OSError, subprocess.TimeoutExpired) as exc:

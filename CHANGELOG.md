@@ -67,11 +67,15 @@ channel or runtime model provider is added.
   `unknown`), `inspect
   --ownership` and `ownership` (#5, #6; a conflicting repository ID for one
   cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
-  part), `verify --observe-ci` (#17, part) and `--report-budget` /
-  `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
-  where documented. `discover --signals` also lists
-  `code_location.named_paths_missing`: file paths the issue names that are not
-  in the snapshot tree, compared exactly (F13).
+  part), `verify --observe-ci` (#17, part), `verify --observe-signatures` (#18,
+  part; GitHub's verification of the evidence head, labelled as not approval;
+  active `required_signatures` rulesets on the base branch; and, with
+  `--repo-dir`, signature-header presence for at most 1000 commits in
+  `base_commit..git_head`, never truncated; no gpg, ssh-keygen or
+  `verify-commit` runs) and `--report-budget` / `--min-remaining` (#27, part).
+  An opted-in report that is incomplete exits 1 where documented. `discover
+  --signals` also lists `code_location.named_paths_missing`: file paths the
+  issue names that are not in the snapshot tree, compared exactly (F13).
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
