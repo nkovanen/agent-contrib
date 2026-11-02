@@ -225,9 +225,11 @@ lexically from the link's directory, expanding every link hop, including links
 to directories, up to 40 hops. The link is a violation, with the reason as its
 rule, when the target is absolute (`/x` or `C:/x`), contains a backslash,
 escapes the repository, points at the repository root, is longer than 4096
-bytes, loops, or resolves to a path outside `allowed_paths` or matching
+bytes, contains a NUL byte, is not valid UTF-8, cannot be read (for example a
+permission error on a hop), loops, or resolves to a path outside `allowed_paths` or matching
 `prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
-A link to an allowed file passes. Git records no path beyond a symlink, so a
+A link to an allowed file passes; a scope pass does not prove the target exists.
+Git records no path beyond a symlink, so a
 file written through a linked directory appears at its real path and is judged
 there.
 

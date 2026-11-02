@@ -889,6 +889,11 @@ def scope_violations(scope, paths):
 
 MAX_LINK_BYTES = 4096
 MAX_LINK_HOPS = 40
+_EXPAND = object()  # parser marker: the next item is a link target still to expand; never equal to a target
+
+
+class BadLink(Exception):
+    """A symlink that cannot be judged; the reason becomes its violation rule (fail closed)."""
 
 
 class LinkView:
@@ -913,30 +918,55 @@ class LinkView:
         if self.worktree:
             full = Path(self.directory, path)
             try:  # each prefix was already resolved, so lstat never passes through a link
-                return os.readlink(full) if stat.S_ISLNK(os.lstat(full).st_mode) else None
+                mode = os.lstat(full).st_mode
+            except (FileNotFoundError, NotADirectoryError):
+                return None  # absent or under a regular file: an ordinary (dangling) path, not a link
             except OSError:
+                raise BadLink('symlink target could not be read: ' + safe_text(path, 500)) from None
+            if not stat.S_ISLNK(mode):
                 return None
-        sha = self.shas.get(path)
-        if sha is None:
-            return None
-        if int(git_read(self.directory, 'cat-file', '-s', sha)) > MAX_LINK_BYTES:
-            return '\0too long'
-        return git_read(self.directory, 'cat-file', 'blob', sha, raw=True).decode('utf-8', errors='surrogateescape')
+            try:
+                data = os.fsencode(os.readlink(full))
+            except OSError:
+                raise BadLink('symlink target could not be read: ' + safe_text(path, 500)) from None
+        else:
+            sha = self.shas.get(path)
+            if sha is None:
+                return None
+            if int(git_read(self.directory, 'cat-file', '-s', sha)) > MAX_LINK_BYTES:
+                raise BadLink(f'symlink target is longer than {MAX_LINK_BYTES} bytes')
+            data = git_read(self.directory, 'cat-file', 'blob', sha, raw=True)
+        # Validate the bytes before any parsing (review SL-02): no NUL, UTF-8 only, bounded.
+        if len(data) > MAX_LINK_BYTES:
+            raise BadLink(f'symlink target is longer than {MAX_LINK_BYTES} bytes')
+        if b'\0' in data:
+            raise BadLink('symlink target contains a NUL byte')
+        try:
+            return data.decode('utf-8')
+        except UnicodeDecodeError:
+            raise BadLink('symlink target is not valid UTF-8') from None
 
 
 def link_violation(scope, path, view):
     """G-08: resolve a symlink lexically, every hop and directory link included, and judge where it lands."""
+    try:
+        return _resolve_link(scope, path, view)
+    except BadLink as exc:
+        return str(exc)
+    except ProtocolError as exc:
+        return 'symlink target could not be read: ' + str(exc)
+
+
+def _resolve_link(scope, path, view):
     stack, hops, shown = path.split('/')[:-1], 0, view.target(path)
-    parts = ['\0link', shown]  # a '\0link' marker is followed by a link target still to expand
+    parts = [_EXPAND, shown]
     while parts:
         part = parts.pop(0)
-        if part == '\0link':
+        if part is _EXPAND:
             target = parts.pop(0)
             hops += 1
             if hops > MAX_LINK_HOPS:
                 return 'symlink target has too many levels of links: ' + safe_text(shown, 200)
-            if target == '\0too long':
-                return f'symlink target is longer than {MAX_LINK_BYTES} bytes'
             if '\\' in target:
                 return 'symlink target uses a backslash (Windows-style): ' + safe_text(target, 200)
             if not target or target.startswith('/') or re.match(r'[A-Za-z]:', target):
@@ -954,7 +984,7 @@ def link_violation(scope, path, view):
         nested = view.target('/'.join(stack))
         if nested is not None:
             stack.pop()
-            parts = ['\0link', nested] + parts
+            parts = [_EXPAND, nested] + parts
     resolved = '/'.join(stack)
     if not resolved:
         return 'symlink to the repository root'
@@ -966,7 +996,12 @@ def link_violations(scope, paths, view):
     """Violations for every changed path that is a symlink in view; other paths are left to scope_violations."""
     found = []
     for path in sorted(paths):
-        if view.target(path) is not None:
+        try:
+            is_link = view.target(path) is not None
+        except BadLink as exc:
+            found.append({'path': safe_text(path, 500), 'rule': str(exc)})
+            continue
+        if is_link:
             rule = link_violation(scope, path, view)
             if rule:
                 found.append({'path': safe_text(path, 500), 'rule': rule})

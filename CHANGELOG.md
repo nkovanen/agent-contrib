@@ -134,7 +134,8 @@ channel or runtime model provider is added.
   target is read without following it and resolved lexically from the link's
   directory through every link hop, directory links included. A target that is
   absolute, uses a backslash or a drive letter, escapes the repository, points
-  at the repository root, exceeds 4096 bytes or 40 hops, or resolves outside
+  at the repository root, exceeds 4096 bytes or 40 hops, contains a NUL byte,
+  is not valid UTF-8, cannot be read, or resolves outside
   `allowed_paths` or into `prohibited_paths` is a scope violation that names the
   reason. A link to an allowed file still passes.
 - Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and

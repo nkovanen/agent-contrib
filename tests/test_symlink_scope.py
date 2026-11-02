@@ -125,6 +125,69 @@ class SymlinkScopeTests(unittest.TestCase):
         self.assertEqual(found['src/docs'], 'symlink to docs: not in allowed_paths')
         self.assertNotIn('src/docs/new.md', workspace.scope_check(task, tmp)['changed_paths'])
 
+    def test_unreadable_hop_fails_closed(self):
+        # Review SL-01: a permission error on a hop used to read as an ordinary in-scope path.
+        if os.geteuid() == 0:
+            self.skipTest('root ignores directory permissions')
+        tmp = self.temporary()
+        task, _, _, git = evidence_checkout(tmp)
+        link(tmp, 'src/visible', 'locked/hidden')
+        link(tmp, 'src/locked/hidden', '../../AGENTS.md')
+        locked = pathlib.Path(tmp, 'src/locked')
+        locked.chmod(0)
+        self.addCleanup(locked.chmod, 0o700)
+        result = workspace.scope_check(task, tmp)
+        self.assertFalse(result['within_scope'])
+        self.assertIn({'path': 'src/visible', 'rule': 'symlink target could not be read: src/locked/hidden'},
+                      result['violations'])
+
+    def test_worktree_readlink_failure_and_oversized_target_fail_closed(self):
+        from unittest.mock import patch
+        tmp = self.temporary()
+        task, _, _, _ = evidence_checkout(tmp)
+        link(tmp, 'src/w', 'thumb.rs')
+        real = os.readlink
+        for effect, rule in [(PermissionError('denied'), 'symlink target could not be read: src/w'),
+                             ('a/' * 2500, 'symlink target is longer than 4096 bytes')]:
+            with self.subTest(rule=rule):
+                def fake(path, *args, **kwargs):
+                    if str(path).endswith('src/w'):
+                        if isinstance(effect, Exception):
+                            raise effect
+                        return effect
+                    return real(path, *args, **kwargs)
+                with patch.object(core.os, 'readlink', side_effect=fake):
+                    self.assertEqual(self.violations(tmp, task).get('src/w'), rule)
+
+    def test_nul_and_non_utf8_link_blobs_are_structured_violations(self):
+        # Review SL-02: a NUL blob collided with the parser's marker and raised IndexError.
+        import subprocess
+        tmp = self.temporary()
+        task, client, evidence, git = evidence_checkout(tmp)
+        for path, data in [('src/nul', b'\0link'), ('src/nul2', b'thumb.rs\0../AGENTS.md'), ('src/bytes', b'\xff\xfe')]:
+            blob = subprocess.run(['git', '-C', tmp, 'hash-object', '-w', '--stdin'], input=data,
+                                  capture_output=True, check=True).stdout.decode().strip()
+            git('update-index', '--add', '--cacheinfo', f'120000,{blob},{path}')
+        staged = self.violations(tmp, task)
+        expected = {'src/nul': 'symlink target contains a NUL byte', 'src/nul2': 'symlink target contains a NUL byte',
+                    'src/bytes': 'symlink target is not valid UTF-8'}
+        self.assertEqual({path: staged[path] for path in expected}, expected)
+        git('commit', '-q', '-m', 'malformed links')
+        refresh_checkout_evidence(evidence, git)
+        self.assertEqual({path: self.violations(tmp, task)[path] for path in expected}, expected)
+        errors = core.verify(task, evidence, tmp, client)['evidence_errors']
+        self.assertIn('Implementation adds a symlink outside reviewed scope: src/nul (symlink target contains a NUL byte)',
+                      errors)
+        import contextlib, io, json
+        from agent_contribute import cli
+        contract = pathlib.Path(self.temporary(), 'task.json')
+        contract.write_text(json.dumps(task))
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = cli.main(['scope-check', str(contract), '--repo-dir', tmp])
+        self.assertEqual(code, 1)
+        self.assertFalse(json.loads(output.getvalue())['within_scope'])
+
 
 if __name__ == '__main__':
     unittest.main()
