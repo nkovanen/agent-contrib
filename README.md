@@ -100,7 +100,9 @@ agent-generated work. A task is **policy-approved** only through an explicit
 `.agent-contrib.json` policy and a configured label currently on the issue. The
 CLI checks the label; it does not verify who applied it. The policy trusts every
 account that can label issues (triage, write and higher, and automation with
-label access), and public GitHub data cannot tell the CLI who the labeller was.
+label access). Public issue events name an event actor, but an outside
+contributor cannot use them to verify that actor's maintainer authority or to
+bind a same-name event reliably to the current label.
 See [maintainer setup](docs/maintainers.md).
 
 Each contract uses one of two task schemas:

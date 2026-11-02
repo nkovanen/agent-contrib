@@ -23,7 +23,8 @@ security maintenance commitment.
 - Source approval, execution authority and publication authority are separate.
   Policy 0.1 checks that a configured label is currently present; it does not
   verify who applied it. It delegates approval to every account permitted to
-  label issues, and label actors cannot be verified from public REST data (#9). The separate schema 0.2 route
+  label issues. Public events name a labeling actor, but its approval authority
+  and its binding to the current label cannot be verified from public REST data (#9). The separate schema 0.2 route
   verifies the current personal credential's numeric identity and exact admin or
   maintain role; it does not turn a candidate into policy-approved work.
 - The schema 0.2 mandate and final sign-off are separate host assertions. Stdin,

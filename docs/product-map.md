@@ -71,7 +71,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [3] F1 `pr-body` description from contract, evidence and live gates ([#19](https://github.com/nkovanen/agent-contrib/issues/19))
 - [3] F2 `feedback`: reviews, comments and exact-head checks on a PR ([#20](https://github.com/nkovanen/agent-contrib/issues/20))
 - [3] Requirements-ledger workflow, contract field mapping, local-only (implement-only) profile and coordinator relay rules in the installed workflow
-- [3] C2 Approval-label authority ([#9](https://github.com/nkovanen/agent-contrib/issues/9)): documented limitation; actor verification not available on public REST data. A maintainer-side label-actor report is deferred (R9-05, R9-06)
+- [3] C2 Approval-label authority ([#9](https://github.com/nkovanen/agent-contrib/issues/9)): documented limitation; labeling-actor authority cannot be verified from public REST data (events name an actor, not its role). A maintainer-side label-actor report is deferred (R9-05, R9-06)
 
 ### Partly implemented
 - [~] B1 Ownership claims and cross-repository linked PRs, report only ([#5](https://github.com/nkovanen/agent-contrib/issues/5)). Missing: adoption into readiness gates

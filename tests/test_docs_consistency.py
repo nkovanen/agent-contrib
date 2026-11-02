@@ -89,7 +89,19 @@ class DocsConsistencyTests(unittest.TestCase):
                       maintainers)
         self.assertIn('A dedicated label name restricts nothing', maintainers)
         self.assertIn('do not opt in under this policy', maintainers)
-        self.assertIn('documented limitation; actor verification not available on public REST data',
+        # R9-07/R9-08: events name an actor; what is unverifiable is its authority and label binding.
+        for path in ('README.md', 'SECURITY.md', 'agent_contribute/instructions.md'):
+            with self.subTest(path=path):
+                self.assertNotIn('cannot tell the CLI who', texts[path])
+                self.assertRegex(texts[path], r'Public (issue )?events name an? (event |labeling )?actor')
+        self.assertIn('configured label is currently present on the issue under the default-branch policy',
+                      maintainers)
+        self.assertIn('triage, write and higher roles, custom roles or grants that allow labelling', maintainers)
+        self.assertIn('use the schema 0.2 mandate route', maintainers)
+        design = flat('docs/design/2026-11-02-actor-verified-approval.md')
+        self.assertIn('R9-05', design)
+        self.assertIn('R9-06', design)
+        self.assertIn('documented limitation; labeling-actor authority cannot be verified from public REST data',
                       flat('docs/product-map.md'))
 
 if __name__ == '__main__':
