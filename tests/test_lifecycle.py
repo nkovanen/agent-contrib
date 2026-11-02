@@ -695,3 +695,19 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.task['prerequisites'] = [pending]
         self.rebind()
         self.assertTrue(self.verify(evidence=False)['implementation_ready'])
+
+    def test_policy_content_change_with_same_present_state_requires_review(self):
+        policy = {'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
+                  'label_authority': 'repository-label-permission'}
+        self.client.policy = copy.deepcopy(policy)
+        prepared = core.prepare(core.inspect_issue('acme/photos#12', self.client), schema_version='0.2', client=self.client)
+        self.task['source'] = dict(prepared['source'], commit=self.evidence['base_commit'])
+        self.rebind()
+        self.assertTrue(self.verify(evidence=False)['implementation_ready'])
+        self.client.policy['agent_approved_labels'] = ['agent-other']
+        current = core.inspect_issue('acme/photos#12', self.client)
+        self.assertEqual(current['provenance']['policy_state'], 'present')
+        self.assertEqual(current['source']['instructions_sha256'], self.task['source']['instructions_sha256'])
+        result = self.verify(evidence=False)
+        self.assertFalse(result['implementation_ready'])
+        self.assertEqual(result['errors'], ['Source policy state/content changed; refresh and review contract'])
