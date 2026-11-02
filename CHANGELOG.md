@@ -84,7 +84,8 @@ channel or runtime model provider is added.
   hono rankings; precision@5 is unchanged on it (1/5, 1/5, 0/5).
   `discover --signals --check-top N` (1-5) reads bounded ownership signals for
   the top N only (one timeline and comment page, 4 PR details each, 30 reads in
-  all). A merged same-repository fix, a fresh claim or an assignee moves a
+  all). A merged same-repository fix, a fresh unquoted first-person claim by a
+  non-maintainer or an assignee moves a
   checked issue below every other candidate that is not excluded or
   overlapping, with the reason listed. `signals.assignees` reports current
   assignees. Report only.

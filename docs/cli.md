@@ -348,7 +348,12 @@ cross-referenced PR details, and all checks together make at most 30 reads.
 Reaching a cap, or a failed read, marks that check `complete: false`, and an
 incomplete `top_check` exits 1. A checked issue is demoted when it has a
 merged same-repository PR that references it exactly ("possibly already
-fixed"), a claim comment no older than 30 days, or a current assignee. It then
+fixed"), a claim comment no older than 30 days, or a current assignee. A claim
+counts only when a non-maintainer writes it in the first person about this issue
+(`I'm working on this`, `can I take it`, `/assign`) outside code spans, fenced
+code, blockquotes and quotation marks; `I'm working on issue #999`, `I will take
+the tests` or a quoted example do not count. The `inspect --ownership` report keeps
+its broader patterns. It then
 moves below every other candidate that is not excluded or overlapping (known
 bad below unknown); relative order is otherwise kept and issues below the top N
 are never read. Each

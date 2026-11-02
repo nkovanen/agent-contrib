@@ -306,6 +306,21 @@ CHECK_TOP_NOTICE = ('Report only. Only the top N candidates were read (first tim
                     'incomplete or clean check is unknown, never proof that an issue is free or unfixed.')
 
 
+# A ranking demotion needs a stricter claim than the report-only ownership patterns (review R8-03): first person,
+# about this issue ('this' or 'it'), by a non-maintainer, outside code, quotes and blockquotes.
+RANKING_CLAIMS = re.compile(r"(?i)\bI(?:'m| am)\s{1,3}(?:currently\s{1,3}|now\s{1,3})?working on (?:this|it)\b(?!\s{0,3}#)|"
+                            r"\bI(?:'ll| will)\s{1,3}take (?:this|it)\b|\bcan I\s{1,3}(?:work on|take|pick up) (?:this|it)\b|"
+                            r"(?m:^[ \t]{0,8}/assign\b)|\bassign (?:this |it )?(?:to )?me\b")
+QUOTED = re.compile(r'(?s)```.*?```|~~~.*?~~~|`[^`\n]*`|(?m:^[ \t]{0,3}>.*$)|"[^"\n]*"|\u201c[^\u201d\n]*\u201d')
+
+
+def ranking_claim(comment):
+    from .ownership import STALE_DAYS
+    age = comment['age_days']
+    return (comment['author_association'] not in MAINTAINER_ASSOCIATIONS and age is not None and age <= STALE_DAYS and
+            bool(RANKING_CLAIMS.search(QUOTED.sub(' ', comment['body'][:SCAN_LIMIT]))))
+
+
 class _ReadCap:
     def __init__(self, client, cap):
         self.client, self.cap, self.reads = client, cap, 0
@@ -318,17 +333,18 @@ class _ReadCap:
 
 
 def check_top(result, client, n, now):
-    """Check only the top n; demote on existing precise detectors only: a merged same-repository PR with an exact
-    reference, a claim comment no older than ownership.STALE_DAYS, or a current assignee."""
+    """Check only the top n; demote on precise detectors only: a merged same-repository PR with an exact reference,
+    a strict unquoted first-person claim by a non-maintainer no older than ownership.STALE_DAYS, or an assignee."""
     from .ownership import ownership_signals
     source, capped, head = result['repository'], _ReadCap(client, CHECK_READ_CAP), result['issues'][:n]
     for issue in head:
         before = capped.reads
+        comments = []
         report = ownership_signals(source, issue['number'], capped, now, max_pages=CHECK_PAGES,
-                                   max_pr_details=CHECK_PR_DETAILS)
+                                   max_pr_details=CHECK_PR_DETAILS, comments_out=comments)
         fixed = [pr['url'] for pr in report['resolution_signals']['possibly_already_fixed']
                  if pr['repository'].casefold() == source.casefold()]
-        claims = [claim for claim in report['claims'] if not claim['stale']]
+        claims = [comment for comment in comments if ranking_claim(comment)]
         reasons = (['possibly already fixed by a merged same-repository PR: ' + ', '.join(fixed[:3])] if fixed else []) + (
             [f'claimed in a comment by {claims[0]["author"]} {claims[0]["age_days"]} days ago'] if claims else []) + (
             ['assigned to ' + ', '.join(issue['signals']['assignees'][:3])] if issue['signals']['assignees'] else [])

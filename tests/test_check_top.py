@@ -89,6 +89,30 @@ class CheckTopTests(unittest.TestCase):
             entry = next(item for item in result['issues'] if item['number'] == number)
             self.assertEqual((entry['duplicates'], entry['exclusions'], entry['approval']['status']), ([], [], 'candidate'))
 
+    def test_only_unquoted_first_person_claims_by_non_maintainers_demote(self):
+        # Review R8-03: quoted, instructional, other-task and tests-only comments are not claims on this issue.
+        claim = 'claimed in a comment by carol 2 days ago'
+        cases = [("I'm working on this", 'NONE', [claim]), ('I am working on it now.', 'CONTRIBUTOR', [claim]),
+                 ('Can I take this?', 'NONE', [claim]), ('/assign', 'FIRST_TIME_CONTRIBUTOR', [claim]),
+                 ("Please do not post `I'm working on this` comments.", 'NONE', []),
+                 ('> I am working on this\n\nThat quotation is an example, not a claim.', 'NONE', []),
+                 ('```\nI am working on this\n```', 'NONE', []),
+                 ('Do not write "I am working on this" here.', 'NONE', []),
+                 ('I will take the tests, but please send your implementation PR.', 'NONE', []),
+                 ("I'm working on issue #999; this issue is still free.", 'NONE', []),
+                 ('Can I work on the documentation for #998 instead?', 'NONE', []),
+                 ("I'm not working on this.", 'NONE', []), ('Nobody is working on this.', 'NONE', []),
+                 ("I'm working on this", 'MEMBER', []), ("I'm working on this", 'OWNER', [])]
+        for body, association, expected in cases:
+            with self.subTest(body=body, association=association):
+                client = CheckGitHub()
+                client.timelines = {}
+                client.comments = {1: [dict(comment(10, body, FRESH), author_association=association)]}
+                code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '1')
+                check = next(item for item in result['issues'] if item['number'] == 1)['top_check']
+                self.assertEqual(check['demotions'], expected)
+                self.assertEqual(result['issues'][0]['number'], 1 if not expected else 2)
+
     def test_smaller_n_checks_only_that_many_but_demotes_below_all(self):
         client = CheckGitHub()
         client.comments = {}
