@@ -97,8 +97,14 @@ def _format(path):
     return '.' + name.rsplit('.', 1)[1].casefold() if '.' in name[1:] else ''
 
 
+def _clean(text):
+    """safe_text without its default 100,000-character cut: callers bound sizes, and silent truncation hid
+    the tail of long paragraphs (RP-14)."""
+    return core.safe_text(text, len(text))
+
+
 def normalize(text):
-    text = core.safe_text(html.unescape(core.safe_text(text)))
+    text = _clean(html.unescape(_clean(text)))
     text = TAG.sub(' ', text)  # a tag starts with a letter, so HTML comment bodies stay and are scanned
     return NOT_CONTRACTION.sub(' not', unicodedata.normalize('NFKC', text))
 
@@ -192,7 +198,7 @@ def _links(text):
 
 def scan(text, path):
     """Hints, policy-like links and the count of non-Latin paragraphs for one source text."""
-    text = core.safe_text(text, MAX_FILE_BYTES * 5)
+    text = _clean(text)
     hints, non_latin = [], 0
     for line, heading, block in _paragraphs(text):
         normalized = normalize(block)

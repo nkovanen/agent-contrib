@@ -476,6 +476,16 @@ class BoundTests(unittest.TestCase):
         self.assertLess(large, 6.0)
         self.assertLess(large, max(small, 0.05) * 10, (small, large))
 
+    def test_long_paragraphs_are_scanned_to_the_end(self):
+        tail = 'AI-generated contributions are forbidden.'
+        for prefix in ('x ' * 55000, '&amp; ' * 20000 + 'x ' * 30000, '\ufdfa ' * 40000):
+            text = prefix + tail
+            with self.subTest(prefix=prefix[:8], size=len(text.encode())):
+                self.assertLess(len(text.encode()), policy.MAX_FILE_BYTES)
+                result, _ = report({'CONTRIBUTING.md': text})
+                self.assertEqual(len(result['sources_scanned']), 1)
+                self.assertIn('possible_ai_restriction', kinds(result))
+
     def test_patterns_have_no_quantified_groups(self):
         source = pathlib.Path(policy.__file__).read_text('utf-8')
         patterns = re.findall(r"re\.compile\((r?'(?:[^'\\]|\\.)*')", source)
