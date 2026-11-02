@@ -379,7 +379,10 @@ Text changes presentation only, never scan depth, authorization or exit status.
 It is a summary: discovery shows at most 20 issues per repository, lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
 counted. Multi-repository discovery includes every repository's completeness and
-errors. Verification shows the gates and blockers. Other commands show top-level
+errors. Verification shows the gates and blockers. With an explicit
+`verify --stage X`, text starts with stage X, its exit gate and its blockers;
+the other stages appear only as blocker counts, because they do not decide that
+exit. JSON still contains every stage. Other commands show top-level
 scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured

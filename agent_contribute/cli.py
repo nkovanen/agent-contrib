@@ -133,6 +133,7 @@ def main(argv=None):
     sub.add_argument('--assistant')
     sub.add_argument('--output', required=True)
     args = None
+    stage_gate = None
     try:
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
@@ -246,6 +247,8 @@ def main(argv=None):
                                    result.get('publication', {}).get('verified') is True),
                          'completion': result.get('completion_ready') is True}
                 code = 0 if result.get('schema_valid') is True and ready[stage] else 1
+                if args.stage is not None:
+                    stage_gate = (stage, code == 0)
             else:
                 result = core.verify(task, evidence, args.repo_dir)
                 code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
@@ -263,7 +266,7 @@ def main(argv=None):
     if stream is None:
         return 1
     try:
-        output = (textfmt.render(args.command, result) if args is not None and args.format == 'text'
+        output = (textfmt.render(args.command, result, stage=stage_gate) if args is not None and args.format == 'text'
                   else json.dumps(result, indent=2, ensure_ascii=True, allow_nan=False) + '\n')
         print(output, end='', file=stream)
         flush = getattr(stream, 'flush', None)

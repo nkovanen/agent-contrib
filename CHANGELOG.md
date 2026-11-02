@@ -41,6 +41,9 @@
   valid mandate` instead of implying the history was read. Gates are unchanged.
 - The prerequisite blocker names each failing prerequisite ID and status, for
   example `P1 (pending), P4 (satisfied without evidence)`.
+- `--format text verify --stage X` leads with stage X, its exit gate and its
+  blockers, and reduces other stages to blocker counts. JSON and exit codes are
+  unchanged.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

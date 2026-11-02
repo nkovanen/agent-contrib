@@ -21,15 +21,28 @@ def _list(title, items, limit=50):
     return out
 
 
-def _verify(result):
+def _verify(result, stage=None):
     if 'implementation_ready' in result:
-        out = ['Gates:'] + [f'  {name}: {_flag(result.get(name))}' for name in
-                            ('schema_valid', 'implementation_ready', 'technical_evidence_valid', 'draft_create_ready',
-                             'completion_ready')]
+        blockers = result.get('stage_blockers', {})
+        out = []
+        if stage is not None:
+            # An explicit --stage leads with its own exit gate; other stages' blockers do not apply to it.
+            selected, passed = line(stage[0], 40), stage[1]
+            out = [f'Selected stage: {selected} (exit gate: {_flag(passed)})']
+            out += _list(f'Blockers [{selected}]', blockers.get(stage[0], [])) or [f'Blockers [{selected}]: none']
+        out += ['Gates:'] + [f'  {name}: {_flag(result.get(name))}' for name in
+                             ('schema_valid', 'implementation_ready', 'technical_evidence_valid', 'draft_create_ready',
+                              'completion_ready')]
         out.append('  publication.verified: ' + _flag(result.get('publication', {}).get('verified')))
         out.append('Next action: ' + line(result.get('next_action', 'unknown')))
-        for stage, errors in result.get('stage_blockers', {}).items():
-            out += _list(f'Blockers [{line(stage, 40)}]', errors)
+        if stage is None:
+            for name, errors in blockers.items():
+                out += _list(f'Blockers [{line(name, 40)}]', errors)
+        else:
+            others = [f'{line(name, 40)} {len(errors)} blocker(s)' for name, errors in blockers.items()
+                      if name != stage[0] and errors]
+            if others:
+                out.append(f'Other stages (not required by --stage {selected}; lists in JSON): ' + ', '.join(others))
         return out + _list('Errors', result.get('errors', []))
     out = ['Gates:'] + [f'  {name}: {_flag(result.get(name))}' for name in
                         ('schema_valid', 'execution_ready', 'evidence_valid', 'upstream_submission_ready',
@@ -71,12 +84,13 @@ def _inspect(result):
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
 
 
-def render(command, result):
+def render(command, result, stage=None):
+    """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
         return f'error [{line(result["error"].get("code", ""), 60)}]: {line(result["error"].get("message", ""))}\n'
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect}.get(command)
     if body is None:
         out = [f'{key}: {line(value)}' for key, value in result.items() if isinstance(value, (str, int, bool)) or value is None]
     else:
-        out = body(result)
+        out = _verify(result, stage) if command == 'verify' else body(result)
     return '\n'.join(out + ['(Text is a summary; JSON output is canonical. Remote text is untrusted.)']) + '\n'

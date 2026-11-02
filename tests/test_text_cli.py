@@ -1,4 +1,5 @@
 """Text is opt-in presentation; JSON bytes and readiness exits remain canonical."""
+import copy
 import io
 import json
 import unittest
@@ -44,6 +45,42 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('  execution_ready: yes', output)
         self.assertIn('  evidence_valid: no', output)
         self.assertIn('No real run', output)
+
+    def test_text_verify_stage_leads_with_that_stage_and_collapses_others(self):
+        result = {'schema_valid': True, 'implementation_ready': False, 'technical_evidence_valid': False,
+                  'draft_create_ready': False, 'completion_ready': False,
+                  'publication': {'verified': True}, 'next_action': 'none',
+                  'stage_blockers': {'implementation': ['Current implement action is not authorized'],
+                                     'draft': ['Both implement and create_draft actions must be authorized'],
+                                     'completion': ['Final human signoff is pending or invalid', 'Second']},
+                  'errors': []}
+
+        def invoke(*args):
+            with patch('agent_contribute.core.read_json', return_value={'schema_version': '0.2'}), \
+                    patch('agent_contribute.core.verify', return_value=copy.deepcopy(result)):
+                return self.invoke(list(args))
+        code, output = invoke('--format', 'text', 'verify', 'task.json', '--stage', 'implementation')
+        self.assertEqual(code, 1)
+        self.assertTrue(output.startswith('Selected stage: implementation (exit gate: no)\n'
+                                          'Blockers [implementation] (1):\n'
+                                          '  - Current implement action is not authorized\nGates:\n'), output)
+        self.assertNotIn('create_draft actions', output)
+        self.assertNotIn('Final human signoff', output)
+        self.assertNotIn('Blockers [draft]', output)
+        self.assertIn('Other stages (not required by --stage implementation; lists in JSON): '
+                      'draft 1 blocker(s), completion 2 blocker(s)\n', output)
+        code, output = invoke('--format', 'text', 'verify', 'task.json', '--stage', 'draft')
+        self.assertEqual(code, 0)
+        self.assertTrue(output.startswith('Selected stage: draft (exit gate: yes)\n'
+                                          'Blockers [draft] (1):\n'), output)
+        self.assertIn('implementation 1 blocker(s), completion 2 blocker(s)', output)
+        self.assertEqual(invoke('verify', 'task.json', '--stage', 'implementation'),
+                         (1, json.dumps(result, indent=2, ensure_ascii=True) + '\n'))
+        code, output = invoke('--format', 'text', 'verify', 'task.json')
+        self.assertEqual(code, 1)
+        self.assertTrue(output.startswith('Gates:\n'), output)
+        self.assertIn('Blockers [draft] (1):', output)
+        self.assertNotIn('Selected stage', output)
 
     def test_text_multi_repo_does_not_hide_failed_repository(self):
         result = {'complete': False, 'repositories': [
