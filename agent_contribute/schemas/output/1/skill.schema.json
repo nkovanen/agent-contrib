@@ -7,15 +7,19 @@
   "properties": {
     "output": {
       "type": "string",
-      "description": "Path of the new SKILL.md"
+      "description": "Path of the new SKILL.md",
+      "maxLength": 100000
     },
     "cli_version": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     },
     "sha256": {
       "type": "string",
-      "pattern": "[0-9a-f]{64}",
-      "description": "SHA-256 of the exported file"
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the exported file",
+      "maxLength": 64,
+      "minLength": 64
     }
   },
   "required": [

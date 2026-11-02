@@ -7,23 +7,29 @@
   "properties": {
     "output": {
       "type": "string",
-      "description": "Path of the new Markdown file"
+      "description": "Path of the new Markdown file",
+      "maxLength": 100000
     },
     "sha256": {
       "type": "string",
-      "pattern": "[0-9a-f]{64}",
-      "description": "SHA-256 of the rendered body"
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the rendered body",
+      "maxLength": 64,
+      "minLength": 64
     },
     "contract_sha256": {
       "type": [
         "string",
         "null"
       ],
-      "pattern": "[0-9a-f]{64}",
-      "description": "Contract hash reported by the embedded verify run"
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Contract hash reported by the embedded verify run",
+      "maxLength": 64,
+      "minLength": 64
     },
     "warning": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     },
     "api_budget": {
       "$ref": "#/$defs/api_budget"
@@ -58,10 +64,12 @@
             "string",
             "null"
           ],
-          "description": "Why used_during_command is null"
+          "description": "Why used_during_command is null",
+          "maxLength": 100000
         },
         "note": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -107,7 +115,8 @@
             "string",
             "null"
           ],
-          "description": "Why the snapshot failed; null when it succeeded"
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 100000
         }
       },
       "required": [

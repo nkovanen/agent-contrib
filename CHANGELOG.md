@@ -10,7 +10,10 @@
   do not carry the version, so existing results are unchanged; a shape change
   bumps it. The bundled validator gained `null`, `number`, type lists, `anyOf`,
   local `$ref` and `additionalProperties` maps, which the task, evidence and
-  host-context schemas do not use.
+  host-context schemas do not use. It now checks every item of a list whose
+  length the schema allows (previously only the first 1000) and rejects NaN and
+  infinities as numbers. Output schemas state every length bound and anchor
+  every pattern, so standard validators decide like the bundled one.
 - `verify`, `scope-check` and `evidence init` capture HEAD once with an exact
   lookup and use that commit for every tree, diff, ancestry, gitlink and
   timestamp read (R4-05). An unborn or deleted current branch, or a HEAD naming

@@ -33,10 +33,12 @@
             "string",
             "null"
           ],
-          "description": "Why used_during_command is null"
+          "description": "Why used_during_command is null",
+          "maxLength": 100000
         },
         "note": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -54,25 +56,29 @@
       "properties": {
         "requested_repository": {
           "type": "string",
-          "description": "Repository named on the command line"
+          "description": "Repository named on the command line",
+          "maxLength": 100000
         },
         "issue_source_repository": {
           "type": [
             "string",
             "null"
           ],
-          "description": "Repository whose tracker was read; null when unresolved"
+          "description": "Repository whose tracker was read; null when unresolved",
+          "maxLength": 100000
         },
         "proposed_target_repository": {
           "type": "string",
-          "description": "Proposed contribution target; context, never authority"
+          "description": "Proposed contribution target; context, never authority",
+          "maxLength": 100000
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
         },
         "reference": {
           "type": "string",
-          "description": "owner/repo#number as requested"
+          "description": "owner/repo#number as requested",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean",
@@ -81,9 +87,11 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 1000
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -105,13 +113,15 @@
       "type": "object",
       "properties": {
         "endpoint": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "observed": {
           "$ref": "#/$defs/repository_observation"
         },
         "fetched_at": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -126,28 +136,33 @@
       "properties": {
         "requested_repository": {
           "type": "string",
-          "description": "Repository named on the command line"
+          "description": "Repository named on the command line",
+          "maxLength": 100000
         },
         "issue_source_repository": {
           "type": [
             "string",
             "null"
           ],
-          "description": "Repository whose tracker was read; null when unresolved"
+          "description": "Repository whose tracker was read; null when unresolved",
+          "maxLength": 100000
         },
         "proposed_target_repository": {
           "type": "string",
-          "description": "Proposed contribution target; context, never authority"
+          "description": "Proposed contribution target; context, never authority",
+          "maxLength": 100000
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
         },
         "reference": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "output": {
           "type": "string",
-          "description": "Path of the new draft contract"
+          "description": "Path of the new draft contract",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean",
@@ -171,7 +186,8 @@
           "description": "The draft task contract as written; validate it with the task schema of its schema_version"
         },
         "warning": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -224,7 +240,8 @@
             "string",
             "null"
           ],
-          "description": "Why the snapshot failed; null when it succeeded"
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -241,7 +258,8 @@
       "type": "object",
       "properties": {
         "full_name": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "fork": {
           "type": "boolean"
@@ -253,7 +271,8 @@
           "type": "object",
           "properties": {
             "full_name": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -277,15 +296,18 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/metadata_read"
-          }
+          },
+          "maxItems": 1000
         },
         "reason": {
           "type": "string",
-          "description": "How the issue tracker was chosen, or \"unresolved\""
+          "description": "How the issue tracker was chosen, or \"unresolved\"",
+          "maxLength": 100000
         },
         "execution_authority": {
           "type": "string",
-          "description": "Always \"none\": resolution never grants authority"
+          "description": "Always \"none\": resolution never grants authority",
+          "maxLength": 100000
         }
       },
       "required": [

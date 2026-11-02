@@ -33,10 +33,12 @@
             "string",
             "null"
           ],
-          "description": "Why used_during_command is null"
+          "description": "Why used_during_command is null",
+          "maxLength": 100000
         },
         "note": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -54,7 +56,8 @@
       "properties": {
         "login": {
           "type": "string",
-          "description": "\"ghost\" for a deleted account"
+          "description": "\"ghost\" for a deleted account",
+          "maxLength": 100000
         },
         "id": {
           "type": [
@@ -98,10 +101,12 @@
           "minimum": 1
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "app_slug": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "app_id": {
           "type": "integer",
@@ -109,7 +114,9 @@
         },
         "head_sha": {
           "type": "string",
-          "pattern": "[0-9a-f]{40}"
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
         },
         "status": {
           "type": "string",
@@ -143,7 +150,8 @@
         },
         "url": {
           "type": "string",
-          "description": "Empty when GitHub reports none"
+          "description": "Empty when GitHub reports none",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -163,7 +171,8 @@
       "properties": {
         "reference": {
           "type": "string",
-          "description": "owner/repo#number of the pull request"
+          "description": "owner/repo#number of the pull request",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean",
@@ -172,11 +181,14 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "untrusted_data_notice": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "pull_request": {
           "type": "object",
@@ -186,7 +198,8 @@
               "minimum": 1
             },
             "url": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             },
             "state": {
               "type": "string",
@@ -200,13 +213,17 @@
             },
             "head_sha": {
               "type": "string",
-              "pattern": "[0-9a-f]{40}"
+              "pattern": "^[0-9a-f]{40}$",
+              "maxLength": 40,
+              "minLength": 40
             },
             "head_ref": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             },
             "base_ref": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -274,17 +291,21 @@
                   "string",
                   "null"
                 ],
-                "pattern": "[0-9a-f]{40}"
+                "pattern": "^[0-9a-f]{40}$",
+                "maxLength": 40,
+                "minLength": 40
               },
               "submitted_at": {
                 "type": [
                   "string",
                   "null"
-                ]
+                ],
+                "maxLength": 100000
               },
               "untrusted_body": {
                 "type": "string",
-                "description": "Untrusted review text, at most 4000 characters"
+                "description": "Untrusted review text, at most 4000 characters",
+                "maxLength": 100000
               }
             },
             "required": [
@@ -306,7 +327,8 @@
           "description": "A non-bot OWNER, MEMBER or COLLABORATOR currently requests changes"
         },
         "review_provenance": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "review_comments": {
           "type": "array",
@@ -317,10 +339,12 @@
                 "$ref": "#/$defs/feedback_author"
               },
               "untrusted_body": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "path": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "line": {
                 "type": [
@@ -354,10 +378,12 @@
                 "$ref": "#/$defs/feedback_author"
               },
               "untrusted_body": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "created_at": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               }
             },
             "required": [
@@ -434,7 +460,8 @@
       "properties": {
         "reference": {
           "type": "string",
-          "description": "owner/repo#number of the pull request"
+          "description": "owner/repo#number of the pull request",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean",
@@ -443,11 +470,14 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "untrusted_data_notice": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -495,7 +525,8 @@
             "string",
             "null"
           ],
-          "description": "Why the snapshot failed; null when it succeeded"
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 100000
         }
       },
       "required": [

@@ -10,12 +10,23 @@
       "properties": {
         "code": {
           "type": "string",
-          "pattern": "[a-z][a-z0-9_]*",
-          "description": "Stable machine-readable code, for example usage or invalid_contract"
+          "pattern": "^(?:[a-z][a-z0-9_]*)(?![\\s\\S])",
+          "description": "Stable machine-readable code, for example usage or invalid_contract",
+          "maxLength": 100000
         },
         "message": {
           "type": "string",
-          "description": "Human-readable explanation; never contains remote text"
+          "description": "Human-readable explanation; never contains remote text",
+          "maxLength": 100000
+        },
+        "schema_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 100,
+          "description": "authorization-request invalid_contract only: the contract schema errors"
         }
       },
       "required": [

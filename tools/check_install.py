@@ -26,6 +26,7 @@ RESOURCE_PATHS = (
     "schemas/0.2/evidence.schema.json",
     "schemas/host-context/0.1.schema.json",
     "schemas/output/1/audit.schema.json",
+    "schemas/output/1/authorization-request.schema.json",
     "schemas/output/1/discover.schema.json",
     "schemas/output/1/drift.schema.json",
     "schemas/output/1/error.schema.json",

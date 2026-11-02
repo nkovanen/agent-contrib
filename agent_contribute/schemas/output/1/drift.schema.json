@@ -7,7 +7,9 @@
   "properties": {
     "contract_sha256": {
       "type": "string",
-      "pattern": "[0-9a-f]{64}"
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 64,
+      "minLength": 64
     },
     "complete": {
       "type": "boolean",
@@ -23,11 +25,14 @@
     "errors": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "maxLength": 100000
+      },
+      "maxItems": 1000
     },
     "notice": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     },
     "issue": {
       "type": "object",
@@ -37,17 +42,23 @@
         },
         "stored_sha256": {
           "type": "string",
-          "pattern": "[0-9a-f]{64}"
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
         },
         "current_sha256": {
           "type": "string",
-          "pattern": "[0-9a-f]{64}"
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
         },
         "stored_updated_at": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_updated_at": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_components": {
           "type": [
@@ -57,26 +68,35 @@
           "properties": {
             "title_sha256": {
               "type": "string",
-              "pattern": "[0-9a-f]{64}"
+              "pattern": "^[0-9a-f]{64}$",
+              "maxLength": 64,
+              "minLength": 64
             },
             "body_sha256": {
               "type": "string",
-              "pattern": "[0-9a-f]{64}"
+              "pattern": "^[0-9a-f]{64}$",
+              "maxLength": 64,
+              "minLength": 64
             },
             "state": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             },
             "labels": {
               "type": "array",
               "items": {
-                "type": "string"
-              }
+                "type": "string",
+                "maxLength": 100000
+              },
+              "maxItems": 1000
             },
             "assignees": {
               "type": "array",
               "items": {
-                "type": "string"
-              }
+                "type": "string",
+                "maxLength": 100000
+              },
+              "maxItems": 1000
             }
           },
           "required": [
@@ -90,7 +110,8 @@
           "description": "Per-component hashes of the current issue; null when unreadable"
         },
         "component_baseline": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -108,16 +129,20 @@
       "type": "object",
       "properties": {
         "stored_repository": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_repository": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "stored_issue_url": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_issue_url": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "changed": {
           "type": "boolean"
@@ -181,24 +206,31 @@
       "type": "object",
       "properties": {
         "stored_branch": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_branch": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "stored_commit": {
           "type": "string",
-          "pattern": "[0-9a-f]{40}"
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
         },
         "current_commit": {
           "type": "string",
-          "pattern": "[0-9a-f]{40}"
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
         },
         "advanced": {
           "type": "boolean"
         },
         "note": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -223,14 +255,18 @@
         "added": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "removed": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "modified": {
           "type": "array",
@@ -238,15 +274,20 @@
             "type": "object",
             "properties": {
               "path": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "stored_sha256": {
                 "type": "string",
-                "pattern": "[0-9a-f]{64}"
+                "pattern": "^[0-9a-f]{64}$",
+                "maxLength": 64,
+                "minLength": 64
               },
               "current_sha256": {
                 "type": "string",
-                "pattern": "[0-9a-f]{64}"
+                "pattern": "^[0-9a-f]{64}$",
+                "maxLength": 64,
+                "minLength": 64
               }
             },
             "required": [
@@ -255,7 +296,8 @@
               "current_sha256"
             ],
             "additionalProperties": false
-          }
+          },
+          "maxItems": 1000
         }
       },
       "required": [
@@ -271,10 +313,12 @@
       "type": "object",
       "properties": {
         "stored_approval": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_approval": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "current_policy_state": {
           "type": "string",
@@ -289,13 +333,17 @@
         },
         "stored_policy_sha256": {
           "type": "string",
-          "pattern": "[0-9a-f]{64}",
-          "description": "Schema 0.2 contracts only"
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Schema 0.2 contracts only",
+          "maxLength": 64,
+          "minLength": 64
         },
         "current_policy_sha256": {
           "type": "string",
-          "pattern": "[0-9a-f]{64}",
-          "description": "Schema 0.2 contracts only"
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Schema 0.2 contracts only",
+          "maxLength": 64,
+          "minLength": 64
         }
       },
       "required": [
@@ -312,18 +360,23 @@
         "added": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
-          "description": "Open PR URLs overlapping now but not at preparation"
+          "description": "Open PR URLs overlapping now but not at preparation",
+          "maxItems": 1000
         },
         "removed": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "scope": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -367,10 +420,12 @@
             "string",
             "null"
           ],
-          "description": "Why used_during_command is null"
+          "description": "Why used_during_command is null",
+          "maxLength": 100000
         },
         "note": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -416,7 +471,8 @@
             "string",
             "null"
           ],
-          "description": "Why the snapshot failed; null when it succeeded"
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 100000
         }
       },
       "required": [

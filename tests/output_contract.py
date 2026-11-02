@@ -1,8 +1,9 @@
 """Check every command result the suite produces against its packaged output schema.
 
-install() runs once from tests/__init__.py. It wraps the CLI's JSON and text
-emitters and the library functions whose results the CLI prints, so any test
+install() runs once from tests/__init__.py. It wraps the CLI's print() of the
+JSON result, its text renderer and the library functions whose results the CLI prints, so any test
 that produces output is checked without opting in."""
+import builtins
 import contextlib
 import functools
 import json
@@ -65,14 +66,12 @@ def _wrap(module, name, schema, definition=None):
     setattr(module, name, wrapper)
 
 
-class _JSON:
-    def __getattr__(self, name):
-        return getattr(json, name)
-
-    @staticmethod
-    def dumps(value, **kwargs):
-        check_cli_result(value)
-        return json.dumps(value, **kwargs)
+def _print(*args, **kwargs):
+    """The CLI's only print() call emits the result; JSON is checked as the exact text printed."""
+    namespace = _state['args']
+    if args and (namespace is None or namespace.format == 'json'):
+        check_cli_result(json.loads(args[0]))
+    return builtins.print(*args, **kwargs)
 
 
 class _Text:
@@ -97,7 +96,7 @@ def install():
         _state['args'] = None
         return main(*args, **kwargs)
     cli.Parser.parse_args, cli.main = recording_parse_args, recording_main
-    cli.json, cli.textfmt = _JSON(), _Text()
+    cli.print, cli.textfmt = _print, _Text()
     for module, name, schema, definition in [
             (core, 'discover', 'discover', None), (multi, 'discover_many', 'discover', None),
             (core, 'inspect_issue', 'inspect', None), (core, 'verify', 'verify', None),

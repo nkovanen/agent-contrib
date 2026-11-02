@@ -14,13 +14,16 @@
         "string",
         "null"
       ],
-      "pattern": "[0-9a-f]{40}",
-      "description": "Resolved base commit; null when the contract or base is invalid"
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Resolved base commit; null when the contract or base is invalid",
+      "maxLength": 40,
+      "minLength": 40
     },
     "changed_paths": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "maxLength": 100000
       },
       "maxItems": 1000000,
       "description": "Committed, staged, unstaged and untracked paths since the base"
@@ -31,11 +34,13 @@
         "type": "object",
         "properties": {
           "path": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
           "rule": {
             "type": "string",
-            "description": "\"not in allowed_paths\" or \"prohibited_paths: PATTERN\""
+            "description": "\"not in allowed_paths\" or \"prohibited_paths: PATTERN\"",
+            "maxLength": 100000
           }
         },
         "required": [
@@ -49,17 +54,22 @@
     "errors": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "maxLength": 100000
+      },
+      "maxItems": 1000
     },
     "warnings": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "maxLength": 100000
+      },
+      "maxItems": 1000
     },
     "evidence": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     }
   },
   "required": [

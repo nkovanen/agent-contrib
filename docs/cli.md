@@ -522,6 +522,56 @@ The reference below is generated from the schemas; a test fails when it drifts.
 
 One of `audit_report`, `audit_unread`.
 
+### `authorization-request`
+
+`agent-contrib schema authorization-request` · Unsigned mandate request pre-filled from a schema 0.2 contract; it is not a mandate and grants nothing.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `kind` | "agent-contrib/authorization-request" |  |
+| `request_version` | "0.1" |  |
+| `issued` | false |  |
+| `notice` | string |  |
+| `target_host_context_schema_version` | "0.1" |  |
+| `ready_for_issuance` | boolean | No preflight errors and no unresolved fields; sets the exit status |
+| `preflight_errors` | string[] | Blockers a mandate would not clear |
+| `preflight_errors_trust` | string |  |
+| `unresolved_fields` | "credential_actor_id" \| "authority"[] |  |
+| `contract_sha256` | string |  |
+| `exact_head_pr_history` | string |  |
+| `mandate_fields` | object | Binding fields; null fields are filled only by the human/host |
+| `mandate_fields.id` | null |  |
+| `mandate_fields.nonce` | null |  |
+| `mandate_fields.issued_at` | null |  |
+| `mandate_fields.expires_at` | null |  |
+| `mandate_fields.contract_sha256` | string |  |
+| `mandate_fields.source_repository_id` | integer |  |
+| `mandate_fields.source_owner_id` | integer |  |
+| `mandate_fields.issue_id` | integer |  |
+| `mandate_fields.issue_number` | integer |  |
+| `mandate_fields.credential_actor_id` | integer or null |  |
+| `mandate_fields.authority` | "owner" \| "maintainer" \| null |  |
+| `mandate_fields.actions` | null |  |
+| `mandate_fields.policy_review` | object |  |
+| `mandate_fields.policy_review.status` | null |  |
+| `mandate_fields.policy_review.instructions_sha256` | string |  |
+| `mandate_fields.policy_review.policy_sha256` | string |  |
+| `mandate_fields.policy_review.notes` | null |  |
+| `mandate_fields.event` | object |  |
+| `mandate_fields.event.kind` | null |  |
+| `mandate_fields.event.reference` | null |  |
+| `mandate_fields.event.text_sha256` | null |  |
+| `mandate_fields.event.binding_sha256` | null |  |
+| `mandate_fields.target_repository` | string |  |
+| `mandate_fields.target_repository_id` | integer |  |
+| `mandate_fields.head_repository` | string |  |
+| `mandate_fields.head_repository_id` | integer |  |
+| `mandate_fields.head_ref` | string |  |
+| `mandate_fields.base_ref` | string |  |
+| `human_only_fields` | string[] |  |
+| `provenance` | `authorization_provenance` |  |
+| `api_budget` | `api_budget` (optional) |  |
+
 ### `discover`
 
 `agent-contrib schema discover` · Ranked open issues of one repository, or of 2-20 repositories (discover_multi). Remote text is untrusted data.
@@ -604,6 +654,7 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 | `error` | object |  |
 | `error.code` | string | Stable machine-readable code, for example usage or invalid_contract |
 | `error.message` | string | Human-readable explanation; never contains remote text |
+| `error.schema_errors` | string[] (optional) | authorization-request invalid_contract only: the contract schema errors |
 
 ### `evidence-init`
 
@@ -808,6 +859,13 @@ The repository could not be resolved or its snapshot read
 | `errors` | string[] |  |
 | `warning` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+
+#### `authorization_provenance`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `fetched_at` | string |  |
+| `endpoints` | string[] | GitHub endpoints read |
 
 #### `ci_observation`
 
@@ -1219,9 +1277,9 @@ Report-only ownership and resolution signals; never change gates
 
 #### `policy_file`
 
-The parsed .agent-contrib.json exactly as read; untrusted and possibly invalid
+The parsed .agent-contrib.json exactly as read: any JSON value, untrusted and possibly invalid; null when absent
 
-Any JSON object (The parsed .agent-contrib.json exactly as read; untrusted and possibly invalid).
+any
 
 #### `prepared`
 
@@ -1609,9 +1667,8 @@ Host-asserted mandate checked against live credential facts; never proof of huma
 | `actions` | "implement" \| "create_draft"[] |  |
 | `errors` | string[] | Why the mandate is not historically valid |
 | `current_errors` | string[] | Why a valid mandate does not authorize new actions now (expiry) |
-| `provenance` | object |  |
-| `provenance.fetched_at` | string |  |
-| `provenance.endpoints` | string[] |  |
+| `source_errors` | string[] | Source identity failures; also listed in errors |
+| `provenance` | `authorization_provenance` |  |
 | `mandate_id` | string (optional) |  |
 | `event_reference` | string (optional) |  |
 | `event_text_sha256` | string (optional) |  |

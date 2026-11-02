@@ -6,23 +6,29 @@
   "type": "object",
   "properties": {
     "cli_version": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     },
     "supported_schema_versions": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "maxLength": 100000
       },
-      "description": "Task/evidence schema versions this CLI accepts"
+      "description": "Task/evidence schema versions this CLI accepts",
+      "maxItems": 1000
     },
     "supported_host_context_versions": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "maxLength": 100000
+      },
+      "maxItems": 1000
     },
     "host_authorization": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     },
     "workflow_markdown": {
       "type": "string",
@@ -33,23 +39,29 @@
       "type": "object",
       "properties": {
         "task_schema": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "evidence_schema": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "task_schema_0.2": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "evidence_schema_0.2": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "host_context_schema": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "output_schemas": {
           "type": "string",
-          "description": "Package directory of these output schemas; agent-contrib schema COMMAND prints one"
+          "description": "Package directory of these output schemas; agent-contrib schema COMMAND prints one",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -65,7 +77,8 @@
     },
     "output_schema_version": {
       "type": "string",
-      "description": "Version of the output schemas, independent of task/evidence schema versions"
+      "description": "Version of the output schemas, independent of task/evidence schema versions",
+      "maxLength": 100000
     },
     "automatic_updates": {
       "type": "boolean",

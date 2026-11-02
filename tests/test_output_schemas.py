@@ -6,6 +6,7 @@ import copy
 import importlib.util
 import json
 import pathlib
+import re
 import unittest
 from unittest.mock import patch
 
@@ -13,7 +14,7 @@ from agent_contribute import cli, core, outputs, ownership
 from tests import output_contract
 from tests.test_cli_help import built_parser
 from tests.test_discover_golden import GOLDEN
-from tests.test_protocol import FakeGitHub
+from tests.test_protocol import FakeGitHub, ready_contract
 
 
 def obj(properties, required=(), **extra):
@@ -183,6 +184,40 @@ class SchemaFileTests(unittest.TestCase):
         skill = (pathlib.Path(outputs.__file__).parent / 'adapters' / 'agent-contribute' / 'SKILL.md').read_text('utf-8')
         self.assertIn('`agent-contrib schema COMMAND`', skill)
 
+    def test_bounds_and_patterns_are_explicit_for_standard_validators(self):
+        # The bundled validator defaults to 1000 items / 100000 characters and full-matches patterns;
+        # standard validators default to unbounded and search. Explicit bounds and anchors make them agree.
+        for name in outputs.SCHEMAS:
+            for path, item in subschemas(outputs.output_schema(name)):
+                kinds = item.get('type') if isinstance(item.get('type'), list) else [item.get('type')]
+                with self.subTest(name=name, path=path):
+                    if 'array' in kinds:
+                        self.assertIn('maxItems', item)
+                    if 'string' in kinds and 'enum' not in item and 'const' not in item:
+                        self.assertIn('maxLength', item)
+                    if 'pattern' in item:
+                        self.assertTrue(item['pattern'].startswith('^'), item['pattern'])
+                        self.assertTrue(item['pattern'].endswith(('$', '(?![\\s\\S])')), item['pattern'])
+
+    def test_patterns_agree_with_search_semantics(self):
+        def standard(value, schema):  # what a search-based JSON Schema validator decides for one string
+            return (schema.get('minLength', 0) <= len(value) <= schema.get('maxLength', len(value)) and
+                    re.search(schema['pattern'], value) is not None)
+        patterns = {}
+        for name in outputs.SCHEMAS:
+            for _, item in subschemas(outputs.output_schema(name)):
+                if 'pattern' in item:
+                    patterns[item['pattern']] = {k: item[k] for k in ('pattern', 'minLength', 'maxLength') if k in item}
+        self.assertGreaterEqual(len(patterns), 3)
+        for pattern, schema in patterns.items():
+            length = re.search(r'\{(\d+)\}', pattern)
+            valid = 'a' * int(length.group(1)) if length else 'usage'
+            for value, expected in ((valid, True), ('-' + valid, False), (valid + '-', False), (valid + '\n', False),
+                                    ('\n' + valid, False), ('!' + valid + '!', False)):
+                with self.subTest(pattern=pattern, value=value):
+                    bundled = not core.schema_errors(value, {'type': 'string', **schema})
+                    self.assertEqual((bundled, standard(value, schema)), (expected, expected))
+
     def test_shared_definitions_are_identical_across_files(self):
         seen = {}
         for name in outputs.SCHEMAS:
@@ -234,6 +269,42 @@ class ContractHookTests(unittest.TestCase):
         verify = outputs.output_schema('verify')
         self.assertEqual(core.schema_errors(result, {'$ref': '#/$defs/verify_0_2_rejected'}, root=verify), [])
         self.assertTrue(core.schema_errors(result, {'$ref': '#/$defs/verify_0_2'}, root=verify))
+
+
+class ReviewRegressionTests(unittest.TestCase):
+    def test_non_object_policies_keep_the_contract_for_inspect_and_verify(self):
+        for policy in ([], ['bad'], 'bad', False, 1, 1.5):
+            with self.subTest(policy=policy), patch.object(core, 'GitHub', return_value=FakeGitHub(policy)):
+                code, result = invoke('inspect', 'acme/photos#12')  # the hook validates the printed JSON
+                self.assertEqual((code, result['provenance']['policy'], result['approval']['status']), (1, policy, 'unknown'))
+            task, client = ready_contract()
+            client.policy = policy
+            with self.subTest(policy=policy, command='verify'), patch.object(core, 'GitHub', return_value=client), \
+                    patch.object(core, 'read_json', return_value=task):
+                code, result = invoke('verify', 'task.json')
+                self.assertEqual((code, result['live_provenance']['policy']), (1, policy))
+
+    def test_corruption_after_item_1000_of_a_real_discover_fails(self):
+        client = FakeGitHub()
+        original = client.request
+
+        def request(endpoint):
+            if '/issues?' in endpoint:
+                start = (int(endpoint.rsplit('page=', 1)[1]) - 1) * 100 + 1
+                seed = original('repos/acme/photos/issues/12')
+                return [dict(seed, number=n, html_url=f'https://github.com/acme/photos/issues/{n}')
+                        for n in range(start, min(start + 100, 1002))]
+            return original(endpoint)
+        client.request = request
+        with patch.object(core, 'GitHub', return_value=client):
+            code, result = invoke('discover', 'acme/photos')
+        self.assertEqual((code, len(result['issues'])), (0, 1001))
+        for index in (0, 999, 1000):
+            mutant = copy.deepcopy(result)
+            mutant['issues'][index]['overlaps'] = mutant['issues'][index].pop('duplicates')
+            with self.subTest(index=index), patch.object(core, 'discover', return_value=mutant), \
+                    self.assertRaises(output_contract.OutputSchemaViolation):
+                invoke('discover', 'acme/photos')
 
 
 def reference_tool():

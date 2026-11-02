@@ -7,7 +7,8 @@
   "properties": {
     "output": {
       "type": "string",
-      "description": "Path of the new evidence file"
+      "description": "Path of the new evidence file",
+      "maxLength": 100000
     },
     "evidence_valid": {
       "type": "boolean",
@@ -20,7 +21,8 @@
       "description": "Number of evidence schema errors left to fill"
     },
     "warning": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100000
     }
   },
   "required": [

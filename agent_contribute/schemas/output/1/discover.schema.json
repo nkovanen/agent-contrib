@@ -36,10 +36,12 @@
             "string",
             "null"
           ],
-          "description": "Why used_during_command is null"
+          "description": "Why used_during_command is null",
+          "maxLength": 100000
         },
         "note": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -64,19 +66,24 @@
           ]
         },
         "policy_path": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "policy_commit": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "matched_labels": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "reason": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -93,7 +100,8 @@
       "type": "object",
       "properties": {
         "requested_repository": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean",
@@ -102,9 +110,11 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 1000
         },
         "issues": {
           "type": "array",
@@ -130,14 +140,17 @@
         },
         "reference": {
           "type": "string",
-          "description": "owner/repo#number in the requested repository"
+          "description": "owner/repo#number in the requested repository",
+          "maxLength": 100000
         },
         "issue_url": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "untrusted_title": {
           "type": "string",
-          "description": "Untrusted issue title"
+          "description": "Untrusted issue title",
+          "maxLength": 100000
         },
         "approval": {
           "$ref": "#/$defs/approval"
@@ -145,9 +158,11 @@
         "exclusions": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
-          "description": "Excluded labels (lowercase) and \"issue is not open\"; any entry excludes the issue"
+          "description": "Excluded labels (lowercase) and \"issue is not open\"; any entry excludes the issue",
+          "maxItems": 1000
         },
         "duplicates": {
           "type": "array",
@@ -209,7 +224,8 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
           "maxItems": 100000,
           "description": "Each repository error prefixed with \"owner/repo: \""
@@ -220,10 +236,12 @@
             "type": "object",
             "properties": {
               "repository": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "reference": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "number": {
                 "type": "integer",
@@ -266,7 +284,8 @@
           "description": "Merged order of every issue across repositories"
         },
         "ordering": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "limits": {
           "type": "object",
@@ -275,7 +294,8 @@
               "type": "integer"
             },
             "per_repository": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -285,7 +305,8 @@
           "additionalProperties": false
         },
         "warning": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -308,25 +329,29 @@
       "properties": {
         "requested_repository": {
           "type": "string",
-          "description": "Repository named on the command line"
+          "description": "Repository named on the command line",
+          "maxLength": 100000
         },
         "issue_source_repository": {
           "type": [
             "string",
             "null"
           ],
-          "description": "Repository whose tracker was read; null when unresolved"
+          "description": "Repository whose tracker was read; null when unresolved",
+          "maxLength": 100000
         },
         "proposed_target_repository": {
           "type": "string",
-          "description": "Proposed contribution target; context, never authority"
+          "description": "Proposed contribution target; context, never authority",
+          "maxLength": 100000
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
         },
         "ordering": {
           "type": "string",
-          "description": "Present with --signals: how issues are sorted"
+          "description": "Present with --signals: how issues are sorted",
+          "maxLength": 100000
         },
         "schema_version": {
           "type": "string",
@@ -335,15 +360,19 @@
         },
         "repository": {
           "type": "string",
-          "description": "Issue source repository that was read"
+          "description": "Issue source repository that was read",
+          "maxLength": 100000
         },
         "commit": {
           "type": "string",
-          "pattern": "[0-9a-f]{40}",
-          "description": "Default-branch commit of the snapshot"
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "Default-branch commit of the snapshot",
+          "maxLength": 40,
+          "minLength": 40
         },
         "fetched_at": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean",
@@ -352,7 +381,8 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
           "maxItems": 5000
         },
@@ -375,7 +405,8 @@
         "spec_paths": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
           "maxItems": 1000000,
           "description": "Markdown spec/doc paths in the tree"
@@ -438,7 +469,8 @@
           "additionalProperties": false
         },
         "warning": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "repository_signals": {
           "type": "object",
@@ -484,18 +516,21 @@
       "properties": {
         "requested_repository": {
           "type": "string",
-          "description": "Repository named on the command line"
+          "description": "Repository named on the command line",
+          "maxLength": 100000
         },
         "issue_source_repository": {
           "type": [
             "string",
             "null"
           ],
-          "description": "Repository whose tracker was read; null when unresolved"
+          "description": "Repository whose tracker was read; null when unresolved",
+          "maxLength": 100000
         },
         "proposed_target_repository": {
           "type": "string",
-          "description": "Proposed contribution target; context, never authority"
+          "description": "Proposed contribution target; context, never authority",
+          "maxLength": 100000
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
@@ -507,9 +542,11 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100000
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 1000
         },
         "issues": {
           "type": "array",
@@ -552,15 +589,18 @@
           "type": "integer"
         },
         "url": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "reason": {
           "type": "string",
-          "description": "\"Explicit reference to this issue\" or a heuristic overlap naming the shared words/IDs"
+          "description": "\"Explicit reference to this issue\" or a heuristic overlap naming the shared words/IDs",
+          "maxLength": 100000
         },
         "repository": {
           "type": "string",
-          "description": "Repository of the PR, when it is not the issue source"
+          "description": "Repository of the PR, when it is not the issue source",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -575,11 +615,14 @@
       "type": "object",
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "sha256": {
           "type": "string",
-          "pattern": "[0-9a-f]{64}"
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
         },
         "untrusted_text": {
           "type": "string",
@@ -611,13 +654,15 @@
             "hints": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               "maxItems": 20,
               "description": "Repository paths matched from the issue text"
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -648,10 +693,12 @@
                   "reproduction steps",
                   "code block"
                 ]
-              }
+              },
+              "maxItems": 1000
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -706,7 +753,8 @@
               "description": "Null when the issue payload lacks or malforms the field"
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -727,7 +775,8 @@
               ]
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -765,8 +814,10 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         }
       },
       "required": [
@@ -781,13 +832,15 @@
       "type": "object",
       "properties": {
         "endpoint": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "observed": {
           "$ref": "#/$defs/repository_observation"
         },
         "fetched_at": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -811,7 +864,8 @@
               ]
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -831,7 +885,8 @@
               ]
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -851,7 +906,8 @@
               ]
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -871,7 +927,8 @@
               ]
             },
             "explanation": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -923,7 +980,8 @@
             "string",
             "null"
           ],
-          "description": "Why the snapshot failed; null when it succeeded"
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -940,7 +998,8 @@
       "type": "object",
       "properties": {
         "full_name": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "fork": {
           "type": "boolean"
@@ -952,7 +1011,8 @@
           "type": "object",
           "properties": {
             "full_name": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100000
             }
           },
           "required": [
@@ -976,15 +1036,18 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/metadata_read"
-          }
+          },
+          "maxItems": 1000
         },
         "reason": {
           "type": "string",
-          "description": "How the issue tracker was chosen, or \"unresolved\""
+          "description": "How the issue tracker was chosen, or \"unresolved\"",
+          "maxLength": 100000
         },
         "execution_authority": {
           "type": "string",
-          "description": "Always \"none\": resolution never grants authority"
+          "description": "Always \"none\": resolution never grants authority",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -1002,13 +1065,15 @@
             "string",
             "null"
           ],
-          "description": "Null when discovery did not resolve the source"
+          "description": "Null when discovery did not resolve the source",
+          "maxLength": 100000
         },
         "endpoint": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean"
@@ -1065,11 +1130,14 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         },
         "explanation": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         }
       },
       "required": [
@@ -1093,10 +1161,12 @@
       "type": "object",
       "properties": {
         "repository": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "endpoint": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100000
         },
         "complete": {
           "type": "boolean"
@@ -1108,8 +1178,10 @@
         "errors": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "maxLength": 100000
+          },
+          "maxItems": 1000
         }
       },
       "required": [
