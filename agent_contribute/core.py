@@ -712,7 +712,7 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args, index_file=None, raw=False):
+def git_read(directory, *args, index_file=None, raw=False, timeout=15):
     """raw=True returns Git's exact output bytes: no decoding and no newline conversion (object parsing)."""
     nul_delimited = '-z' in args
     try:
@@ -733,14 +733,16 @@ def git_read(directory, *args, index_file=None, raw=False):
                                  # POSIX has symlinks: a file standing in for a tracked symlink is a change.
                                  *(('-c', 'core.symlinks=true') if os.name == 'posix' else ()),
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
-                                capture_output=True, text=not (nul_delimited or raw), timeout=15, shell=False)
+                                capture_output=True, text=not (nul_delimited or raw), timeout=timeout, shell=False)
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
         if raw:
             return result.stdout
         # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
         return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except subprocess.TimeoutExpired as exc:
+        raise ProtocolError('git_timeout', 'Could not inspect evidence checkout') from exc
+    except OSError as exc:
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
 
 
@@ -817,14 +819,31 @@ def shallow_or(directory, error):
                          'fetch more history (git fetch --unshallow or --deepen) and retry') if shallow else error
 
 
+# Re-hashing every tracked byte needs time proportional to size; assume at least 32 MiB/s.
+CONTENT_TIMEOUT_FLOOR, CONTENT_TIMEOUT_CEILING, CONTENT_HASH_RATE = 15, 900, 32 * 1024 * 1024
+
+
+def content_timeout(tracked_bytes):
+    return min(CONTENT_TIMEOUT_CEILING, CONTENT_TIMEOUT_FLOOR + tracked_bytes // CONTENT_HASH_RATE)
+
+
 def worktree_changes(directory, commit):
     """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
     temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
+    tracked = sum(int(fields[3]) for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0')
+                  if entry and (fields := entry.split('\t', 1)[0].split())[1] == 'blob')
+    budget = content_timeout(tracked)
     with tempfile.TemporaryDirectory() as scratch:
         index = os.path.join(scratch, 'index')
         git_read(directory, 'read-tree', commit, index_file=index)
-        listed = git_read(directory, 'status', '--porcelain', '-z', '--no-renames', '--untracked-files=no',
-                          '--ignore-submodules=all', index_file=index)
+        try:
+            listed = git_read(directory, 'status', '--porcelain', '-z', '--no-renames', '--untracked-files=no',
+                              '--ignore-submodules=all', index_file=index, timeout=budget)
+        except ProtocolError as exc:
+            if exc.code != 'git_timeout':
+                raise
+            raise ProtocolError('checkout_too_large_for_timeout', f'Hashing {tracked} tracked bytes did not finish '
+                                f'within {budget} s; the checkout is too large for the content check') from None
     # Porcelain v1 is 'XY path'; Y is the worktree against that index.
     return {entry[3:] for entry in listed.split('\0') if len(entry) > 3 and entry[1] != ' '}
 

@@ -196,6 +196,10 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- The worktree content check gets a timeout scaled from the tracked blob size
+  (15 s plus one second per 32 MiB, at most 900 s), and running out reports
+  `checkout_too_large_for_timeout` with the byte count instead of a generic
+  read error. Other Git reads keep their 15 s limit (G-16).
 - In a shallow clone that lacks the base or its history, `verify`,
   `scope-check` and `evidence init` now say so (`shallow_checkout`, with a
   fetch hint) instead of a generic read or base error. They still fail closed.
