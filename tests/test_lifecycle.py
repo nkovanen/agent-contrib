@@ -265,6 +265,33 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(result['evidence_errors'], ['Evidence has duplicate ' + name + ' IDs'])
         self.assertTrue(self.verify()['technical_evidence_valid'])
 
+    def test_signoff_rejects_schema_invalid_final_evidence(self):
+        self.publish_fixture()
+        self.context['final_signoff'] = signoff(self.task, self.context, self.evidence)
+        self.evidence['unexpected'] = True
+        result = self.verify()
+        self.assertFalse(result['technical_evidence_valid'])
+        self.assertFalse(result['completion_ready'])
+        self.assertEqual(result['human_signoff']['status'], 'invalid')
+        self.assertEqual(result['human_signoff']['errors'], ['Final signoff requires valid final evidence'])
+
+    def test_expired_mandate_is_reported_in_top_level_errors(self):
+        self.context['mandate'].update(issued_at=(NOW - dt.timedelta(hours=3)).isoformat(),
+                                      expires_at=(NOW - dt.timedelta(minutes=15)).isoformat())
+        self.context['mandate']['event']['binding_sha256'] = event_binding(self.context['mandate'])
+        result = self.verify(evidence=False)
+        self.assertTrue(result['user_authorization']['historical_valid'])
+        self.assertFalse(result['implementation_ready'])
+        self.assertEqual(result['errors'], ['Human/host mandate has expired for new actions'])
+
+    def test_prepared_duplicates_are_tagged_with_the_source_repository(self):
+        self.client.prs = [{'id': 3101, 'number': 31, 'title': 'Other', 'body': 'Fixes #12',
+                            'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'other'}}]
+        prepared = core.prepare(core.inspect_issue('acme/photos#12', self.client), schema_version='0.2', client=self.client)
+        self.assertEqual([(item.get('repository'), item['number']) for item in prepared['discovery']['duplicate_prs']],
+                         [('acme/photos', 31)])
+        self.assertEqual(core.validate_contract(prepared), [])
+
 class IntegratedGitHub(CandidateGitHub):
     def __init__(self):
         super().__init__()
