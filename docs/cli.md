@@ -260,6 +260,21 @@ means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
 
+A changed path that is a symlink is also judged by its target, the same way in
+`verify` and `scope-check`. The target comes from the commit, the index or the
+worktree that holds the link, read without following it. It is resolved
+lexically from the link's directory, expanding every link hop, including links
+to directories, up to 40 hops. The link is a violation, with the reason as its
+rule, when the target is absolute (`/x` or `C:/x`), contains a backslash,
+escapes the repository, points at the repository root, is longer than 4096
+bytes, contains a NUL byte, is not valid UTF-8, cannot be read (for example a
+permission error on a hop), loops, or resolves to a path outside `allowed_paths` or matching
+`prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
+A link to an allowed file passes; a scope pass does not prove the target exists.
+Git records no path beyond a symlink, so a
+file written through a linked directory appears at its real path and is judged
+there.
+
 ## Evidence skeleton
 
 `evidence init` writes a draft evidence file for the contract's schema version.
@@ -840,7 +855,9 @@ line reads `not evaluated; see Errors` and the schema errors follow. JSON still
 contains every stage. `scope-check` lists each violating path
 and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
 informational changes (an advanced default branch, PRs no longer open) apart.
-`instructions` prints a version line and then the
+`authorization-request` shows whether the request is ready for issuance, that it
+is unsigned and grants nothing, the contract hash, and each preflight error and
+unresolved field. `instructions` prints a version line and then the
 workflow Markdown unchanged, so it can be read without unwrapping JSON. Other
 commands show top-level scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.

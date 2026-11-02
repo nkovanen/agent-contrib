@@ -165,6 +165,16 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- `--observe-ci` and `--observe-signatures` share one target/head prelude.
+  With an evidence head but an invalid target repository,
+  `ci_observation.head_sha` is now `null`, like `signature_observation`, since
+  nothing was observed at that head. A missing `execution` object no longer
+  raises in the CI observer. Readiness and exit codes are unchanged (A2-05).
+- The installed workflow runs `drift` before any authorization request and
+  before publication, and names `--observe-ci`/`--observe-signatures` as
+  report-only (A2-10).
+- `--format text authorization-request` lists its preflight errors and
+  unresolved fields, so a request that is not ready says why (A2-08).
 - Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
   repository; merged PRs elsewhere move to `downstream_references` (E-11: a
   downstream workaround was reported as a possible fix). Cross-referenced PRs
@@ -202,6 +212,15 @@ channel or runtime model provider is added.
 
 ### Security
 
+- Scope judges each changed symlink by where it points (G-08), in `verify`
+  evidence checks and `scope-check`. The committed (or staged, or worktree)
+  target is read without following it and resolved lexically from the link's
+  directory through every link hop, directory links included. A target that is
+  absolute, uses a backslash or a drive letter, escapes the repository, points
+  at the repository root, exceeds 4096 bytes or 40 hops, contains a NUL byte,
+  is not valid UTF-8, cannot be read, or resolves outside
+  `allowed_paths` or into `prohibited_paths` is a scope violation that names the
+  reason. A link to an allowed file still passes.
 - Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and
   numbers that overflow to infinity (`1e999`) as `invalid_json` in GitHub
   responses, contracts, evidence and host context. A lone surrogate used to
@@ -283,6 +302,11 @@ channel or runtime model provider is added.
   `temp_dir_error` instead of an unstructured input error (G-20).
 - Every Git read sets `GIT_ATTR_NOSYSTEM=1`, so a system-wide gitattributes file
   cannot shape how checkout files are compared (G-19).
+- Schema 0.2 `verify` lists contract route errors (pending mode, invalid or
+  equal refs, a different target or head repository) in its errors and every
+  stage's blockers even without a host context, as `authorization-request`
+  already did. With a mandate they appear once. Only blockers are added
+  (A2-02).
 - The temporary index for the content check is created under a temporary root
   whose real path is outside the worktree and its Git directories (falling
   back from `TMPDIR` to `/tmp` or `/var/tmp`, else `unsafe_temp_dir`), so a
@@ -316,6 +340,8 @@ channel or runtime model provider is added.
   0.1 and 0.2, host-context 0.1 and 0.2. Unknown versions fail closed; nothing is
   migrated. `prepare` still defaults to 0.1.
 - Schema 0.1 changes, all fail-closed or message-only:
+  - `verify` rejects evidence whose implementation adds a symlink that resolves
+    outside the contract scope (G-08); a symlink to an in-scope file still passes.
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an
     evidence error instead of reading part of the checkout.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.

@@ -16,10 +16,7 @@ def scope_check(task, directory, base=None):
     if errors:
         return result
     try:
-        core.require_worktree_root(directory)
-        core.require_safe_config(directory)
-        core.require_plain_index(directory)
-        head = core.current_head(directory)
+        head = core.open_checkout(directory)
         default = base is None
         base = result['base_commit'] = _base(task['source']['commit']) if default else _resolve(directory, base)
         try:
@@ -32,14 +29,21 @@ def scope_check(task, directory, base=None):
                 'git_error', 'Base commit is missing or not an ancestor of HEAD')) from None
         if core.has_gitlink(directory, head, base):  # stop before any index or worktree diff
             raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
-        paths = set(core.implementation_paths(directory, base, head))
+        committed = set(core.implementation_paths(directory, base, head))
         # Index, working tree and untracked files: everything a later commit could contain.
         # The index itself is the subject only for staged changes; worktree content is judged without its stat cache.
-        paths.update(path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path)
-        paths.update(core.worktree_changes(directory, base))
-        paths.update(core.untracked_paths(directory))
+        staged = {path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path}
+        working = core.worktree_changes(directory, base) | core.untracked_paths(directory)
+        paths = committed | staged | working
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
-        result['violations'] = sorted(core.scope_violations(task['scope'], paths), key=lambda item: item['path'])
+        # G-08: each symlink is also judged by its resolved target, in the snapshot that holds it.
+        links = (core.link_violations(task['scope'], committed, core.LinkView(directory, head)) +
+                 core.link_violations(task['scope'], staged, core.LinkView(directory, index=True)) +
+                 # Every changed path: a path committed since the base is not in worktree_changes (review SL-03).
+                 core.link_violations(task['scope'], paths, core.LinkView(directory, worktree=True)))
+        result['violations'] = sorted(core.scope_violations(task['scope'], paths) +
+                                      list({(item['path'], item['rule']): item for item in links}.values()),
+                                      key=lambda item: (item['path'], item['rule']))
         if default and result['violations']:
             # Report only: several commits plus violations often mean work stacked on unpublished commits.
             behind = int(core.git_read(directory, 'rev-list', '--count', base + '..' + head))
@@ -55,7 +59,7 @@ def scope_check(task, directory, base=None):
 
 
 def _base(base):
-    if not isinstance(base, str) or not re.fullmatch('[0-9a-f]{40}', base):
+    if not isinstance(base, str) or not core.SHA.fullmatch(base):
         raise core.ProtocolError('invalid_base', 'Base must be a full lowercase 40-character commit SHA')
     return base
 
@@ -98,10 +102,7 @@ def evidence_skeleton(task, directory, base):
     """Prefill only facts Git observes; results stay unfilled so the draft cannot validate."""
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
-    core.require_worktree_root(directory)
-    core.require_safe_config(directory)
-    core.require_plain_index(directory)
-    head = core.current_head(directory)
+    head = core.open_checkout(directory)
     base = _resolve(directory, base)
     try:
         core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
@@ -115,9 +116,7 @@ def evidence_skeleton(task, directory, base):
     attestation = {'status': 'pending', 'reviewer': '', 'git_head': '', 'contract_sha256': '', 'notes': ''}
     skeleton = {'schema_version': version, 'contract_sha256': core.canonical_hash(task),
                 'git_head': head, 'git_tree': core.git_read(directory, 'rev-parse', head + '^{tree}'), 'base_commit': base,
-                'worktree_clean': not (core.git_read(directory, 'status', '--porcelain', '--untracked-files=all',
-                                                     '--ignore-submodules=all') or core.untracked_paths(directory)
-                                    or core.worktree_changes(directory, head)),
+                'worktree_clean': not core.worktree_dirty(directory, head),
                 'implementer': '',
                 'validations': [{'id': item['id'], 'argv': item['argv'], 'status': None, 'exit_code': None,
                                  'skipped': None, 'output': '', 'started_at': '', 'finished_at': '',

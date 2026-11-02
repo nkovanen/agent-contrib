@@ -158,5 +158,38 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('Overlapping PRs (1):\n  - https://github.com/acme/photos/pull/30: Explicit reference to this issue', text)
 
 
+
+class AuthorizationRequestTextTests(unittest.TestCase):
+    """A2-08: the Quick-path request shows why it is not ready, not only the scalar flag."""
+    def request(self, **changes):
+        from agent_contribute import authrequest
+        from tests.test_authorization import candidate_task
+        task, client = candidate_task()
+        task['execution'].update(changes)
+        return authrequest.build(task, client)
+
+    def test_not_ready_lists_preflight_errors_and_unresolved_fields(self):
+        result = self.request(mode='pending', head_ref='bad..ref')
+        result['preflight_errors'].append(FORGED)
+        result['unresolved_fields'] = ['credential_actor_id', 'authority']
+        text = textfmt.render('authorization-request', result)
+        self.assertIn('Ready for issuance: no\n', text)
+        self.assertIn('Issued: no (unsigned request; not a mandate; grants nothing)\n', text)
+        self.assertIn('  - Execution mode is pending\n', text)
+        self.assertIn('  - Invalid reviewed Git ref: head_ref\n', text)
+        self.assertIn('Unresolved fields (2):\n  - credential_actor_id\n  - authority\n', text)
+        self.assertIn('Contract SHA-256: ' + result['contract_sha256'] + '\n', text)
+        self.assertNotIn('\n  execution_ready: yes', text)  # forged remote text stays on its own bullet
+        self.assertNotIn('\x1b', text)
+
+    def test_ready_request_says_so_without_error_lists(self):
+        result = self.request()
+        result.update(ready_for_issuance=True, preflight_errors=[], unresolved_fields=[])
+        text = textfmt.render('authorization-request', result)
+        self.assertIn('Ready for issuance: yes\n', text)
+        self.assertNotIn('Preflight errors', text)
+        self.assertNotIn('Unresolved fields', text)
+
+
 if __name__ == '__main__':
     unittest.main()
