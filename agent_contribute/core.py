@@ -696,10 +696,17 @@ def git_read(directory, *args):
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
+        # A missing object must be a read error, never a fetch: GIT_NO_LAZY_FETCH (Git 2.44+) and
+        # protocol.allow=never; promisor config is refused by require_safe_config for older Git.
         env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_OPTIONAL_LOCKS='0',
-                   GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull)
+                   GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull, GIT_NO_LAZY_FETCH='1',
+                   GIT_PROTOCOL_FROM_USER='0', GIT_TERMINAL_PROMPT='0')
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
+                                 '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',
+                                 # Full stat and mode checks: relaxed checkout settings could hide an edit.
+                                 '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
+                                 '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
                                 capture_output=True, text=not nul_delimited, timeout=15, shell=False)
         if result.returncode:
@@ -708,6 +715,34 @@ def git_read(directory, *args):
         return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
+
+
+# Keys a read command could run as a program, or use to fetch, that -c cannot neutralize. Anything else in
+# local config is accepted: core.fsmonitor, core.hooksPath and log.showSignature are forced by git_read, and
+# credential/ssh/askpass/pager/editor/merge-driver settings are never reached by the fixed read commands.
+UNSAFE_CONFIG = re.compile(r'filter\..+|gpg(\..+)?\.program|diff\.external|diff\..+\.(command|textconv)'
+                           r'|extensions\.partialclone|remote\..+\.(promisor|partialclonefilter)|protocol\..+')
+
+
+def _case_insensitive(directory):
+    try:
+        return os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
+    except OSError:
+        return False
+
+
+def require_safe_config(directory):
+    """Effective checkout config, includes and includeIf resolved; listing it executes nothing."""
+    entries = git_read(directory, 'config', '--list', '--includes', '--show-scope', '-z').split('\0')
+    for scope, entry in zip(entries[::2], entries[1::2]):
+        key, _, value = entry.partition('\n')
+        key = key.lower()
+        # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
+        case_hiding = (key == 'core.ignorecase' and value.lower() not in ('false', 'no', 'off', '0') and
+                       not _case_insensitive(directory))
+        if scope != 'command' and (UNSAFE_CONFIG.fullmatch(key) or case_hiding):
+            raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(key, 200)}, which a read '
+                                'could run as a program or use to hide changes; remove it or use a fresh clone')
 
 
 def require_worktree_root(directory):
@@ -788,6 +823,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence was not recorded from a clean worktree')
     try:
         require_worktree_root(directory)
+        require_safe_config(directory)
         require_plain_index(directory)
         head = current_head(directory)
         tree = git_read(directory, 'rev-parse', head + '^{tree}')

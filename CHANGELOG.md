@@ -138,6 +138,21 @@ channel or runtime model provider is added.
   name differing only by trailing Unicode whitespace no longer matches. Git
   output loses only its trailing newline, never other whitespace.
 
+- Checkout Git config can no longer make a read run a program or fetch.
+  `verify`, `scope-check` and `evidence init` refuse (`unsafe_git_config`) a
+  checkout whose effective config, including `include`/`includeIf` files, sets
+  `filter.*`, a `gpg` program, `diff.external`, `diff.*.command`/`textconv`,
+  partial-clone/promisor settings or `protocol.*`. Every Git read forces
+  `log.showSignature=false` and `protocol.allow=never` and sets
+  `GIT_NO_LAZY_FETCH`, `GIT_PROTOCOL_FROM_USER=0` and `GIT_TERMINAL_PROMPT=0`.
+  Previously a local clean filter, a `gpg.program` with `log.showSignature`, or
+  a promisor `ext::` transport ran during status, diff, show or merge-base.
+- Git reads force `core.checkStat=default`, `core.trustctime=true`,
+  `core.ignoreStat=false` and `core.fileMode=true`, so relaxed checkout stat or
+  mode settings cannot hide a same-size edit or an executable-bit change.
+  `core.ignoreCase=true` on a case-sensitive filesystem is refused
+  (`unsafe_git_config`) because it hides case twins.
+
 ### Fixed
 
 - Closed or missing stdout exits 1 quietly, including buffered errors and
@@ -157,6 +172,8 @@ channel or runtime model provider is added.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.
   - An index with assume-unchanged or skip-worktree entries, including a sparse
     checkout, now fails with `index_flags`.
+  - A checkout with the Git config keys listed under Security fails with
+    `unsafe_git_config`.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;
