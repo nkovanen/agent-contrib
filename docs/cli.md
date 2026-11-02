@@ -380,9 +380,12 @@ exit codes do not change. `--ai-policy` is accepted and does nothing more.
   characters.
 - **`limits_reached` and `reads`.** At most 25 logical GitHub requests per
   report (each with the client's usual three attempts), 12 source and 8 owner
-  policy files, 200 kB per file and 1 MB scanned. The report keeps 100 hints,
+  policy files, 200 kB per file and 1 MB scanned, all counted in UTF-8 bytes. The report keeps 100 hints,
   50 unassessed entries and 256 kB serialized, and identifiers are truncated
-  with `what_truncated`. Anything dropped is counted in `limits_reached`.
+  with `what_truncated`. Anything dropped is counted in `limits_reached`. To
+  fit the size bound, hints go first, then unassessed entries, then long source
+  paths are shortened, and finally source records are left out. Each step is
+  recorded as a `report size: ...` limit.
 - **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
   comments, other repositories, non-Latin text.
 - **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained

@@ -451,7 +451,7 @@ class BoundTests(unittest.TestCase):
         with patch.object(policy, 'MAX_REPORT_BYTES', 6000):
             result, _ = report({'CONTRIBUTING.md': '\n\n'.join('No AI number %d. ' % n + 'pad ' * 60 for n in range(40))})
         self.assertLessEqual(len(json.dumps(result, ensure_ascii=True).encode()), 6000)
-        self.assertIn('report size', {item['limit'] for item in result['limits_reached']})
+        self.assertIn('report size: hints', {item['limit'] for item in result['limits_reached']})
 
     def test_hint_limit_keeps_the_most_specific_kinds(self):
         noise = '\n\n'.join('Contributions are not merged without tests, case %d.' % n for n in range(150))
@@ -485,6 +485,21 @@ class BoundTests(unittest.TestCase):
         files = {f'docs/{n}/CONTRIBUTING.md': 'word ' * 39000 for n in range(8)}
         result, _ = report(files)
         self.assertIn('scanned bytes', {item['limit'] for item in result['limits_reached']})
+
+    def test_scanned_bytes_are_utf8_bytes(self):
+        files = {f'docs/{n}/CONTRIBUTING.md': '中' * 50000 + ' No AI.' for n in range(7)}  # 150 kB each
+        result, _ = report(files)
+        self.assertIn('scanned bytes', {item['limit'] for item in result['limits_reached']})
+        self.assertLessEqual(sum(150007 for s in result['sources_scanned']), policy.MAX_SCANNED_BYTES)
+
+    def test_metadata_alone_cannot_exceed_the_real_report_bound(self):
+        component = '\U0001f600' * 60  # 240 UTF-8 bytes, 720 bytes once ASCII-escaped: 60 such paths exceed 256 kB
+        instructions = [{'path': f'{n:02d}/' + '/'.join([component] * 7) + '/AGENTS.md', 'sha256': '1' * 64,
+                         'untrusted_text': 'Build with make.'} for n in range(60)]
+        self.assertTrue(all(len(item['path']) < policy.IDENTIFIER_CHARS for item in instructions))
+        result, _ = report({}, instructions=instructions)
+        self.assertLessEqual(len(json.dumps(result, ensure_ascii=True).encode()), policy.MAX_REPORT_BYTES)
+        self.assertTrue(any(item['limit'].startswith('report size') for item in result['limits_reached']))
 
     def test_adversarial_input_scans_in_linear_time(self):
         cases = ['ai not ' * 150000, ('<' * 5000 + 'a' * 100) * 100, '&#' * 300000, '[' * 300000 + '](',

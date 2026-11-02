@@ -266,11 +266,12 @@ class _Report:
                 blobs[core.require(entry.get('path'), str, 'tree path')] = entry.get('sha')
         return blobs
 
-    def add(self, origin, repository, path, commit, digest, kind, text):
-        if self.scanned_bytes + len(text) > MAX_SCANNED_BYTES:
+    def add(self, origin, repository, path, commit, digest, kind, text, size):
+        """size is the source's UTF-8 byte count, the unit of the 1 MB scan bound (RP-18)."""
+        if self.scanned_bytes + size > MAX_SCANNED_BYTES:
             self.limit('scanned bytes')
             return
-        self.scanned_bytes += len(text)
+        self.scanned_bytes += size
         result = scan(text, path)
         notes = ([f'paragraphs with non-Latin script not assessed: {result["non_latin_paragraphs"]}']
                  if result['non_latin_paragraphs'] else [])
@@ -305,7 +306,7 @@ class _Report:
             except UnicodeError:
                 self.note(label, 'not UTF-8 text')
                 return
-            self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text)
+            self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data))
 
     def read_candidates(self, origin, repository, commit, blobs, skip, cap, limit_name, allowed=lambda path: True):
         found = []
@@ -408,7 +409,8 @@ def report(repository, commit, instructions, client, *, default_branch=None):
         loaded.add(item['path'])
         if len(item['path']) >= IDENTIFIER_CHARS:  # core stores instruction paths shortened to 500 characters
             state.note(item['path'], 'instruction path may be shortened by core; identity unresolved')
-        state.add('repository', repository, item['path'], commit, item['sha256'], kind_of(item['path']), item['untrusted_text'])
+        state.add('repository', repository, item['path'], commit, item['sha256'], kind_of(item['path']),
+                  item['untrusted_text'], len(item['untrusted_text'].encode('utf-8')))
     try:
         blobs = state.tree(repository, commit)
     except (core.ProtocolError, _Limit):
@@ -453,13 +455,23 @@ def report(repository, commit, instructions, client, *, default_branch=None):
             'limits_reached': result['limits_reached']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
+        # Shrink until the serialized report fits, recording every reduction (RP-18).
+        long_paths = [s for s in result['sources_scanned'] if len(s['path']) > 80]
         if result['hints']:
             result['hints'].pop()
+            state.limit('report size: hints')
         elif result['unassessed']:
             result['unassessed'].pop()
+            state.limit('report size: unassessed entries')
+        elif long_paths:
+            for source in long_paths:
+                source.update(path=source['path'][:80], path_truncated=True)
+            state.limit('report size: shortened paths', len(long_paths))
+        elif result['sources_scanned']:
+            result['sources_scanned'].pop()
+            state.limit('report size: sources not listed')
         else:
             return result
-        state.limit('report size')
 
 
 def for_inspected(inspected, client):
