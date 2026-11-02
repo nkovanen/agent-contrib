@@ -27,6 +27,12 @@ found. Authenticate `gh` using its own supported mechanism, and check with
 LightCraft checkout, subscription to a particular model, or repository-specific
 setup is needed for discovery.
 
+A failed GitHub read never echoes `gh` output, which can contain credentials.
+HTTP 404 is reported as not found or not visible to this account (check the
+repository and issue names, or private access), HTTP 401 as an authentication
+failure (`gh auth status`), and anything else as a generic auth, access or rate
+limit failure. The error code stays `api_error` and the command still fails.
+
 For a standard virtual environment instead of pipx:
 
 ```sh

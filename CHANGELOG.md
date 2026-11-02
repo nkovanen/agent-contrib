@@ -69,7 +69,9 @@ channel or runtime model provider is added.
   cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
   part), `verify --observe-ci` (#17, part) and `--report-budget` /
   `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
-  where documented.
+  where documented. `discover --signals` also lists
+  `code_location.named_paths_missing`: file paths the issue names that are not
+  in the snapshot tree, compared exactly (F13).
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
@@ -98,7 +100,17 @@ channel or runtime model provider is added.
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.
 - A heuristic overlap `reason` ends with the shared title words and checklist IDs
-  that triggered it. Matching and fields are unchanged.
+  that triggered it, and says when a shared ID such as `SHA-256` may name a
+  standard (R7-01). Matching and fields are unchanged; such overlaps still block.
+- A failed GitHub read says when it was HTTP 404 (not found or not visible to
+  this account) or HTTP 401 (not authenticated) instead of always "check gh
+  auth" (E-17). `gh` output is never echoed; codes and exits are unchanged.
+- Text `discover` shows each issue's overlapping-PR count, excluded flag and
+  (with `--signals`) score, plus overlapping and excluded totals that include
+  issues beyond the 20-line cap (F8).
+- `scope-check` warns when the default base is more than one commit behind
+  HEAD and out-of-scope paths changed, naming the base and suggesting `--base`
+  (F36). Violations and exit status are unchanged.
 - A global option placed after the subcommand is still a usage error; the
   message now says to move it before the subcommand. `discover` with no
   repository reports the missing `reference`.

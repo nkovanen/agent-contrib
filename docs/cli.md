@@ -80,7 +80,10 @@ unresolved, with errors and `complete: false`.
 A heuristic overlap's `reason` ends with what triggered it: the shared title
 words (two or more) and/or shared checklist IDs, sorted, at most ten of each with
 a count of the rest. An explicit issue reference keeps its own reason. The
-duplicate entry fields are unchanged.
+duplicate entry fields are unchanged. When a shared ID is a well-known standard
+name such as `SHA-256` or `UTF-8`, the reason adds that it may name a standard,
+not a work item. The match still blocks: spelling alone cannot tell a standard
+from a project ticket such as `SHA-1234`.
 
 Use the `reference` emitted by discovery for subsequent commands. It keeps the
 requested spelling; schema 0.2 `prepare` refuses a case variant of the canonical
@@ -198,7 +201,10 @@ other Git reads, and nothing under `.git` is opened directly. `base_commit`
 reports the full SHA. A value that is blank, starts with `-` or contains
 whitespace or control characters is refused. When the default base is not an ancestor of HEAD,
 `warnings` suggests passing `--base` for stacked or rebased work; the result
-still fails. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
+still fails. When the default base is an ancestor but more than one commit
+behind HEAD and out-of-scope paths changed, `warnings` names the base, the
+commit count and suggests `--base`; the violations and exit status are
+unchanged. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
@@ -280,6 +286,14 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   name containing other identifier characters, such as combining marks, `℘` or
   `·`, is refused; its fragments are never resolved either.
   Path and file-name matches come first and the same limit of 20 applies.
+  `named_paths_missing` lists repository-relative file paths the issue names
+  (`docs/x.md`, `./src/a.rs`, `.github/ci.yml`; a last segment with an
+  extension) that the snapshot tree does not contain, at most 20 in order of
+  appearance. The named path is compared exactly: unlike hints, an existing
+  suffix (`src/a.rs` for `old/src/a.rs`) does not count. It is a heuristic, not
+  a URL parser; it skips absolute paths, ordinary URLs, domains, `..` traversal and
+  tokens cut at 300 characters, and it is empty when the tree is unknown. It is a
+  staleness cue only: it does not change `value`, `score` or ordering.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
   expected/actual sections, reproduction steps and code blocks.
 - `activity`: age and last-update days, comment and reaction counts from the
@@ -508,7 +522,9 @@ agent-contrib --format json inspect 'owner/repo#123'
 ```
 
 Text changes presentation only, never scan depth, authorization or exit status.
-It is a summary: discovery shows at most 20 issues per repository, lists show at
+It is a summary: discovery shows at most 20 issues per repository, each with its
+overlapping-PR count, whether it is excluded and (with `--signals`) its score,
+followed by overlapping and excluded counts over all issues; lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
 counted. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
@@ -1187,6 +1203,7 @@ Added by --signals; report-only heuristics, never approval
 | `code_location` | object |  |
 | `code_location.value` | "found" \| "none" \| "unknown" |  |
 | `code_location.hints` | string[] | Repository paths matched from the issue text |
+| `code_location.named_paths_missing` | string[] | Repository-relative file paths named in the issue text that are not in the snapshot tree (exact comparison; report only) |
 | `code_location.explanation` | string |  |
 | `acceptance_clarity` | object |  |
 | `acceptance_clarity.value` | "high" \| "medium" \| "low" |  |

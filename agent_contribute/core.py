@@ -136,7 +136,12 @@ class GitHub:
                 if transient and attempt < 2:
                     time.sleep(attempt + 1)
                     continue
-                # Never echo gh stderr: authentication errors can contain credentials.
+                # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
+                if re.search(r'\bHTTP 404\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or path '
+                                        'does not exist or is not visible to this gh account')
+                if re.search(r'\bHTTP 401\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET was not authenticated (HTTP 401); check gh auth status')
                 raise ProtocolError('api_error', 'GitHub GET failed; check gh auth, access and rate limits')
             except (OSError, subprocess.TimeoutExpired) as exc:
                 raise ProtocolError('transport_error', 'Could not run gh GET within 30 seconds') from exc
@@ -426,7 +431,13 @@ def overlap_matches(words, ids):
         return title + ': ' + ', '.join(items[:limit]) + (f' and {len(items) - limit} more' if len(items) > limit else '')
     parts = ([listed('shared title words', words)] if len(words) >= 2 else []) + (
         [listed('shared checklist IDs', ids)] if ids else [])
+    # Explanation only: a standards-shaped ID may still be a real ticket, so the match keeps blocking.
+    parts += [f'{item} may name a standard, not a work item' for item in sorted(ids & STANDARD_TOKENS)[:10]]
     return '(' + '; '.join(parts) + ')'
+
+
+STANDARD_TOKENS = {'AES-128', 'AES-192', 'AES-256', 'CRC-32', 'ISO-8601', 'ISO-8859-1', 'RSA-2048', 'RSA-4096', 'SHA-1',
+                   'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512', 'SHA3-256', 'SHA3-512', 'UTF-16', 'UTF-32', 'UTF-8'}
 
 
 def ranking(issue, duplicates):

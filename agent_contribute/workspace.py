@@ -38,6 +38,14 @@ def scope_check(task, directory, base=None):
         paths.update(core.untracked_paths(directory))
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
         result['violations'] = sorted(core.scope_violations(task['scope'], paths), key=lambda item: item['path'])
+        if default and result['violations']:
+            # Report only: several commits plus violations often mean work stacked on unpublished commits.
+            behind = int(core.git_read(directory, 'rev-list', '--count', base + '..' + head))
+            if behind > 1:
+                result['warnings'].append(
+                    f'Default base source.commit {base} is {behind} commits behind HEAD and paths outside the scope '
+                    'changed; if your change is stacked on other unpublished commits, pass --base naming the commit '
+                    'it starts from (for example HEAD~1)')
     except core.ProtocolError as exc:
         errors.append(str(exc))
     result['within_scope'] = not errors and not result['violations']
