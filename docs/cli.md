@@ -496,8 +496,9 @@ line reads `not evaluated; see Errors` and the schema errors follow. JSON still
 contains every stage. `scope-check` lists each violating path
 and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
 informational changes (an advanced default branch, PRs no longer open) apart.
-Other commands show top-level
-scalar fields; use JSON for full nested results, instructions and provenance.
+`instructions` prints a version line and then the
+workflow Markdown unchanged, so it can be read without unwrapping JSON. Other
+commands show top-level scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured
 JSON when argument parsing has not produced a valid format selection.

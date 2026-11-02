@@ -135,6 +135,12 @@ def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
         return f'error [{line(result["error"].get("code", ""), 60)}]: {line(result["error"].get("message", ""))}\n'
+    if command == 'instructions':
+        # The workflow is the packaged Markdown, not remote text: print it whole so agents need no JSON unwrapping.
+        versions = ', '.join(result['supported_schema_versions'])
+        return (f"agent-contrib {result['cli_version']} workflow (task/evidence schemas {versions}; host-context "
+                f"{', '.join(result['supported_host_context_versions'])}; JSON output is canonical)\n\n"
+                + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift}.get(command)
     if body is None:
