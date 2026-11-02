@@ -10,6 +10,7 @@ import os
 import stat
 import importlib.resources
 import json
+import math
 import re
 import subprocess
 import tempfile
@@ -624,7 +625,8 @@ def schema_errors(value, schema, path='$', depth=0, root=None):
     kind = schema.get('type')
     matches = {'object': isinstance(value, dict), 'array': isinstance(value, list),
                'string': isinstance(value, str), 'integer': type(value) is int,
-               'boolean': type(value) is bool, 'null': value is None, 'number': type(value) in (int, float)}
+               'boolean': type(value) is bool, 'null': value is None,
+               'number': type(value) is int or type(value) is float and math.isfinite(value)}
     kinds = kind if isinstance(kind, list) else [kind] if kind else []
     if kinds and not any(matches.get(item, False) for item in kinds):
         return [path + ': expected ' + ' or '.join(kinds)]
@@ -648,7 +650,8 @@ def schema_errors(value, schema, path='$', depth=0, root=None):
     elif kind == 'array':
         if not schema.get('minItems', 0) <= len(value) <= schema.get('maxItems', 1000):
             errors.append(path + ': invalid list length')
-        for i, item in enumerate(value[:1000]):
+            value = value[:1000]  # Already invalid; bound the item checks. An allowed length checks every item.
+        for i, item in enumerate(value):
             errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1, root))
     elif kind == 'string':
         if schema.get('minLength', 0) > 0 and not value.strip():

@@ -73,6 +73,23 @@ class ValidatorKeywordTests(unittest.TestCase):
         self.assertEqual(core.schema_errors({'a': 1, 'b': 2}, closed), ['$: unknown properties'])
         self.assertEqual(core.schema_errors({'a': 1, 'b': 2}, obj({'a': {}})), ['$: unknown properties'])
 
+    def test_every_item_of_an_allowed_list_is_checked(self):
+        schema = {'type': 'array', 'items': {'type': 'integer'}, 'maxItems': 2000}
+        self.assertEqual(core.schema_errors([1] * 1001, schema), [])
+        self.assertEqual(core.schema_errors([1] * 1000 + ['x'], schema), ['$[1000]: expected integer'])
+        self.assertEqual(core.schema_errors([1] * 1999 + ['x'], schema), ['$[1999]: expected integer'])
+        default = {'type': 'array', 'items': {'type': 'integer'}}
+        self.assertEqual(core.schema_errors([1] * 1000, default), [])
+        self.assertEqual(core.schema_errors([1] * 1001, default), ['$: invalid list length'])
+        # An over-long list fails on its length; item checks stay bounded to the first 1000 as before.
+        errors = core.schema_errors(['x'] * 5000, schema)
+        self.assertEqual(errors[0], '$: invalid list length')
+        self.assertEqual(len(errors), 1001)
+
+    def test_numbers_must_be_finite(self):
+        for value in (float('nan'), float('inf'), float('-inf')):
+            self.assertEqual(core.schema_errors(value, {'type': ['number', 'null']}), ['$: expected number or null'])
+
     def test_existing_single_type_messages_are_unchanged(self):
         self.assertEqual(core.schema_errors([], {'type': 'object'}), ['$: expected object'])
         self.assertEqual(core.schema_errors(1, {'type': 'unknown'}), ['$: expected unknown'])
