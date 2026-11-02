@@ -146,7 +146,7 @@ class RouteTests(unittest.TestCase):
         deleted = report.pr_facts(payload('x', head_repo=None, base_ref=execution['base_ref'],
                                           base_repo=(execution['target_repository'], execution['target_repository_id'])))
         checks = report.route_checks(task, deleted, 'acme/photos')
-        self.assertEqual([c['state'] for c in checks if c['name'].startswith('Head')], ['not-evaluated'] * 3)
+        self.assertEqual([c['state'] for c in checks if c['name'].startswith('Head')], ['not-evaluated'] * 4)
 
     def test_schema_01_route_rules(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -154,7 +154,7 @@ class RouteTests(unittest.TestCase):
         facts = report.pr_facts(payload('x'))
         checks = report.route_checks(task, facts, 'acme/photos')
         self.assertTrue(all(check['state'] == 'match' for check in checks), checks)
-        self.assertFalse(any(check['name'].startswith('Head') for check in checks))
+        self.assertEqual([check['name'] for check in checks if check['name'].startswith('Head')], ['Head repository is known'])
         fork = copy.deepcopy(task)
         fork['execution'].update(mode='fork-experiment', target_repository='human/photos')
         self.assertEqual(sorted(states(report.route_checks(fork, facts, 'acme/photos')).values()).count('mismatch'), 2)
@@ -276,6 +276,28 @@ class IsolationTests(CheckoutCase):
         # The planted files are untracked changes, so the scope check reports them; the run itself stays isolated.
         self.assertRegex(result.stdout, r'\AAgent Contrib report written to the job summary: [a-z-]+\n\Z')
         self.assertIn('## Agent Contrib report (report-only)', summary.read_text('utf-8'))
+
+
+class HeadRepositoryTests(CheckoutCase):
+    def test_null_head_repository_is_never_a_complete_schema_01_result(self):
+        model = self.build(head_repo=None)
+        self.assertEqual(model['result'], 'not-checked', model)
+        rows = {c['name']: c['state'] for _, checks in model['sections'] for c in checks}
+        self.assertEqual(rows['Head repository is known'], 'not-evaluated')
+        code, _, summary = run_main(self.environ(body(self.task, self.evidence), head_repo=None))
+        self.assertNotIn('No inconsistency found', summary)
+        self.assertIn('- not evaluated: Head repository is known', summary)
+
+    def test_absent_head_repository_key_is_a_malformed_payload(self):
+        event = payload(body(self.task, self.evidence), head_sha=self.head)
+        del event['pull_request']['head']['repo']
+        with self.assertRaises(report.NotChecked):
+            report.pr_facts(event)
+        path = pathlib.Path(self.workspace.name, 'event.json')
+        environ = self.environ('x')
+        path.write_text(json.dumps(event))
+        model = report.build(environ)
+        self.assertEqual((model['result'], model['reason']), ('not-checked', 'the event payload lacks pull request facts'))
 
 
 class SchemaTwoCheckoutTests(CheckoutCase):

@@ -100,7 +100,9 @@ def pr_facts(event):
     body = pr.get('body')
     if body is not None and not isinstance(body, str):
         raise NotChecked('the event payload lacks pull request facts')
-    head_repo = head.get('repo')
+    if 'repo' not in head:
+        raise NotChecked('the event payload lacks pull request facts')
+    head_repo = head['repo']  # null when the head repository was deleted: a known gap, not a match
     return {'number': _field(pr, 'number', int, lambda number: number > 0), 'body': body,
             'head_sha': _field(head, 'sha', str, HEX40.fullmatch), 'head_ref': _field(head, 'ref', str),
             'head_repo': None if head_repo is None else _repository(head_repo),
@@ -126,6 +128,10 @@ def route_checks(task, facts, workflow_repository):
               compare('source.repository is the base repository', task['source']['repository'], base_name, casefold=True),
               compare('execution.target_repository is the base repository', execution['target_repository'], base_name,
                       casefold=True)]
+    # Applies to every schema version: without the head repository the PR route is not fully known (MA-07).
+    deleted = facts['head_repo'] is None
+    checks.append(check('Head repository is known', 'not-evaluated' if deleted else 'match',
+                        [[('', 'the head repository was deleted')]] if deleted else ()))
     if task['schema_version'] != '0.2':
         same = execution['mode'] == 'upstream-contribution'
         checks.append(check('execution.mode is upstream-contribution', 'match' if same else 'mismatch',
@@ -135,7 +141,7 @@ def route_checks(task, facts, workflow_repository):
                compare('execution.base_ref is the PR base ref', execution['base_ref'], facts['base_ref'])]
     names = ('Head repository is execution.head_repository', 'Head repository ID is execution.head_repository_id',
              'Head ref is execution.head_ref')
-    if facts['head_repo'] is None:
+    if deleted:
         return checks + [check(name, 'not-evaluated', [[('', 'the head repository was deleted')]]) for name in names]
     head_name, head_id = facts['head_repo']
     return checks + [compare(names[0], execution['head_repository'], head_name, casefold=True),
