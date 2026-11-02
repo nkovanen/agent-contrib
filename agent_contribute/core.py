@@ -770,6 +770,16 @@ def untracked_paths(directory):
     return {path for path in listed.split('\0') if path}
 
 
+def shallow_or(directory, error):
+    """A failed base or ancestry read in a shallow clone usually means missing history; say so."""
+    try:
+        shallow = git_read(directory, 'rev-parse', '--is-shallow-repository') == 'true'
+    except ProtocolError:
+        shallow = False
+    return ProtocolError('shallow_checkout', 'Checkout is shallow and lacks the history needed to check the base; '
+                         'fetch more history (git fetch --unshallow or --deepen) and retry') if shallow else error
+
+
 def current_head(directory):
     """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
     names when the current branch is unborn or deleted, so later reads use this object ID instead."""
@@ -839,13 +849,16 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         # The full ref, exactly: --short would accept refs/tags/NAME for a reviewed branch NAME.
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        if has_gitlink(directory, head, evidence['base_commit']):
-            errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
         dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
                  untracked_paths(directory))
-        # A base from another checkout cannot satisfy this task, even with a matching string.
-        git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
-        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        try:  # every read that needs the base commit and its history
+            if has_gitlink(directory, head, evidence['base_commit']):
+                errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
+            # A base from another checkout cannot satisfy this task, even with a matching string.
+            git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
+            git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        except ProtocolError as exc:
+            raise shallow_or(directory, exc) from None
         changed = implementation_paths(directory, evidence['base_commit'], head)
         if not changed:
             errors.append('Implementation diff is empty')

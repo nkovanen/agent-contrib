@@ -20,14 +20,15 @@ def scope_check(task, directory, base=None):
         core.require_plain_index(directory)
         head = core.current_head(directory)
         default = base is None
-        base = result['base_commit'] = _base(task['source']['commit']) if default else resolve_base(directory, base)
+        base = result['base_commit'] = _base(task['source']['commit']) if default else _resolve(directory, base)
         try:
             core.git_read(directory, 'merge-base', '--is-ancestor', base, head)
         except core.ProtocolError:
             if default:
                 result['warnings'].append('Default base source.commit is not an ancestor of HEAD; for stacked or '
                                           'rebased work pass --base REV naming the commit your change starts from')
-            raise core.ProtocolError('git_error', 'Base commit is missing or not an ancestor of HEAD') from None
+            raise core.shallow_or(directory, core.ProtocolError(
+                'git_error', 'Base commit is missing or not an ancestor of HEAD')) from None
         if core.has_gitlink(directory, head, base):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
         paths = set(core.implementation_paths(directory, base, head))
@@ -73,6 +74,16 @@ def resolve_base(directory, rev):
                                  'or an existing refs/... name') from None
 
 
+def _resolve(directory, rev):
+    """A well-formed base that does not resolve in a shallow clone is reported as missing history."""
+    try:
+        return resolve_base(directory, rev)
+    except core.ProtocolError as exc:
+        if isinstance(rev, str) and REVISION.fullmatch(rev):
+            raise core.shallow_or(directory, exc) from None
+        raise
+
+
 def evidence_skeleton(task, directory, base):
     """Prefill only facts Git observes; results stay unfilled so the draft cannot validate."""
     if core.validate_contract(task):
@@ -81,12 +92,13 @@ def evidence_skeleton(task, directory, base):
     core.require_safe_config(directory)
     core.require_plain_index(directory)
     head = core.current_head(directory)
-    base = resolve_base(directory, base)
+    base = _resolve(directory, base)
     try:
         core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
         core.git_read(directory, 'merge-base', '--is-ancestor', base, head)
     except core.ProtocolError:
-        raise core.ProtocolError('base_history', 'Base must descend from source.commit and be an ancestor of HEAD') from None
+        raise core.shallow_or(directory, core.ProtocolError(
+            'base_history', 'Base must descend from source.commit and be an ancestor of HEAD')) from None
     if core.has_gitlink(directory, head, base):
         raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
     version = task['schema_version']

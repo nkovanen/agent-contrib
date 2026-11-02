@@ -160,6 +160,9 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- In a shallow clone that lacks the base or its history, `verify`,
+  `scope-check` and `evidence init` now say so (`shallow_checkout`, with a
+  fetch hint) instead of a generic read or base error. They still fail closed.
 - Closed or missing stdout exits 1 quietly, including buffered errors and
   caller-provided write-only streams (#4). Help and version are unchanged.
 - Library `verify` of a schema-valid 0.1 contract with host context keeps
