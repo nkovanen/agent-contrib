@@ -332,13 +332,14 @@ demotion is listed in the issue's `top_check.demotions`. No maintainer
 "reserved" or "rejected" detector exists, so none is used. A clean or
 incomplete check proves nothing, gates and overlap are unchanged, and the
 reads appear in `--report-budget`. In live runs with N=5 it made 13-18 reads
-and demoted ripgrep #2528 and hono #1018, both judged bad, to ranks 59 and 183.
+and demoted ripgrep #2528 and hono #1018, both judged bad by that evaluator, to ranks 59 and 183.
 Precision@5 stayed 1/5, 1/5 and 0/5 for click, ripgrep and hono: the issues
 that moved up (ripgrep #1221, hono #2649) were judged bad too.
 
 `tests/test_ranking_eval.py` replays a frozen dogfood-2 snapshot (public titles,
-labels and signal inputs for click, ripgrep and hono, with human verdicts) and
-checks precision@5 and the ranks of known bad labelled or meta issues offline.
+labels and signal inputs for click, ripgrep and hono, with the dogfood
+evaluator's judgements; the evaluator was a model, Claude Opus 5.5, and no
+separate human review was done) and checks precision@5 and the ranks of known bad labelled or meta issues offline.
 The demotions move those issues out of the top ranks but do not raise
 precision@5 on that snapshot (click 1/5, ripgrep 1/5, hono 0/5 before and
 after): most remaining false candidates are design debates, already fixed or
