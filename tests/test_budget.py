@@ -125,14 +125,37 @@ class BudgetTests(unittest.TestCase):
                         self.assertEqual(client.calls, [])
             self.assertFalse(Path(directory, 'body.md').exists())
 
+    def test_min_remaining_equal_to_remaining_is_enough(self):
+        code, result = run(BudgetGitHub(remaining=100), '--report-budget', '--min-remaining', '100', 'discover', 'acme/photos')
+        self.assertEqual(code, 0, result)
+        self.assertEqual(result['api_budget']['before']['remaining'], 100)
+        code, result = run(BudgetGitHub(remaining=99), '--report-budget', '--min-remaining', '100', 'discover', 'acme/photos')
+        self.assertEqual((code, result['error']['code']), (1, 'rate_limit_budget'))
+
+    def test_lifecycle_options_on_legacy_task_fail_before_the_budget_read(self):
+        from tests.test_protocol import ready_contract
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory, 'task.json')
+            task.write_text(json.dumps(ready_contract()[0]))
+            for option in (['--stage', 'draft'], ['--host-context-stdin']):
+                with self.subTest(option=option):
+                    client = BudgetGitHub()
+                    code, result = run(client, '--report-budget', 'verify', str(task), *option)
+                    self.assertEqual((code, result['error']['code']), (1, 'schema_options'))
+                    self.assertEqual(client.calls, [])
+
     def test_usage_errors(self):
         for argv in [('--min-remaining', '5', 'discover', 'acme/photos'),
                      ('--report-budget', '--min-remaining', '-1', 'discover', 'acme/photos'),
-                     ('--report-budget', 'instructions')]:
-            client = BudgetGitHub()
-            code, result = run(client, *argv)
-            self.assertEqual((code, result['error']['code']), (2, 'usage'))
-            self.assertEqual(client.calls, [])
+                     ('--report-budget', 'instructions'), ('--report-budget', 'skill', '--output', '/nonexistent/s.md'),
+                     ('--report-budget', 'scope-check', '/nonexistent/task.json', '--repo-dir', '.'),
+                     ('--report-budget', 'evidence', 'init', '/nonexistent/task.json', '--repo-dir', '.',
+                      '--base', 'a' * 40, '--output', '/nonexistent/e.json')]:
+            with self.subTest(argv=argv):
+                client = BudgetGitHub()
+                code, result = run(client, *argv)
+                self.assertEqual((code, result['error']['code']), (2, 'usage'))
+                self.assertEqual(client.calls, [])
 
 
 if __name__ == '__main__':
