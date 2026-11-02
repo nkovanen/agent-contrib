@@ -261,6 +261,11 @@
           "type": "string",
           "description": "Repository of the PR, when it is not the issue source",
           "maxLength": 2147483647
+        },
+        "observed_in": {
+          "type": "string",
+          "const": "disposition_read",
+          "description": "Only in schema 0.2 verify: the match was first seen in a host-context 0.2 disposition read, not the open-PR list scan"
         }
       },
       "required": [

@@ -118,10 +118,10 @@ def evaluate(task, context, authority, current, client, now):
     canonical = 'https://github.com/{}/pull/{}'
     waived, extra, tips = set(), [], {}
 
-    def block(number, reason, message):
+    def block(number, reason, message, **observed):
         errors.append(message)
         extra.append({'number': number, 'url': canonical.format(repository, number), 'reason': reason,
-                      'repository': repository})
+                      'repository': repository, **observed})
 
     for entry in record['dispositions']:
         number = entry['pr_number']
@@ -135,8 +135,9 @@ def evaluate(task, context, authority, current, client, now):
             continue
         finding = findings[0] if findings else None
         if finding and finding['reason'] == DIRECT:
-            block(number, DIRECT + ' (observed in disposition read)',
-                  f'Overlap disposition read found an explicit reference: PR #{number}')
+            # A real match, so it is also reported as an observed overlap; read failures are only blockers.
+            block(number, DIRECT, f'Overlap disposition read found an explicit reference: PR #{number}',
+                  observed_in='disposition_read')
             continue
         if finding is None and not listed:
             if saved:

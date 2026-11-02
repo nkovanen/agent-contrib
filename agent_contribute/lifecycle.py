@@ -184,7 +184,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
                     if item.get('repository') == source['repository'] and item['number'] in waived]
     all_duplicates = [item for item in live_duplicates + task['discovery']['duplicate_prs']
                       if item not in waived_items] + observed
-    result['duplicates'] = live_duplicates
+    result['duplicates'] = live_duplicates + [item for item in observed if item.get('observed_in')]
     implementation_errors = list(action_errors)
     if not authority['implement']:
         implementation_errors.append('Current implement action is not authorized')

@@ -246,8 +246,11 @@ class DirectReferenceTests(WaiverFixture):
         self.detail_changed(body='Also fixes #12')
         result = self.verify(evidence=False)
         self.assert_blocked(result, 'Overlap disposition read found an explicit reference: PR #31')
-        self.assertIn(DIRECT + ' (observed in disposition read)',
-                      [item['reason'] for item in result['blocking_duplicates']])
+        observed = {'number': 31, 'url': self.pr['html_url'], 'reason': DIRECT, 'repository': SOURCE,
+                    'observed_in': 'disposition_read'}
+        self.assertIn(observed, result['blocking_duplicates'])
+        self.assertEqual(result['duplicates'][-1], observed)
+        self.assertEqual(result['duplicates'][0]['reason'], TOPICAL)  # the list observation stays too
 
 
 class MatchAndScopeTests(WaiverFixture):
@@ -295,7 +298,8 @@ class ReconciliationTests(WaiverFixture):
         self.show(details=[dict(self.pr, body='fixes #12')])
         result = self.verify(evidence=False)
         self.assert_blocked(result, 'Overlap disposition read found an explicit reference: PR #31')
-        self.assertEqual(result['duplicates'], [])
+        self.assertEqual(result['duplicates'], [{'number': 31, 'url': self.pr['html_url'], 'reason': DIRECT,
+                                                 'repository': SOURCE, 'observed_in': 'disposition_read'}])
 
     def test_absent_from_the_list_but_topical_in_the_detail_blocks(self):
         self.show(details=[self.pr])
@@ -309,6 +313,7 @@ class ReconciliationTests(WaiverFixture):
         self.show()
         result = self.verify(evidence=False)
         self.assert_blocked(result, 'Overlap disposition read failed for PR #31')
+        self.assertEqual(result['duplicates'], [])  # an unknown is a blocker, never a claimed overlap
 
     def test_malformed_detail_blocks(self):
         self.detail_changed(head={'ref': 'renderer', 'repo': {'id': 101}})

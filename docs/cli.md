@@ -151,8 +151,9 @@ non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 schemas 0.1 and 0.2. With a host-context 0.2 document, `verify` adds
 `overlap_dispositions` and `waived_duplicates`. The status is:
 - `absent`: no record;
-- `invalid`: a schema, binding or expiry error. Nothing is waived and no extra
-  read is made;
+- `invalid`: a schema, binding or expiry error. Nothing is waived. A record
+  rejected on its own checks makes no extra read, but one that expires during
+  the reads becomes `invalid` only after them;
 - `evaluated`: the record's contract, mandate, credential, event, interval and
   entry bindings check out.
 
@@ -168,7 +169,9 @@ from the blocking lists only when all of these hold:
 - the record is still unexpired after all reads.
 
 A direct reference, contradiction or failed read seen in that read blocks. A
-waived PR stays in `duplicates`. Waivers never remove any other blocker; text
+direct reference first seen there is also added to `duplicates` with
+`observed_in: "disposition_read"`; a failed read is a blocker only, never a
+claimed overlap. A waived PR stays in `duplicates`. Waivers never remove any other blocker; text
 output names them. A record that expires during the reads fails every stage
 closed. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
@@ -1072,6 +1075,7 @@ An open PR that references or overlaps the issue
 | `url` | string |  |
 | `reason` | string | "Explicit reference to this issue" or a heuristic overlap naming the shared words/IDs |
 | `repository` | string (optional) | Repository of the PR, when it is not the issue source |
+| `observed_in` | "disposition_read" (optional) | Only in schema 0.2 verify: the match was first seen in a host-context 0.2 disposition read, not the open-PR list scan |
 
 #### `feedback_author`
 
