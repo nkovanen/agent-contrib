@@ -31,7 +31,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
-| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is an accepted no-op |
+| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is syntax-compatible only |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib --report-budget [--min-remaining N] COMMAND ...` | Adds the core REST rate-limit budget before and after a GitHub-reading command; optionally refuses to start below N |
@@ -331,7 +331,9 @@ unknown`; an unknown is never "not fixed". With
 
 `discover` (once per repository), `inspect` and `prepare` add `repository_policy`
 in the CLI output. Core results, prepared contracts, `instructions_sha256` and
-exit codes do not change. `--ai-policy` is accepted and does nothing more.
+exit codes do not change. `--ai-policy` is syntax-compatible only: it is
+accepted and changes nothing. The earlier unreleased `ai_policy` excerpts and
+the `agent_contribute.aipolicy` module no longer exist.
 
 - **Inventory.** The issue source repository (never a requested fork) at the
   observed commit. It covers the loaded instruction files plus policy-named

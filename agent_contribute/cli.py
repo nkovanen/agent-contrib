@@ -130,7 +130,7 @@ def main(argv=None):
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
             sub.add_argument('--ai-policy', action='store_true',
-                             help='Accepted for compatibility; inspect always adds the repository_policy report')
+                             help='Syntax-compatible only: accepted and ignored; inspect always adds repository_policy')
         if command == 'prepare':
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',

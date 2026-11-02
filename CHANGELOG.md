@@ -2,7 +2,7 @@
 
 ## 0.3.0 — unreleased
 
-- Replace the opt-in `inspect --ai-policy` excerpts with a default-on,
+- Add a default-on,
   report-only `repository_policy` in `discover`, `inspect` and `prepare` output
   (dogfood E-01 to E-05). The old scanner reported `coverage: complete` with no
   hits on pallets/click, BurntSushi/ripgrep and honojs/hono, although each
@@ -10,7 +10,9 @@
   with "Pull requests are limited to maintainers". The new report adds
   policy-named files and the owner `.github` repository, pinned by commit; it
   hints over paragraphs and lists unassessed links and formats. It has no
-  coverage verdict. `--ai-policy` is kept as a no-op. The installed workflow
+  coverage verdict. `--ai-policy` remains syntax-compatible only: it is
+  accepted and changes nothing. The earlier unreleased `ai_policy` JSON and the
+  `agent_contribute.aipolicy` module are removed. The installed workflow
   gains a mandatory policy review with five dispositions, an `unresolved` state
   that blocks upstream work, and a rule that local authorization never overrides
   the source project's policy. Contracts, `instructions_sha256` and verifier
@@ -85,8 +87,6 @@
   outdated flags, bot authors and failing/pending checks for the exact head.
 - Add opt-in, report-only ownership and resolution signals (#5, #6) via
   `inspect --ownership` and `ownership`; no gate or default output changes.
-- Add opt-in `inspect --ai-policy` (#8, part): located AI-contribution
-  statement excerpts from loaded instructions; the opt-out policy is deferred.
 - Add read-only `drift task.json` (#16, part): per-file instruction changes from
   the pinned commit, issue, branch, policy and overlap changes; never rewrites.
 - Add opt-in `verify --observe-ci` (#17, part): report-only check runs and
