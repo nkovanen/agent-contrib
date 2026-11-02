@@ -102,6 +102,46 @@ measurably worse than chance on this corpus. Before changing the ranking,
 re-measure with more repositories and cutoffs, so that a real effect of the
 size (d) suggests could be detected.
 
+## Pre-registered protocol: expanded corpus (registered 2026-11-03, before collection)
+
+This was written and committed before the new snapshots were collected or any
+variant was scored on them. Nothing below changes after results are seen.
+
+- **Question.** Does variant (d), the most-recent-activity tie-break, beat random
+  on repositories it was not tuned on?
+- **Tuning set.** The four original snapshots above (cutoff 2026-03-01). They are
+  already known and are not used for the decision.
+- **Test set.** Eight new repositories at two cutoffs each, 2025-09-01 and
+  2026-03-01, 90-day horizon, giving 16 snapshots. They are counted as they
+  come, whatever their positive counts.
+  - Python: `encode/httpx`, `pydantic/pydantic`
+  - JavaScript: `expressjs/express`, `axios/axios`
+  - Rust: `clap-rs/clap`, `sharkdp/bat`
+  - Go: `spf13/cobra`, `junegunn/fzf`
+
+  A snapshot that cannot be collected within the read budget is reported as
+  missing, not replaced.
+- **Collection.**
+  - Read-only, through `collect.py`: `--max-issues 150` (most recently created
+    first), `--max-search-pages 5`, `--horizon-days 90`.
+  - Total budget about 3000 reads. Collection stops early rather than let the
+    core rate limit fall below 1000.
+  - Snapshots go into `tools/benchmark/data/` while the committed total stays
+    under about 2 MB; the rest are kept under the validation-runs directory and
+    listed here.
+- **Labels.** The scoring labels above, with fixes already in flight at T
+  excluded. The raw labels are reported as a secondary result.
+- **Variants.** (a) default, (b) `--signals`, (d) recent-activity tie-break.
+- **Metric.** Pooled precision@k: the mean over test snapshots that have at least
+  one positive, each snapshot one unit. Intervals are 95% percentile bootstraps,
+  2000 replicates, seed 0, with the random reference resampled the same way.
+- **Decision rule.** (d) qualifies only if its test-set precision@10 interval
+  lies wholly above the random interval. Precision@5 is reported, but it is
+  secondary and cannot qualify (d) on its own. If (d) does not qualify, no
+  ranking change is made.
+- **Known dependence.** Two cutoffs of the same repository share maintainers and
+  habits, so the intervals are optimistic about independence.
+
 ## Reproduce
 
 ```sh
