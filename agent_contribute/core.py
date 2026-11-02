@@ -22,6 +22,7 @@ VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
+SHA = re.compile('[0-9a-f]{40}')
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
                   'question', 'roadmap', 'backlog', 'in progress', 'duplicate', 'invalid',
                   'wontfix', "won't fix", 'needs info', 'fixed'}
@@ -269,7 +270,7 @@ def repository_snapshot(repository, client, meta=None, commit=None):
     if commit is None:
         commit_data = require(client.request(f'repos/{repository}/commits/{quote(branch, safe="")}'), dict, 'commit')
         commit = require(commit_data.get('sha'), str, 'commit sha')
-    if not re.fullmatch('[0-9a-f]{40}', commit):
+    if not SHA.fullmatch(commit):
         raise ProtocolError('api_shape', 'Invalid default branch commit')
     snapshot = {'repository': canonical, 'default_branch': branch, 'commit': commit,
                 'fetched_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'complete': True,
@@ -769,6 +770,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     for name in ('validations', 'criteria'):
         if not unique_ids(evidence[name]):
             errors.append('Evidence has duplicate ' + name + ' IDs')
+    # Schema 0.1 keeps its original, Python-version-dependent fromisoformat dialect; 0.2 uses the strict parser.
     parse_timestamp = lambda value: dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
     if schema_version == '0.2':
         from .authorization import timestamp as parse_timestamp
