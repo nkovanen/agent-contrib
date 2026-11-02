@@ -459,9 +459,12 @@ class BoundTests(unittest.TestCase):
         self.assertEqual(len(result['hints']), policy.MAX_HINTS)
         self.assertEqual(len(result['unassessed']), policy.MAX_UNASSESSED)
         limits = {item['limit']: item['not_reported'] for item in result['limits_reached']}
-        discovered = len(policy.scan(text + '\n\n' + links, 'CONTRIBUTING.md')['hints'])
-        self.assertGreater(discovered, policy.MAX_HINTS)
-        self.assertEqual(limits['hints'], discovered - policy.MAX_HINTS)
+        discovered = policy.scan(text + '\n\n' + links, 'CONTRIBUTING.md')['hints']
+        stop = sum(h['kind'] in policy.STOP_HINTS for h in discovered)
+        self.assertGreater(stop, policy.MAX_HINTS)
+        # Mentions are dropped first; dropped restriction hints are counted separately as hiding (N-04).
+        self.assertEqual(limits['hints'], len(discovered) - stop)
+        self.assertEqual(limits['restriction hints'], stop - policy.MAX_HINTS)
         self.assertEqual(limits['unassessed entries'], 61 - policy.MAX_UNASSESSED)
         self.assertLessEqual(len(json.dumps(result, ensure_ascii=True).encode()), policy.MAX_REPORT_BYTES)
 
@@ -627,7 +630,7 @@ class HiddenSourceTests(unittest.TestCase):
         self.assertTrue(result['limits_hide_sources'])
 
     def test_hint_overflow_alone_hides_no_source(self):
-        text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(101))
+        text = '\n\n'.join('We welcome AI tools, case %d.' % n for n in range(101))  # mentions only
         result, _ = report({'CONTRIBUTING.md': text}, {})
         self.assertEqual(result['omitted_sources'], [])
         self.assertEqual({i['limit']: i['hides_sources'] for i in result['limits_reached']}, {'hints': False})

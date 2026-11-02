@@ -457,7 +457,8 @@ the `agent_contribute.aipolicy` module no longer exist.
   after `.`, `-`, `_` or a space, case-insensitively: `contributing`,
   `contribute`, `ai`, `llm`, `agents`, `claude`, `gemini`,
   `copilot-instructions`, `pull_request_template`, `code_of_conduct`,
-  `code-of-conduct`, `security`, `support`, `governance`, and a root `readme`.
+  `code-of-conduct`, `security`, `support`, `governance` (these five only in the
+  root, `.github/` or `docs/`), and a root `readme`.
   So `CONTRIBUTING.en.md`, `AI_USAGE_RULES.md`, `SECURITY-POLICY.md` and
   `README.development.md` all match. Also matched: `.cursorrules`,
   `.cursor/rules/*`, `llms.txt`, `.github/PULL_REQUEST_TEMPLATE/*`, and files
@@ -496,6 +497,14 @@ the `agent_contribute.aipolicy` module no longer exist.
   terms can move them out of the 12-word window, and so can added text that
   turns an existing line into a heading. Excerpts are sanitized and at most 300
   characters.
+
+  Hints are ordered for attention: agent, then AI restrictions, then PR
+  restrictions whose paragraph also names AI or agents, then PR restrictions in
+  policy files (AI policy, agent instructions, contributing, PR templates), then
+  other PR restrictions, and mentions last. When the 100-hint bound or the
+  report-size bound applies, mentions are dropped first. A dropped restriction
+  hint is counted as `restriction hints` or `report size: restriction hints`,
+  which `hides_sources`.
 - **`limits_reached` and `reads`.** At most 25 logical GitHub requests per
   report (each with the client's usual three attempts), 12 source and 8 owner
   policy files, 200 kB per file and 1 MB scanned, all counted in UTF-8 bytes. The report keeps 100 hints,

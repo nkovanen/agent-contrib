@@ -29,7 +29,9 @@ MAX_OMITTED = 50
 # Limits after which a policy candidate or reference may be unread or unlisted; hint limits hide no source.
 HIDING_LIMITS = {'requests', 'policy files', 'owner policy files', 'scanned bytes', 'unassessed entries',
                  'omitted sources not listed', 'report size: unassessed entries', 'report size: omitted sources',
-                 'report size: sources not listed'}
+                 'report size: sources not listed', 'restriction hints', 'report size: restriction hints'}
+STOP_HINTS = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction')
+POLICY_KINDS = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template')
 EXCERPT_CHARS = 300
 IDENTIFIER_CHARS = 500
 MAX_REPORT_BYTES = 256 * 1024
@@ -38,7 +40,6 @@ SCANNED_FORMATS = {'', '.md', '.markdown', '.rst', '.txt'}
 # Other document formats a policy may use; listed as unsupported. Code, data and image files are not candidates.
 DOCUMENT_FORMATS = {'.adoc', '.asciidoc', '.pdf', '.html', '.htm', '.docx', '.odt', '.org', '.textile', '.rtf', '.mdx'}
 KIND_ORDER = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template', 'community', 'readme')
-HINT_ORDER = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction', 'ai_mention')
 NEVER_INSPECTED = ['GitHub wiki', 'websites outside the GitHub REST API', 'images and PDFs',
                    'issue, pull request and discussion comments',
                    "files in repositories other than the source and its owner's .github repository",
@@ -225,7 +226,8 @@ def scan(text, path):
         for kind, anchor in candidates:
             if anchor is not None:
                 hints.append({'kind': kind, 'line': line, 'heading': core.safe_text(heading, 120),
-                              'untrusted_excerpt': _excerpt(normalized, tokens[anchor][0])})
+                              'untrusted_excerpt': _excerpt(normalized, tokens[anchor][0]),
+                              'ai_context': bool(found['ai'] or found['agent'])})
     return {'hints': hints, 'links': _links(text), 'non_latin_paragraphs': non_latin}
 
 
@@ -331,7 +333,7 @@ class _Report:
         for path, blob in blobs.items():
             kind = kind_of(core.safe_text(path, len(path)))  # classify the full path, display it shortened (RP-17)
             if (kind is None or path in skip or not allowed(path) or origin != 'repository' and kind == 'readme' or
-                    _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
+                    kind == 'community' and not _top_level(path) or _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
                 continue
             if _format(path) not in SCANNED_FORMATS:
                 self.note(path if origin == 'repository' else f'{repository}:{path}', 'unsupported format',
@@ -357,6 +359,19 @@ def _display(path):
     shown = core.safe_text(path, len(path))
     return {'path': shown[:IDENTIFIER_CHARS], 'path_truncated': len(shown) > IDENTIFIER_CHARS,
             'path_sanitized': shown != path}
+
+
+def _top_level(path):
+    """Root, .github/ or docs/: where security, support, governance and conduct files are policy (N-04)."""
+    parts = path.split('/')
+    return len(parts) == 1 or len(parts) == 2 and parts[0].casefold() in ('.github', 'docs')
+
+
+def _tier(hint, source_kind):
+    """Attention order: agent, AI, PR hints with AI context, PR hints in policy files, other PR hints, mentions."""
+    if hint['kind'] != 'possible_pr_restriction':
+        return {'possible_agent_restriction': 0, 'possible_ai_restriction': 1}.get(hint['kind'], 5)
+    return 2 if hint['ai_context'] else 3 if source_kind in POLICY_KINDS else 4
 
 
 def _pinned(blob, reported, data):
@@ -456,7 +471,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     scanned = state.scanned
     hints = []
     for index, (source, (path, result)) in enumerate(zip(state.sources, state.texts)):
-        hints += [dict(hint, source=index) for hint in result['hints']]
+        hints += [dict(hint, source=index, tier=_tier(hint, source['kind'])) for hint in result['hints']]
         for link in result['links']:
             origin = f'{source["repository"]}:{source["path"]}'
             try:
@@ -469,14 +484,15 @@ def report(repository, commit, instructions, client, *, default_branch=None):
                 state.note(link['url'], 'malformed reference, not assessed', origin, link['line'], link['link_text'])
     if state.skipped:
         state.limit('requests', state.skipped)
-    hints.sort(key=lambda hint: (HINT_ORDER.index(hint['kind']), hint['source'], hint['line']))
-    if len(hints) > MAX_HINTS:
-        state.limit('hints', len(hints) - MAX_HINTS)
+    hints.sort(key=lambda hint: (hint['tier'], hint['source'], hint['line']))
+    for hint in hints[MAX_HINTS:]:  # mentions go first; a dropped stop-class hint is a hiding limit (N-04)
+        state.limit('restriction hints' if hint['kind'] in STOP_HINTS else 'hints')
+    hints = [{k: v for k, v in hint.items() if k not in ('tier', 'ai_context')} for hint in hints[:MAX_HINTS]]
     result = {'report': 'policy-report/1', 'review_obligation': OBLIGATION, 'sources_scanned': state.sources,
               'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
               'limits_hide_sources': False,
               'never_inspected': list(NEVER_INSPECTED),
-              'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints[:MAX_HINTS], 1)],
+              'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints, 1)],
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:
         result['limits_reached'] = [{'limit': name, 'not_reported': count, 'hides_sources': name in HIDING_LIMITS}
@@ -495,8 +511,8 @@ def report(repository, commit, instructions, client, *, default_branch=None):
         # Shrink until the serialized report fits, recording every reduction (RP-18).
         long_paths = [s for s in result['sources_scanned'] if len(s['path']) > 80]
         if result['hints']:
-            result['hints'].pop()
-            state.limit('report size: hints')
+            dropped = result['hints'].pop()
+            state.limit('report size: restriction hints' if dropped['kind'] in STOP_HINTS else 'report size: hints')
         elif result['unassessed']:
             result['unassessed'].pop()
             state.limit('report size: unassessed entries')

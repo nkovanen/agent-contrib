@@ -137,6 +137,13 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Repository policy hints (N-04, external evaluation 2): security, support,
+  governance and code-of-conduct files count only in the root, `.github/` or
+  `docs/`, so API reference pages such as `doc/source/reference/security.rst` no
+  longer add noise. Hints are ordered agent, AI, then PR restrictions with AI
+  context, then PR restrictions in policy files, other PR restrictions and
+  mentions. Bounds drop mentions first. A dropped restriction hint is reported
+  as a source-hiding limit (`restriction hints`).
 - Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
   repository; merged PRs elsewhere move to `downstream_references` (E-11: a
   downstream workaround was reported as a possible fix). Cross-referenced PRs
