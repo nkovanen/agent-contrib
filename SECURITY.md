@@ -65,7 +65,9 @@ not attestations that work ran or that publication is permitted. Text output is
 abridged; use canonical JSON for audits and automated decisions.
 
 The opt-in `--cache` stores only file contents of repositories observed public in
-the same command, under a user-owned 0700 directory. Each hit must hash to the
+the same command, under a user-owned 0700 directory. That directory is opened
+once, refused if any ancestor lets another account rename it, and used only
+through that open descriptor. Each hit must hash to the
 Git blob SHA from a live tree read, so a corrupted or tampered entry is discarded
 rather than used. The cache does not defend against other code running as the
 same user, which could alter the CLI itself.

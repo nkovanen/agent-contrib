@@ -11,8 +11,8 @@ import binascii
 import hashlib
 import os
 import re
+import secrets
 import stat
-import tempfile
 from urllib.parse import quote, unquote
 
 ENTRY_LIMIT = 8 * 1024 * 1024  # the response cap; GitHub contents responses are smaller
@@ -23,6 +23,7 @@ METADATA = re.compile(rf'repos/({_NAME})')
 TREE = re.compile(rf'repos/({_NAME})/git/trees/([0-9a-f]{{40}})\?recursive=1')
 CONTENTS = re.compile(rf'repos/({_NAME})/contents/([^?#]+)\?ref=([0-9a-f]{{40}})')
 BLOB = re.compile(r'[0-9a-f]{40}')
+ENTRY = re.compile(PREFIX + r'[0-9a-f]{40}')  # eviction touches only valid entry names
 
 _active = None
 
@@ -40,6 +41,8 @@ def default_directory():
 
 def configure(enabled, directory=None):
     global _active
+    if _active is not None:
+        _active.close()
     _active = Cache(directory or default_directory()) if enabled else None
 
 
@@ -52,7 +55,7 @@ class Cache:
         self.directory = directory
         self.public = set()  # casefolded owner/repo whose live metadata said private: false
         self.blobs = {}  # (casefolded owner/repo, commit) -> {path: blob SHA} from a live, complete tree
-        self.usable = None
+        self._fd, self._checked = None, False
 
     def lookup(self, endpoint):
         """Verified cached response for a pinned contents read, or None to read live."""
@@ -121,29 +124,30 @@ class Cache:
         return self.blobs.get((name, commit), {}).get(path), path
 
     def _root(self):
-        """The cache directory if it is safe to use: a real directory owned by this user, not group/other writable."""
-        if self.usable is None:
-            self.usable = False
+        """A descriptor for the checked cache directory, or None to bypass the cache. Every entry operation is
+        relative to this descriptor, so renaming or replacing the directory's name later cannot redirect them."""
+        if not self._checked:
+            self._checked = True
             try:
-                uid = os.getuid()
-                os.makedirs(self.directory, mode=0o700, exist_ok=True)
-                info = os.lstat(self.directory)
-                self.usable = (stat.S_ISDIR(info.st_mode) and info.st_uid == uid and
-                               not info.st_mode & (stat.S_IWGRP | stat.S_IWOTH))
-            except (OSError, AttributeError):  # no POSIX ownership: bypass
-                self.usable = False
-        return self.directory if self.usable else None
+                self._fd = _open_directory(self.directory)
+            except (OSError, AttributeError, ValueError):  # unsafe ancestor, no POSIX ownership or no dir_fd support
+                self._fd = None
+        return self._fd
 
-    def _path(self, sha):
-        root = self._root()
-        return os.path.join(root, PREFIX + sha) if root and BLOB.fullmatch(sha) else None
+    def close(self):
+        if self._fd is not None:
+            os.close(self._fd)
+        self._fd, self._checked = None, True
+
+    def _name(self, sha):
+        return PREFIX + sha if self._root() is not None and BLOB.fullmatch(sha) else None
 
     def _read(self, sha):
-        path = self._path(sha)
-        if path is None:
+        name = self._name(sha)
+        if name is None:
             return None
         try:
-            descriptor = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+            descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=self._fd)
         except FileNotFoundError:
             return None
         except OSError:  # a symlink (ELOOP) or unreadable entry
@@ -159,25 +163,26 @@ class Cache:
         return data
 
     def _discard(self, sha):
-        path = self._path(sha)
-        if path is not None:
+        name = self._name(sha)
+        if name is not None:
             try:
-                os.unlink(path)
+                os.unlink(name, dir_fd=self._fd)
             except OSError:
                 pass
 
     def _store(self, sha, data):
-        path = self._path(sha)
-        if path is None:
+        name = self._name(sha)
+        if name is None:
             return
-        descriptor, temporary = tempfile.mkstemp(prefix='.tmp-', dir=os.path.dirname(path))  # mode 0600
+        temporary = '.tmp-' + secrets.token_hex(16)
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=self._fd)
         try:
             with os.fdopen(descriptor, 'wb') as handle:
                 handle.write(data)
-            os.replace(temporary, path)
+            os.rename(temporary, name, src_dir_fd=self._fd, dst_dir_fd=self._fd)  # atomic replace on POSIX
         except BaseException:
             try:
-                os.unlink(temporary)
+                os.unlink(temporary, dir_fd=self._fd)
             except OSError:
                 pass
             raise
@@ -185,9 +190,9 @@ class Cache:
 
     def _evict(self):
         entries = []
-        with os.scandir(self._root()) as listing:
+        with os.scandir(self._fd) as listing:
             for entry in listing:
-                if entry.name.startswith(PREFIX) and entry.is_file(follow_symlinks=False):
+                if ENTRY.fullmatch(entry.name) and entry.is_file(follow_symlinks=False):
                     info = entry.stat(follow_symlinks=False)
                     entries.append((info.st_mtime, entry.name, info.st_size))
         total = sum(size for _, _, size in entries)
@@ -195,7 +200,67 @@ class Cache:
             if total <= TOTAL_LIMIT:
                 break
             try:
-                os.unlink(os.path.join(self._root(), name))
+                os.unlink(name, dir_fd=self._fd)
                 total -= size
             except OSError:
                 pass
+
+
+def _private_group(gid, uid):
+    """True when gid is this user's own group: their primary group, with no other member or primary user.
+    (User-private groups make umask 002 homes group-writable without granting anyone else access.)"""
+    try:
+        import grp
+        import pwd
+        name = pwd.getpwuid(uid).pw_name
+        return (gid == os.getgid() and set(grp.getgrgid(gid).gr_mem) <= {name} and
+                not any(entry.pw_gid == gid and entry.pw_uid != uid for entry in pwd.getpwall()))
+    except (ImportError, KeyError, OSError):
+        return False
+
+
+def _check_ancestor(descriptor, uid):
+    """Another account able to rename entries in an ancestor makes the cache unsafe. Each ancestor must be owned by
+    root or the user; if other-writable, or group-writable by a group other than the user's private group, it must
+    be sticky (as /tmp is)."""
+    info = os.fstat(descriptor)
+    shared = info.st_mode & stat.S_IWOTH or (
+        info.st_mode & stat.S_IWGRP and not (info.st_uid == uid and _private_group(info.st_gid, uid)))
+    if info.st_uid not in (0, uid) or (shared and not info.st_mode & stat.S_ISVTX):
+        raise PermissionError('Unsafe cache ancestor')
+
+
+def _open_child(name, parent):
+    """Open (creating 0700 if missing, like makedirs) one directory component relative to its parent."""
+    try:
+        os.mkdir(name, 0o700, dir_fd=parent)
+    except FileExistsError:
+        pass
+    return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+
+
+def _open_directory(directory):
+    """Open the cache directory without following a substituted symlink: resolve the configured path once,
+    then walk it component by component with O_NOFOLLOW, checking every ancestor, and create the leaf 0700."""
+    if not all(function in os.supports_dir_fd for function in (os.open, os.stat, os.unlink, os.rename, os.mkdir)) or (
+            os.scandir not in os.supports_fd):
+        raise ValueError('No dir_fd support: the cache is disabled')
+    uid = os.getuid()
+    # Resolve only the parent (legitimately symlinked homes); the leaf itself is opened with O_NOFOLLOW.
+    parent, leaf = os.path.realpath(os.path.dirname(os.path.abspath(directory))), os.path.basename(os.path.abspath(directory))
+    current = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        _check_ancestor(current, uid)
+        for part in [part for part in parent.split(os.sep) if part]:
+            following = _open_child(part, current)
+            os.close(current)
+            current = following
+            _check_ancestor(current, uid)
+        root = _open_child(leaf, current)
+    finally:
+        os.close(current)
+    info = os.fstat(root)
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != uid or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        os.close(root)
+        raise PermissionError('Cache directory is not a private directory of this user')
+    return root

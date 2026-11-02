@@ -513,10 +513,20 @@ status.
   mismatching, oversized, symlinked or foreign-owned entry is deleted and read
   live. Identical files at different paths share one entry.
 - The directory is `$XDG_CACHE_HOME/agent-contrib` (an absolute
-  `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`. It is created with
-  mode 0700 and used only when it is a real directory owned by you with no group
-  or other write permission. Writes are atomic and private (0600). On platforms
-  without POSIX ownership checks the cache is bypassed.
+  `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`.
+  - It is opened once, walking the resolved parent path component by component
+    without following symlinks, and created with mode 0700 if missing.
+  - Every ancestor must be owned by root or by you. An ancestor that is
+    other-writable, or group-writable by a group other than your private user
+    group, must be sticky (as `/tmp` is). The cache directory itself must be
+    yours, with no group or other write permission. Otherwise the cache is
+    bypassed.
+  - Every read, write, rename, scan and delete then works relative to that
+    open directory, so renaming or replacing its name afterwards cannot
+    redirect them.
+  - Writes are atomic and private (0600), and eviction touches only valid
+    entry names.
+  - Without POSIX ownership checks or `dir_fd` support, the cache is bypassed.
 - Entries are at most 8 MiB. The total is kept under 256 MiB by deleting the
   oldest entries. Delete the directory to clear it; any cache error falls back
   to the live read.

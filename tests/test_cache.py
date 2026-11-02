@@ -375,6 +375,107 @@ class StorageSafetyTests(CacheTestCase):
             self.assertEqual(cache.default_directory(), os.path.join(str(self.home), 'agent-contrib'))
 
 
+class DirectoryAnchorTests(CacheTestCase):
+    """Review R10-01: after the checks, every operation must use the checked directory, never its pathname again."""
+    def test_swapping_the_directory_for_a_symlink_cannot_redirect_writes_or_eviction(self):
+        unrelated = pathlib.Path(self.directory.name, 'unrelated')
+        unrelated.mkdir(mode=0o700)
+        important = unrelated / ('blob-' + 'e' * 40)
+        important.write_bytes(b'important, not a cache entry')
+        store, fake = self.store()
+        store.lookup(self.contents())  # acquires and checks the directory
+        moved = pathlib.Path(self.directory.name, 'moved')
+        self.root.rename(moved)  # someone with write access to the parent swaps the name
+        self.root.symlink_to(unrelated, target_is_directory=True)
+        with patch.object(cache, 'TOTAL_LIMIT', 1):  # every store would evict everything it can see
+            store.observe(self.contents(), fake.request(self.contents()))
+        self.assertEqual(sorted(p.name for p in unrelated.iterdir()), [important.name], 'nothing created in the unrelated dir')
+        self.assertEqual(important.read_bytes(), b'important, not a cache entry', 'nothing evicted outside the cache')
+        self.assertIsNone(store.lookup(self.contents().replace('AGENTS', 'README')))
+
+    def test_after_a_swap_every_operation_still_uses_the_anchored_directory(self):
+        # The swapped-in target is inaccessible, so any pathname-based open, rename, scan or unlink would fail.
+        fake = ContentGitHub()
+        fake.files['README.md'] = b'r' * 100
+        store, _ = self.store(fake)
+        store.observe(self.contents('README.md'), fake.request(self.contents('README.md')))
+        old_entry = 'blob-' + blob(b'r' * 100)
+        os.utime(self.root / old_entry, (1000, 1000))
+        moved = pathlib.Path(self.directory.name, 'moved')
+        self.root.rename(moved)
+        blocked = pathlib.Path(self.directory.name, 'blocked')
+        blocked.mkdir(mode=0o700)
+        (blocked / old_entry).write_bytes(b'not yours')
+        self.root.symlink_to(blocked, target_is_directory=True)
+        blocked.chmod(0o000)
+        self.addCleanup(blocked.chmod, 0o700)
+        with patch.object(cache, 'TOTAL_LIMIT', len(INSTRUCTION) + 10):  # room for the new entry only
+            store.observe(self.contents(), fake.request(self.contents()))
+        blocked.chmod(0o700)
+        self.assertEqual(sorted(p.name for p in moved.iterdir()), ['blob-' + blob(INSTRUCTION)],
+                         'stored and evicted in the anchored directory')
+        self.assertEqual((blocked / old_entry).read_bytes(), b'not yours')
+
+    def test_foreign_owned_ancestor_is_refused(self):
+        real = os.stat(self.directory.name)
+        fake = os.stat_result((stat.S_IFDIR | 0o755, 0, 0, 0, os.getuid() + 1, 0, 0, 0, 0, 0))
+        with patch.object(cache.os, 'fstat', return_value=fake):
+            with self.assertRaises(PermissionError):
+                cache._check_ancestor(0, os.getuid())
+        with patch.object(cache.os, 'fstat', return_value=os.stat_result((stat.S_IFDIR | 0o755, 0, 0, 0, 0, 0, 0, 0, 0, 0))):
+            cache._check_ancestor(0, os.getuid())  # root-owned, not writable: fine
+        self.assertTrue(stat.S_ISDIR(real.st_mode))
+
+    def test_writable_ancestors_disable_the_cache(self):
+        for mode, private, usable in ((0o777, True, False), (0o707, True, False), (0o770, False, False),
+                                      (0o770, True, True), (0o775, True, True), (0o1777, False, True),
+                                      (0o1770, False, True), (0o755, False, True)):
+            with self.subTest(mode=oct(mode), private_group=private):
+                shared = pathlib.Path(self.directory.name, 'shared-%o-%s' % (mode, private))
+                shared.mkdir()
+                shared.chmod(mode)
+                with patch.object(cache, '_private_group', return_value=private):
+                    store = cache.Cache(str(shared / 'agent-contrib'))
+                    self.assertEqual(store._root() is not None, usable)
+                store.close()
+
+    def test_private_group_requires_the_users_own_group(self):
+        import grp
+        import pwd
+        uid, gid = os.getuid(), os.getgid()
+        name = pwd.getpwuid(uid).pw_name
+        group = grp.struct_group(('g', 'x', gid, [name]))
+        others = [pwd.struct_passwd((name, 'x', uid, gid, '', '/', '/bin/sh'))]
+        with patch.object(grp, 'getgrgid', return_value=group), patch.object(pwd, 'getpwall', return_value=others):
+            self.assertTrue(cache._private_group(gid, uid))
+            self.assertFalse(cache._private_group(gid + 1, uid), 'not the primary group')
+        with patch.object(grp, 'getgrgid', return_value=grp.struct_group(('g', 'x', gid, [name, 'mallory']))), \
+                patch.object(pwd, 'getpwall', return_value=others):
+            self.assertFalse(cache._private_group(gid, uid), 'another member')
+        intruder = pwd.struct_passwd(('mallory', 'x', uid + 1, gid, '', '/', '/bin/sh'))
+        with patch.object(grp, 'getgrgid', return_value=group), patch.object(pwd, 'getpwall', return_value=others + [intruder]):
+            self.assertFalse(cache._private_group(gid, uid), 'another account with it as primary group')
+        with patch.object(grp, 'getgrgid', side_effect=KeyError):
+            self.assertFalse(cache._private_group(gid, uid), 'unknown group fails closed')
+
+    def test_a_symlinked_ancestor_is_resolved_then_checked(self):
+        real = pathlib.Path(self.directory.name, 'real-home')
+        real.mkdir(mode=0o700)
+        link = pathlib.Path(self.directory.name, 'link-home')
+        link.symlink_to(real, target_is_directory=True)
+        store = cache.Cache(str(link / 'agent-contrib'))
+        self.assertIsNotNone(store._root())
+        store.close()
+        self.assertTrue((real / 'agent-contrib').is_dir())
+
+    def test_without_dir_fd_support_the_cache_is_disabled(self):
+        with patch.object(cache.os, 'supports_dir_fd', set()):
+            store, fake = self.store()
+            store.observe(self.contents(), fake.request(self.contents()))
+            self.assertIsNone(store.lookup(self.contents()))
+        self.assertEqual(self.entries(), [])
+
+
 class EvictionTests(CacheTestCase):
     def test_oldest_entries_are_evicted_over_the_total(self):
         fake = ContentGitHub()
@@ -389,6 +490,15 @@ class EvictionTests(CacheTestCase):
             store.observe(self.contents(names[2]), fake.request(self.contents(names[2])))
         self.assertEqual(self.entries(), sorted('blob-' + blob(fake.files[n]) for n in names[1:]))
         self.assertEqual(cache.TOTAL_LIMIT, 256 * 1024 * 1024)
+
+    def test_eviction_touches_only_valid_entry_names(self):
+        store, fake = self.store()
+        self.root.mkdir(mode=0o700, parents=True)
+        for name in ('blob-notes', 'blob-' + 'e' * 39, 'BLOB-' + 'e' * 40, 'README'):
+            (self.root / name).write_bytes(b'x' * 50)
+        with patch.object(cache, 'TOTAL_LIMIT', 1):
+            store.observe(self.contents(), fake.request(self.contents()))
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ['BLOB-' + 'e' * 40, 'README', 'blob-' + 'e' * 39, 'blob-notes'])
 
 
 if __name__ == '__main__':
