@@ -72,6 +72,37 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertFalse(result['within_scope'])
             self.assertIn('Submodule/gitlink evidence is unsupported; no submodule commands were run', result['errors'])
 
+    def test_staged_then_deleted_file_is_still_checked(self):
+        # Only `git diff --cached` lists it: absent from base and worktree, but the next commit contains it.
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, _, git = self.checkout(tmp)
+            pathlib.Path(tmp, '.github').mkdir()
+            pathlib.Path(tmp, '.github/secret.yml').write_text('staged then deleted')
+            git('add', '.github/secret.yml')
+            pathlib.Path(tmp, '.github/secret.yml').unlink()
+            result = workspace.scope_check(task, tmp)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], [])
+            self.assertEqual(result['violations'], [{'path': '.github/secret.yml', 'rule': 'prohibited_paths: .github/**'}])
+
+    def test_base_must_be_full_sha_and_ancestor_of_head(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            result = workspace.scope_check(task, tmp, evidence['base_commit'][:12])
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], ['Base must be a full lowercase 40-character commit SHA'])
+            git('checkout', '-q', '-b', 'side', evidence['base_commit'])
+            pathlib.Path(tmp, 'src').mkdir()
+            pathlib.Path(tmp, 'src/side.rs').write_text('unrelated history')
+            git('add', '.')
+            git('commit', '-q', '-m', 'side')
+            side = git('rev-parse', 'HEAD')
+            git('checkout', '-q', '-')
+            result = workspace.scope_check(task, tmp, side)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'], ['Base commit is missing or not an ancestor of HEAD'])
+            self.assertTrue(workspace.scope_check(task, tmp, evidence['base_commit'])['within_scope'])
+
     def test_invalid_contract_reads_no_checkout(self):
         with patch.object(core, 'git_read') as git_read:
             result = workspace.scope_check({'schema_version': '0.1'}, '.')
