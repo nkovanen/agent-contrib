@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- The installed workflow runs `drift` before any authorization request and
+  before publication, and names `--observe-ci`/`--observe-signatures` as
+  report-only (A2-10).
 - `--format text authorization-request` lists its preflight errors and
   unresolved fields, so a request that is not ready says why (A2-08).
 - Schema 0.2 `verify` lists contract route errors (pending mode, invalid or

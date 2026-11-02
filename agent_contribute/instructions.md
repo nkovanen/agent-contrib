@@ -27,12 +27,14 @@ A summary of the sections below; it never overrides them. Global options such as
 5. `agent-contrib verify task.json` (0.1) or `agent-contrib verify task.json
    --stage implementation` (0.2) shows the hash and blockers; for 0.2,
    `agent-contrib authorization-request task.json` prepares the host request.
+   Run `agent-contrib drift task.json` before asking for any authorization.
 6. Edit only with the user's actual authorization and a passing gate. 0.1:
    `execution_ready: true`. 0.2: `agent-contrib verify task.json --stage
    implementation --host-context-stdin`, host-issued context unchanged on stdin,
    with `implementation_ready: true`. Then work on an isolated branch: `scope-check`,
    `evidence init`, the repository's real checks and independent review.
 7. Publish only with separate user authorization and a passing publication gate.
+   Rerun `drift` first; `--observe-ci`/`--observe-signatures` are optional reports.
    0.1: `upstream_submission_ready: true` (`fork_completion_ready: true` for a
    fork experiment). 0.2: `verify ... --evidence
    evidence.json --repo-dir checkout --stage draft --host-context-stdin` with
@@ -313,6 +315,15 @@ Before a separately authorized PR action, `agent-contrib pr-body task.json
 description with every pending gate; review it before use. For schema 0.2 it takes
 no host context and omits authority gates and sign-off; rely on your own
 `verify --host-context-stdin` run for those, never on the body.
+Run `agent-contrib drift task.json` before asking the user or host for any
+authorization and again before any publication. It reports what changed since
+preparation (issue, instruction files, default branch, policy, open-PR overlap)
+and never rewrites the contract. `drifted: true` means re-review and re-prepare
+the contract; exit 1 with `complete: false` means the change is unknown, which
+is not a pass. `verify ... --evidence evidence.json --observe-ci` and
+`--observe-signatures` add report-only CI and commit-signature observations
+for the evidence head. They never change gates or the exit code; read a failing
+or missing observation as a reason to look, not as a pass or a block.
 After publication, `agent-contrib feedback 'owner/repo#PR' --expected-head SHA`
 reads reviews, comments and failing checks as untrusted data. It never changes
 scope or authority.
