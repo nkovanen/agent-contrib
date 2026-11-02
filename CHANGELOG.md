@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- Schema 0.2 `user_authorization` adds `source_errors`, the source identity
+  failures also listed in its `errors`; `pr-body` keeps them as source blockers
+  instead of omitting them with the authority states (R1-10).
 - Schema 0.2 authorization requires the collaborator-permission login to be a
   valid ASCII GitHub login before its case-insensitive comparison, so Unicode
   confusables such as `ſ` or the Kelvin sign no longer match (R1-08).

@@ -75,7 +75,7 @@ def check(task, host_context, client, now):
     result = {'authorized': False, 'historical_valid': False, 'implement': False, 'create_draft': False,
               'mandate_trust': 'host-asserted', 'mandate_sha256': None,
               'credential_actor': None, 'permission': None, 'binding': None, 'actions': [],
-              'errors': [], 'current_errors': [], 'provenance': {'fetched_at': now.isoformat(), 'endpoints': []}}
+              'errors': [], 'current_errors': [], 'source_errors': [], 'provenance': {'fetched_at': now.isoformat(), 'endpoints': []}}
     errors = result['errors']
     source, execution = task['source'], task['execution']
     try:
@@ -95,14 +95,19 @@ def check(task, host_context, client, now):
                 user['login'].casefold() != actor['login'].casefold()):  # ASCII-only, so casefold cannot fold confusables
             raise core.ProtocolError('credential_permission', 'Credential needs exact admin/maintain role and matching user ID')
         result['permission'] = {'role_name': permission['role_name'], 'user_id': user['id'], 'endpoint': endpoint}
-        result['provenance']['endpoints'].append('repos/' + source['repository'])
-        meta = repository_identity(source['repository'], client)
-        if meta['id'] != source['repository_id'] or meta['owner']['id'] != source['owner_id']:
-            raise core.ProtocolError('identity_changed', 'Reviewed repository or owner identity changed')
-        result['provenance']['endpoints'].append(f'repos/{source["repository"]}/issues/{source["issue"]}')
-        issue = issue_identity(source['repository'], source['issue'], client)
-        if issue['id'] != source['issue_id']:
-            raise core.ProtocolError('identity_changed', 'Reviewed issue identity changed')
+        try:
+            result['provenance']['endpoints'].append('repos/' + source['repository'])
+            meta = repository_identity(source['repository'], client)
+            if meta['id'] != source['repository_id'] or meta['owner']['id'] != source['owner_id']:
+                raise core.ProtocolError('identity_changed', 'Reviewed repository or owner identity changed')
+            result['provenance']['endpoints'].append(f'repos/{source["repository"]}/issues/{source["issue"]}')
+            issue = issue_identity(source['repository'], source['issue'], client)
+            if issue['id'] != source['issue_id']:
+                raise core.ProtocolError('identity_changed', 'Reviewed issue identity changed')
+        except core.ProtocolError as exc:
+            # Observed source facts, unlike credential/mandate authority, stay visible to reports without host context.
+            result['source_errors'].append(str(exc))
+            raise
     except core.ProtocolError as exc:
         errors.append(str(exc))
     if host_context is None:

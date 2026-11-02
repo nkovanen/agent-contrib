@@ -179,7 +179,8 @@ When supplied evidence does not pass `verify`, its statuses are labelled
 `unverified claim`. Evidence that fails its schema is not quoted at all; its
 errors appear among the gates. For schema 0.2, review and sign-off states come
 from `verify`. `pr-body` takes no host context, so for 0.2 it shows only
-`technical_evidence_valid` with source, evidence and review blockers. It omits
+`technical_evidence_valid` with source (including repository, owner and issue
+identity), evidence and review blockers. It omits
 the implementation, draft and completion gates, `next_action`, final sign-off and
 authorization blockers, and says so, rather than misreporting authorized work as
 unauthorized. The host's `verify --host-context-stdin` run decides those.

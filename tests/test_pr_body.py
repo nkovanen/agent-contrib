@@ -164,6 +164,27 @@ class PRBodyTests(unittest.TestCase):
         self.assertIn('- source: Reviewed source commit is not in current source default-branch history\n', body)
         self.assertIn('- evidence: No technical execution evidence provided\n', body)
 
+    def test_schema_02_keeps_source_identity_blockers_reported_by_authorization(self):
+        # R1-10: identity failures arrive in user_authorization.errors but are source facts, not authority states.
+        from tests import test_lifecycle
+        case = test_lifecycle.IntegratedLifecycleTests()
+        case.setUp()
+        self.addCleanup(case.doCleanups)
+        cases = [('repos/acme/photos', 'id', 102, 'Reviewed repository or owner identity changed'),
+                 ('repos/acme/photos/issues/12', 'id', 9999, 'Reviewed issue identity changed')]
+        for endpoint, key, value, error in cases:
+            with self.subTest(error=error):
+                original = case.client.request
+                case.client.request = lambda e, o=original: dict(o(e), **{key: value}) if e == endpoint else o(e)
+                try:
+                    body, verification = prbody.pr_body(case.task, case.evidence, case.directory.name, case.client)
+                finally:
+                    case.client.request = original
+                self.assertIn(error, verification['user_authorization']['errors'])
+                self.assertIn('- source: ' + error + '\n', body)
+                self.assertNotIn('No pending gates were reported.', body)
+                self.assertNotIn('mandate', body)
+
     def test_next_action_enum_is_never_mangled_or_echoed_for_schema_02(self):
         # A1-14 kept the enum from being mangled; A1-12 omits it, so neither form may appear as a gate.
         task, _ = candidate_task()
