@@ -37,6 +37,8 @@
   per-repository results and a merged candidate order; one repository is unchanged.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
+- Schema 0.2 `verify` reports `Exact-head PR history not checked: requires a
+  valid mandate` instead of implying the history was read. Gates are unchanged.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

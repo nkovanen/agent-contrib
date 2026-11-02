@@ -100,6 +100,10 @@ draft, `next_action` is `none`; success does not permit another creation. Pendin
 sign-off leaves completion at exit 1 even when the draft stage passes. Explicit
 lifecycle options on schema 0.1 are rejected rather than reinterpreted.
 
+Exact-head PR history is read only under a valid mandate. Without one, the
+implementation and draft blockers say `Exact-head PR history not checked:
+requires a valid mandate`; both gates stay blocked.
+
 `instructions.resources` lists both task/evidence versions and host-context
 schema 0.1. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
