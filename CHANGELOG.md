@@ -7,6 +7,11 @@
   and untracked reads omitted the rest of the checkout, hiding gitlinks and
   out-of-scope untracked files. This also changes schema 0.1 `verify`: a
   subdirectory or Git directory now fails closed with an evidence error.
+- Reject non-null, non-string PR `body`/`head.ref` and non-object `head` values in
+  every overlap scan (R1-02). Values such as `[]`, `false` or `0` were scanned as
+  empty text, so a complete-looking scan could report no overlap. `null` stays the
+  only empty value. Schema 0.1 discovery and verification also fail closed on such
+  data now (incomplete scan), a hardening of malformed-input handling only.
 
 - Require a source-linked repository requirements ledger in the installed
   workflow, precommit gates before commits, and independent review of compliance

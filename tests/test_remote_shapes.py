@@ -1,7 +1,10 @@
 """Field-shape fuzz: every consumed remote field rejects wrong types without crashing or claiming completeness."""
 import unittest
+from unittest.mock import patch
 
-from agent_contribute import feedback, ownership
+from agent_contribute import core, feedback, ownership
+from tests import test_lifecycle
+from tests.test_authorization import candidate_task, host_context
 from tests.test_feedback import PRGitHub
 from tests.test_ownership import NOW, TimelineGitHub
 
@@ -98,6 +101,44 @@ class RemoteShapeTests(unittest.TestCase):
         client = TimelineGitHub()
         client.pulls['acme/photos/31']['base']['repo']['id'] = 555  # same name, different repository identity
         self.assertFalse(ownership.ownership_signals('acme/photos', 12, client, NOW)['complete'])
+
+
+class OverlapScanShapeTests(unittest.TestCase):
+    # Only null means "empty"; any other non-string must not be scanned as empty text (R1-02).
+    def pr(self, **fields):
+        return dict({'id': 3101, 'number': 31, 'title': 'Separate work', 'body': None,
+                     'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'separate'}}, **fields)
+
+    def verify(self, pr):
+        task, _ = candidate_task()
+        client = test_lifecycle.IntegratedGitHub()
+        client.prs = [pr]
+        with patch.object(core.dt, 'datetime', test_lifecycle.Clock):
+            return core.verify(task, client=client, host_context=host_context(task))
+
+    def test_null_body_head_and_ref_stay_complete(self):
+        for pr in (self.pr(), self.pr(head=None), self.pr(head={'ref': None})):
+            with self.subTest(pr=pr):
+                result = self.verify(pr)
+                self.assertTrue(result['live_complete'], result['errors'])
+                self.assertTrue(result['implementation_ready'], result['errors'])
+
+    def test_false_valued_malformed_fields_block_schema_02_readiness(self):
+        cases = [('body', value, 'pull request body') for value in ([], {}, False, 0)]
+        cases += [('head', value, 'pull request head') for value in ([], False, 0, '')]
+        cases += [('ref', value, 'pull request branch') for value in ([], {}, False, 0)]
+        for field, value, description in cases:
+            with self.subTest(field=field, value=value):
+                pr = self.pr(head={'ref': value}) if field == 'ref' else self.pr(**{field: value})
+                result = self.verify(pr)
+                self.assertIn('Invalid GitHub ' + description, result['errors'])
+                self.assertFalse(result['live_complete'])
+                self.assertFalse(result['implementation_ready'])
+
+    def test_index_rejects_false_valued_malformed_fields(self):
+        for pr in (self.pr(body=[]), self.pr(head=0), self.pr(head={'ref': False})):
+            with self.subTest(pr=pr), self.assertRaises(core.ProtocolError):
+                core.index_prs([pr])
 
 
 if __name__ == '__main__':

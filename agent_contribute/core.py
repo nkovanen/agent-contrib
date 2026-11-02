@@ -364,9 +364,10 @@ def index_prs(prs):
         number = require(pr.get('number'), int, 'pull request number')
         title = require(pr.get('title'), str, 'pull request title')
         url = require(pr.get('html_url'), str, 'pull request URL')
-        body = require(pr.get('body') or '', str, 'pull request body')
-        head = require(pr.get('head') or {}, dict, 'pull request head')
-        branch = require(head.get('ref') or '', str, 'pull request branch')
+        # Only null means empty: a falsy non-string must not be scanned as empty text.
+        body = require('' if pr.get('body') is None else pr['body'], str, 'pull request body')
+        head = require({} if pr.get('head') is None else pr['head'], dict, 'pull request head')
+        branch = require('' if head.get('ref') is None else head['ref'], str, 'pull request branch')
         text = title + '\n' + body + '\n' + branch
         if len(text) > 100000:
             raise ProtocolError('scan_limit', 'PR reference scan exceeds 100 kB text limit')
