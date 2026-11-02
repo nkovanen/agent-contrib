@@ -495,9 +495,10 @@ read makes the signals `complete: false` and `resolution_signals.status:
 unknown`; an unknown is never "not fixed". With
 `--ownership`, exit 1 also covers incomplete signals.
 
-## AI-contribution statements (opt-in)
+## AI-contribution statements
 
-`inspect --ai-policy` adds `ai_policy` without changing any other field. It
+The AI-policy report (`inspect --ai-policy`) adds `ai_policy` and changes no other
+field or gate. It
 scans the instruction files `inspect` already loaded, line by line, for a fixed
 set of patterns (AI-generated, AI-assisted, LLM, large language model,
 generative AI, artificial intelligence, Copilot, ChatGPT, machine-generated, "no
@@ -1293,7 +1294,7 @@ The issue was read
 | `resolution_provenance` | `resolution_provenance` |  |
 | `reference` | string | owner/repo#number as requested |
 | `ownership_signals` | `ownership_signals` (optional) | Added by --ownership |
-| `ai_policy` | object (optional) | Added by --ai-policy: located AI-contribution statements, signals only |
+| `ai_policy` | object (optional) | The AI-policy report (inspect --ai-policy): located AI-contribution statements, signals only |
 | `ai_policy.ai_policy_review` | "required" |  |
 | `ai_policy.coverage` | "complete" \| "incomplete" |  |
 | `ai_policy.excerpts_capped` | boolean |  |

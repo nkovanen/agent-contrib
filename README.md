@@ -148,12 +148,13 @@ agent-contrib verify task.json --evidence evidence.json --repo-dir ./checkout
 | `schema` | Print the JSON Schema of a command's JSON output |
 
 v0.2.0 has `discover`, `inspect`, `prepare`, `verify`, `instructions` and
-`skill`; the other commands are new in the v0.3.0 candidate. Optional reports
-never grant approval or authority and never change a readiness gate:
-`discover --signals`, `discover --responsiveness`, `inspect --ownership`,
-`inspect --ai-policy`, `verify --observe-ci` and `--report-budget`. `--signals`
-re-ranks candidates by its score after exclusions, overlaps and low likelihood;
-the others leave ordering unchanged.
+`skill`; the other commands are new in the v0.3.0 candidate. Reports never grant
+approval or authority and never change a readiness gate: `discover --signals`,
+`discover --responsiveness`, `discover --check-top`, `discover --repo-dir`,
+`inspect --ownership`, the AI-policy report (`inspect --ai-policy`),
+`verify --observe-ci` and `--report-budget`. `--signals` re-ranks candidates by
+its score after exclusions, overlaps, known-bad issues (with `--repo-dir` or
+`--check-top`) and low likelihood; the others leave ordering unchanged.
 Put `--format text` before the command for an abridged summary; JSON is
 canonical. Exit status: 0 when the command's gate passes, 1 when it does not or
 a read is incomplete, 2 for usage errors. An exit code is never authorization.

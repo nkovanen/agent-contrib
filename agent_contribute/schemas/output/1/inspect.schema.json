@@ -429,7 +429,7 @@
             "notice"
           ],
           "additionalProperties": false,
-          "description": "Added by --ai-policy: located AI-contribution statements, signals only"
+          "description": "The AI-policy report (inspect --ai-policy): located AI-contribution statements, signals only"
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
