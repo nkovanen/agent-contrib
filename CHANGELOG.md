@@ -2,6 +2,11 @@
 
 ## 0.3.0 — unreleased
 
+- `verify`, `scope-check` and `evidence init` capture HEAD once with an exact
+  lookup and use that commit for every tree, diff, ancestry, gitlink and
+  timestamp read (R4-05). An unborn or deleted current branch, or a HEAD naming
+  a non-commit, now fails with `unborn_head`; previously a `refs/tags/HEAD`
+  tag could stand in for it. This also hardens schema 0.1 `verify`.
 - Schema 0.2 `user_authorization` adds `source_errors`, the source identity
   failures also listed in its `errors`; `pr-body` keeps them as source blockers
   instead of omitting them with the authority states (R1-10).

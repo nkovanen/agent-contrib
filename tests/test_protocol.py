@@ -514,13 +514,17 @@ class VerificationTests(unittest.TestCase):
             utc_timestamp = commit_time.astimezone(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             original_git_read = core.git_read
 
+            patched = []
+
             def read_git(directory, *args):
-                if args == ('show', '-s', '--format=%cI', 'HEAD'):
+                if args == ('show', '-s', '--format=%cI', evidence['git_head']):  # the captured HEAD (R4-05)
+                    patched.append(args)
                     return utc_timestamp
                 return original_git_read(directory, *args)
 
             with patch.object(core, 'git_read', side_effect=read_git):
                 result = core.verify(task, evidence, tmp, client)
+            self.assertEqual(len(patched), 1, 'the commit time read must use the captured HEAD')
             self.assertTrue(result['evidence_valid'], result['evidence_errors'])
             self.assertTrue(result['upstream_submission_ready'], result['evidence_errors'])
 

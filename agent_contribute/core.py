@@ -688,9 +688,23 @@ def require_worktree_root(directory):
         raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
 
 
-def implementation_paths(directory, base):
+def current_head(directory):
+    """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
+    names when the current branch is unborn or deleted, so later reads use this object ID instead."""
+    try:
+        head = git_read(directory, 'show-ref', '--verify', '--hash', 'HEAD')
+    except ProtocolError:
+        head = None
+    if not isinstance(head, str) or not SHA.fullmatch(head) or not git_read(
+            directory, 'cat-file', '-t', head) == 'commit':
+        raise ProtocolError('unborn_head', 'Checkout HEAD is unborn or not a commit; commit on a branch first')
+    return head
+
+
+def implementation_paths(directory, base, head=None):
+    head = head or current_head(directory)
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
-                                      '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, 'HEAD').split('\0') if path]
+                                      '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, head).split('\0') if path]
 
 
 def has_gitlink(directory, *revisions):
@@ -736,17 +750,17 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence was not recorded from a clean worktree')
     try:
         require_worktree_root(directory)
-        head = git_read(directory, 'rev-parse', 'HEAD')
-        tree = git_read(directory, 'rev-parse', 'HEAD^{tree}')
+        head = current_head(directory)
+        tree = git_read(directory, 'rev-parse', head + '^{tree}')
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        if has_gitlink(directory, 'HEAD', evidence['base_commit']):
+        if has_gitlink(directory, head, evidence['base_commit']):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
         dirty = git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all')
         # A base from another checkout cannot satisfy this task, even with a matching string.
         git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
-        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], 'HEAD')
-        changed = implementation_paths(directory, evidence['base_commit'])
+        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        changed = implementation_paths(directory, evidence['base_commit'], head)
         if not changed:
             errors.append('Implementation diff is empty')
         for violation in scope_violations(task['scope'], changed):
@@ -761,7 +775,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
                     targets.add(match.group(1).casefold())
         if task['execution']['target_repository'].casefold() not in targets:
             errors.append('Checkout has no GitHub remote matching the authorized target')
-        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', 'HEAD').replace('Z', '+00:00'))
+        commit_time = dt.datetime.fromisoformat(git_read(directory, 'show', '-s', '--format=%cI', head).replace('Z', '+00:00'))
         if dirty or head != evidence['git_head'] or tree != evidence['git_tree']:
             errors.append('Current checkout is dirty or differs from evidence HEAD/tree')
     except (ProtocolError, ValueError) as exc:
