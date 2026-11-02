@@ -62,16 +62,24 @@ explicit and versioned; the tool never updates itself.
 ## What the agent does
 
 1. Finds issues, reads contribution policies and checks open PRs for overlap.
+   Records applicable repository requirements, their sources and when each is due.
 2. Ranks feasible tasks and prepares a specification: scope, acceptance criteria,
    prohibited changes, tests and required evidence.
 3. Checks repository approval and your permission to implement the chosen task.
-4. Works in an isolated branch, runs checks and obtains an independent review.
+4. Works in an isolated branch, follows precommit and final checks in order, and
+   obtains independent review of both the code and repository compliance.
 5. Records the results and prepares a PR for human review.
 
 A request to help a repository gets you discovery and a draft specification.
 Implementation and publication need their own authorization. Agent Contrib's
 CLI only reads GitHub; your agent handles implementation and any authorized PR
 operation. Nothing is merged automatically.
+
+The [installed workflow](agent_contribute/instructions.md#repository-requirements-required-for-every-contribution-route)
+requires a source-linked requirements ledger covering tests, docs, visual evidence,
+attribution and the PR template where applicable. Unmet requirements remain
+blockers; a green test suite alone is not readiness. This is a host-agent and
+reviewer obligation, not automatic enforcement of prose by the CLI.
 
 If a fork has Issues disabled, the CLI reads tasks from its parent and keeps the
 fork as the proposed contribution target. It reports the requested repository,

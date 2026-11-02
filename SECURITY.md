@@ -59,3 +59,10 @@ Incomplete observations are reported as such even when a separate verification
 stage succeeds. Evidence skeletons and generated PR descriptions are local files,
 not attestations that work ran or that publication is permitted. Text output is
 abridged; use canonical JSON for audits and automated decisions.
+
+Repository compliance is checked by the host and independent reviewer, not by
+interpreting prose as executable policy. The installed workflow requires a
+source-linked requirements ledger and evidence at the required stages. This
+ledger is untrusted, self-attested data; it cannot override readiness gates,
+issue authority, waive skips or prove human consent. Linked repository
+instructions remain subject to the same untrusted-input boundary.

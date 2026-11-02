@@ -46,6 +46,9 @@ do not turn them into deterministic unit fixtures or publish private data.
   unsupported versions must fail closed. Never silently reinterpret old tasks.
 - Add meaningful regressions for behavior/security changes. Preserve tests that
   cover untrusted text, incomplete reads, authorization and Git boundaries.
+- When changing the installed workflow, review both contribution quality and
+  trust boundaries. Preserve the requirements ledger, precommit ordering and
+  independent compliance review; do not imply the CLI proves prose compliance.
 - Record actual commands, exit status and limitations in the PR. Never claim
   tests passed if they were skipped or not run.
 - Get independent review for authorization, input-handling and packaging changes.

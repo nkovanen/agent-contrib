@@ -5,7 +5,10 @@ description: Use when asked to help an open-source GitHub repository, select con
 
 Run `agent-contrib instructions` first and read its JSON workflow. The installed
 CLI/library owns the protocol, schemas, compatibility checks and guidance.
-Follow that workflow for the repository the user identifies.
+Follow that workflow for the repository the user identifies. Build its required
+source-linked repository requirements ledger before implementation and have an
+independent reviewer check compliance before publication. Passing tests or CLI
+gates alone does not establish compliance.
 
 Use `agent-contrib --help` for the installed command surface. Delegate discovery,
 inspection, contract preparation and evidence verification to `agent-contrib discover`, `inspect`, `prepare` and `verify` as directed by the workflow.

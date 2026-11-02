@@ -2,6 +2,11 @@
 
 ## 0.3.0 — unreleased
 
+- Require a source-linked repository requirements ledger in the installed
+  workflow, precommit gates before commits, and independent review of compliance
+  as well as code. Include required docs, PR-visible artifacts and template items;
+  do not equate passing CLI gates with prose compliance. Schemas are unchanged.
+
 - Handle closed or missing stdout quietly, including buffered errors and
   caller-provided write-only streams (#4). Help/version behavior is unchanged.
 - Add opt-in `--format text` summaries; JSON stays canonical (#24, part).
