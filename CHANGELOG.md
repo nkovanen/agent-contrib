@@ -205,6 +205,10 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- The temporary index for the content check is created under a temporary root
+  whose real path is outside the worktree and its Git directories (falling
+  back from `TMPDIR` to `/tmp` or `/var/tmp`, else `unsafe_temp_dir`), so a
+  `TMPDIR` inside `.git` or the checkout no longer receives it (R1-20).
 - The worktree content check gets a timeout scaled from the tracked blob size
   (15 s plus one second per 32 MiB, at most 900 s), and running out reports
   `checkout_too_large_for_timeout` with the byte count instead of a generic

@@ -838,6 +838,19 @@ def content_timeout(tracked_bytes):
     return min(CONTENT_TIMEOUT_CEILING, CONTENT_TIMEOUT_FLOOR + tracked_bytes // CONTENT_HASH_RATE)
 
 
+def _scratch_root(directory):
+    """A temporary root whose real path is outside the worktree and its Git directories; TMPDIR may point inside."""
+    forbidden = [Path(directory).resolve()] + [
+        Path(directory, git_read(directory, 'rev-parse', option)).resolve()
+        for option in ('--absolute-git-dir', '--git-common-dir')]
+    for candidate in (tempfile.gettempdir(), '/tmp', '/var/tmp'):
+        root = Path(candidate).resolve()
+        if root.is_dir() and not any(root == path or root.is_relative_to(path) for path in forbidden):
+            return str(root)
+    raise ProtocolError('unsafe_temp_dir', 'No temporary directory outside the checkout is available; '
+                        'set TMPDIR to a directory outside it')
+
+
 def worktree_changes(directory, commit):
     """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
     temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
@@ -849,7 +862,7 @@ def worktree_changes(directory, commit):
     tracked = sum(int(fields[3]) for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0')
                   if entry and (fields := entry.split('\t', 1)[0].split())[1] == 'blob')
     budget = content_timeout(tracked)
-    with tempfile.TemporaryDirectory() as scratch:
+    with tempfile.TemporaryDirectory(dir=_scratch_root(directory)) as scratch:
         index = os.path.join(scratch, 'index')
         git_read(directory, 'read-tree', commit, index_file=index)
         try:
