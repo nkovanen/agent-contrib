@@ -14,12 +14,14 @@ source-linked repository requirements ledger before implementation and have an
 independent reviewer check compliance before publication. Passing tests or CLI
 gates alone does not establish compliance.
 
-Use `agent-contrib --help` for the installed command surface and
-`agent-contrib schema COMMAND` for the fields of its JSON output. Delegate discovery,
+Use `agent-contrib --help` for the installed command surface. When it lists
+`schema`, use `agent-contrib schema COMMAND` for the fields of a command's JSON
+output; older CLIs without it are still supported. Delegate discovery,
 inspection, contract preparation and evidence verification to `agent-contrib discover`, `inspect`, `prepare` and `verify` as directed by the workflow.
 Perform implementation through your ordinary tools within the user's actual
 authority. Report the CLI's observed results and unresolved gates.
 
-If the installed command or required schema is unavailable, report that blocker.
+If a contribution command the workflow requires, or a required task/evidence
+schema, is unavailable, report that blocker.
 Do not invent a substitute workflow. Installation and updates are explicit user
 choices; this adapter does not update the CLI or run a model.
