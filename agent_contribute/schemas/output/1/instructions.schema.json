@@ -7,13 +7,13 @@
   "properties": {
     "cli_version": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "supported_schema_versions": {
       "type": "array",
       "items": {
         "type": "string",
-        "maxLength": 100000
+        "maxLength": 2147483647
       },
       "description": "Task/evidence schema versions this CLI accepts",
       "maxItems": 1000
@@ -22,13 +22,13 @@
       "type": "array",
       "items": {
         "type": "string",
-        "maxLength": 100000
+        "maxLength": 2147483647
       },
       "maxItems": 1000
     },
     "host_authorization": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "workflow_markdown": {
       "type": "string",
@@ -40,28 +40,28 @@
       "properties": {
         "task_schema": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "evidence_schema": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "task_schema_0.2": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "evidence_schema_0.2": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "host_context_schema": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "output_schemas": {
           "type": "string",
           "description": "Package directory of these output schemas; agent-contrib schema COMMAND prints one",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -78,7 +78,7 @@
     "output_schema_version": {
       "type": "string",
       "description": "Version of the output schemas, independent of task/evidence schema versions",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "automatic_updates": {
       "type": "boolean",

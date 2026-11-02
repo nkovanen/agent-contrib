@@ -34,11 +34,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -57,7 +57,7 @@
         "requested_repository": {
           "type": "string",
           "description": "Repository named on the command line",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "issue_source_repository": {
           "type": [
@@ -65,12 +65,12 @@
             "null"
           ],
           "description": "Repository whose tracker was read; null when unresolved",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "proposed_target_repository": {
           "type": "string",
           "description": "Proposed contribution target; context, never authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
@@ -83,18 +83,18 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "warning": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "repository": {
           "type": "string",
           "description": "Repository whose snapshot was audited",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "commit": {
           "type": "string",
@@ -116,7 +116,7 @@
             },
             "path": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "commit": {
               "type": "string",
@@ -133,34 +133,34 @@
             },
             "reason": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "approval_labels": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "description": "Labels the policy declares; with a list-valued declaration only",
-              "maxItems": 1000
+              "maxItems": 2147483647
             },
             "missing_labels": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "description": "Declared labels that do not exist in the repository",
-              "maxItems": 1000
+              "maxItems": 2147483647
             },
             "generic_approval_labels": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "description": "Declared labels that are generic triage labels",
-              "maxItems": 1000
+              "maxItems": 2147483647
             }
           },
           "required": [
@@ -180,7 +180,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "maxItems": 60,
               "description": "Instruction files agents load"
@@ -367,7 +367,7 @@
             "tracker": {
               "type": "string",
               "description": "resolution_provenance.reason",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "proposed_target_pulls": {
               "anyOf": [
@@ -391,7 +391,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Non-binding suggestions for maintainers",
           "maxItems": 1000
@@ -407,9 +407,9 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
-              "maxItems": 1000
+              "maxItems": 2147483647
             },
             "label_authority": {
               "type": "string",
@@ -454,7 +454,7 @@
         "requested_repository": {
           "type": "string",
           "description": "Repository named on the command line",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "issue_source_repository": {
           "type": [
@@ -462,12 +462,12 @@
             "null"
           ],
           "description": "Repository whose tracker was read; null when unresolved",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "proposed_target_repository": {
           "type": "string",
           "description": "Proposed contribution target; context, never authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
@@ -480,13 +480,13 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "warning": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -518,9 +518,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         }
       },
       "required": [
@@ -536,14 +536,14 @@
       "properties": {
         "endpoint": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "observed": {
           "$ref": "#/$defs/repository_observation"
         },
         "fetched_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -587,7 +587,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -605,7 +605,7 @@
       "properties": {
         "full_name": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "fork": {
           "type": "boolean"
@@ -618,7 +618,7 @@
           "properties": {
             "full_name": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -648,12 +648,12 @@
         "reason": {
           "type": "string",
           "description": "How the issue tracker was chosen, or \"unresolved\"",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "execution_authority": {
           "type": "string",
           "description": "Always \"none\": resolution never grants authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -668,11 +668,11 @@
       "properties": {
         "repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "endpoint": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "complete": {
           "type": "boolean"
@@ -685,9 +685,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         }
       },
       "required": [

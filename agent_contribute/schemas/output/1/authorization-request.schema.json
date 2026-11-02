@@ -19,7 +19,7 @@
     },
     "notice": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "target_host_context_schema_version": {
       "type": "string",
@@ -33,14 +33,14 @@
       "type": "array",
       "items": {
         "type": "string",
-        "maxLength": 100000
+        "maxLength": 2147483647
       },
       "description": "Blockers a mandate would not clear",
-      "maxItems": 1000
+      "maxItems": 2147483647
     },
     "preflight_errors_trust": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "unresolved_fields": {
       "type": "array",
@@ -61,7 +61,7 @@
     },
     "exact_head_pr_history": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "mandate_fields": {
       "type": "object",
@@ -177,7 +177,7 @@
         },
         "target_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "target_repository_id": {
           "type": "integer",
@@ -185,7 +185,7 @@
         },
         "head_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "head_repository_id": {
           "type": "integer",
@@ -193,11 +193,11 @@
         },
         "head_ref": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "base_ref": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -229,7 +229,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "maxLength": 100000
+        "maxLength": 2147483647
       },
       "maxItems": 1000
     },
@@ -280,11 +280,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -302,13 +302,13 @@
       "properties": {
         "fetched_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "endpoints": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "GitHub endpoints read",
           "maxItems": 1000
@@ -354,7 +354,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [

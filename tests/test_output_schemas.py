@@ -307,6 +307,74 @@ class ReviewRegressionTests(unittest.TestCase):
                 invoke('discover', 'acme/photos')
 
 
+def paged(count, item):
+    """A GitHub list endpoint answering page=N with its slice of count generated items."""
+    def page(endpoint):
+        start = (int(endpoint.rsplit('page=', 1)[1]) - 1) * 100
+        return [item(n) for n in range(start + 1, min(start + 100, count) + 1)]
+    return page
+
+
+class DiagnosticVolumeTests(unittest.TestCase):
+    """Producers never truncate diagnostics, so real outputs with more than 1000 of them must validate (R5-04)."""
+    BIG = {'behavior_criteria': [{}] * 600}
+
+    def test_schema_errors_beyond_1000_through_verify_and_scope_check(self):
+        for version in ('0.1', '0.2'):
+            task = dict(self.BIG, schema_version=version)
+            with self.subTest(version=version), patch.object(core, 'read_json', return_value=task), \
+                    patch.object(core, 'GitHub', side_effect=AssertionError('no GitHub read')):
+                code, result = invoke('verify', 'task.json')
+                self.assertEqual(code, 1)
+                self.assertGreater(len(result['errors']), 1000)
+                code, result = invoke('scope-check', 'task.json', '--repo-dir', '.')
+                self.assertEqual(code, 1)
+                self.assertGreater(len(result['errors']), 1000)
+                if version == '0.2':
+                    code, result = invoke('authorization-request', 'task.json')
+                    self.assertEqual((code, len(result['error']['schema_errors'])), (1, 100))
+
+    def test_malformed_remote_records_beyond_1000_through_ownership_inspect_and_feedback(self):
+        client = FakeGitHub()
+        original = client.request
+        timeline = paged(1001, lambda n: {'id': n, 'event': 5})
+
+        def request(endpoint):
+            if '/timeline?' in endpoint:
+                return timeline(endpoint)
+            if '/issues/12/comments?' in endpoint:
+                return []
+            return original(endpoint)
+        client.request = request
+        with patch.object(core, 'GitHub', return_value=client):
+            code, result = invoke('ownership', 'acme/photos#12')
+            self.assertEqual((code, len(result['ownership_signals']['errors'])), (1, 1001))
+            code, result = invoke('inspect', 'acme/photos#12', '--ownership')
+            self.assertEqual((code, len(result['ownership_signals']['errors'])), (1, 1001))
+        from tests.test_feedback import PRGitHub
+        client = PRGitHub()
+        original = client.request
+        comments = paged(1001, lambda n: {'id': 100 + n, 'user': 5})
+        client.request = lambda endpoint: comments(endpoint) if '/issues/30/comments' in endpoint else original(endpoint)
+        with patch.object(core, 'GitHub', return_value=client):
+            code, result = invoke('feedback', 'acme/photos#30')
+        self.assertEqual(code, 1)
+        self.assertEqual(sum(error.startswith('Malformed comment') for error in result['errors']), 1001)
+
+    def test_diagnostic_lists_claim_no_cap_below_the_input_bound(self):
+        name_rule = re.compile(r'(^|_)(errors|warnings)$|^(preflight_errors|blocking_if_adopted)$')
+        found = 0
+        for name in outputs.SCHEMAS:
+            for path, item in subschemas(outputs.output_schema(name)):
+                key = path.rsplit('.', 1)[-1]
+                if name_rule.search(key) and 'items' in item:
+                    found += 1
+                    with self.subTest(name=name, path=path):
+                        self.assertIn(item['maxItems'], (0, 2 ** 31 - 1))
+                        self.assertEqual(item['items'].get('maxLength', 2 ** 31 - 1), 2 ** 31 - 1)
+        self.assertGreater(found, 40)
+
+
 def reference_tool():
     path = pathlib.Path(__file__).resolve().parents[1] / 'tools' / 'output_reference.py'
     spec = importlib.util.spec_from_file_location('output_reference', path)

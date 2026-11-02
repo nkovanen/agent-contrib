@@ -8,7 +8,7 @@
     "output": {
       "type": "string",
       "description": "Path of the new Markdown file",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "sha256": {
       "type": "string",
@@ -29,7 +29,7 @@
     },
     "warning": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "api_budget": {
       "$ref": "#/$defs/api_budget"
@@ -65,11 +65,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -116,7 +116,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [

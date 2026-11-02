@@ -40,11 +40,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -70,23 +70,23 @@
         },
         "policy_path": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "policy_commit": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "matched_labels": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "reason": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -104,13 +104,13 @@
       "properties": {
         "fetched_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "endpoints": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "GitHub endpoints read",
           "maxItems": 1000
@@ -128,7 +128,7 @@
         "repository": {
           "type": "string",
           "description": "Repository whose CI was read: the execution target, else the source",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "head_sha": {
           "type": [
@@ -147,13 +147,13 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "notice": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "check_runs": {
           "type": "array",
@@ -195,7 +195,7 @@
                 "properties": {
                   "context": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "state": {
                     "type": "string",
@@ -208,7 +208,7 @@
                   },
                   "url": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   }
                 },
                 "required": [
@@ -250,17 +250,17 @@
         },
         "url": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "reason": {
           "type": "string",
           "description": "\"Explicit reference to this issue\" or a heuristic overlap naming the shared words/IDs",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "repository": {
           "type": "string",
           "description": "Repository of the PR, when it is not the issue source",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -285,9 +285,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         }
       },
       "required": [
@@ -303,14 +303,14 @@
       "properties": {
         "endpoint": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "observed": {
           "$ref": "#/$defs/repository_observation"
         },
         "fetched_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -357,7 +357,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -375,7 +375,7 @@
       "properties": {
         "full_name": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "fork": {
           "type": "boolean"
@@ -388,7 +388,7 @@
           "properties": {
             "full_name": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -418,12 +418,12 @@
         "reason": {
           "type": "string",
           "description": "How the issue tracker was chosen, or \"unresolved\"",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "execution_authority": {
           "type": "string",
           "description": "Always \"none\": resolution never grants authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -438,11 +438,11 @@
       "properties": {
         "repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "endpoint": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "complete": {
           "type": "boolean"
@@ -455,9 +455,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         }
       },
       "required": [
@@ -512,29 +512,29 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Blockers for execution_ready",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_errors": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Blockers for evidence_valid",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_trust": {
           "type": "string",
           "description": "Evidence is self-attested; identity and truth are not authenticated",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "publication": {
           "type": "string",
           "description": "Fixed notice: this CLI never publishes",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -555,30 +555,30 @@
         },
         "issue_source_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "proposed_target_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "resolution_provenance": {
           "type": "object",
           "properties": {
             "requested_repository": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "issue_source_repository": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "proposed_target_repository": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "execution_authority": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -606,7 +606,7 @@
             "$ref": "#/$defs/duplicate"
           },
           "description": "Open PRs overlapping the issue now",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "execution_authorization": {
           "type": "object",
@@ -621,15 +621,15 @@
             },
             "target_repository": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "authorized_by": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "authorization_evidence": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -707,29 +707,29 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Blockers for execution_ready",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_errors": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Blockers for evidence_valid",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_trust": {
           "type": "string",
           "description": "Evidence is self-attested; identity and truth are not authenticated",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "publication": {
           "type": "string",
           "description": "Fixed notice: this CLI never publishes",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -817,18 +817,18 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Contract, live-source and mandate blockers",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_errors": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "stage_blockers": {
           "type": "object",
@@ -837,25 +837,25 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
-              "maxItems": 1000
+              "maxItems": 2147483647
             },
             "draft": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
-              "maxItems": 1000
+              "maxItems": 2147483647
             },
             "completion": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
-              "maxItems": 1000
+              "maxItems": 2147483647
             }
           },
           "required": [
@@ -872,12 +872,12 @@
             "$ref": "#/$defs/duplicate"
           },
           "description": "Overlapping PRs other than the verified own draft",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_trust": {
           "type": "string",
           "description": "Evidence is self-attested; identity and truth are not authenticated",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "mandate_trust": {
           "type": "string",
@@ -912,7 +912,7 @@
           "properties": {
             "repository": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "repository_id": {
               "type": "integer",
@@ -953,7 +953,7 @@
             "$ref": "#/$defs/duplicate"
           },
           "description": "Open PRs overlapping the issue now",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -1044,17 +1044,17 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "minItems": 1,
           "description": "Contract schema errors",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "evidence_errors": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "maxItems": 0
         },
@@ -1074,7 +1074,7 @@
         "evidence_trust": {
           "type": "string",
           "description": "Evidence is self-attested; identity and truth are not authenticated",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "mandate_trust": {
           "type": "string",
@@ -1123,7 +1123,7 @@
       "properties": {
         "target_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "target_repository_id": {
           "type": "integer",
@@ -1131,7 +1131,7 @@
         },
         "head_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "head_repository_id": {
           "type": "integer",
@@ -1139,11 +1139,11 @@
         },
         "head_ref": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "base_ref": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "credential_actor_id": {
           "type": "integer",
@@ -1157,11 +1157,11 @@
         },
         "issued_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "expires_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "mandate_sha256": {
           "type": "string",
@@ -1195,11 +1195,11 @@
         },
         "name": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "app_slug": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "app_id": {
           "type": "integer",
@@ -1244,7 +1244,7 @@
         "url": {
           "type": "string",
           "description": "Empty when GitHub gave none",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -1304,7 +1304,7 @@
       "properties": {
         "repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "repository_id": {
           "type": "integer",
@@ -1320,7 +1320,7 @@
         },
         "url": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "head_sha": {
           "type": "string",
@@ -1330,11 +1330,11 @@
         },
         "head_ref": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "base_ref": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "author_id": {
           "type": "integer",
@@ -1342,7 +1342,7 @@
         },
         "created_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -1388,9 +1388,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "provenance": {
           "type": "object",
@@ -1408,7 +1408,7 @@
               "properties": {
                 "endpoint": {
                   "type": "string",
-                  "maxLength": 100000
+                  "maxLength": 2147483647
                 },
                 "complete": {
                   "type": "boolean"
@@ -1425,9 +1425,9 @@
                   "type": "array",
                   "items": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
-                  "maxItems": 1000
+                  "maxItems": 2147483647
                 }
               },
               "required": [
@@ -1441,7 +1441,7 @@
             },
             "detail_endpoint": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [],
@@ -1456,10 +1456,10 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Blockers for verified",
-          "maxItems": 1000
+          "maxItems": 2147483647
         }
       },
       "required": [
@@ -1496,7 +1496,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "maxItems": 0
         },
@@ -1536,9 +1536,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "trust": {
           "type": "string",
@@ -1569,7 +1569,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "maxItems": 0
         }
@@ -1603,9 +1603,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "sha256": {
           "type": [
@@ -1636,7 +1636,7 @@
         },
         "reason": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -1690,7 +1690,7 @@
             },
             "login": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "type": {
               "type": "string",
@@ -1724,7 +1724,7 @@
             },
             "endpoint": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -1752,39 +1752,39 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Why the mandate is not historically valid",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "current_errors": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Why a valid mandate does not authorize new actions now (expiry)",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "source_errors": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Source identity failures; also listed in errors",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "provenance": {
           "$ref": "#/$defs/authorization_provenance"
         },
         "mandate_id": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "event_reference": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "event_text_sha256": {
           "type": "string",

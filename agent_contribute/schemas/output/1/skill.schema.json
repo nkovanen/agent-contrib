@@ -8,11 +8,11 @@
     "output": {
       "type": "string",
       "description": "Path of the new SKILL.md",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "cli_version": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "sha256": {
       "type": "string",

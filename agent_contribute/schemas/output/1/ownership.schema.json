@@ -10,7 +10,7 @@
         "requested_repository": {
           "type": "string",
           "description": "Repository named on the command line",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "issue_source_repository": {
           "type": [
@@ -18,19 +18,19 @@
             "null"
           ],
           "description": "Repository whose tracker was read; null when unresolved",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "proposed_target_repository": {
           "type": "string",
           "description": "Proposed contribution target; context, never authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
         },
         "reference": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "complete": {
           "type": "boolean",
@@ -82,11 +82,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -105,7 +105,7 @@
         "requested_repository": {
           "type": "string",
           "description": "Repository named on the command line",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "issue_source_repository": {
           "type": [
@@ -113,12 +113,12 @@
             "null"
           ],
           "description": "Repository whose tracker was read; null when unresolved",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "proposed_target_repository": {
           "type": "string",
           "description": "Proposed contribution target; context, never authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "resolution_provenance": {
           "$ref": "#/$defs/resolution_provenance"
@@ -126,7 +126,7 @@
         "reference": {
           "type": "string",
           "description": "owner/repo#number as requested",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "complete": {
           "type": "boolean",
@@ -136,10 +136,10 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "minItems": 1,
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -171,9 +171,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         }
       },
       "required": [
@@ -189,14 +189,14 @@
       "properties": {
         "endpoint": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "observed": {
           "$ref": "#/$defs/repository_observation"
         },
         "fetched_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -216,9 +216,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "reads": {
           "type": "object",
@@ -248,7 +248,7 @@
             "properties": {
               "repository": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "repository_id": {
                 "type": "integer"
@@ -259,7 +259,7 @@
               },
               "url": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "state": {
                 "type": "string",
@@ -279,14 +279,14 @@
                   "string",
                   "null"
                 ],
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "closed_at": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "exact_reference": {
                 "type": "boolean",
@@ -323,15 +323,15 @@
               },
               "assignee": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "actor": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "created_at": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -358,11 +358,11 @@
               },
               "actor": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "created_at": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -387,7 +387,7 @@
               },
               "url": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -415,7 +415,7 @@
               },
               "author": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "author_association": {
                 "type": "string",
@@ -468,7 +468,7 @@
                 "properties": {
                   "repository": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "repository_id": {
                     "type": "integer"
@@ -479,7 +479,7 @@
                   },
                   "url": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "state": {
                     "type": "string",
@@ -499,14 +499,14 @@
                       "string",
                       "null"
                     ],
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "closed_at": {
                     "type": [
                       "string",
                       "null"
                     ],
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "exact_reference": {
                     "type": "boolean",
@@ -537,7 +537,7 @@
                 "properties": {
                   "repository": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "repository_id": {
                     "type": "integer"
@@ -548,7 +548,7 @@
                   },
                   "url": {
                     "type": "string",
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "state": {
                     "type": "string",
@@ -568,14 +568,14 @@
                       "string",
                       "null"
                     ],
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "closed_at": {
                     "type": [
                       "string",
                       "null"
                     ],
-                    "maxLength": 100000
+                    "maxLength": 2147483647
                   },
                   "exact_reference": {
                     "type": "boolean",
@@ -618,14 +618,14 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 200,
+          "maxItems": 2147483647,
           "description": "Preview of what would block if these signals became gates; nothing blocks now"
         },
         "notice": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -678,7 +678,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -696,7 +696,7 @@
       "properties": {
         "full_name": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "fork": {
           "type": "boolean"
@@ -709,7 +709,7 @@
           "properties": {
             "full_name": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -739,12 +739,12 @@
         "reason": {
           "type": "string",
           "description": "How the issue tracker was chosen, or \"unresolved\"",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "execution_authority": {
           "type": "string",
           "description": "Always \"none\": resolution never grants authority",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [

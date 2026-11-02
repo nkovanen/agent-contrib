@@ -26,13 +26,13 @@
       "type": "array",
       "items": {
         "type": "string",
-        "maxLength": 100000
+        "maxLength": 2147483647
       },
-      "maxItems": 1000
+      "maxItems": 2147483647
     },
     "notice": {
       "type": "string",
-      "maxLength": 100000
+      "maxLength": 2147483647
     },
     "issue": {
       "type": "object",
@@ -54,11 +54,11 @@
         },
         "stored_updated_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_updated_at": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_components": {
           "type": [
@@ -80,23 +80,23 @@
             },
             "state": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "labels": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
-              "maxItems": 1000
+              "maxItems": 2147483647
             },
             "assignees": {
               "type": "array",
               "items": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
-              "maxItems": 1000
+              "maxItems": 2147483647
             }
           },
           "required": [
@@ -111,7 +111,7 @@
         },
         "component_baseline": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -130,19 +130,19 @@
       "properties": {
         "stored_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_repository": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "stored_issue_url": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_issue_url": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "changed": {
           "type": "boolean"
@@ -207,11 +207,11 @@
       "properties": {
         "stored_branch": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_branch": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "stored_commit": {
           "type": "string",
@@ -230,7 +230,7 @@
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -256,17 +256,17 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "removed": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "modified": {
           "type": "array",
@@ -275,7 +275,7 @@
             "properties": {
               "path": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "stored_sha256": {
                 "type": "string",
@@ -314,11 +314,11 @@
       "properties": {
         "stored_approval": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_approval": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "current_policy_state": {
           "type": "string",
@@ -361,22 +361,22 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
           "description": "Open PR URLs overlapping now but not at preparation",
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "removed": {
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "scope": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -421,11 +421,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -472,7 +472,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [

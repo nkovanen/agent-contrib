@@ -14,6 +14,9 @@
   length the schema allows (previously only the first 1000) and rejects NaN and
   infinities as numbers. Output schemas state every length bound and anchor
   every pattern, so standard validators decide like the bundled one.
+  Error, warning and other diagnostic lists, free text and remote-derived
+  lists claim no cap below the input bounds, because producers never truncate
+  them (R5-04).
 - `verify`, `scope-check` and `evidence init` capture HEAD once with an exact
   lookup and use that commit for every tree, diff, ancestry, gitlink and
   timestamp read (R4-05). An unborn or deleted current branch, or a HEAD naming

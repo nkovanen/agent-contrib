@@ -34,11 +34,11 @@
             "null"
           ],
           "description": "Why used_during_command is null",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "note": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -57,7 +57,7 @@
         "login": {
           "type": "string",
           "description": "\"ghost\" for a deleted account",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "id": {
           "type": [
@@ -102,11 +102,11 @@
         },
         "name": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "app_slug": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "app_id": {
           "type": "integer",
@@ -151,7 +151,7 @@
         "url": {
           "type": "string",
           "description": "Empty when GitHub reports none",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
@@ -172,7 +172,7 @@
         "reference": {
           "type": "string",
           "description": "owner/repo#number of the pull request",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "complete": {
           "type": "boolean",
@@ -182,13 +182,13 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "untrusted_data_notice": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "pull_request": {
           "type": "object",
@@ -199,7 +199,7 @@
             },
             "url": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "state": {
               "type": "string",
@@ -219,11 +219,11 @@
             },
             "head_ref": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             },
             "base_ref": {
               "type": "string",
-              "maxLength": 100000
+              "maxLength": 2147483647
             }
           },
           "required": [
@@ -300,12 +300,12 @@
                   "string",
                   "null"
                 ],
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "untrusted_body": {
                 "type": "string",
                 "description": "Untrusted review text, at most 4000 characters",
-                "maxLength": 100000
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -328,7 +328,7 @@
         },
         "review_provenance": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "review_comments": {
           "type": "array",
@@ -340,11 +340,11 @@
               },
               "untrusted_body": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "path": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "line": {
                 "type": [
@@ -379,11 +379,11 @@
               },
               "untrusted_body": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               },
               "created_at": {
                 "type": "string",
-                "maxLength": 100000
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -461,7 +461,7 @@
         "reference": {
           "type": "string",
           "description": "owner/repo#number of the pull request",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "complete": {
           "type": "boolean",
@@ -471,13 +471,13 @@
           "type": "array",
           "items": {
             "type": "string",
-            "maxLength": 100000
+            "maxLength": 2147483647
           },
-          "maxItems": 1000
+          "maxItems": 2147483647
         },
         "untrusted_data_notice": {
           "type": "string",
-          "maxLength": 100000
+          "maxLength": 2147483647
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -526,7 +526,7 @@
             "null"
           ],
           "description": "Why the snapshot failed; null when it succeeded",
-          "maxLength": 100000
+          "maxLength": 2147483647
         }
       },
       "required": [
