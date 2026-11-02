@@ -48,9 +48,9 @@
   triggered the match. Duplicate entry fields and matching are unchanged.
 - `scope-check --base` and `evidence init --base` accept a full or abbreviated
   SHA, `HEAD`, or a branch, tag or full ref name, optionally with `~N`/`^N`,
-  resolved with hardened `git rev-parse --verify 'REV^{commit}'`; other revision
-  syntax and option-like
-  values are refused. `scope-check` adds a `warnings` list and warns when the
+  resolved with hardened `git rev-parse --verify 'REV^{commit}'`. Names with
+  more than one meaning (for example a branch and a tag), other revision syntax
+  and option-like values are refused. `scope-check` adds a `warnings` list and warns when the
   default base is not an ancestor of HEAD.
 - `agent-contrib --help` describes every command and option, including input
   constraints and exit status; the description no longer claims JSON-only output.

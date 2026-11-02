@@ -105,7 +105,9 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertTrue(result['within_scope'], result)
             with patch.object(core, 'git_read', wraps=core.git_read) as git_read:
                 workspace.resolve_base(tmp, 'HEAD')
-            git_read.assert_called_once_with(tmp, 'rev-parse', '--verify', '--quiet', 'HEAD^{commit}')
+            # Every lookup, including the ambiguity check, goes through the hardened Git reader.
+            self.assertEqual([call.args[1] for call in git_read.call_args_list], ['rev-parse', 'for-each-ref', 'rev-parse'])
+            git_read.assert_called_with(tmp, 'rev-parse', '--verify', '--quiet', 'HEAD^{commit}')
 
     def test_unsupported_revision_forms_are_refused_by_name(self):
         grammar = ('Base must be a SHA, HEAD, or a branch, tag or full ref name, optionally followed by '
@@ -114,7 +116,7 @@ class ScopeCheckTests(unittest.TestCase):
             task, _, evidence, git = self.checkout(tmp)
             self.assertEqual(git('rev-parse', '--verify', ':/upstream'), evidence['base_commit'])
             for rev in [':/upstream', '@{-1}', 'HEAD@{0}', 'HEAD:AGENTS.md', 'HEAD^{tree}', 'HEAD^{/upstream}',
-                        'HEAD~1..HEAD', 'a*', 'main^!']:
+                        'HEAD~1..HEAD', 'a*', 'main^!', '/HEAD']:
                 with self.subTest(rev=rev):
                     result = workspace.scope_check(task, tmp, rev)
                     self.assertEqual((result['within_scope'], result['base_commit'], result['errors']),
@@ -122,6 +124,44 @@ class ScopeCheckTests(unittest.TestCase):
                     with self.assertRaises(core.ProtocolError) as raised:
                         workspace.evidence_skeleton(task, tmp, rev)
                     self.assertEqual(str(raised.exception), grammar)
+
+    def test_ambiguous_names_are_refused_instead_of_picking_one(self):
+        ambiguous = ('Base name is ambiguous in this checkout (for example a branch and a tag); '
+                     'use a full ref name such as refs/heads/NAME or a full SHA')
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            base, head = evidence['base_commit'], evidence['git_head']
+            pathlib.Path(tmp, 'outside.txt').write_text('out of scope')
+            git('add', 'outside.txt')
+            git('commit', '-q', '-m', 'out of scope')
+            git('branch', 'work-base', base)
+            git('tag', 'work-base', 'HEAD')
+            git('branch', base[:7], 'HEAD')
+            git('branch', 'gitdir-name', base)
+            pathlib.Path(tmp, '.git', 'gitdir-name').write_text(head + '\n')
+            git('update-ref', 'refs/heads/HEAD', base)
+            # Raw Git silently prefers one meaning for each of these.
+            self.assertEqual(git('rev-parse', '--verify', 'work-base'), git('rev-parse', 'HEAD'))
+            for rev in ['work-base', 'work-base~0', base[:7], 'gitdir-name', 'HEAD', 'HEAD~1']:
+                with self.subTest(rev=rev):
+                    result = workspace.scope_check(task, tmp, rev)
+                    self.assertEqual((result['within_scope'], result['base_commit'], result['errors']),
+                                     (False, None, [ambiguous]))
+                    with self.assertRaises(core.ProtocolError) as raised:
+                        workspace.evidence_skeleton(task, tmp, rev)
+                    self.assertEqual(str(raised.exception), ambiguous)
+            git('update-ref', '-d', 'refs/heads/HEAD')
+            # A Git-directory file that is not a ref (here .git/config) is not a second meaning.
+            git('branch', 'config', base)
+            for rev, expected in [('config', base), ('refs/heads/work-base', base), ('refs/tags/work-base', git('rev-parse', 'HEAD')),
+                                  ('HEAD~2', base), (base[:12], base), (base, base)]:
+                with self.subTest(rev=rev):
+                    self.assertEqual(workspace.resolve_base(tmp, rev), expected)
+            result = workspace.scope_check(task, tmp, 'refs/heads/work-base')
+            self.assertEqual(result['violations'], [{'path': 'outside.txt', 'rule': 'not in allowed_paths'}])
+            # A full ref name is checked too: a tag literally named refs/heads/work-base is a second meaning.
+            git('update-ref', 'refs/tags/refs/heads/work-base', 'HEAD')
+            self.assertEqual(workspace.scope_check(task, tmp, 'refs/heads/work-base')['errors'], [ambiguous])
 
     def test_default_base_outside_head_history_warns_and_still_fails(self):
         with tempfile.TemporaryDirectory() as tmp:

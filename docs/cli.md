@@ -130,7 +130,11 @@ and untracked files that are not ignored. Renames report both paths. The base
 must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts a full or
 abbreviated SHA, `HEAD`, or a branch, tag or full ref name, optionally followed
 by `~N` or `^N`. Other revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths,
-ranges) is refused. The value is resolved in the checkout with
+ranges) is refused. A name with more than one meaning in the checkout (a branch
+and a tag, a Git-directory ref file, or a ref that also looks like an
+abbreviated SHA) is refused instead of following Git's silent preference; give
+a full ref name such as `refs/heads/NAME` or a full SHA. The value is resolved
+in the checkout with
 `git rev-parse --verify 'REV^{commit}'` under the same hook, fsmonitor and
 replacement-object protections as other Git reads; `base_commit` reports the
 full SHA. A value that is blank, starts with `-` or contains whitespace or
