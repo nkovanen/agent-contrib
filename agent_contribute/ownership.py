@@ -55,11 +55,12 @@ def _pull_detail(repository, repository_id, number, source, issue_number, client
             'merged_at': merged_at, 'closed_at': closed_at, 'exact_reference': exact}
 
 
-def ownership_signals(source, number, client, now=None):
+def ownership_signals(source, number, client, now=None, *, max_pages=core.MAX_PAGES, max_pr_details=MAX_PR_DETAILS):
+    """The caps bound reads for discover --check-top; reaching either one makes the report incomplete."""
     now = now or dt.datetime.now(dt.timezone.utc)
     errors = []
-    timeline = core.paginate(client, f'repos/{source}/issues/{number}/timeline', key=_event_key)
-    comments = core.paginate(client, f'repos/{source}/issues/{number}/comments')
+    timeline = core.paginate(client, f'repos/{source}/issues/{number}/timeline', key=_event_key, max_pages=max_pages)
+    comments = core.paginate(client, f'repos/{source}/issues/{number}/comments', max_pages=max_pages)
     errors += timeline['errors'] + comments['errors']
     referenced, assignments, connections, commits = {}, [], [], []
     for event in timeline['items']:
@@ -92,9 +93,9 @@ def ownership_signals(source, number, client, now=None):
             errors.append('Malformed timeline event: ' + str(exc))
     pulls = []
     targets = sorted(referenced.values(), key=lambda item: (item[0].casefold(), item[2]))
-    if len(targets) > MAX_PR_DETAILS:
-        errors.append(f'More than {MAX_PR_DETAILS} cross-referenced PRs; details are incomplete')
-    for name, repo_id, pr_number in targets[:MAX_PR_DETAILS]:
+    if len(targets) > max_pr_details:
+        errors.append(f'More than {max_pr_details} cross-referenced PRs; details are incomplete')
+    for name, repo_id, pr_number in targets[:max_pr_details]:
         try:
             pulls.append(_pull_detail(name, repo_id, pr_number, source, number, client))
         except (core.ProtocolError, ValueError) as exc:

@@ -313,6 +313,22 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   maintainer author unless the title is meta-like, minus two per demotion,
   never below zero.
 
+`--check-top N` (1-5, with `--signals` and one repository) then reads the
+existing ownership signals (as `inspect --ownership`) for only the top N
+candidates. Each check reads the first timeline and comment page and at most 4
+cross-referenced PR details, and all checks together make at most 30 reads.
+Reaching a cap, or a failed read, marks that check `complete: false`, and an
+incomplete `top_check` exits 1. Only those N are re-ranked: a checked issue
+moves below the other checked issues, keeping relative order, when it has a
+merged same-repository PR that references it exactly ("possibly already
+fixed"), a claim comment no older than 30 days, or a current assignee. Each
+demotion is listed in the issue's `top_check.demotions`. No maintainer
+"reserved" or "rejected" detector exists, so none is used. A clean or
+incomplete check proves nothing, gates and overlap are unchanged, and the
+reads appear in `--report-budget`. In live runs with N=5 it made 13-18 reads
+and demoted ripgrep #2528 and hono #1018, both judged bad; precision@5 cannot
+change because only the top five are re-ranked.
+
 `tests/test_ranking_eval.py` replays a frozen dogfood-2 snapshot (public titles,
 labels and signal inputs for click, ripgrep and hono, with human verdicts) and
 checks precision@5 and the ranks of known bad labelled or meta issues offline.
@@ -992,6 +1008,11 @@ A repository in a multi-repository run whose discovery raised
 | `complete` | boolean |  |
 | `ranking` | `ranking` |  |
 | `signals` | `issue_signals` (optional) |  |
+| `top_check` | object (optional) | Present only for the top N candidates checked by --check-top; report only |
+| `top_check.complete` | boolean | False when a read failed or a page, PR-detail or total read cap was reached |
+| `top_check.errors` | string[] |  |
+| `top_check.reads` | integer | GitHub reads made for this issue; at most 30 |
+| `top_check.demotions` | string[] | Merged same-repository fix, fresh claim comment or current assignee |
 
 #### `discover_multi`
 
@@ -1050,6 +1071,13 @@ One repository was resolved and read
 | `warning` | string |  |
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
+| `top_check` | object (optional) | Present with --check-top N: bounded ownership reads for the top N, re-ranked among themselves |
+| `top_check.requested` | integer | at most 5 |
+| `top_check.checked` | integer | at most 5 |
+| `top_check.reads` | integer | at most 30 |
+| `top_check.read_cap` | integer | at most 30 |
+| `top_check.complete` | boolean | Every checked issue was read completely; false sets exit 1 |
+| `top_check.notice` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
 
 #### `discover_unresolved`
@@ -1250,6 +1278,7 @@ Added by --signals; report-only heuristics, never approval
 | `maintainer.value` | "maintainer" \| "other" \| "unknown" |  |
 | `maintainer.explanation` | string |  |
 | `labels` | string[] | Issue label names (sanitized), as used by the demotion rules |
+| `assignees` | string[] | Current assignee logins from the issue list payload (sanitized, at most 10) |
 | `demotion` | object | Documented label and title demotions; each subtracts 2 from the score |
 | `demotion.value` | "demoted" \| "none" |  |
 | `demotion.reasons` | string[] | One entry per matched label group or meta-like title |

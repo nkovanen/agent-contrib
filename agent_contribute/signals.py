@@ -250,9 +250,56 @@ def issue_signals(issue, paths, now):
     demotion, meta, labels = demotions(issue)
     signals = {'code_location': location_hints(text, paths), 'acceptance_clarity': acceptance_clarity(issue['body']),
                'activity': activity(issue, now), 'maintainer': maintainer_signal(issue), 'labels': labels,
+               'assignees': [core.safe_text(user['login'], 100) for user in (issue.get('assignees') or [])[:10]
+                             if isinstance(user, dict) and isinstance(user.get('login'), str)],
                'demotion': demotion}
     score = ((signals['code_location']['value'] == 'found') +
              {'high': 2, 'medium': 1, 'low': 0}[signals['acceptance_clarity']['value']] +
              (signals['maintainer']['value'] == 'maintainer' and not meta))
     signals['score'] = max(0, score - DEMOTION * len(demotion['reasons']))
     return signals
+
+
+# discover --signals --check-top N: the existing ownership readers, bounded, for the top N candidates only.
+CHECK_TOP_MAX = 5
+CHECK_PAGES = 1
+CHECK_PR_DETAILS = 4
+CHECK_READ_CAP = 30
+CHECK_TOP_NOTICE = ('Report only. Only the top N candidates were read (first timeline and comment page, at most '
+                    f'{CHECK_PR_DETAILS} cross-referenced PR details each) and re-ranked among themselves. An '
+                    'incomplete or clean check is unknown, never proof that an issue is free or unfixed.')
+
+
+class _ReadCap:
+    def __init__(self, client, cap):
+        self.client, self.cap, self.reads = client, cap, 0
+
+    def request(self, endpoint):
+        if self.reads >= self.cap:
+            raise core.ProtocolError('read_cap', f'Total --check-top read cap of {self.cap} reached')
+        self.reads += 1
+        return self.client.request(endpoint)
+
+
+def check_top(result, client, n, now):
+    """Demote within the top n on existing precise detectors only: a merged same-repository PR with an exact
+    reference, a claim comment no older than ownership.STALE_DAYS, or a current assignee."""
+    from .ownership import ownership_signals
+    source, capped, head = result['repository'], _ReadCap(client, CHECK_READ_CAP), result['issues'][:n]
+    for issue in head:
+        before = capped.reads
+        report = ownership_signals(source, issue['number'], capped, now, max_pages=CHECK_PAGES,
+                                   max_pr_details=CHECK_PR_DETAILS)
+        fixed = [pr['url'] for pr in report['resolution_signals']['possibly_already_fixed']
+                 if pr['repository'].casefold() == source.casefold()]
+        claims = [claim for claim in report['claims'] if not claim['stale']]
+        reasons = (['possibly already fixed by a merged same-repository PR: ' + ', '.join(fixed[:3])] if fixed else []) + (
+            [f'claimed in a comment by {claims[0]["author"]} {claims[0]["age_days"]} days ago'] if claims else []) + (
+            ['assigned to ' + ', '.join(issue['signals']['assignees'][:3])] if issue['signals']['assignees'] else [])
+        issue['top_check'] = {'complete': report['complete'], 'errors': list(dict.fromkeys(report['errors'])),
+                              'reads': capped.reads - before, 'demotions': reasons}
+    head.sort(key=lambda item: bool(item['top_check']['demotions']))  # stable: within n only
+    result['issues'][:n] = head
+    result['ordering'] += f'; then the top {n} re-ranked by --check-top demotions'
+    return {'requested': n, 'checked': len(head), 'reads': capped.reads, 'read_cap': CHECK_READ_CAP,
+            'complete': all(item['top_check']['complete'] for item in head), 'notice': CHECK_TOP_NOTICE}

@@ -180,6 +180,45 @@
         },
         "signals": {
           "$ref": "#/$defs/issue_signals"
+        },
+        "top_check": {
+          "type": "object",
+          "properties": {
+            "complete": {
+              "type": "boolean",
+              "description": "False when a read failed or a page, PR-detail or total read cap was reached"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            },
+            "reads": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "GitHub reads made for this issue; at most 30"
+            },
+            "demotions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 3,
+              "description": "Merged same-repository fix, fresh claim comment or current assignee"
+            }
+          },
+          "required": [
+            "complete",
+            "errors",
+            "reads",
+            "demotions"
+          ],
+          "additionalProperties": false,
+          "description": "Present only for the top N candidates checked by --check-top; report only"
         }
       },
       "required": [
@@ -484,6 +523,49 @@
           ],
           "additionalProperties": false,
           "description": "Added by --responsiveness"
+        },
+        "top_check": {
+          "type": "object",
+          "properties": {
+            "requested": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "at most 5"
+            },
+            "checked": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "at most 5"
+            },
+            "reads": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "at most 30"
+            },
+            "read_cap": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "at most 30"
+            },
+            "complete": {
+              "type": "boolean",
+              "description": "Every checked issue was read completely; false sets exit 1"
+            },
+            "notice": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "requested",
+            "checked",
+            "reads",
+            "read_cap",
+            "complete",
+            "notice"
+          ],
+          "additionalProperties": false,
+          "description": "Present with --check-top N: bounded ownership reads for the top N, re-ranked among themselves"
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
@@ -794,6 +876,15 @@
           "maxItems": 100,
           "description": "Issue label names (sanitized), as used by the demotion rules"
         },
+        "assignees": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "maxItems": 10,
+          "description": "Current assignee logins from the issue list payload (sanitized, at most 10)"
+        },
         "demotion": {
           "type": "object",
           "properties": {
@@ -833,6 +924,7 @@
         "activity",
         "maintainer",
         "labels",
+        "assignees",
         "demotion",
         "score"
       ],

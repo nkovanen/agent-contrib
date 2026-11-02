@@ -146,11 +146,11 @@ class GitHub:
         return paginate(self, endpoint)
 
 
-def paginate(client, endpoint, key=None):
+def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
     """key derives an identity for endpoints whose items lack id/number/name (timeline events)."""
     items, errors, seen = [], [], set()
     page_count = 0
-    for page in range(1, MAX_PAGES + 1):
+    for page in range(1, max_pages + 1):
         separator = '&' if '?' in endpoint else '?'
         try:
             data = client.request(f'{endpoint}{separator}per_page=100&page={page}')
@@ -174,7 +174,7 @@ def paginate(client, endpoint, key=None):
             errors.append(str(exc))
             break
     else:
-        errors.append('Pagination reached the 40-page limit')
+        errors.append(f'Pagination reached the {max_pages}-page limit')
     return {'items': items, 'complete': False, 'pages': page_count, 'errors': errors}
 
 
@@ -510,9 +510,12 @@ def inspect_issue(reference, client=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False):
+def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None):
     client = client or GitHub()
     result, snapshot = discover_with_snapshot(repository, client, signals=signals)
+    if check_top and signals and snapshot is not None:
+        from .signals import check_top as recheck
+        result['top_check'] = recheck(result, client, check_top, dt.datetime.fromisoformat(result['fetched_at']))
     if responsiveness:
         from .signals import responsiveness as report
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.

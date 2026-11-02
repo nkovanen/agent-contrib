@@ -79,7 +79,11 @@ channel or runtime model provider is added.
   or WIP titles, whose maintainer point is no longer counted (E-08, E-09).
   Default discover output and ordering are unchanged. An offline regression
   replays the dogfood-2 click, ripgrep and hono rankings; precision@5 is
-  unchanged on it (1/5, 1/5, 0/5).
+  unchanged on it (1/5, 1/5, 0/5). `discover --signals --check-top N` (1-5)
+  reads bounded ownership signals for the top N only (one timeline and comment
+  page, 4 PR details each, 30 reads in all) and re-ranks those N: a merged
+  same-repository fix, a fresh claim or an assignee moves an issue down, with
+  the reason listed. `signals.assignees` reports current assignees. Report only.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,

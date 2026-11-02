@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote, textfmt, workspace, __version__
+from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote, signals, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -77,6 +77,10 @@ def prevalidate(args):
     """The single local argument check, run before any GitHub read (including the optional rate_limit read)."""
     if args.command == 'discover':
         args.names = discover_names(args)
+        if args.check_top is not None and (not args.signals or not 1 <= args.check_top <= signals.CHECK_TOP_MAX or
+                                           len(args.names) != 1):
+            raise core.ProtocolError('usage', f'--check-top needs --signals, one repository and N from 1 to '
+                                     f'{signals.CHECK_TOP_MAX}')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
     elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
         core.parse_issue(args.reference)
@@ -128,6 +132,9 @@ def main(argv=None):
                              help='Add report-only code-location, clarity, activity and maintainer signals')
             sub.add_argument('--responsiveness', action='store_true',
                              help='Add a report-only repository responsiveness report from one read of recently closed PRs')
+            sub.add_argument('--check-top', type=int, metavar='N',
+                             help='With --signals and one repository: read ownership signals (one timeline and comment '
+                                  'page, at most 4 PR details) for the top N (1-5) and re-rank only those N; report only')
             sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
         else:
             sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
@@ -284,8 +291,12 @@ def main(argv=None):
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
             names = args.names
+            if args.check_top is not None:
+                options['check_top'] = args.check_top
             result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
             code = 0 if result['complete'] else 1
+            if args.check_top is not None:  # an incomplete opted-in report is a nonzero exit, as for --responsiveness
+                code = code or (0 if result.get('top_check', {}).get('complete') else 1)
             if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
                 reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
                 code = code or (0 if all(r and r['complete'] for r in reports) else 1)
