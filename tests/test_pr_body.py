@@ -1,5 +1,6 @@
 """PR body rendering: golden output, inert untrusted text, no GitHub writes."""
 import contextlib
+import html
 import copy
 import io
 import json
@@ -97,6 +98,21 @@ class PRBodyTests(unittest.TestCase):
         self.assertFalse(any(line.startswith('#') and 'Heading' in line for line in body.splitlines()))
         self.assertIn('Fixes', visible)
         self.assertIn('@octocat', visible)
+
+    def test_entity_encoded_references_and_strikethrough_stay_inert(self):
+        task, _ = ready_contract()
+        hostile = ('&commat;octocat &num;12 acme/photos&num;3 https&colon;&sol;&sol;evil.example '
+                   '&#64;octocat &#x23;4 ~~verified~~ | x | y |')
+        task['objective'] = hostile
+        body = prbody.render(task, {'schema_valid': True, 'errors': [hostile], 'evidence_errors': []})
+        # After one HTML decoding pass, no entity may reintroduce a mention, reference or URL.
+        decoded = html.unescape(body.replace('Refs acme/photos#12', ''))
+        self.assertNotRegex(decoded, r'@[A-Za-z]')
+        self.assertNotRegex(decoded, r'#[0-9]')
+        self.assertNotRegex(decoded, r'https?://')
+        self.assertIn('&amp;commat;octocat', body)
+        self.assertNotRegex(body, r'(?<!\\)~')
+        self.assertEqual(prbody.md('~~x~~ | y'), r'\~\~x\~\~ \| y')
 
     def test_schema_02_shows_stage_gates_and_blockers(self):
         task, _ = candidate_task()
