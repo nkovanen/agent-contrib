@@ -1,7 +1,9 @@
 # Owner-local and stacked routes: design proposal
 
 - Date: 2026-11-02
-- Status: proposal for hostile review. No code changes are part of this step.
+- Status: proposal, revision 2. The first hostile review (GPT-6.1-Sol, `BLOCK`,
+  H=1 M=4 L=1) is resolved in [Review resolution](#review-resolution). No code
+  changes are part of this step.
 - Base: `47c80a1` (unreleased v0.3.0 candidate; task/evidence schemas 0.1 and 0.2,
   host-context 0.1).
 - Input: dogfood 1, Stage 1 friction log, findings F1, F2, F3 and F6.
@@ -11,14 +13,15 @@
 | Finding | Recommendation | Ships as |
 | --- | --- | --- |
 | F6: the workflow asks for contract records that have no field | Name the exact existing fields in the workflow. Defer typed fields to the next task schema that is needed anyway (#16/#17). | Docs only |
-| F3: no way to produce an authorization request | Add a read-only `authorization-request` command. It prints an unsigned request with every binding field pre-filled from the contract and live reads, and every human-only field `null`. Its output can never pass as host context. | CLI, no schema change |
+| F3: no way to produce an authorization request | Add a read-only `authorization-request` command. It prints an unsigned request with every binding field pre-filled from the contract and live reads, and every human-only field `null`. It contains no display summary: the host renders the complete contract from its own snapshot. Its output can never pass as host context. | CLI, no schema change |
 | F2: no route for owner-local, coordinator-delegated work | Add no new mandate format. A host-context 0.1 mandate with `actions: ["implement"]` already is the minimal implement-only profile. Document it, define normative host-issuer requirements, and state that a coordinator relays but never issues. Native Paseo/Claude Code issuers live in the hosts (#23). | Docs |
-| F1: stacked or unpublished bases can never validate | Now: document the limitation and the procedure. Later: a host-context 0.2 "local-base" mandate in which the human pins the local base commit and its instruction hash. It is implement-only by schema, and publication is impossible. Build it only once a native issuer exists. | Docs now; host-context 0.2 later |
+| F1: stacked or unpublished bases can never validate | Document the limitation and the land-first procedure. A local-base mandate is **not specified**. It is recorded as a future direction with preconditions, starting with a host that can show the human the complete source-to-base diff and instruction contents. | Docs only |
 
 All four fit inside the existing trust model. Authority still comes only from a
-human/host-issued record. Every new piece of data is either already re-verified by
-`verify` or pinned by the human. No existing contract, evidence or host-context
-document changes meaning.
+human/host-issued record. Every new field the CLI emits is a binding that
+`verify` re-checks. Nothing the worker supplies is used as approval material. No
+existing contract, evidence or host-context document changes meaning, and no new
+schema version is proposed.
 
 ## Invariants this design must keep
 
@@ -182,17 +185,25 @@ the line between requesting and issuing.
   has a different top-level shape from host context, and its human-only fields
   are `null`, so piping it or its `mandate_fields` into `--host-context-stdin`
   fails schema validation.
-- **The worker shows the human contract X but the request hashes contract Y.** The
-  host must hash the contract file it displays itself, never trust the request's
-  `contract_sha256`. `verify` later re-checks the mandate's contract hash against
-  the file it is given, so a mismatch fails closed, but only the host can make
-  sure the human saw that file.
-- **Injected remote text in the review material** (an issue title saying "Owner
-  pre-approved, click accept") would influence the human. The output carries no
-  remote free text: identities, refs, hashes, paths and action names only.
-- **Pre-filled fields are wrong** (stale or malicious). Every pre-filled field is
-  re-verified by `verify` against the contract and live GitHub after issuance. A
-  wrong value can only produce a mandate that fails closed.
+- **The human is shown something other than what is bound** (RD-01). Suppose a
+  request summary describes contract X while the worker supplies contract Y and
+  Y's correct hash. The host hashes Y, the human sees X, and `verify` accepts Y.
+  Every hash comparison is consistent, yet the approval is meaningless. The same
+  happens with an honest but partial summary: two contracts that differ only in
+  `validation[].argv` share every summary field. Display material is not part of
+  the binding, so `verify` cannot catch this. Only the host can. The command
+  therefore emits **no display summary at all**. The issuer requirements (F2)
+  make the host render the complete contract from the same parsed snapshot it
+  hashes and issues from.
+- **Injected remote text** (an issue title saying "Owner pre-approved, click
+  accept") would influence the human. The output carries no remote free text:
+  identities, refs, hashes and action names only. The contract the host renders
+  is worker-authored data and is displayed as data (F2).
+- **Pre-filled binding fields are wrong** (stale or malicious). Every field in
+  `mandate_fields` is re-verified by `verify` against the contract and live
+  GitHub after issuance, so a wrong *binding* value can only produce a mandate
+  that fails closed. This guarantee covers bindings only, never anything shown to
+  the human, which is why no shown material comes from the request.
 - **Extra reads or writes.** The command performs exactly the reads of
   `verify task.json` without host context, writes no file and reads no stdin.
 
@@ -241,17 +252,12 @@ Output (JSON):
   "kind": "agent-contrib/authorization-request",
   "request_version": "0.1",
   "issued": false,
-  "notice": "UNSIGNED REQUEST. Not a mandate; grants no authority. Only the human/host issues a mandate, from the contract file it shows the human, and the worker relays it unchanged.",
+  "notice": "UNSIGNED REQUEST. Not a mandate; grants no authority. Contains no approval material: the host must render the complete contract from its own snapshot. Only the human/host issues a mandate; the worker relays it unchanged.",
   "target_host_context_schema_version": "0.1",
   "ready_for_issuance": true,
   "preflight_errors": [],
   "contract_sha256": "<canonical hash, same as verify>",
-  "review_material": {
-    "source_repository": "owner/repo", "issue_number": 12, "issue_url": "https://github.com/owner/repo/issues/12",
-    "head_ref": "branch", "base_ref": "main", "requested_actions": ["implement"],
-    "allowed_paths": ["..."], "prohibited_paths": ["..."],
-    "validation_ids": ["V1"], "exact_head_pr_history": "not checked before issuance; verify checks it after"
-  },
+  "exact_head_pr_history": "not checked before issuance; verify checks it after",
   "mandate_fields": {
     "id": null, "nonce": null, "issued_at": null, "expires_at": null,
     "contract_sha256": "<hash>",
@@ -281,12 +287,15 @@ Field rules:
   host offers exactly that subset.
 - `event.kind` is `null` even though the schema constant is `human`. The host
   asserts it, and a `null` keeps the untouched template invalid.
-- The paths come from the contract, which is worker-authored and labelled so. No
-  issue title, body or other remote prose is included.
+- The request has no scope, path, objective, criteria or validation summary. The
+  `contract_sha256` lets the host flag a mismatch with its own hash; it is never
+  the hash the host binds.
 
 Workflow change: the sentence "The worker may prepare an authorization request"
-names the command and adds: "Give the host the contract file and the request. The
-host hashes the contract itself; never fill in the request's `null` fields."
+names the command and adds: "Give the host the exact contract file and the
+request. The host renders and hashes the contract itself. Never write a summary
+for the human in place of the contract, and never fill in the request's `null`
+fields."
 Add the command to `docs/cli.md`, and add an issuer section to
 `docs/host-authorization.md` (see F2).
 
@@ -325,7 +334,9 @@ comparison of `check` output across the refactor.
    host context. Only GETs, no stdin read, and no file created in the working
    directory.
 8. An issue title, body and comment carrying injection text and control characters
-   do not appear anywhere in the output.
+   do not appear anywhere in the output. The output has no key other than the
+   documented ones; in particular it contains no scope, path, objective,
+   criteria or validation material (RD-01 pin).
 9. `contract_sha256` equals `verify`'s value and the documented recipe; a one-byte
    contract change changes it.
 10. Mutation testing in a `/tmp` copy: drop a binding field, swap head/target IDs,
@@ -377,6 +388,15 @@ the CLI has no write path.
   cryptographic.
 - **Overlong authority.** Local work sessions are short; a 24-hour mandate
   invites reuse beyond the reviewed task.
+- **Display/binding split** (RD-01). The host binds contract Y but shows the human
+  a worker-supplied summary of X, or an honest summary that omits validation argv.
+  Hash checks cannot detect this, so the issuer must render what the human sees
+  from the exact snapshot it binds.
+- **Replay after revocation** (RD-05). The CLI is stateless by design: the same
+  unexpired mandate verifies again and again (the reviewer's probe confirms
+  this). If the human revokes mandate M1 and approves M2 for the same contract, a
+  worker holding M1 can keep relaying it until M1 expires. Only the host can
+  refuse it, and only at the point where it consumes authority.
 
 ### Options
 
@@ -415,10 +435,23 @@ normative for any host issuer, including future Paseo and Claude Code integratio
    channel. The worker can at most *request* issuance; the response comes only
    from a human gesture in host UI. No agent-callable API (MCP tool, plugin RPC,
    permission-response tool) can complete it.
-2. **Material.** The host reads the contract file itself, recomputes its canonical
-   hash, and shows the human that hash, the structured `review_material` and the
-   offered action subset. It ignores the request's own `contract_sha256` except
-   to flag a mismatch.
+2. **One snapshot for display, hash and binding** (RD-01). The host reads the
+   contract bytes once and parses them with duplicate-key and nonfinite-number
+   rejection, as `strict_json` does. From that single immutable snapshot it:
+   - computes `contract_sha256`;
+   - renders what the human sees;
+   - derives the offered action subset (`execution.requested_actions`);
+   - fills the mandate bindings.
+
+   The human sees the **complete** contract through a renderer that treats it as
+   data, with no Markdown or HTML interpretation and control characters made
+   visible. That includes the objective, every behavior criterion, scope,
+   constraints, prohibited changes, prerequisites with their evidence, and every
+   validation `argv`. Worker or coordinator summaries, including any future
+   request fields, are untrusted hints. They are never the approval view. If the
+   host shows them at all, it rejects any that disagree with the snapshot. The
+   request's `contract_sha256` is used only to flag a mismatch with the host's own
+   hash, which aborts issuance.
 3. **Generated fields.** `id` and `event.reference` are the host's durable
    approval-record ID. `nonce` is ≥128 bits from a CSPRNG, base64url, 24–200
    characters, and is included in the approval text the human sees.
@@ -426,13 +459,34 @@ normative for any host issuer, including future Paseo and Claude Code integratio
    implement-only local work (the hard cap stays 24 hours). `event.text_sha256`
    hashes the exact retained approval text. `policy_review` records the human's
    decision on the pinned instruction and policy hashes.
-4. **Retention.** The host keeps the approval text, the material shown and the
-   mandate hash outside the worker's writable roots, and audits `verify`'s echoed
-   `mandate_sha256` against them.
-5. **Delivery.** Through stdin from a host-controlled file, issued before the
+4. **Retention.** The host keeps these outside the worker's writable roots:
+   - the contract snapshot bytes;
+   - the rendered approval view and the exact approval text;
+   - the mandate hash.
+
+   It audits `verify`'s echoed `contract_sha256` and `mandate_sha256` against
+   them.
+5. **Status registry and action-time checks** (RD-05). The host keeps a status per
+   `mandate_sha256`: `active`, `revoked`, `superseded` or `expired`. It checks
+   that status **whenever it consumes authority, not only when it issues**:
+   - before delivering a record to a verifier run;
+   - before any host-performed privileged action, such as the authorized push or
+     draft creation;
+   - before acting on, or forwarding to a coordinator, any `verify` result. Any
+     result whose echoed `mandate_sha256` is not `active` is void, whatever the
+     gates say.
+
+   A replacement mandate for the same contract is issued only after the previous
+   one is marked `revoked` or `superseded`. Revoking an implement-only mandate
+   also stops the worker's session for that contract (cancel the agent or remove
+   its worktree access). The stateless CLI cannot stop a worker from reusing a
+   copy it already holds, so this is the host's only effective lever.
+6. **What is single-use.** Repeatable under an `active` mandate: `verify` runs at
+   any stage, local implementation, and local validation. Single-use per mandate,
+   enforced by the host: draft creation (one PR) and consumption of a final
+   sign-off. A replay of a consumed or non-`active` record is refused.
+7. **Delivery.** Through stdin from a host-controlled file, issued before the
    verifier starts (unchanged).
-6. **Single use.** The host refuses to issue a second mandate for the same
-   contract hash while one is unexpired, unless the human revokes the first.
 
 Per host, kept as notes because these are integration work outside this
 repository (#23):
@@ -463,9 +517,20 @@ accepts.
    rejected; one equal to `requested_actions: ["implement"]` is accepted.
 3. Workflow-resource test: the text forbids coordinator issuance and approving on
    the human's behalf, and defines local-only as implement-only.
-4. The host-issuer requirements carry no code tests here; they become the
-   acceptance checklist for the out-of-repository issuer (#23), checked by an
-   independent reviewer when that issuer ships.
+4. The host-issuer requirements carry no code tests here. They become the
+   acceptance checklist for the out-of-repository issuer (#23), and these issuer
+   negative tests are mandatory there:
+   - a correct contract hash paired with a forged or stale summary: issuance
+     aborts, or the summary is ignored and the full snapshot is shown;
+   - two contracts with the same validation ID but different `argv`: the approval
+     views differ, and the `argv` is visible;
+   - a request hash that differs from the host's own: issuance aborts;
+   - an unexpired mandate replayed after revocation and replacement: delivery is
+     refused and any `verify` result echoing it is void;
+   - a second draft creation under one mandate is refused;
+   - an approval arriving through an agent-callable API is rejected.
+
+   An independent reviewer checks them when the issuer ships.
 
 ### Out of scope
 
@@ -511,15 +576,16 @@ A local base is worker-controlled data. The vectors are:
 | Option | Pros | Cons |
 | --- | --- | --- |
 | A. Scope out stacked bases and document the procedure | No new surface; honest | The dogfood loop cannot reach `technical_evidence_valid` |
-| B. Host-context 0.2 local-base mandate: the human pins the base commit and its instruction hash; implement-only by schema; evidence base must equal the pin | Closes vectors 1–7: 1 and 2 by human pinning plus review material, 3 by schema, 4 by SHA, 5 by mandate hash, 6 by existing Git guards plus object-only reads | A new host-context version and more verifier code. Useless until a host can issue mandates. |
+| B. Host-context 0.2 local-base mandate: the human pins the base commit; implement-only by schema; evidence base must equal the pin | Vectors 3–5 and 7 close cleanly (schema, SHA, mandate hash) | Vectors 1 and 2 close only if the human actually reviews the full source-to-base diff and instruction contents. No host can show that today, and a path inventory is not a review (RD-02). Needs a raw-byte Git read path (RD-03) and an implementation-time checkout binding (RD-04). Useless until an issuer exists. |
 | C. A published non-default base branch (`base_ref` ≠ default; read instructions and compare at that ref) | GitHub-verifiable; stacked PRs could be published | The owner must push the base. Instruction and approval sources split across refs; a non-default PR target; draft-update interplay (#21). A larger trust change that needs its own design. |
 | D. Trust `evidence.base_commit` when local ancestry holds | Trivial | Vector 1 directly: the worker chooses the base. Rejected. |
 
 ### Recommendation
 
-A now; B as a deferred slice that is fully specified below. Build B only after a
-native issuer exists (F2/#23). Until then no one can conveniently issue the
-mandate it extends, and A is the honest behavior. C stays out of scope.
+A only. B is **not specified** in this design (revision 1 specified it; the review
+showed that its central closure claim rested on review material that cannot
+establish a review). It is recorded below as a future direction with explicit
+preconditions. C stays out of scope.
 
 ### A: exact workflow changes (now)
 
@@ -530,8 +596,10 @@ Add to `instructions.md`, schema 0.2 implementation section:
 > commits cannot reach `technical_evidence_valid` in this version. Before
 > requesting a mandate, tell the human. Do not encode this as a prerequisite:
 > prerequisites gate implementation, and this is an evidence-stage fact. Record
-> it as a constraint and in the ledger. For local-only work under an
-> implement-only mandate:
+> it as a constraint naming the stacked base by its full SHA, and in the ledger.
+> The human then sees the base as part of the complete contract they approve.
+> That constraint is not verifier-enforced. Start the branch from exactly that
+> commit. For local-only work under an implement-only mandate:
 > - use `scope-check --repo-dir checkout --base <full stacked-base SHA>` for
 >   early scope feedback;
 > - record the evidence honestly;
@@ -547,229 +615,144 @@ Add to `instructions.md`, schema 0.2 implementation section:
 > reviewed fields over by hand, review, and obtain a new mandate. Rebase the head
 > onto a default-branch commit that contains the base, re-run every validation,
 > regenerate the evidence, and obtain a new independent review. Old evidence,
-> review and mandate do not transfer.
+> review and mandate do not transfer. This holds whatever the landing method;
+> after a squash or rebase landing the old commit IDs no longer exist upstream.
 
 `docs/host-authorization.md` and README "Current limits": one line saying that
 stacked or unpublished bases are unsupported for technical evidence, with a link
 to the procedure.
 
-### B: the local-base mandate (deferred slice)
+### Future direction: a local-base mandate (not specified)
 
-**New schema** `agent_contribute/schemas/host-context/0.2.schema.json`. It is a
-copy of 0.1 with these differences:
+A later design may let the human pin an unpublished base in a mandate. It must
+not be specified or built until all of these hold. They come from the review of
+revision 1:
 
-- `schema_version: {"const": "0.2"}`.
-- No `publication` or `final_signoff` properties. The closed schema rejects them,
-  so the schema itself enforces local-only.
-- `mandate.actions`: `{"type": "array", "items": {"const": "implement"},
-  "minItems": 1, "maxItems": 1}`, which enforces implement-only by schema.
-- A required `mandate.local_base`:
+1. **A real base review** (RD-02). A trusted host retrieves the complete
+   `source.commit..base` diff and the full applicable instruction contents from
+   the exact pinned Git objects, and presents them for an explicit base-review
+   decision. If a limit truncates the material, issuance stops until the
+   remainder is reviewed and that continuation is recorded. The host retains what
+   was reviewed. Path counts and lists are navigation aids only. A benign base and
+   a base that disables a check inside the same file have identical path
+   inventories.
+2. **A raw-byte object read** (RD-03). `core.git_read` decodes text-mode output and
+   `strip()`s it (`core.py:631-643`), which alters final newlines, leading
+   whitespace and CRLF. Instruction hashing needs a separate raw-byte path:
+   - with the same environment, hook, replace and graft protections;
+   - with blob size checked (`cat-file -s`) before the bounded read;
+   - with UTF-8 validated without normalization.
 
-```json
-"local_base": {
-  "type": "object", "additionalProperties": false,
-  "required": ["commit", "instructions_sha256"],
-  "properties": {
-    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-    "instructions_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-  }
-}
-```
+   Existing text-mode callers stay unchanged. It needs local/remote equality
+   tests for final newlines, leading whitespace and CRLF.
+3. **Checkout binding at the implementation gate** (RD-04). Before
+   `implementation_ready`, and independently of evidence, the verifier checks:
+   - the checkout's GitHub remote and the active branch equal the bound repository
+     and `head_ref`;
+   - the pinned base is an ancestor of `HEAD`;
+   - divergent or dirty instruction files leave implementation unresolved.
 
-`local_base` is required, so host-context 0.2 has exactly one meaning: the
-local-base profile. A plain mandate keeps exactly one encoding (0.1). The
-`policy_review.status: clear` in a 0.2 mandate attests to both the pinned
-default-branch instructions (`policy_review.instructions_sha256`, unchanged
-check) and the local-base instructions (`local_base.instructions_sha256`).
+   The workflow tells the worker to start from the pinned base. It needs
+   sibling-HEAD, wrong-branch and wrong-remote counterexample tests.
+4. **Host revocation and status enforcement** (RD-05), as in the F2 issuer
+   requirements. Otherwise a revoked base B1 can be replayed after the human
+   approves B2 for the same contract.
+5. **Rules already established in revision 1 that still apply:**
+   - implement-only and no publication or sign-off sections, enforced by schema;
+   - exact evidence base equality;
+   - a new exact host-context version that leaves 0.1 untouched;
+   - approval policy is never read from a local base.
 
-**Code changes:**
-
-- `core.bundled_schema`: host-context accepts the exact set `{'0.1', '0.2'}`;
-  anything else is still `unsupported_schema`.
-- `authorization.check` selects the schema by the host context's
-  `schema_version`. A non-dict or unknown version gives a schema error, as now.
-  For 0.2 it echoes `user_authorization.local_base = {commit,
-  instructions_sha256, verified}`.
-- A new shared helper, `core.instruction_paths(blob_paths)`, extracted from
-  `repository_snapshot`, so remote and local selection cannot drift. This is a
-  pure refactor; the snapshot output is pinned by goldens.
-- A new `core.local_instructions_hash(directory, commit)`:
-  - reads **Git objects only** (`git ls-tree -r -z <commit>`, `git cat-file blob
-    <oid>`) through `git_read` with its existing hook, replace and graft guards,
-    and never the working tree;
-  - accepts only mode `100644`/`100755` blobs;
-  - fails closed on a symlink (`120000`) or gitlink at a selected path, on more
-    than 60 files, on any file over 200 kB, and on non-UTF-8 content;
-  - excludes `.agent-contrib.json` as the remote snapshot does (approval policy is
-    always read live from GitHub, never from a local base);
-  - produces the same canonical `[{path, sha256}]` hash as
-    `snapshot['instructions_sha256']`.
-- `lifecycle.verify` with a 0.2 host context:
-  - `--repo-dir` is required at **every** stage. Without it the implementation
-    blocker is "Local-base mandate requires --repo-dir".
-  - At every stage, all of these must hold, or the error is "Local base is
-    missing, not stacked on the reviewed source commit, or its instructions
-    differ from the mandate":
-    - `local_base.commit` exists in the checkout as a commit;
-    - `merge-base --is-ancestor source.commit local_base.commit` succeeds;
-    - `local_instructions_hash` equals the mandate's.
-  - `check_evidence` gets a new keyword `local_base=None`. With `None` the code
-    path is byte-for-byte today's. When set:
-    - `evidence.base_commit` must equal `local_base.commit` exactly;
-    - the GitHub compare of the evidence base is replaced by the local
-      `source.commit → local_base → HEAD` ancestry checks, which already exist;
-    - every other evidence check is unchanged: scope diff `local_base..HEAD`,
-      head ref, clean tree, remote, gitlinks, validations, criteria, review and
-      artifacts.
-  - The check that the reviewed `source.commit` is in current default-branch
-    history is **unchanged**. The source pin stays GitHub-authenticated.
-  - Draft and completion add the blocker "Local-base mandates authorize local
-    implementation only; re-prepare after the base lands". `draft_create_ready`,
-    `publication.verified` and `completion_ready` are always false.
-- `authorization-request --local-base REV --repo-dir CHECKOUT`:
-  - resolves REV with `git rev-parse --verify REV^{commit}` through `git_read`;
-  - sets `target_host_context_schema_version: "0.2"`;
-  - pre-fills `mandate_fields.local_base`, with `actions` still `null`;
-  - adds `review_material.local_base`:
-    - `commits_ahead_of_source` (a count);
-    - `changed_paths`: `source.commit..local_base`, sanitized, capped at 500, with a
-      `truncated` flag;
-    - `instruction_paths_changed`;
-    - `policy_file_changed`.
-
-  This is what the human must look at to rule out vectors 1 and 2. The
-  `--local-base` option is a usage error without `--repo-dir`.
-- `instructions` output: `supported_host_context_versions: ["0.1", "0.2"]`.
-
-**How each vector is closed:**
-
-| Vector | Closure | Residual |
-| --- | --- | --- |
-| 1 Scope laundering | The human pins the base SHA after seeing `changed_paths` for `source..base`. The worker cannot change it afterwards. | A rubber-stamping human. The blast radius is local only (vector 3). |
-| 2 Instruction laundering | A separate local instruction hash with the changed instruction paths flagged. Instructions are never authority. Approval policy is read live from the default branch only. | The human's policy review quality |
-| 3 Publication smuggling | Schema: implement-only, no publication or sign-off sections, plus explicit draft and completion blockers. Publication needs the A procedure (re-prepare after the base lands). | None in the CLI. Pushing is the host's control. |
-| 4 Base substitution | Exact SHA equality between the mandate and the evidence base; content addressing | Git SHA-1 (collision-detecting) strength |
-| 5 Downgrade or mixing | `local_base` is inside the hashed mandate, so stripping it changes `mandate_sha256`, and a stacked evidence base then fails the GitHub compare. `contract_sha256` binds the mandate to one contract. | None new |
-| 6 Hostile Git | Existing `git_read` guards; object-only reads; symlink, gitlink, size and count limits fail closed. Shallow or missing history makes `--is-ancestor` fail closed. | Not a sandbox (unchanged boundary) |
-| 7 Issue text | The base comes only from the human-issued mandate; the request merely proposes it. | None new |
-
-### Backward compatibility
-
-- Task and evidence schemas 0.1/0.2: unchanged.
-- Host-context 0.1: the schema file, the code path and every error string are
-  unchanged. A 0.1 document carrying `local_base` is still a schema error.
-- Older CLIs reject host-context 0.2 as an unknown version (fail closed).
-- A 0.2 document is accepted only by a CLI that implements all of B.
-
-### Test plan
-
-Fixtures are temporary Git repositories with a published source commit `A`
-(FakeGitHub reports it as the default tip), unpublished commits `B1..Bn`
-(the local base), and a head branch `C` on top.
-
-1. **Compatibility goldens.** Every existing host-context 0.1 test fixture gives
-   byte-identical `verify` JSON and exit codes before and after the change.
-   Snapshot `instructions_sha256` goldens are unchanged by the `instruction_paths`
-   refactor.
-2. **Happy path.** 0.2 with `local_base = Bn`, evidence base `Bn`, in-scope diff:
-   `implementation_ready` true and `technical_evidence_valid` true with no
-   `compare` GET for `Bn`. Draft and completion are false with the local-only
-   blocker, and the draft-stage exit code is 1.
-3. **Base pin.** Fails when:
-   - evidence base = `A`, or evidence base = `B(n-1)`;
-   - `local_base` is not a descendant of `A` (a sibling branch);
-   - the `local_base` commit is absent from the checkout;
-   - the checkout is a shallow clone missing `A`.
-4. **Instruction hash.**
-   - Fails when the mandate hash was computed before a later `AGENTS.md` change in
-     `Bn`.
-   - Passes when only the worktree `AGENTS.md` is dirty; it reads objects only.
-     The dirty tree still fails the separate clean-tree evidence check, which
-     proves the two checks stay independent.
-   - Fails on a symlinked `AGENTS.md`, a gitlink at `CONTRIBUTING.md`, a 201 kB
-     `README.md`, non-UTF-8 content, and more than 60 instruction files.
-   - A `refs/replace` object substituting `AGENTS.md` is ignored.
-5. **Scope laundering is visible.** An out-of-scope file changed in `B1` appears
-   in `authorization-request` `review_material.local_base.changed_paths`. The
-   same file changed in `C` fails scope.
-6. **Profile enforcement by schema.** Each of these is a schema error:
-   - `actions: ["implement", "create_draft"]`, or `["create_draft"]`;
-   - a `publication` section, or a `final_signoff` section;
-   - a missing `local_base`.
-7. **Version handling.** Rejected as before:
-   - `schema_version: "0.3"`;
-   - a 0.1 document with a `local_base` key;
-   - a mix (`"0.2"` without `local_base`).
-8. **Downgrade.** The same mandate re-wrapped as 0.1 without `local_base` has a
-   different `mandate_sha256`, and stacked evidence fails with today's message.
-9. **Repo-dir requirement.** 0.2 without `--repo-dir` fails at the implementation
-   stage.
-10. **`authorization-request --local-base`.**
-    - The round-trip test from F3 works with 0.2: the filled mandate verifies.
-    - Without `--repo-dir` the command exits 2.
-    - A short SHA or branch name resolves to the full SHA.
-    - A nonexistent revision exits 1.
-11. **Mutation testing** in a `/tmp` copy. Each mutant must be killed:
-    - drop the base-equality check;
-    - drop the ancestry check;
-    - hash worktree files instead of objects;
-    - allow `create_draft`;
-    - skip `--repo-dir` at the implementation stage;
-    - take `instruction_paths` from a divergent list;
-    - let the 0.1 path take the `local_base` branch.
+Until then, stacked work follows A: land the base, then prepare again.
 
 ### Out of scope
 
-Publishing stacked work (Option C, a non-default `base_ref`), draft updates
-(#21), forks (#22), automatic rebasing, and carrying evidence across the landing
-of a base.
+Any local-base mandate (see the preconditions above), publishing stacked work
+(Option C, a non-default `base_ref`), draft updates (#21), forks (#22), automatic
+rebasing, and carrying evidence across the landing of a base.
 
 ---
 
 ## Compatibility matrix
 
-| Input | Before | After slices 1–3 | After slice 4 |
-| --- | --- | --- | --- |
-| Task 0.1, any evidence | old decisions | identical | identical |
-| Task 0.2 plus host-context 0.1 | current decisions | identical (`route_errors` refactor golden-pinned) | identical |
-| Task 0.2 plus host-context 0.2 | unknown version, fail closed | unknown version, fail closed | local-base profile |
-| Task 0.1 plus any host context | rejected | rejected | rejected |
-| `authorization-request` | n/a | 0.2 tasks only | plus `--local-base` |
+No slice in this design changes a schema. Host-context 0.2 stays an unknown
+version throughout, and fails closed (RD-06).
+
+| Input | Before | After slices 1–4 |
+| --- | --- | --- |
+| Task 0.1, any evidence | old decisions | identical |
+| Task 0.2 plus host-context 0.1 | current decisions | identical (`route_errors` refactor golden-pinned) |
+| Task 0.2 plus host-context 0.2 or any other version | unknown version, fail closed | unknown version, fail closed |
+| Task 0.1 plus any host context | rejected | rejected |
+| `authorization-request` | n/a | 0.2 tasks only; host-context 0.1 bindings only |
 
 ## Ordered implementation slices
 
 Each slice is independently shippable, keeps all existing tests passing, and gets
-its own hostile review.
+its own hostile review. "Tonight" marks slices that depend on no pending host
+feature.
 
-1. **Workflow field mapping and route documentation (F6, F2 and F1-A docs).**
-   Changes `instructions.md`, `docs/host-authorization.md` (local-only profile,
-   coordinator rules), README limits and `development-status.md`. Adds tests: the
-   workflow-resource assertions plus regression pins for prerequisite blocking,
-   implement-only semantics and stacked-base evidence failing with today's
-   message. No code behavior change.
+1. **Workflow field mapping and route documentation (F6, F2 local-only profile and
+   coordinator rules, F1-A).**
+   - Changes `instructions.md`, `docs/host-authorization.md`, README limits and
+     `development-status.md`.
+   - The host-authorization text restates that the human sees the complete
+     contract, never a summary (RD-01).
+   - Tests: workflow-resource assertions, plus regression pins for prerequisite
+     blocking, implement-only semantics and stacked-base evidence failing with
+     today's message.
+   - No code behavior change. **Safe tonight.**
 2. **`route_errors` refactor.** A pure extraction from `authorization.check` with a
-   golden equivalence test on `check` output. Shipping it separately keeps the
-   F3 diff free of authorization-logic churn.
-3. **`authorization-request` command (F3)** with the full F3 test plan, including
-   the round-trip and the "request is not host context" tests. Adds docs in
-   `docs/cli.md`.
-4. **Host-issuer requirements (F2)** in `docs/host-authorization.md`, plus the #23
-   status update. These are the acceptance checklist for out-of-repository Paseo
-   and Claude Code issuers. Docs only; it can ship in parallel with 3 but is
-   ordered after it because it references the request format.
-5. **Local-base mandate (F1-B), deferred.** Build only after a native issuer from
-   slice 4 exists. It ships as three commits on one branch, each tested:
-   - (a) the `instruction_paths` refactor with goldens;
-   - (b) `local_instructions_hash` with the Git-boundary tests;
-   - (c) host-context 0.2 schema, the verifier and `authorization-request
-     --local-base` with the full B test plan.
+   golden equivalence test on `check` output. **Safe tonight**; it can be the
+   first commit of slice 3.
+3. **`authorization-request` command (F3).**
+   - Read-only, stdout only, no display summary.
+   - Ships with the full F3 test plan: the round-trip, the "request is not host
+     context" test, and the RD-01 no-summary pin. Adds docs in `docs/cli.md`.
+   - **Safe tonight.** It needs no host feature: a human issuing by hand from a
+     separate terminal can use it today.
+4. **Host-issuer requirements (F2)** in `docs/host-authorization.md`:
+   - one-snapshot display, hash and binding;
+   - the status registry and action-time checks;
+   - single-use rules;
+   - the mandatory issuer negative tests;
+   - the #23 status update.
+
+   Docs only; it is ordered after 3 because it references the request format.
+   **Safe tonight as documentation.** The issuers it governs are host work outside
+   this repository.
+
+Not planned: the local-base mandate. Reopen it as a new design only when the
+F1 preconditions hold, starting with a host that can present the full
+source-to-base diff (RD-02).
 
 ## Open decisions for Niko
 
 - Whether per-contract human approval is acceptable friction for coordinator-run
   local work, or whether standing delegation (F2 Option C) should get its own risk
   review. This design assumes per-contract approval.
-- Whether the recommended 8-hour expiry for implement-only local mandates should
-  instead become a verifier-enforced cap in host-context 0.2.
-- Whether slice 5 is wanted at all, or whether "land the base first" (F1-A) is the
-  permanent answer.
+- Whether "land the base first" (F1-A) is the permanent answer for stacked work,
+  or whether a host diff-review capability should be planned so the local-base
+  direction can be reopened.
+
+## Review resolution
+
+Review: `review-rd-sol.md` (GPT-6.1-Sol, high), against revision 1 (`7468f0c`):
+`BLOCK`, C=0 H=1 M=4 L=1. Each finding was checked independently against the
+code and the revision-1 text. All six are confirmed; none is disputed.
+
+| ID | Severity | Verdict | Independent check | Change in revision 2 |
+| --- | --- | --- | --- | --- |
+| RD-01 | High | Confirmed | The revision-1 F2 "Material" item told the host to show the request's `review_material`, which was neither bound nor complete (validation IDs only). The reviewer's probe shows two contracts differing only in `argv` with identical summaries, the changed one reaching `implementation_ready: true`. This matches the text and lifecycle code. | `review_material` removed from the request. Issuer requirement 2 now demands one parsed snapshot for hash, display and bindings, a complete data-rendered contract including every `argv`, summaries treated as untrusted hints, and abort on hash mismatch. Mandatory issuer negative tests added. The F3 threat model is corrected: the fail-closed guarantee covers bindings only. |
+| RD-02 | Medium | Confirmed | A path inventory cannot distinguish a benign edit from a disabled check in the same file. The revision-1 closure table claimed otherwise. | The F1-B specification is removed. F1 recommends A only. A full diff and instruction review by a trusted host is now precondition 1 for any future local-base design. |
+| RD-03 | Medium | Confirmed | `core.git_read` uses `text=True` and returns `stdout.strip()` for non-`-z` calls (`core.py:640-643`), so `cat-file blob` output cannot reproduce the remote byte hash. | Recorded as precondition 2: a separate raw-byte, size-checked read path; text-mode callers unchanged; newline, whitespace and CRLF equality tests. |
+| RD-04 | Medium | Confirmed | `check_evidence` (remote, branch and ancestry checks) runs only when evidence is supplied (`lifecycle.py:205-211`), and the revision-1 implementation-gate checks did not tie the base to `HEAD`, the branch or the remote. | Recorded as precondition 3. For F1-A, the stacked base is now named by full SHA in a constraint that the human sees in the full contract, with an explicit note that it is not verifier-enforced. |
+| RD-05 | Medium | Confirmed | `authorization.check` has no revocation or consumption input, and the same record authorizes on every call, as the probe shows. Revision 1 governed only issuance. | New issuer requirements 5–6: status per mandate hash, checked at delivery, at host actions and when acting on a `verify` result; replacement only after revocation; revocation stops the worker session; single-use versus repeatable operations listed; a replay negative test. The CLI stays stateless. |
+| RD-06 | Low | Confirmed | The matrix's "After slice 4" column showed 0.2 support that only slice 5 would have added. | Moot after the F1-B removal. The matrix now has one "After slices 1–4" column, with host-context 0.2 rejected throughout. |
+
+The review's other notes are preserved:
+
+- F1-A forbids carrying stale evidence and now names squash/rebase landings.
+- F6 remains a self-attested convention and is never presented as
+  verifier-enforced.
+- The acknowledged same-credential forgery non-goal is unchanged.
