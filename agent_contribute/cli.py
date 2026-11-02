@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
+from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -84,6 +84,9 @@ def prevalidate(args):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
     elif args.command == 'audit':
         core.parse_repository(args.repository)
+    elif args.command == 'authorization-request':
+        args.task = core.read_json(args.contract)  # read once; dispatch builds from this object
+        authrequest.check_contract(args.task)
     elif args.command in ('verify', 'drift', 'pr-body'):
         # Each file is read once; dispatch uses these objects, so a file changed later cannot change the route.
         args.evidence_data = None
@@ -150,6 +153,9 @@ def main(argv=None):
                           'not proof of human consent')
     sub.add_argument('--observe-ci', action='store_true',
                      help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub = commands.add_parser('authorization-request',
+                              help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
+    sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
@@ -234,6 +240,9 @@ def main(argv=None):
                       'contract_sha256': verification.get('contract_sha256'),
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
             code = 0
+        elif args.command == 'authorization-request':
+            result = authrequest.build(args.task)
+            code = 0 if result.get('ready_for_issuance') is True else 1
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
@@ -296,7 +305,7 @@ def main(argv=None):
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:
-        result = {'error': {'code': exc.code, 'message': str(exc)}}
+        result = getattr(exc, 'payload', None) or {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}

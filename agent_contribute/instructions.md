@@ -24,9 +24,12 @@ only reads GitHub. Implementation and any authorized publication use host tools.
      must be the same; publication base is the source's default branch. This
      route refuses a fork-to-parent target change rather than swapping targets.
    Run `agent-contrib inspect 'owner/repo#N' --ai-policy` and read every
-   excerpt in context. Respect any refusal of AI contributions; record the
-   review in the contract and disclose it in the PR body. Zero hits are not
-   permission.
+   excerpt in context. Respect any refusal of AI contributions. Record the result
+   as the contract prerequisite `ai-policy-review`: `satisfied` with evidence
+   naming the source commit, scan coverage, excerpt count and your conclusion;
+   `blocked` when the repository refuses AI contributions; `pending` while
+   coverage is incomplete or excerpts are unresolved. Disclose agent assistance
+   in the PR body. Zero hits are not permission.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Build the repository
    requirements ledger below before marking the task reviewed. Resolve questions,
@@ -82,11 +85,21 @@ Do not invent a requirement when the repository has none. Missing resources are
 not permission to substitute a smaller check. Select another feasible task or
 report the blocker when required work cannot be completed.
 
-Map requirements into existing task criteria, constraints, prerequisites,
-validation and definition-of-done fields where their schemas permit. Reference
-the ledger in existing review notes; do not add undeclared schema fields or
-silently change old contract semantics. A ledger supplies no authority, waiver
-or human sign-off. Keep the existing readiness gates intact.
+Map requirements into existing fields; never add undeclared schema fields or
+silently change old contract semantics:
+
+- conditions that must hold before implementation go in `prerequisites`; every
+  prerequisite must be `satisfied` with evidence before implementation;
+- obligations due during or after implementation (precommit gates, docs,
+  compliance review, publication checks) go in `constraints`, `validation` or
+  `behavior_criteria`, never in `prerequisites`;
+- the ledger itself goes in one `constraints` entry starting `Requirements
+  ledger:`, naming it by a portable name rather than a host path or content hash;
+- the reviewer's compliance conclusion goes in evidence
+  `independent_review.notes` with the SHA-256 of the exact ledger version checked.
+
+A ledger supplies no authority, waiver or human sign-off. Keep the existing
+readiness gates intact.
 
 ### During implementation and before committing
 
@@ -159,8 +172,23 @@ The human or trusted host retains the actual human event, the reviewed material
 shown at approval time, and an issued mandate hash outside worker control. Current
 Claude Code, Codex and Paseo installations do not automatically emit this new
 record. Use an explicit human/host handoff; report missing host capability rather
-than inventing it. The worker may prepare an authorization request and relay a
-human/host-issued mandate unchanged. If it is absent, remain pending.
+than inventing it. The worker may prepare an authorization request with
+`agent-contrib authorization-request task.json`, give the host it and the exact
+contract file, and relay a human/host-issued mandate unchanged. Never fill in the
+request's `null` fields. If it is absent, remain pending. The human
+must see the complete contract, never a worker-written summary in its place.
+
+**Local-only work.** When the user wants local implementation without
+publication, request only `implement`. An implement-only mandate authorizes
+commits on the reviewed `head_ref` in a local checkout; it does not authorize a
+push, PR, comment or other GitHub write, and `draft_create_ready` stays false by
+design. Report the draft and completion blockers as expected, not as failures.
+
+**Coordinators.** A coordinator or orchestrator agent may forward the worker's
+request and the exact contract file to the human/host and return the issued
+host context unchanged. It must not issue, edit, re-serialize or approve one,
+including by answering host permission prompts on the human's behalf. If no host
+can issue, stay pending and report the missing host capability.
 
 Host context schema `0.1` has three independently hashed sections:
 
@@ -211,6 +239,24 @@ isolated branch/worktree from the reviewed source base and implement with host
 tools. Preserve unrelated work, inspect builds/tests before running them, and
 keep credentials away from untrusted code. Any task/scope/identity/policy change
 requires reviewed rebinding; a mandate cannot silently authorize changed work.
+
+**Stacked or unpublished bases.** Schema 0.2 evidence authenticates its base
+against the source default branch's GitHub history, so an unpublished commit
+cannot be the evidence base. A published base works: the checked diff then
+includes the whole unpublished stack, which must all belong to the approved
+contribution, stay within scope, and be tested and reviewed with it. When the
+stack holds a separate dependency that must be excluded from this contribution,
+the work cannot reach `technical_evidence_valid` in this version. Tell the human
+before requesting a mandate. Record it as a constraint naming the stacked base by full
+SHA (the human sees it in the contract; the verifier does not enforce it) and in
+the ledger, not as a prerequisite. Start the branch from exactly that commit.
+Ledger the checkout's instructions at that revision too. Under an implement-only
+mandate, use `scope-check --base` for early feedback, record evidence honestly
+and report the actual evidence error; never claim technical validity. To publish
+later, wait until the base lands on the default branch, prepare and review a new
+contract, obtain a new mandate, rebase onto a default-branch commit containing
+the base, and redo validations, evidence and independent review. Old evidence,
+review and mandate do not transfer, whatever the landing method.
 
 While implementing, `agent-contrib scope-check task.json --repo-dir checkout`
 reports out-of-scope paths early without GitHub reads. A pass is not evidence;

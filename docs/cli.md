@@ -26,6 +26,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
+| `agent-contrib authorization-request task.json` | Schema 0.2 only: an unsigned request with every mandate binding pre-filled from the contract and live reads and every human-only field `null`. Grants nothing; exit 1 when not ready |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base REV]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base REV --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
@@ -126,6 +127,29 @@ non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 `instructions.resources` lists both task/evidence versions and host-context
 schema 0.1. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
+
+## Authorization request
+
+`authorization-request task.json` makes the same GitHub reads as `verify
+task.json` without host context, writes no file and reads no stdin. It first
+validates the full task 0.2 schema: a schema 0.1 or unknown version is a usage
+error (exit 2), and an invalid contract returns `error.code: invalid_contract`
+with `schema_errors` and no template (exit 1), before any read; the payload is
+identical with `--report-budget`, which takes no budget snapshot in that case.
+
+The output has `issued: false`, `contract_sha256`, `mandate_fields`,
+`human_only_fields`, `unresolved_fields`, `preflight_errors` and
+`ready_for_issuance` (exit 0 only when true). In a ready request the `null`
+leaves of `mandate_fields` are exactly `human_only_fields`. When identity or
+permission reads fail, `credential_actor_id` and `authority` are also `null` and
+listed in `unresolved_fields`; only fresh trusted reads resolve them.
+`preflight_errors` omit the blockers that exist only because no mandate exists
+yet. They are untrusted diagnostics and may contain repository-authored paths.
+
+The request deliberately contains no scope, path, objective, criteria or
+validation summary. The host renders the complete contract from the file it
+hashes, issues the record, and the worker relays it unchanged. The request is not
+host context: piping it to `verify --host-context-stdin` fails schema validation.
 
 ## Offline scope check
 

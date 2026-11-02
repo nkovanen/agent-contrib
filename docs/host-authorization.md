@@ -23,7 +23,10 @@ Before implementation, the worker presents:
 - repository policy/instruction findings and their hashes, unresolved questions
   and any overlapping work.
 
-The human approves that concrete scope or requests changes. A previous request
+The host shows the human the complete reviewed contract, rendered as data from
+the same file it hashes, including every validation command, never a summary
+written by the worker or a coordinator. The human approves that concrete scope
+or requests changes. A previous request
 to investigate, a coordinator message, an issue body, a self-authored contract or
 successful tests cannot substitute for that decision. The worker stops if the
 host cannot supply an actual record. The host keeps what the human was shown,
@@ -38,6 +41,21 @@ and mismatched identities fail closed. Enterprise-managed login forms containing
 underscores are currently unsupported. Use canonical repository spelling from
 discovery; case-variant schema 0.2 preparation can be refused conservatively. This verifies the credential, not the
 human who supplied it.
+
+## Local-only work
+
+A mandate with `actions: ["implement"]` is the local-only profile: it authorizes
+commits on the reviewed head ref in a local checkout and nothing on GitHub.
+Draft readiness stays false by design. A coordinator agent may forward the
+request and contract to the human/host and relay the issued record unchanged; it
+never issues, edits or approves one, including through host permission prompts.
+
+An unpublished commit cannot be the evidence base for schema 0.2 evidence,
+because the base must be in the source default branch's history. With a
+published base, the whole unpublished stack is part of the checked diff and must
+belong to the approved contribution. To exclude a separate stacked dependency,
+land it first, then prepare, authorize, validate and review again; see the
+installed workflow.
 
 ## Three separately sourced records
 
@@ -79,6 +97,68 @@ ID, nonce and event reference, the exact final head and the hash of
 `evidence.independent_review`. Final sign-off must follow review and publication
 and be current when completion is checked. Human sign-off is absent from evidence
 schema 0.2; evidence alone cannot supply it.
+
+## Host issuer requirements
+
+These are normative for any host that issues mandates, including future Paseo
+and Claude Code integrations. No issuer ships with this CLI: anything the worker
+can invoke through its tools would be self-issuance.
+
+1. **Placement.** Issuance completes only through a human gesture in host UI,
+   outside the worker's and any coordinator's tool channel. No agent-callable
+   API, such as an MCP tool, plugin RPC or permission-response tool, can complete
+   it. The worker may only request issuance, for example with
+   `agent-contrib authorization-request`.
+2. **One snapshot.** The host reads the contract bytes once, parses them strictly
+   (duplicate keys and nonfinite numbers rejected), and from that one parsed
+   snapshot computes the contract hash, renders the complete contract as data
+   (every criterion, scope entry, constraint, prerequisite and validation
+   command, with control characters made visible), derives the offered actions
+   and fills the bindings. Worker or coordinator summaries are untrusted hints,
+   never the approval view. A request hash that differs from the host's own
+   aborts issuance.
+3. **Generated fields.** `id` and `event.reference` are the host's durable
+   approval-record ID. `nonce` comes from a CSPRNG (at least 128 bits) and
+   appears in the approval text. `issued_at` is now. Prefer `expires_at` no
+   more than 8 hours ahead for implement-only work (the hard cap is 24 hours).
+   `event.text_sha256` hashes the exact retained approval text.
+   `policy_review` records the human's decision on the pinned hashes.
+4. **Retention.** Keep the contract bytes, the rendered approval view, the
+   approval text and the mandate hash outside the worker's writable roots, and
+   audit the echoed `contract_sha256` and `mandate_sha256` against them.
+5. **Status and action-time checks.** Keep a status per `mandate_sha256`:
+   `active`, `revoked` or `superseded`. Expiry is not a status; it is the
+   record's own `expires_at`, which ends permission for new actions only. Check
+   status whenever authority is consumed, not only at issuance:
+   - New actions (implementation, the authorized push, draft creation) need an
+     `active`, unexpired mandate.
+   - Recognizing a draft created inside the mandate interval, and completion with
+     a separate current final sign-off, need only a mandate that is not
+     `revoked` or `superseded`. An expired original may be delivered for this.
+     It is the only record that can show the PR was created inside its interval,
+     so the host never substitutes a fresh mandate for it.
+   - A `verify` result echoing a `revoked` or `superseded` mandate hash is void,
+     whatever the gates say. A result from an expired mandate counts only for
+     recognition and completion.
+   - Issue a replacement for the same contract only after marking the previous
+     record `revoked` or `superseded`. Revoking an implement-only mandate also
+     stops the worker's session for that contract; the stateless CLI cannot stop
+     a worker from reusing a copy it already holds.
+6. **What repeats.** Repeatable under an `active`, unexpired mandate: `verify`
+   at any stage, local implementation and validation. Repeatable under any
+   non-revoked, non-superseded mandate: recognition and completion checks.
+   Single-use per mandate, enforced by the host: draft creation and consumption
+   of a final sign-off.
+7. **Delivery.** Through stdin from a host-controlled file, issued before the
+   verifier starts.
+
+Mandatory issuer tests, checked by an independent reviewer when an issuer ships:
+a correct contract hash paired with a forged or stale summary; two contracts with
+the same validation ID and different commands; a request hash mismatch; replay of
+an unexpired mandate after revocation and replacement; a second draft creation;
+an approval arriving through an agent-callable API; and the post-expiry journey,
+where a timely draft created under the original mandate is still recognized and
+completed with a current sign-off while new actions stay refused.
 
 ## Reproduce hashes independently
 

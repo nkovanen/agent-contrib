@@ -35,6 +35,10 @@ def prepare_v2(inspected, client):
     return task
 
 
+# Exact-head history is read only under a valid mandate; say so rather than implying it was read.
+HISTORY_UNCHECKED = 'Exact-head PR history not checked: requires a valid mandate'
+
+
 def check_publication(binding, publication_claim, expected_head, client):
     # Lazy import keeps legacy users independent of the new publication boundary.
     from .pr_identity import check_publication as check
@@ -184,8 +188,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     review = independent_review(task, evidence, now)
     result['independent_review'] = review
     publication = result['publication']
-    # Exact-head history is read only under a valid mandate; say so rather than implying it was read.
-    unchecked = 'Exact-head PR history not checked: requires a valid mandate'
+    unchecked = HISTORY_UNCHECKED
     if authority['historical_valid']:
         claim = host_context.get('publication')
         head = evidence['git_head'] if result['technical_evidence_valid'] else None
