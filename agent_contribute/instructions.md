@@ -6,41 +6,42 @@ only reads GitHub. Implementation and any authorized publication use host tools.
 
 ## Quick path: "Go help owner/repo"
 
-A summary of the sections below; it never overrides them. Put global options
-such as `--report-budget` and `--format` before the subcommand.
+A summary of the sections below; it never overrides them. Global options such as
+`--report-budget` and `--format` go before the subcommand.
 
-1. Record `agent-contrib --version` and the user's exact request. A bare help
-   request grants discovery and a reviewable draft contract only.
-2. `agent-contrib --report-budget discover owner/repo --signals` ranks open
-   issues; `--signals` re-ranks by a heuristic score, never approval. Add
-   `--responsiveness` to see whether outside PRs get merged. Drop excluded and
-   overlapping issues.
-3. For each shortlisted issue run
-   `agent-contrib inspect 'owner/repo#N' --ownership` (claims, linked PRs,
-   possible prior fixes) and complete the repository policy step below. Read
-   every reported excerpt and claim in context.
-4. `agent-contrib prepare 'owner/repo#N' --output task.json` writes a schema 0.1
-   draft; add `--schema-version 0.2` only for an owner/maintainer same-repository
-   candidate. Fill the contract and the requirements ledger as described below.
-5. `agent-contrib verify task.json` (0.1) or
-   `agent-contrib verify task.json --stage implementation` (0.2) reports the
-   contract hash and blockers. For 0.2, `agent-contrib authorization-request
-   task.json` prepares the unsigned request for the human/host.
+1. Record `agent-contrib --version` and the user's exact request.
+2. `agent-contrib --report-budget discover owner/repo --signals` ranks issues
+   (`--signals` re-ranks heuristically, never approves); add `--responsiveness`
+   to see whether outside PRs get merged. Drop excluded or overlapping issues.
+3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
+   (claims, linked PRs, prior fixes) and complete the repository policy step below.
+4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add
+   `--schema-version 0.2` for the owner/maintainer same-repository route). Fill
+   the contract and the requirements ledger as described below.
+5. `agent-contrib verify task.json` (0.1) or `agent-contrib verify task.json
+   --stage implementation` (0.2) shows the hash and blockers; for 0.2,
+   `agent-contrib authorization-request task.json` prepares the host request.
+6. Edit only with the user's actual authorization and a passing gate. 0.1:
+   `execution_ready: true`. 0.2: `agent-contrib verify task.json --stage
+   implementation --host-context-stdin`, host-issued context unchanged on stdin,
+   with `implementation_ready: true`. Then work on an isolated branch: `scope-check`,
+   `evidence init`, the repository's real checks and independent review.
+7. Publish only with separate user authorization and a passing publication gate.
+   0.1: `upstream_submission_ready: true` (`fork_completion_ready: true` for a
+   fork experiment). 0.2: `verify ... --evidence
+   evidence.json --repo-dir checkout --stage draft --host-context-stdin` with
+   `draft_create_ready: true`; publish as a draft PR only, add the publication
+   claim and rerun until `publication.verified: true`.
+8. 0.2 completion needs a separate, later human/host final sign-off for the exact
+   final head and `--stage completion` with `completion_ready: true`. Until then
+   report the draft as pending acceptance. Never mark the PR ready, merge or release.
 
-**Stop and report** (present the contract, its hash and the blockers) when:
-
-- the user made a bare help request: implementation needs separate approval;
-- the repository policy step finds a refusal or restriction, or is unresolved;
-- an open PR, claim or possible prior fix overlaps the task, or a read is incomplete;
-- schema 0.2 has no human/host-issued mandate (never write one yourself), or
-  schema 0.1 lacks the user's explicit execution authorization;
-- before any push, PR or comment: publication needs its own user authorization;
-  never merge.
-
-With authorization: implement on an isolated branch, run `scope-check` while
-working, `evidence init` before recording real results, the repository's checks
-and independent review, then `verify` with `--evidence` (`--stage draft` for
-0.2). `pr-body` and `feedback` support an authorized PR.
+**Stop and report** (contract, hash, blockers) when: the user made a bare help
+request; the repository policy step finds a refusal or restriction, or is
+unresolved; a PR, claim or prior fix overlaps the task, or a read is incomplete;
+schema 0.2 has no human/host-issued mandate (never write one) or schema 0.1 lacks
+the user's explicit execution authorization; a gate in steps 6-8 is false;
+publication needs its own user authorization; final sign-off is pending.
 
 ## Start with discovery, then choose a contract version
 

@@ -1,5 +1,6 @@
 """The workflow starts with a short quick path that defers to the detailed rules, without duplicates."""
 import importlib.resources
+import re
 import unittest
 
 
@@ -37,10 +38,46 @@ class QuickPathTests(unittest.TestCase):
         self.assertIn('**Stop and report', section)
         for point in ('bare help request', 'repository policy step', 'overlap', 'incomplete',
                       'no human/host-issued mandate', 'explicit execution authorization',
-                      'publication needs its own user authorization', 'never merge'):
+                      'a gate in steps 6-8 is false', 'publication needs its own user authorization',
+                      'final sign-off is pending'):
             with self.subTest(point=point):
                 self.assertIn(point, section)
         self.assertIn('never overrides', section)
+
+
+def steps():
+    """Numbered quick-path steps, each flattened to one line."""
+    parts = re.split(r'\n(?=\d\. )', quick_path().split('**Stop and report')[0])
+    return {int(part[0]): ' '.join(part.split()) for part in parts if part[:1].isdigit()}
+
+
+class QuickPathGateTests(unittest.TestCase):
+    def test_editing_requires_authorization_and_the_passing_execution_gate(self):
+        gate = next(text for text in steps().values() if text.startswith('6. '))
+        self.assertIn("Edit only with the user's actual authorization and a passing gate", gate)
+        self.assertIn('0.1: `execution_ready: true`', gate)
+        self.assertIn('0.2: `agent-contrib verify task.json --stage implementation --host-context-stdin`', gate)
+        self.assertIn('`implementation_ready: true`', gate)
+        self.assertIn('host-issued context unchanged', gate)
+        section = ' '.join(quick_path().split())
+        self.assertLess(section.index('`implementation_ready: true`'), section.index('isolated branch'))
+
+    def test_publication_requires_its_own_authorization_and_the_draft_gate(self):
+        gate = steps()[7]
+        self.assertIn('separate user authorization and a passing publication gate', gate)
+        self.assertIn('0.1: `upstream_submission_ready: true`', gate)
+        self.assertIn('--stage draft --host-context-stdin', gate)
+        self.assertIn('`draft_create_ready: true`', gate)
+        self.assertIn('as a draft PR only', gate)
+        self.assertIn('`publication.verified: true`', gate)
+
+    def test_completion_requires_a_separate_final_signoff_and_is_reported_pending_until_then(self):
+        final = steps()[8]
+        self.assertIn('separate, later human/host final sign-off', final)
+        self.assertIn('--stage completion', final)
+        self.assertIn('`completion_ready: true`', final)
+        self.assertIn('pending acceptance', final)
+        self.assertIn('Never mark the PR ready, merge or release', final)
 
 
 class DeduplicationTests(unittest.TestCase):

@@ -13,6 +13,9 @@ class SkillTests(unittest.TestCase):
         skill = resource('adapters/agent-contribute/SKILL.md')
         self.assertIn('agent-contrib --format text instructions', skill)
         self.assertIn('Quick path', skill)
+        flat = ' '.join(skill.split())
+        # An older CLI's workflow has no quick path; the Skill must not send the agent looking for one.
+        self.assertIn('"Quick path" section if it has one; otherwise follow the returned workflow directly', flat)
         self.assertLess(len(skill), 2000)
         self.assertIsNone(re.search(r'--signals|discover owner', skill))  # the flow lives in the workflow
 
