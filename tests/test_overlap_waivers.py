@@ -441,6 +441,18 @@ class BaseTipTests(WaiverFixture):
         self.client.tips['main'] = '3' * 40  # PR base.sha still equals the bound tip
         self.assert_blocked(self.verify(evidence=False), 'Overlap disposition stale for PR #31: base tip')
 
+    def test_malformed_base_ref_blocks(self):
+        original = self.client.request
+        for name, value in [('tag object', {'ref': 'refs/heads/main', 'object': {'type': 'tag', 'sha': TIP}}),
+                            ('other ref', {'ref': 'refs/heads/mainline', 'object': {'type': 'commit', 'sha': TIP}}),
+                            ('short sha', {'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': '1' * 39}}),
+                            ('list', [{'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': TIP}}])]:
+            with self.subTest(case=name):
+                self.client.request = lambda endpoint, value=value: (
+                    copy.deepcopy(value) if endpoint == TIP_ENDPOINT else original(endpoint))
+                self.assert_blocked(self.verify(evidence=False), 'Overlap disposition base tip read failed for PR #31')
+        self.client.request = original
+
     def test_unreadable_tip_blocks(self):
         self.client.failed = {TIP_ENDPOINT}
         self.assert_blocked(self.verify(evidence=False), 'Overlap disposition base tip read failed for PR #31')
