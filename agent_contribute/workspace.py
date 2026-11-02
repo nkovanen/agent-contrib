@@ -138,7 +138,8 @@ def require_outside_checkout(directory, output):
 
 
 MAX_LOCAL_COMMITS = 500
-LOCAL_SCAN = 65536
+MAX_COMMIT_BYTES = 65536
+MAX_LOCAL_BYTES = 4 * 1024 * 1024
 LOCAL_NOTICE = ('Report only. Issues referenced (#N or owner/repo#N for the source repository) by commits reachable '
                 'from the checkout HEAD but not from the source default-branch commit. A reference is not proof that '
                 'the work is done, and no reference is not proof that it is not.')
@@ -157,19 +158,41 @@ def local_issue_references(directory, repository, base):
         except core.ProtocolError:
             raise core.ProtocolError('missing_base', f'Source default-branch commit {base} is not in this checkout; '
                                      'fetch it with your own tools (the CLI never fetches)') from None
-        raw = core.git_read(directory, 'log', '-z', '--no-decorate', '--no-show-signature', '--no-color',
-                            '--format=%H%n%B', f'--max-count={MAX_LOCAL_COMMITS + 1}', head, '^' + base)
-        entries = [entry for entry in raw.split('\0') if entry.strip()]
-        if len(entries) > MAX_LOCAL_COMMITS:
+        if core.git_read(directory, 'rev-parse', '--is-shallow-repository') != 'false':
+            # A shallow boundary can hide intermediate commits while git log still succeeds (review R11-02).
+            raise core.ProtocolError('shallow_checkout', 'Checkout is shallow, so local history may be missing; '
+                                     'deepen it with your own tools (git fetch --unshallow) and retry')
+        commits = core.git_read(directory, 'rev-list', f'--max-count={MAX_LOCAL_COMMITS + 1}', head, '^' + base).split()
+        if len(commits) > MAX_LOCAL_COMMITS:
             report['errors'].append(f'More than {MAX_LOCAL_COMMITS} local commits after the source default branch; '
                                     f'only the newest {MAX_LOCAL_COMMITS} were read')
-            entries = entries[:MAX_LOCAL_COMMITS]
+            commits = commits[:MAX_LOCAL_COMMITS]
+        # Bound bytes before any message is read: object sizes first, then only commits within both limits.
+        sizes = core.git_read(directory, 'cat-file', '--batch-check=%(objectname) %(objectsize)',
+                              input=''.join(sha + '\n' for sha in commits)).split('\n') if commits else []
+        readable, total = [], 0
+        for record in sizes:
+            sha, _, size = record.partition(' ')
+            if not core.SHA.fullmatch(sha) or not size.isdigit():
+                raise core.ProtocolError('git_error', 'Unexpected git cat-file output')
+            if int(size) > MAX_COMMIT_BYTES:
+                report['errors'].append(f'Commit {sha} is larger than {MAX_COMMIT_BYTES} bytes; its message was not read')
+            elif total + int(size) > MAX_LOCAL_BYTES:
+                report['errors'].append(f'Local commit messages exceed {MAX_LOCAL_BYTES} bytes in total; only the newest '
+                                        'commits within that bound were read')
+                break
+            else:
+                readable.append(sha)
+                total += int(size)
+        raw = core.git_read(directory, 'log', '-z', '--no-walk=unsorted', '--no-decorate', '--no-show-signature',
+                            '--no-color', '--format=%H%n%B', *readable) if readable else ''
+        entries = [entry for entry in raw.split('\0') if entry.strip()]
         referenced = {}
         for entry in entries:
             sha, _, message = entry.strip('\n').partition('\n')
             if not core.SHA.fullmatch(sha):
                 raise core.ProtocolError('git_error', 'Unexpected git log output')
-            for number in _issue_refs(message[:LOCAL_SCAN], repository):
+            for number in _issue_refs(message, repository):  # whole message: never a cut token
                 commits = referenced.setdefault(number, [])
                 if sha not in commits and len(commits) < 10:
                     commits.append(sha)

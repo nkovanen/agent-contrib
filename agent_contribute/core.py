@@ -756,7 +756,8 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args):
+def git_read(directory, *args, input=None):
+    """input, when given, is sent on stdin (for example object IDs to cat-file --batch-check); otherwise stdin is closed."""
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
@@ -771,8 +772,8 @@ def git_read(directory, *args):
                                  # Full stat and mode checks: relaxed checkout settings could hide an edit.
                                  '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
-                                 '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
-                                capture_output=True, text=not nul_delimited, timeout=15, shell=False)
+                                 '-C', str(directory), *args], env=env, capture_output=True, timeout=15, shell=False,
+                                text=not nul_delimited, **({'stdin': subprocess.DEVNULL} if input is None else {'input': input}))
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
         # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.

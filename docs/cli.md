@@ -387,11 +387,14 @@ reading the issue.
 `local_work` object for unpublished local work. It lists the issue numbers
 referenced as `#N` or `owner/repo#N` (the source repository only)
 in the messages of commits reachable from the checkout's HEAD but not from the
-snapshot's source default-branch commit. It reads the newest 500 commits at most
-and 64 KiB of each message, with the hardened Git reader after the worktree-root
-and checkout-config checks. A missing base commit (the CLI never fetches), an
-unsafe config, a subdirectory or more than 500 commits make it incomplete,
-which exits 1. With `--signals`, each issue gets `signals.local_work`
+snapshot's source default-branch commit. It lists the newest 500 commits at most,
+checks each commit object's size before reading any message, and reads only
+whole messages: a commit larger than 64 KiB is skipped, and reading stops once
+messages would exceed 4 MiB in total. Reads use the hardened Git reader after the
+worktree-root and checkout-config checks. A missing base commit (the CLI never
+fetches), a shallow checkout (a shallow boundary can hide commits), an unsafe
+config, a subdirectory, more than 500 commits or a skipped message make it
+incomplete, which exits 1. With `--signals`, each issue gets `signals.local_work`
 (`referenced`, `none` or `unknown`), and a referenced issue ranks below every
 other candidate that is not excluded or overlapping. Its score, gates and
 exclusions are unchanged. Without `--signals` the issue order is unchanged. A

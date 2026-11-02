@@ -16,6 +16,7 @@ def checkout(tmp):
     def git(*argv):
         return subprocess.check_output(['git', '-C', tmp, '-c', 'user.name=Test', '-c', 'user.email=test@example.org',
                                         *argv], text=True).strip()
+    git.directory = tmp
     git('init', '-q')
     pathlib.Path(tmp, 'README.md').write_text('base')
     git('add', '.')
@@ -33,6 +34,19 @@ def run(client, *argv):
     with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
         code = cli.main(list(argv))
     return code, json.loads(output.getvalue())
+
+
+def import_commits(git, messages):
+    """Many commits quickly: fast-import appends to the current branch without touching the worktree."""
+    branch, parent = git('symbolic-ref', 'HEAD'), git('rev-parse', 'HEAD')
+    stream = []
+    for index, message in enumerate(messages):
+        data = message.encode('utf-8')
+        stream.append(f'commit {branch}\nmark :{index + 1}\ncommitter T <t@e> 1700000000 +0000\n'
+                      f'data {len(data)}\n'.encode() + data + b'\n' +
+                      (f'from {parent}\n' if index == 0 else '').encode())
+    subprocess.run(['git', '-C', git.directory, 'fast-import', '--quiet'], input=b''.join(stream), check=True)
+    return git('rev-parse', 'HEAD')
 
 
 class LocalWorkTests(unittest.TestCase):
@@ -103,6 +117,65 @@ class LocalWorkTests(unittest.TestCase):
             sub = pathlib.Path(tmp, 'sub')
             sub.mkdir()
             self.assertFalse(workspace.local_issue_references(str(sub), 'acme/photos', base)['complete'])
+
+    def test_message_bytes_are_bounded_before_reading_and_never_parsed_partially(self):
+        # Review R11-01: a 64 Ki character slice turned '#1234567890' into '#12' and buffered whole messages.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            near = import_commits(git, ['x' * 65000 + ' Fixes #11'])
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual((report['complete'], report['issues']), (True, [{'number': 11, 'commits': [near]}]))
+            long = import_commits(git, ['x' * 65532 + ' #1234567890'])
+            wide = import_commits(git, ['\u00e9' * 40000 + ' Fixes acme/photos#12'])
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['issues'], [{'number': 11, 'commits': [near]}])
+            for commit_id in (long, wide):
+                self.assertIn(f'Commit {commit_id} is larger than 65536 bytes; its message was not read', report['errors'])
+            self.assertEqual(report['commits_scanned'], 1)
+
+    def test_total_message_bytes_are_bounded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            import_commits(git, [f'Step {n} #12 ' + 'y' * 60000 for n in range(72)])
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertIn('Local commit messages exceed 4194304 bytes in total; only the newest commits within that '
+                          'bound were read', report['errors'])
+            self.assertLess(report['commits_scanned'], 72)
+            self.assertEqual(report['issues'][0]['number'], 12)
+
+    def test_the_500_commit_limit_is_exact(self):
+        # Review mutant R11-M03: the earlier test patched the limit, so 500 itself was never pinned.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            import_commits(git, [f'Step {n}' for n in range(500)])
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual((report['complete'], report['commits_scanned'], report['commit_limit']), (True, 500, 500))
+            import_commits(git, ['One more for #12'])
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['commits_scanned'], 500)
+            self.assertIn('More than 500 local commits after the source default branch; only the newest 500 were read',
+                          report['errors'])
+
+    def test_shallow_checkout_is_incomplete_even_when_the_base_is_present(self):
+        # Review R11-02: a shallow boundary can hide intermediate commits while git log still succeeds.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            commit(git, 'Fix #12')
+            tip = commit(git, 'Unrelated')
+            pathlib.Path(tmp, '.git', 'shallow').write_text(tip + '\n')
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['issues'], [])
+            self.assertEqual(report['errors'], ['Checkout is shallow, so local history may be missing; deepen it with '
+                                                'your own tools (git fetch --unshallow) and retry'])
+            client = SignalGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--signals', '--repo-dir', tmp)
+            self.assertEqual(code, 1)
+            self.assertEqual({item['signals']['local_work']['value'] for item in result['issues']}, {'unknown'})
 
     def test_cli_exit_usage_and_no_gate_change(self):
         with tempfile.TemporaryDirectory() as tmp:
