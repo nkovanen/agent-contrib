@@ -234,6 +234,26 @@ class RequestCLITests(unittest.TestCase):
                     self.assertTrue(result['error']['schema_errors'])
                 self.assertNotIn('mandate_fields', json.dumps(result))
 
+    def test_invalid_contract_payload_is_identical_with_and_without_budget(self):
+        from agent_contribute import budget
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'task.json')
+            with open(path, 'w', encoding='utf-8') as handle:
+                json.dump({'schema_version': '0.2'}, handle)
+            results = []
+            for flags in ((), ('--report-budget',)):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output), \
+                        patch.object(core, 'GitHub', side_effect=AssertionError('no GitHub read expected')), \
+                        patch.object(budget, 'snapshot', side_effect=AssertionError('no budget read expected')):
+                    code = cli.main([*flags, 'authorization-request', path])
+                results.append((code, json.loads(output.getvalue())))
+        self.assertEqual(results[0], results[1])
+        code, result = results[0]
+        self.assertEqual(code, 1)
+        self.assertEqual(result['error']['code'], 'invalid_contract')
+        self.assertIn('$.source: missing', result['error']['schema_errors'])
+
     def test_text_format_and_budget_prevalidation(self):
         code, result = self.invoke('--report-budget', 'authorization-request', 'task.json', task={'schema_version': '0.2'})
         self.assertEqual(code, 1)

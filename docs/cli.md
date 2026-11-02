@@ -111,7 +111,8 @@ that is the same host-asserted boundary as the CLI, not a privileged API.
 task.json` without host context, writes no file and reads no stdin. It first
 validates the full task 0.2 schema: a schema 0.1 or unknown version is a usage
 error (exit 2), and an invalid contract returns `error.code: invalid_contract`
-with `schema_errors` and no template (exit 1), before any read.
+with `schema_errors` and no template (exit 1), before any read; the payload is
+identical with `--report-budget`, which takes no budget snapshot in that case.
 
 The output has `issued: false`, `contract_sha256`, `mandate_fields`,
 `human_only_fields`, `unresolved_fields`, `preflight_errors` and

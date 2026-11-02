@@ -15,18 +15,25 @@ HUMAN_ONLY_FIELDS = ['id', 'nonce', 'issued_at', 'expires_at', 'actions', 'polic
                      'event.binding_sha256']
 
 
+class InvalidContract(core.ProtocolError):
+    """Carries the schema errors so every caller, with or without budget reads, reports the same payload."""
+
+    def __init__(self, schema_errors):
+        super().__init__('invalid_contract', 'Contract does not match its bundled schema')
+        self.payload = {'error': {'code': self.code, 'message': str(self), 'schema_errors': schema_errors[:100]}}
+
+
 def check_contract(task):
     """Fail before any GitHub read; route extraction indexes fields the schema guarantees."""
     if not isinstance(task, dict) or task.get('schema_version') != '0.2':
         raise core.ProtocolError('usage', 'Authorization requests require an explicit schema 0.2 contract')
-    return core.validate_contract(task)
+    schema_errors = core.validate_contract(task)
+    if schema_errors:
+        raise InvalidContract(schema_errors)
 
 
 def build(task, client=None):
-    schema_errors = check_contract(task)
-    if schema_errors:
-        return {'error': {'code': 'invalid_contract', 'message': 'Contract does not match its bundled schema',
-                          'schema_errors': schema_errors[:100]}}
+    check_contract(task)
     verified = lifecycle.verify(task, client=client or core.GitHub())
     source, execution = task['source'], task['execution']
     actions = execution['requested_actions']

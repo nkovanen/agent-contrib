@@ -66,8 +66,8 @@ def prevalidate(args):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
     elif args.command == 'audit':
         core.parse_repository(args.repository)
-    elif args.command == 'authorization-request' and authrequest.check_contract(core.read_json(args.contract)):
-        raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
+    elif args.command == 'authorization-request':
+        authrequest.check_contract(core.read_json(args.contract))
     elif args.command in ('verify', 'drift', 'pr-body'):
         if getattr(args, 'evidence', None):
             core.read_json(args.evidence)
@@ -261,7 +261,7 @@ def main(argv=None):
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:
-        result = {'error': {'code': exc.code, 'message': str(exc)}}
+        result = getattr(exc, 'payload', None) or {'error': {'code': exc.code, 'message': str(exc)}}
         code = 2 if exc.code == 'usage' else 1
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}
