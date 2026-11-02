@@ -1,6 +1,7 @@
 """Round 3a reviewer follow-ups: bounded parsing, report identity and single name parsing."""
 import base64
 import contextlib
+import copy
 import io
 import json
 import unittest
@@ -44,6 +45,32 @@ class NonfiniteJSONTests(unittest.TestCase):
         self.assertEqual(result['approval']['status'], 'unknown')
         self.assertIn('Could not read repository instruction: .agent-contrib.json', result['errors'])
 
+
+
+class OwnershipIdentityTests(unittest.TestCase):
+    def collision(self, second_id_offset):
+        from agent_contribute import ownership
+        from tests.test_ownership import NOW, TimelineGitHub, xref
+        client = TimelineGitHub()
+        first = xref('other/fork', 4)
+        second = copy.deepcopy(first)
+        second['created_at'] = '2030-01-01T00:05:00Z'  # a distinct event, not a repeated page item
+        second['source']['issue']['repository']['id'] += second_id_offset
+        client.timeline = [first, second]
+        client.comments = []
+        client.pulls['other/fork/4']['base']['repo']['id'] += second_id_offset
+        return ownership.ownership_signals('acme/photos', 12, client, NOW)
+
+    def test_conflicting_repository_ids_for_one_pr_leave_the_report_incomplete(self):
+        result = self.collision(1000)
+        self.assertFalse(result['complete'])
+        self.assertTrue(any('other/fork#4' in error and 'repository ID' in error for error in result['errors']),
+                        result['errors'])
+
+    def test_identical_duplicate_references_still_deduplicate(self):
+        result = self.collision(0)
+        self.assertTrue(result['complete'], result['errors'])
+        self.assertEqual(len(result['cross_referenced_prs']), 1)
 
 if __name__ == '__main__':
     unittest.main()
