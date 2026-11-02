@@ -33,6 +33,20 @@ class QuickPathTests(unittest.TestCase):
         self.assertLess(section.index("inspect 'owner/repo#N'"), section.index("prepare 'owner/repo#N'"))
         self.assertLess(section.index("prepare 'owner/repo#N'"), section.index('authorization-request'))
 
+    def test_repository_policy_step_names_its_command_and_sections(self):
+        # Dogfood 3 F43/F44: the step must say where it is and which command feeds it. Since policy-v2 the
+        # repository policy report is default-on, so the step must not tell agents to pass the ignored --ai-policy.
+        section = ' '.join(quick_path().split())
+        self.assertIn("agent-contrib inspect 'owner/repo#N' --ownership", section)
+        self.assertIn('the policy report is always added', section)
+        self.assertNotIn('--ai-policy', section)
+        text = resource('instructions.md')
+        for heading in ('Start with discovery, then choose a contract version', 'Repository requirements'):
+            with self.subTest(heading=heading):
+                self.assertIn('"' + heading.split(',')[0] + '"', section)
+                self.assertIn('\n## ' + heading, text)
+        self.assertIn('`ai-policy-review`', section)
+
     def test_quick_path_states_every_stop_point_and_defers_to_the_detail(self):
         section = ' '.join(quick_path().split())
         self.assertIn('**Stop and report', section)

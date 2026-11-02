@@ -68,6 +68,16 @@ class DocsConsistencyTests(unittest.TestCase):
                 with self.subTest(path=path.name, target=target):
                     self.assertTrue((path.parent / target).exists())
 
+    def test_product_map_lists_shipped_output_schemas_as_implemented(self):
+        # Dogfood 3 F45: the map still listed the shipped output schemas as missing.
+        from agent_contribute import outputs
+        text = (ROOT / 'docs' / 'product-map.md').read_text('utf-8')
+        implemented = text.split('### Implemented')[1].split('### Partly implemented')[0]
+        self.assertTrue(outputs.SCHEMAS)
+        self.assertIn('G1 ', implemented)
+        self.assertNotIn('Missing: output JSON Schemas', text)
+        self.assertNotIn('G1 output schemas', text)
+
     def test_product_map_covers_every_tracked_issue(self):
         text = (ROOT / 'docs' / 'product-map.md').read_text('utf-8')
         for number in [n for n in range(1, 29) if n != 2]:  # #2 is a pull request, not an issue

@@ -121,8 +121,12 @@ def safe_text(value, limit=100000):
 
 class GitHub:
     """Only fixed GET endpoints; no gh aliases, shell, writes, or remote argv."""
-    def request(self, endpoint):
-        for attempt in range(3):
+    def request_once(self, endpoint):
+        """One transport attempt, no retry: for callers that bound and report their own GitHub reads."""
+        return self.request(endpoint, attempts=1)
+
+    def request(self, endpoint, attempts=3):
+        for attempt in range(attempts):
             try:
                 env = dict(os.environ, GH_PROMPT_DISABLED='1', GH_NO_UPDATE_NOTIFIER='1')
                 env.pop('GH_DEBUG', None)
@@ -142,7 +146,7 @@ class GitHub:
                     except UnicodeError as exc:
                         raise ProtocolError('api_error', 'GitHub returned invalid UTF-8') from exc
                 transient = bool(re.search(r'(?i)\b(429|500|502|503|504)\b|rate.limit|secondary.limit', error))
-                if transient and attempt < 2:
+                if transient and attempt < attempts - 1:
                     time.sleep(attempt + 1)
                     continue
                 # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
@@ -160,11 +164,11 @@ class GitHub:
         return paginate(self, endpoint)
 
 
-def paginate(client, endpoint, key=None):
+def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
     """key derives an identity for endpoints whose items lack id/number/name (timeline events)."""
     items, errors, seen = [], [], set()
     page_count = 0
-    for page in range(1, MAX_PAGES + 1):
+    for page in range(1, max_pages + 1):
         separator = '&' if '?' in endpoint else '?'
         try:
             data = client.request(f'{endpoint}{separator}per_page=100&page={page}')
@@ -188,7 +192,7 @@ def paginate(client, endpoint, key=None):
             errors.append(str(exc))
             break
     else:
-        errors.append('Pagination reached the 40-page limit')
+        errors.append(f'Pagination reached the {max_pages}-page limit')
     return {'items': items, 'complete': False, 'pages': page_count, 'errors': errors}
 
 
@@ -530,9 +534,15 @@ def inspect_issue(reference, client=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False):
+def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None):
     client = client or GitHub()
-    result, snapshot = discover_with_snapshot(repository, client, signals=signals)
+    result, snapshot = discover_with_snapshot(repository, client, signals=signals, assignees=bool(check_top))
+    if repo_dir is not None:
+        local_work(result, snapshot, repo_dir, signals)
+    # Checked after the local re-sort, so locally referenced issues are not spent from the top N.
+    if check_top and signals and snapshot is not None:
+        from .signals import check_top as recheck
+        result['top_check'] = recheck(result, client, check_top, dt.datetime.fromisoformat(result['fetched_at']))
     if responsiveness:
         from .signals import responsiveness as report
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
@@ -541,7 +551,49 @@ def discover(repository, client=None, *, signals=False, responsiveness=False):
     return result
 
 
-def discover_with_snapshot(repository, client=None, *, signals=False):
+def local_work(result, snapshot, repo_dir, signals):
+    """F12, report only: with --signals, locally referenced issues move below every other candidate that is not
+    excluded or overlapping (known work below unknown); scores, gates and exclusions are unchanged."""
+    from .workspace import local_issue_references, LOCAL_NOTICE
+    if snapshot is None:
+        report = {'complete': False, 'head': None, 'base': None, 'commits_scanned': 0, 'commit_limit': 0, 'issues': [],
+                  'errors': ['Discovery did not resolve a source snapshot; the checkout was not read'],
+                  'notice': LOCAL_NOTICE}
+    else:
+        report = local_issue_references(repo_dir, snapshot['repository'], snapshot['commit'])
+    result['local_work'] = report
+    if not signals or snapshot is None:
+        return
+    commits = {item['number']: item['commits'] for item in report['issues']}
+    for issue in result['issues']:
+        found = commits.get(issue['number'])
+        issue['signals']['local_work'] = (
+            {'value': 'referenced', 'commits': found, 'explanation': f'Referenced by {len(found)} local commit(s) not in '
+             'the source default branch; the work may already exist'} if found else
+            {'value': 'none' if report['complete'] else 'unknown', 'commits': [],
+             'explanation': 'No local reference found' if report['complete'] else 'The checkout was not read completely'})
+    result['issues'].sort(key=lambda item: issue_order(item, True))
+    result['ordering'] = KNOWN_BAD_ORDERING
+
+
+KNOWN_BAD_ORDERING = ('exclusions, overlaps, known bad (locally referenced, or demoted by --check-top), low '
+                      'likelihood, then higher signal score, then issue number')
+
+
+def known_bad(item):
+    """Evidence that the work is done or taken: a local commit reference (--repo-dir) or a --check-top demotion."""
+    return bool(item.get('top_check', {}).get('demotions') or
+                (item.get('signals') or {}).get('local_work', {}).get('value') == 'referenced')
+
+
+def issue_order(item, signals):
+    # One key for every ordering: known-bad issues go below every other candidate, never below blocked ones.
+    return (bool(item['exclusions']), bool(item['duplicates']), known_bad(item),
+            item['ranking']['success_likelihood']['value'] == 'low',
+            -item['signals']['score'] if signals else 0, item['number'])
+
+
+def discover_with_snapshot(repository, client=None, *, signals=False, assignees=False):
     """The snapshot is internal context for read-only reports such as audit; it is never output."""
     repository = parse_repository(repository)
     client = client or GitHub()
@@ -583,13 +635,14 @@ def discover_with_snapshot(repository, client=None, *, signals=False):
                 from .signals import issue_signals
                 issues[-1]['signals'] = issue_signals(item, snapshot['blob_paths'],
                                                       dt.datetime.fromisoformat(snapshot['fetched_at']))
+                if assignees:  # --check-top input only, so plain --signals output is unchanged
+                    from .signals import assignees as current_assignees
+                    issues[-1]['signals']['assignees'] = current_assignees(item)
             if not inspected['complete']:
                 errors.extend(inspected['errors'])
         except ProtocolError as exc:
             errors.append(str(exc))
-    issues.sort(key=lambda item: (bool(item['exclusions']), bool(item['duplicates']),
-                                  item['ranking']['success_likelihood']['value'] == 'low',
-                                  -item['signals']['score'] if signals else 0, item['number']))
+    issues.sort(key=lambda item: issue_order(item, signals))
     extra = {'ordering': 'exclusions, overlaps, low likelihood, then higher signal score, then issue number'} if signals else {}
     return {**context, **extra, 'schema_version': VERSION, 'repository': source, 'commit': snapshot['commit'],
             'fetched_at': snapshot['fetched_at'], 'complete': not errors, 'errors': sorted(set(errors)),
@@ -721,8 +774,9 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args, index_file=None, raw=False, timeout=15):
-    """raw=True returns Git's exact output bytes: no decoding and no newline conversion (object parsing)."""
+def git_read(directory, *args, index_file=None, raw=False, timeout=15, input=None):
+    """raw=True returns Git's exact output bytes: no decoding and no newline conversion (object parsing).
+    input, when given, is sent on stdin (object IDs for cat-file --batch-check); otherwise stdin is closed."""
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
@@ -742,8 +796,9 @@ def git_read(directory, *args, index_file=None, raw=False, timeout=15):
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
                                  # POSIX has symlinks: a file standing in for a tracked symlink is a change.
                                  *(('-c', 'core.symlinks=true') if os.name == 'posix' else ()),
-                                 '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
-                                capture_output=True, text=not (nul_delimited or raw), timeout=timeout, shell=False)
+                                 '-C', str(directory), *args], env=env, capture_output=True,
+                                text=not (nul_delimited or raw), timeout=timeout, shell=False,
+                                **({'stdin': subprocess.DEVNULL} if input is None else {'input': input}))
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
         if raw:
@@ -974,6 +1029,15 @@ def scope_violations(scope, paths):
     return violations
 
 
+def base_relation(task, base, tip, status=None):
+    """Names the offending base and what it was compared with; the SHAs are schema/API-validated, the rest sanitized."""
+    where = f'{safe_text(task["source"]["repository"], 200)} default branch {safe_text(task["source"]["default_branch"], 200)} at {tip}'
+    if status is None:
+        return f'base {base} compared with {where}'
+    phrase = {'ahead': 'is ahead of', 'diverged': 'is diverged from'}.get(status) if isinstance(status, str) else None
+    return f'base {base} {phrase or "has comparison status " + safe_text(str(status), 40) + " against"} {where}'
+
+
 def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None,
                    schema_version='0.1', attestations=('independent_review', 'human_signoff')):
     errors = schema_errors(evidence, bundled_schema('evidence', schema_version))
@@ -990,9 +1054,11 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
             # GitHub compares HEAD (evidence base) against BASE (observed upstream tip).
             # Only behind/identical proves the evidence base belongs to upstream history.
             if comparison.get('status') not in ('behind', 'identical'):
-                errors.append('Evidence base is not in current source default-branch history')
-        except ProtocolError:
-            errors.append('Could not authenticate evidence base against source default-branch history')
+                errors.append('Evidence base is not in current source default-branch history: ' +
+                              base_relation(task, evidence['base_commit'], current_commit, comparison.get('status')))
+        except ProtocolError as exc:
+            errors.append('Could not authenticate evidence base against source default-branch history: ' +
+                          base_relation(task, evidence['base_commit'], current_commit) + ': ' + str(exc))
     if evidence['contract_sha256'] != digest:
         errors.append('Evidence contract hash is stale')
     if not evidence['worktree_clean']:
@@ -1129,6 +1195,20 @@ def reviewed_contract_errors(task, schema_version):
         errors.append('Prepared discovery is incomplete or has unresolved duplicates')
     errors.extend(prerequisite_errors(task['prerequisites']))
     return errors
+
+
+def lint(task):
+    """Offline contract checks (F17): the bundled schema, then the reviewed-contract rules verify applies first."""
+    errors = validate_contract(task)
+    version = task.get('schema_version') if isinstance(task, dict) else None
+    result = {'schema_version': safe_text(version, 20) if isinstance(version, str) else None, 'schema_valid': not errors,
+              'schema_errors': errors, 'review_errors': [], 'reviewed': False, 'contract_sha256': None,
+              'network': 'No GitHub or Git reads. Live source, approval, overlap, authorization and evidence checks '
+                         'still need verify.'}
+    if not errors:
+        result.update(contract_sha256=canonical_hash(task), review_errors=reviewed_contract_errors(task, version))
+        result['reviewed'] = not result['review_errors']
+    return result
 
 
 def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None):

@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from . import (audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody,
-               remote, signatures, textfmt, workspace, __version__)
+               remote, signals, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -78,6 +78,12 @@ def prevalidate(args):
     """The single local argument check, run before any GitHub read (including the optional rate_limit read)."""
     if args.command == 'discover':
         args.names = discover_names(args)
+        if args.check_top is not None and (not args.signals or not 1 <= args.check_top <= signals.CHECK_TOP_MAX or
+                                           len(args.names) != 1):
+            raise core.ProtocolError('usage', f'--check-top needs --signals, one repository and N from 1 to '
+                                     f'{signals.CHECK_TOP_MAX}')
+        if args.repo_dir is not None and len(args.names) != 1:
+            raise core.ProtocolError('usage', '--repo-dir with discover supports one repository')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
     elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
         core.parse_issue(args.reference)
@@ -129,7 +135,13 @@ def main(argv=None):
                              help='Add report-only code-location, clarity, activity and maintainer signals')
             sub.add_argument('--responsiveness', action='store_true',
                              help='Add a report-only repository responsiveness report from one read of recently closed PRs')
+            sub.add_argument('--check-top', type=int, metavar='N',
+                             help='With --signals and one repository: read ownership signals (one timeline and comment '
+                                  'page, at most 4 PR details) for the top N (1-5) and re-rank only those N; report only')
             sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
+            sub.add_argument('--repo-dir', metavar='CHECKOUT',
+                             help='One repository only: report issues referenced by local commits not in the source '
+                                  'default branch (with --signals they rank below other candidates); report only')
         else:
             sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
         if command == 'inspect':
@@ -164,6 +176,9 @@ def main(argv=None):
                           'locally or changes the exit status')
     sub = commands.add_parser('authorization-request',
                               help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub = commands.add_parser('lint', help='Offline check of a contract against its schema and the reviewed-contract '
+                                           'rules; no GitHub or Git reads')
     sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
@@ -204,7 +219,7 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'scope-check', 'evidence'):
+        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence'):
             raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
         prevalidate(args)
         if args.report_budget:
@@ -236,6 +251,9 @@ def main(argv=None):
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
+        elif args.command == 'lint':
+            result = core.lint(core.read_json(args.contract))
+            code = 0 if result['reviewed'] else 1
         elif args.command == 'scope-check':
             result = workspace.scope_check(core.read_json(args.contract), args.repo_dir, args.base)
             code = 0 if result['within_scope'] else 1
@@ -274,9 +292,18 @@ def main(argv=None):
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
             names, client = args.names, core.GitHub()
+            if args.check_top is not None:
+                options['check_top'] = args.check_top
+            if args.repo_dir is not None:
+                options['repo_dir'] = args.repo_dir
             result = (core.discover(names[0], client, **options) if len(names) == 1 else
                       multi.discover_many(names, client, **options))
             code = 0 if result['complete'] else 1
+            # An incomplete opted-in report is a nonzero exit, as for --responsiveness.
+            if args.check_top is not None:
+                code = code or (0 if result.get('top_check', {}).get('complete') else 1)
+            if args.repo_dir is not None:
+                code = code or (0 if result['local_work']['complete'] else 1)
             for single in result.get('repositories', [result]):
                 if 'commit' in single:  # report only: never part of completeness or the exit code
                     single['repository_policy'] = policy.report(single['repository'], single['commit'],

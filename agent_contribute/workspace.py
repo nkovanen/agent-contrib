@@ -137,3 +137,96 @@ def require_outside_checkout(directory, output):
     target = Path(output).parent.resolve() / Path(output).name
     if target == root or target.is_relative_to(root):
         raise core.ProtocolError('output_in_checkout', 'Write evidence outside the checkout it describes')
+
+
+MAX_LOCAL_COMMITS = 500
+MAX_COMMIT_BYTES = 65536
+MAX_LOCAL_BYTES = 4 * 1024 * 1024
+LOCAL_NOTICE = ('Report only. Issues referenced (#N or owner/repo#N for the source repository) by commits reachable '
+                'from the checkout HEAD but not from the source default-branch commit. A reference is not proof that '
+                'the work is done, and no reference is not proof that it is not.')
+
+
+def local_issue_references(directory, repository, base):
+    """F12: unpublished local work that may already implement an issue. Hardened reads only; nothing is fetched."""
+    report = {'complete': False, 'head': None, 'base': base, 'commits_scanned': 0, 'commit_limit': MAX_LOCAL_COMMITS,
+              'issues': [], 'errors': [], 'notice': LOCAL_NOTICE}
+    try:
+        core.require_worktree_root(directory)
+        core.require_safe_config(directory)
+        head = report['head'] = core.current_head(directory)
+        try:
+            core.git_read(directory, 'cat-file', '-e', _base(base) + '^{commit}')
+        except core.ProtocolError:
+            raise core.ProtocolError('missing_base', f'Source default-branch commit {base} is not in this checkout; '
+                                     'fetch it with your own tools (the CLI never fetches)') from None
+        if core.git_read(directory, 'rev-parse', '--is-shallow-repository') != 'false':
+            # A shallow boundary can hide intermediate commits while git log still succeeds (review R11-02).
+            raise core.ProtocolError('shallow_checkout', 'Checkout is shallow, so local history may be missing; '
+                                     'deepen it with your own tools (git fetch --unshallow) and retry')
+        commits = core.git_read(directory, 'rev-list', f'--max-count={MAX_LOCAL_COMMITS + 1}', head, '^' + base).split()
+        if len(commits) > MAX_LOCAL_COMMITS:
+            report['errors'].append(f'More than {MAX_LOCAL_COMMITS} local commits after the source default branch; '
+                                    f'only the newest {MAX_LOCAL_COMMITS} were read')
+            commits = commits[:MAX_LOCAL_COMMITS]
+        # Bound bytes before any message is read: object sizes first, then only commits within both limits.
+        sizes = core.git_read(directory, 'cat-file', '--batch-check=%(objectname) %(objectsize)',
+                              input=''.join(sha + '\n' for sha in commits)).split('\n') if commits else []
+        readable, total = [], 0
+        for record in sizes:
+            sha, _, size = record.partition(' ')
+            if not core.SHA.fullmatch(sha) or not size.isdigit():
+                raise core.ProtocolError('git_error', 'Unexpected git cat-file output')
+            if int(size) > MAX_COMMIT_BYTES:
+                report['errors'].append(f'Commit {sha} is larger than {MAX_COMMIT_BYTES} bytes; its message was not read')
+            elif total + int(size) > MAX_LOCAL_BYTES:
+                report['errors'].append(f'Local commit messages exceed {MAX_LOCAL_BYTES} bytes in total; only the newest '
+                                        'commits within that bound were read')
+                break
+            else:
+                readable.append(sha)
+                total += int(size)
+        entries = []
+        for sha, message in _raw_messages(directory, readable):
+            if b'\0' in message:  # %B would stop at the NUL and silently drop later references (review R11-03)
+                report['errors'].append(f'Commit {sha} has a NUL byte in its message; it was not read')
+            else:
+                entries.append((sha, message.decode('utf-8', errors='surrogateescape')))
+        referenced = {}
+        for sha, message in entries:
+            for number in _issue_refs(message, repository):  # whole message: never a cut token
+                commits = referenced.setdefault(number, [])
+                if sha not in commits and len(commits) < 10:
+                    commits.append(sha)
+        report.update(commits_scanned=len(entries),
+                      issues=[{'number': number, 'commits': commits} for number, commits in sorted(referenced.items())])
+    except core.ProtocolError as exc:
+        report['errors'].append(str(exc))
+    report['complete'] = not report['errors']
+    return report
+
+
+def _raw_messages(directory, shas):
+    """Raw commit objects (already size-bounded) through cat-file --batch; yields (sha, message bytes)."""
+    if not shas:
+        return
+    raw = core.git_read(directory, 'cat-file', '--batch', raw=True, input=b''.join(sha.encode() + b'\n' for sha in shas))
+    position = 0
+    for expected in shas:
+        end = raw.find(b'\n', position)
+        header = raw[position:end].decode('ascii', errors='replace').split(' ')
+        if end < 0 or len(header) != 3 or header[0] != expected or header[1] != 'commit' or not header[2].isdigit():
+            raise core.ProtocolError('git_error', 'Unexpected git cat-file output')
+        body = raw[end + 1:end + 1 + int(header[2])]
+        position = end + 1 + int(header[2]) + 1
+        if len(body) != int(header[2]):
+            raise core.ProtocolError('git_error', 'Unexpected git cat-file output')
+        yield expected, body.partition(b'\n\n')[2]
+
+
+def _issue_refs(text, repository):
+    qualified = re.compile(r'(?<![A-Za-z0-9_.\-/])([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99})#([1-9][0-9]{0,9})(?![0-9A-Za-z_])')
+    numbers = {int(number) for name, number in qualified.findall(text) if name.casefold() == repository.casefold()}
+    bare = qualified.sub('', text)
+    numbers.update(int(n) for n in re.findall(r'(?<![A-Za-z0-9_/#&])#([1-9][0-9]{0,9})(?![0-9A-Za-z_])', bare))
+    return numbers

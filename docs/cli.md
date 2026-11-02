@@ -28,6 +28,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
 | `agent-contrib authorization-request task.json` | Schema 0.2 only: an unsigned request with every mandate binding pre-filled from the contract and live reads and every human-only field `null`. Grants nothing; exit 1 when not ready |
+| `agent-contrib lint task.json` | Offline contract check: bundled task schema, then the reviewed-contract rules `verify` applies first; exit 0 only for a schema-valid reviewed contract. No GitHub or Git reads |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base REV]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base REV --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
@@ -211,6 +212,18 @@ validation summary. The host renders the complete contract from the file it
 hashes, issues the record, and the worker relays it unchanged. The request is not
 host context: piping it to `verify --host-context-stdin` fails schema validation.
 
+## Offline contract lint
+
+`lint task.json` reads one contract and nothing else. It validates it against
+the bundled task schema for its `schema_version` (unknown versions fail), and
+for a schema-valid contract it applies the same reviewed-contract rules that
+`verify` checks: reviewed status with no open questions, required fields,
+concrete repository-relative scope, unique IDs, a definition of done covering
+every criterion and validation, complete prepared discovery and satisfied
+prerequisites. `reviewed` (and exit 0) means only that the contract is ready
+for `verify`. It says nothing about the live issue, approval, overlap,
+authorization or evidence, and it never runs validation argv.
+
 ## Offline scope check
 
 `scope-check` evaluates the working diff against the contract's
@@ -337,13 +350,91 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   issue list payload; malformed fields are `null`.
 - `maintainer`: whether the issue author's association is OWNER, MEMBER or
   COLLABORATOR.
+- `labels`: the issue's label names (sanitized, at most 100).
+- `demotion`: documented, report-only demotions with one reason each. A label
+  matches a phrase when the phrase's words appear as whole words in the
+  lower-cased label name, with punctuation and separators read as spaces
+  (`Status: On-Hold` matches `on hold`; `blockedness` matches nothing). Each
+  group counts once:
+  - on hold or deferred: `icebox`, `on hold`, `blocked`, `deferred`,
+    `postponed`, `frozen`;
+  - needs a decision or design discussion: `needs decision`, `needs design`,
+    `needs discussion`, `discussion`, `question`, `rfc`, `proposal`;
+  - not planned or not this project: `not planned`, `out of scope`,
+    `upstream`, `third party`, `wont do`;
+  - major-version or breaking-change bucket: only an explicit bucket, where the
+    label or its last `:` or `/` part is exactly `breaking`, `breaking change`,
+    `breaking changes`, `vN` or `vN.x` (`v5`, `kind/breaking`, `target: v6`).
+    `non-breaking`, `v5-compat` and `bug: v5 regression` are not buckets.
+  A phrase right after `non`, `not`, `no` or `un` does not match, so
+  `not blocked` and `no discussion needed` are not demotions.
+  A title counts as meta-like when it starts with `meta`, `wip`, `tracking`,
+  `tracker`, `roadmap`, `rfc`, `umbrella` or `epic` followed by `:`, `]`, `)` or
+  `-`, or contains `meta issue`, `tracking issue`, `umbrella issue`, `roadmap`
+  or `features list`. These rules come from dogfood evidence where icebox'd,
+  maintainer-reserved `v5`, question-labelled and tracking issues ranked first.
+  They are heuristics: a label can be stale, and titles can mislead.
 - `score`: one point for found locations, up to two for clarity, one for a
-  maintainer author.
+  maintainer author unless the title is meta-like, minus two per demotion,
+  never below zero.
 
-Ordering stays exclusions first, then overlaps, then low success likelihood;
+`--check-top N` (1-5, with `--signals` and one repository) then reads the
+existing ownership signals (as `inspect --ownership`) for only the top N
+candidates. Each check reads the first timeline and comment page and at most 4
+cross-referenced PR details, and all checks together make at most 30 reads.
+Each read is one GitHub GET with no retry, so a transient failure marks the
+check incomplete instead of making extra requests.
+Reaching a cap, or a failed read, marks that check `complete: false`, and an
+incomplete `top_check` exits 1. A checked issue is demoted when it has a
+merged same-repository PR that references it exactly ("possibly already
+fixed") or a current assignee. Claim comments never demote: comment prose is
+untrusted and easy to misread (quoted instructions, code examples, other
+issues), so claims stay visible only in the report-only `inspect --ownership`
+output. A demoted issue then moves below every other candidate that is not
+excluded or overlapping (known bad below unknown); relative order is otherwise
+kept and issues below the top N are never read. Each
+demotion is listed in the issue's `top_check.demotions`. No maintainer
+"reserved" or "rejected" detector exists, so none is used. A clean or
+incomplete check proves nothing, gates and overlap are unchanged, and the
+reads appear in `--report-budget`. In live runs with N=5 it made 13-18 reads
+and demoted ripgrep #2528 and hono #1018, both judged bad by that evaluator, to ranks 59 and 183.
+Precision@5 stayed 1/5, 1/5 and 0/5 for click, ripgrep and hono: the issues
+that moved up (ripgrep #1221, hono #2649) were judged bad too.
+
+`tests/test_ranking_eval.py` replays a frozen dogfood-2 snapshot (public titles,
+labels and signal inputs for click, ripgrep and hono, with the dogfood
+evaluator's judgements; the evaluator was a model, Claude Opus 5.5, and no
+separate human review was done) and checks precision@5 and the ranks of known bad labelled or meta issues offline.
+The demotions move those issues out of the top ranks but do not raise
+precision@5 on that snapshot (click 1/5, ripgrep 1/5, hono 0/5 before and
+after): most remaining false candidates are design debates, already fixed or
+not this project's bug, with no label or title cue.
+
+Ordering stays exclusions first, then overlaps; with `--repo-dir` or
+`--check-top` the next key is known-bad issues (locally referenced or demoted by
+the check), which rank below every other candidate. Then low success likelihood;
 only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
+
+`discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
+`local_work` object for unpublished local work. It lists the issue numbers
+referenced as `#N` or `owner/repo#N` (the source repository only)
+in the messages of commits reachable from the checkout's HEAD but not from the
+snapshot's source default-branch commit. It lists the newest 500 commits at most,
+checks each commit object's size before reading any message, and reads only
+whole messages: a commit larger than 64 KiB is skipped, and reading stops once
+messages would exceed 4 MiB in total. Reads use the hardened Git reader after the
+worktree-root and checkout-config checks. A missing base commit (the CLI never
+fetches), a shallow checkout (a shallow boundary can hide commits), an unsafe
+config, a subdirectory, more than 500 commits, a skipped message or a message
+containing a NUL byte make it incomplete, which exits 1. Messages are read from
+the raw commit objects (`git cat-file --batch`), never reformatted, and commit
+headers such as the author are not parsed. With `--signals`, each issue gets `signals.local_work`
+(`referenced`, `none` or `unknown`), and a referenced issue ranks below every
+other candidate that is not excluded or overlapping. Its score, gates and
+exclusions are unchanged. Without `--signals` the issue order is unchanged. A
+reference is not proof that the work is done.
 
 ## Repository responsiveness
 
@@ -680,7 +771,8 @@ It is a summary: discovery shows at most 20 issues per repository, each with its
 overlapping-PR count, whether it is excluded and (with `--signals`) its score,
 followed by overlapping and excluded counts over all issues; lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
-counted. Multi-repository discovery includes every repository's completeness and
+counted. Discovery adds one line each for `--responsiveness` and `--repo-dir` local
+work when requested. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that
@@ -903,6 +995,20 @@ One of `inspect_result`, `issue_unresolved`.
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
 
+### `lint`
+
+`agent-contrib schema lint` · Offline contract check: bundled task schema, then the reviewed-contract rules. No GitHub or Git reads; never readiness or authorization.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | string or null | The contract's schema_version when it is a string, else null |
+| `schema_valid` | boolean |  |
+| `schema_errors` | string[] |  |
+| `review_errors` | string[] | Reviewed-contract blockers; empty when the schema is invalid |
+| `reviewed` | boolean | Schema valid with no review errors; sets the exit status |
+| `contract_sha256` | string or null | Canonical contract hash; null when the schema is invalid |
+| `network` | string |  |
+
 ### `ownership`
 
 `agent-contrib schema ownership` · Report-only ownership and resolution signals for one issue.
@@ -1117,6 +1223,11 @@ A repository in a multi-repository run whose discovery raised
 | `complete` | boolean |  |
 | `ranking` | `ranking` |  |
 | `signals` | `issue_signals` (optional) |  |
+| `top_check` | object (optional) | Present only for the top N candidates checked by --check-top; report only |
+| `top_check.complete` | boolean | False when a read failed or a page, PR-detail or total read cap was reached |
+| `top_check.errors` | string[] |  |
+| `top_check.reads` | integer | GitHub reads made for this issue; at most 30 |
+| `top_check.demotions` | string[] | Merged same-repository fix or current assignee; claim comments never demote |
 
 #### `discover_multi`
 
@@ -1175,6 +1286,14 @@ One repository was resolved and read
 | `warning` | string |  |
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
+| `top_check` | object (optional) | Present with --check-top N: bounded ownership reads for the top N; a demoted one moves below every other candidate that is not excluded or overlapping |
+| `top_check.requested` | integer | at most 5 |
+| `top_check.checked` | integer | at most 5 |
+| `top_check.reads` | integer | at most 30 |
+| `top_check.read_cap` | integer | at most 30 |
+| `top_check.complete` | boolean | Every checked issue was read completely; false sets exit 1 |
+| `top_check.notice` | string |  |
+| `local_work` | `local_work` (optional) |  |
 | `api_budget` | `api_budget` (optional) |  |
 | `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
 
@@ -1194,6 +1313,7 @@ The repository could not be resolved or its snapshot read
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `local_work` | `local_work` (optional) |  |
 
 #### `duplicate`
 
@@ -1365,7 +1485,16 @@ Added by --signals; report-only heuristics, never approval
 | `maintainer` | object |  |
 | `maintainer.value` | "maintainer" \| "other" \| "unknown" |  |
 | `maintainer.explanation` | string |  |
-| `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1) |
+| `labels` | string[] | Issue label names (sanitized), as used by the demotion rules |
+| `assignees` | string[] (optional) | Present only with --check-top: current assignee logins from the issue list payload (sanitized, at most 10) |
+| `demotion` | object | Documented label and title demotions; each subtracts 2 from the score |
+| `demotion.value` | "demoted" \| "none" |  |
+| `demotion.reasons` | string[] | One entry per matched label group or meta-like title |
+| `local_work` | object (optional) | Present with --repo-dir; a referenced issue ranks below other candidates that are not excluded or overlapping |
+| `local_work.value` | "referenced" \| "none" \| "unknown" |  |
+| `local_work.commits` | string[] |  |
+| `local_work.explanation` | string |  |
+| `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1, not for a meta-like title) - 2 per demotion, floored at 0 |
 
 #### `issue_unresolved`
 
@@ -1391,6 +1520,23 @@ Completeness of one paginated GitHub list read
 | `complete` | boolean |  |
 | `pages` | integer |  |
 | `errors` | string[] |  |
+
+#### `local_work`
+
+Present with --repo-dir: issues referenced by local commits not in the source default branch; report only
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean | False when the checkout or base could not be read or the commit limit was reached; sets exit 1 |
+| `head` | string or null |  |
+| `base` | string or null | Source default-branch commit of the snapshot |
+| `commits_scanned` | integer |  |
+| `commit_limit` | integer |  |
+| `issues` | object[] |  |
+| `issues[].number` | integer |  |
+| `issues[].commits` | string[] |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `metadata_read`
 

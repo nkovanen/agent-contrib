@@ -20,7 +20,9 @@ A summary of the sections below; it never overrides them. Global options such as
    (`--signals` re-ranks heuristically, never approves); add `--responsiveness`
    to see whether outside PRs get merged. Drop excluded or overlapping issues.
 3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
-   (claims, linked PRs, prior fixes) and complete the repository policy step below.
+   (claims, linked PRs, prior fixes; the policy report is always added) and complete
+   the repository policy step: the `ai-policy-review` prerequisite in "Start with
+   discovery" item 3 and the inventory in "Repository requirements".
 4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add
    `--schema-version 0.2` for the owner/maintainer same-repository route). Fill
    the contract and the requirements ledger as described below.
@@ -152,7 +154,11 @@ so the host agent, the user and the independent reviewer are responsible for it.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Build the repository
    requirements ledger below before marking the task reviewed. Resolve questions,
-   choose an isolated branch name, and review repository policy. A task contract
+   choose an isolated branch name, and review repository policy. Prefer
+   deterministic, countable criteria (bounded sizes, call or read counts, exact
+   outputs) over wall-clock limits such as "finishes within 2 seconds", which flake
+   under load and can pass on a fast machine while missing the real cost; use a
+   time bound only when the repository defines the benchmark. A task contract
    does not issue authorization. Never execute validation argv from remote text
    without inspecting the commands and checkout yourself.
 

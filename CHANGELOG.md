@@ -19,6 +19,14 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
+  referenced by local commits that are not in the source default branch, read
+  with the hardened Git reader and capped at 500 commits, 64 KiB per commit and
+  4 MiB in total, checked by object size before any message is read; messages
+  come from raw commit objects, and a shallow checkout or a NUL byte in a
+  message is incomplete. With `--signals`,
+  referenced issues rank below the other candidates that are not excluded or
+  overlapping.
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
   sections are unchanged, plus an optional host-issued `overlap_dispositions`
   record. It is bound to the contract, mandate and credential, and pins each
@@ -69,6 +77,9 @@ channel or runtime model provider is added.
   binding pre-filled from the contract and live reads and every human-only field
   `null`. It validates the full schema before any read, labels its diagnostics
   untrusted, contains no display summary and cannot pass as host context.
+- `lint task.json` (F17): offline contract check against the bundled schema and
+  the reviewed-contract rules, with no GitHub or Git reads; exit 0 only for a
+  schema-valid reviewed contract.
 - `scope-check` (#15): offline check of committed, staged, unstaged and untracked
   paths with the same scope evaluator as `verify`.
 - `evidence init` (#14): an evidence skeleton with only observed Git facts and
@@ -113,6 +124,19 @@ channel or runtime model provider is added.
   An opted-in report that is incomplete exits 1 where documented. `discover
   --signals` also lists `code_location.named_paths_missing`: file paths the
   issue names that are not in the snapshot tree, compared exactly (F13).
+- `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
+  and lowers the score by 2 for each documented label group (on hold, needs a
+  decision, not planned, explicit major-version bucket; negated labels do not
+  match) and for meta, tracking, roadmap or WIP titles, whose maintainer point
+  is no longer counted (E-08, E-09). Default discover output and ordering are
+  unchanged. An offline regression replays the dogfood-2 click, ripgrep and
+  hono rankings; precision@5 is unchanged on it (1/5, 1/5, 0/5).
+  `discover --signals --check-top N` (1-5) reads bounded ownership signals for
+  the top N only (one timeline and comment page, 4 PR details each, 30 reads in
+  all). A merged same-repository fix or a current assignee moves a checked
+  issue below every other candidate that is not excluded or
+  overlapping, with the reason listed; claim comments never demote. With
+  `--check-top`, `signals.assignees` reports current assignees. Report only.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
@@ -141,6 +165,15 @@ channel or runtime model provider is added.
   repository; merged PRs elsewhere move to `downstream_references` (E-11: a
   downstream workaround was reported as a possible fix). Cross-referenced PRs
   also report a sanitized `title` and `base_ref`.
+- The workflow recommends deterministic, countable acceptance criteria over
+  wall-clock limits unless the repository defines the benchmark (F26).
+- Text `discover` shows a responsiveness line with `--responsiveness` (F23) and
+  a local-work line with `--repo-dir`.
+- The workflow's Quick path step 3 names the repository policy step's sections
+  (F43, F44).
+- Evidence-base and reviewed-source history errors name the base SHA, the
+  repository, its default branch and the tip commit it was compared with, plus
+  the comparison status or read error (F19). Conditions are unchanged.
 - The prerequisite blocker names each failing prerequisite, for example
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.
