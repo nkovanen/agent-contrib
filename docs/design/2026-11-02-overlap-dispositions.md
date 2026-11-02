@@ -1,8 +1,9 @@
 # Reviewed overlap dispositions (#7): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, revision 2. Hostile review RO-01 to RO-06 is resolved in
-  [Review resolution](#review-resolution). No code is part of this step.
+- Status: proposal, revision 3. Hostile review rounds 1 (RO-01 to RO-06) and 2
+  (RO-07) are resolved in [Review resolution](#review-resolution). Slice 1
+  (inert plumbing) is implemented on this branch.
 - Base: `rsi/v03-land` at `44bf2d5` (unreleased v0.3.0 candidate: task/evidence
   schemas 0.1 and 0.2, host-context 0.1).
 - Issue: [#7](https://github.com/nkovanen/agent-contrib/issues/7), product-map key B3.
@@ -19,7 +20,8 @@ the credential actor. Each entry pins:
 - its head repository and head SHA, state and draft flag;
 - a hash of its title, body and refs, and `updated_at`;
 - the exact match reason;
-- the identity and hash of the immutable code comparison the human reviewed.
+- the identity and hash of the immutable code comparison the human reviewed,
+  including the base-branch tip it was computed against.
 
 `verify` re-reads every disposed PR, reconciles each read with the open-PR scan,
 and recomputes the match from the fresh copy. It waives the overlap only when all
@@ -100,14 +102,14 @@ What blocks today, and what this design changes:
 | # | Actor and attack | Required property |
 | --- | --- | --- |
 | T1 | **The worker launders a real conflict**: it writes or edits a disposition, or presents an "unrelated" summary to the human. | Only a human or trusted host issues dispositions, with the same event, nonce and hash discipline as the mandate. The host derives what the human sees from its own fresh PR read, never from a worker summary (RD-01 rule). `verify` echoes the record hash for audit. Same-credential forgery stays the documented non-goal. |
-| T1b | **A hostile PR author writes a misleading description** (RO-01): a truthful API response whose title and body describe something unrelated while the code implements the issue, or a branch that changes while the human opens a diff link. | The human must review the **actual code**: an immutable comparison identified by full commit SHAs (merge base to bound head), retained by the host with the event. The record binds the comparison's base and head SHAs and the hash of the retained material. Missing or truncated comparison material means the host must not issue. No automatic conflict analyzer is claimed. |
+| T1b | **A hostile PR author writes a misleading description** (RO-01): a truthful API response whose title and body describe something unrelated while the code implements the issue, or a branch that changes while the human opens a diff link. | The human must review the **actual code**: an immutable comparison identified by full commit SHAs (merge base to bound head), retained by the host with the event. The record binds the independently resolved base-branch tip, the merge base, the head and the hash of the retained material. A base-tip change re-blocks, because an advancing base can change the patch while the head stays fixed (RO-07). Missing or truncated comparison material means the host must not issue. No automatic conflict analyzer is claimed. |
 | T2 | **A hostile PR author changes the PR after review**: retitles it, edits the body to "fixes #12", pushes code, turns a draft ready, retargets the base or reopens it. | Bind and compare explicitly: head SHA, head repository ID, state, `draft`, base ref, a hash of title, body and refs, and the author. Recompute the match from the fresh read; a new direct reference is never waivable. `updated_at` equality is an **extra** conservative check. GitHub does not document that every event bumps it, and same-second ABA changes can leave it equal (RO-02). The guarantee is limited to the enumerated observations. |
 | T3 | **A stale disposition**: the issue changes, the contract is re-prepared, or the mandate is re-issued. | Bind `contract_sha256` and `mandate_sha256`; the issue is already bound through the contract. |
 | T4 | **Replay across tasks, repositories or PRs**. | Bind the repository ID, PR ID and number, the contract and mandate hashes, and the credential actor ID. Each entry covers exactly one PR. |
 | T5 | **Waiver by omission**: an incomplete scan, an unread page, a PR that failed to read, or a disposed PR that left the scan but is direct in the detail read (RO-03). | A disposition never covers an unknown. Every disposed PR is read and reconciled with the scan. An incomplete scan, a failed detail read, or a contradiction between list and detail blocks. A direct or topical match first seen in the detail read becomes a blocker. |
 | T6 | **Scope creep**: one disposition hides new or other matches. | A waiver applies only to entries whose recomputed reason equals the bound reason, for that PR. New PRs, and new reasons on the same PR, block. |
 | T7 | **The disposition outlives human attention**, including expiring during slow reads (RO-05). | Its own interval, at most 24 hours. Expiry is judged with a fresh clock after all blocking reads, before any waiver-dependent gate, as is already done for final sign-off. Expiry re-blocks. Because it is a separate section, a host can re-issue it without touching the mandate. |
-| T8 | **Read amplification by a hostile repository with many matches**. | At most 20 entries per record, and one logical GET per disposed PR (deduplicated), only when a record is supplied. The transport retries a transient failure up to three times with 30-second timeouts, so the worst case adds about 31 minutes. This is documented, and it is why expiry is rechecked after the reads. |
+| T8 | **Read amplification by a hostile repository with many matches**. | At most 20 entries per record. Each disposed PR costs one logical PR GET, and each distinct base ref one base-tip GET, so at most 40 extra logical GETs, made only when a record is supplied. The transport retries a transient failure up to three times with 30-second timeouts, so the worst case adds roughly an hour. This is documented, and it is why expiry is rechecked after the reads. |
 | T9 | **The worker relabels the agent's own earlier draft as unrelated** (RO-04). | Enforced, not assumed: a PR authored by the bound credential actor is **never** waivable. This also refuses legitimate earlier human PRs from that account, deliberately. Exact-head recognition (#3) and draft updates (#21) stay the only routes for the agent's own work. |
 
 Schema 0.1 has no host-context channel, and this design adds none. Under 0.1 a
@@ -175,8 +177,9 @@ dispositions later by re-wrapping the same issued mandate as 0.2.
           "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
           "comparison": {
             "type": "object", "additionalProperties": false,
-            "required": ["base_sha", "head_sha", "material_sha256"],
+            "required": ["base_tip_sha", "base_sha", "head_sha", "material_sha256"],
             "properties": {
+              "base_tip_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
               "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
               "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
               "material_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
@@ -214,16 +217,25 @@ Definitions:
   validates its shape; values are not normalized. It is an extra conservative
   check, not an event counter.
 - `comparison` identifies the code the human reviewed. It holds:
-  - `base_sha`, the merge base of the PR's base and head, as reported by
-    `GET repos/{source}/compare/{base.sha}...{head.sha}`;
+  - `base_tip_sha`: the base branch's tip, resolved **independently** at issuance
+    with `GET repos/{source}/git/ref/heads/{base.ref}`. The PR object's
+    `base.sha` is not used; it can differ from the current tip (RO-07).
+  - `base_sha`: the merge base reported by
+    `GET repos/{source}/compare/{base_tip_sha}...{head_sha}`
+    (`merge_base_commit.sha`);
   - `head_sha`, which must equal the entry's `head_sha`;
-  - `material_sha256`, the SHA-256 of the exact comparison material the host
-    showed and retained (file list and patch).
+  - `material_sha256`: the SHA-256 of the canonical JSON of the retained
+    `files` array of that comparison, in response order. Each item keeps exactly
+    `filename`, `previous_filename` (or `null`), `status`, `sha` and `patch` (or
+    `null`). An auditor recomputes this digest from the retained bytes, never from
+    a re-fetch.
 
-  The CLI checks that `comparison.head_sha` equals the bound and live head. It
-  cannot verify the retained material: that is host evidence for audit. A base
-  branch that moves forward without a head change leaves the merge base, and so
-  the reviewed comparison, unchanged; any head change re-blocks.
+  The CLI checks that `comparison.head_sha` equals the bound and live head, and
+  that the base branch's current tip still equals `base_tip_sha`. An advancing
+  base can change the merge base and the patch while the head stays fixed
+  (`A -> B -> H`: `A...H` and `B...H` differ), so **any** base-tip change
+  re-blocks, including harmless advances. The CLI cannot verify the retained
+  material; that is host evidence for audit.
 - `author_id` is the PR's `user.id` and `head_repository_id` its `head.repo.id`.
   A `null` head repository (deleted fork) cannot be bound and is not waivable.
 - Event binding and record hash follow the existing recipe:
@@ -295,6 +307,10 @@ The steps, in order:
    - `user.id == author_id`, which is not the credential actor;
    - `state == "open"`, `draft` equal, `head.repo.id == head_repository_id`, and
      `head.sha == head_sha`;
+   - the base branch's current tip equals `comparison.base_tip_sha`. It is
+     resolved with one `GET repos/{source}/git/ref/heads/{base.ref}` per distinct
+     base ref (deduplicated), never from the PR's `base.sha`. A failed or
+     malformed read blocks;
    - `updated_at` equal;
    - the content hash equal.
 
@@ -364,11 +380,16 @@ never a waiver.
 - **`docs/host-authorization.md`, host issuer requirements:**
   - the host reads the PR itself and shows the human its title, body, head and
     base refs, state, draft flag, author and the match reason (rendered as data);
-  - it shows the actual code (RO-01): it fetches
-    `compare/{base.sha}...{head.sha}` for the bound head and presents the full
-    file list and patch as retained material, identified by its merge base and
-    head SHAs. A mutable diff link is not enough. If the comparison is truncated
-    (GitHub caps files and patch size) or unavailable, it does not issue;
+  - it shows the actual code (RO-01, RO-07):
+    - it resolves the base branch tip itself (`git/ref/heads/{base.ref}`), never
+      from the PR's `base.sha`;
+    - it fetches `compare/{base_tip}...{head.sha}` for the bound head;
+    - it presents the full file list and patches as retained material,
+      identified by base tip, merge base and head SHAs.
+
+    A mutable diff link is not enough. The host does not issue when the
+    comparison is unavailable, saturated (300 files, GitHub's cap) or missing a
+    patch for a non-binary file.
   - it retains that exact material with the event, and records its hash as
     `comparison.material_sha256`;
   - it computes every bound field from its own reads;
@@ -384,7 +405,9 @@ never a waiver.
   - a truthful API response whose description misleads about its code;
   - a branch pushed while the human reviews, where the record must bind the
     reviewed head;
-  - a truncated comparison, which must not issue.
+  - a truncated comparison, which must not issue;
+  - a PR whose `base.sha` differs from the base branch tip: the host binds the
+    tip it resolved itself.
 
   These requirements ship **with or before** the waiver evaluation (slice 3), never
   after it.
@@ -475,8 +498,18 @@ binding.
 9. **Compatibility goldens.** Every existing host-context 0.1 fixture gives
    byte-identical `verify` JSON and exit codes. The same mandate wrapped as 0.2
    without the section gives identical gates and the same `mandate_sha256`.
+9a. **Base tip** (RO-07):
+    - the `A -> B -> H` example: the base branch advances from the bound tip A
+      to B, while head H, `updated_at` and every other field stay unchanged.
+      The PR blocks with `stale ... base tip`;
+    - the PR detail's `base.sha` differs from the ref tip, but the ref tip equals
+      the bound one: waived. This proves the tip is read from the ref;
+    - `base.sha` equals the bound tip but the ref tip differs: blocks;
+    - the base-ref read fails or is malformed: blocks;
+    - two PRs on the same base ref make one base-tip GET.
 10. **Reads.** Without the section, the read sequence is identical to today's.
-    With N distinct disposed PRs, exactly N extra `pulls/{n}` GETs are made,
+    With N distinct disposed PRs on M distinct base refs, exactly N `pulls/{n}`
+    GETs and M base-ref GETs are made,
     only after the list scan completed. With more than 20 entries the schema
     fails before any read.
 10a. **Text output** (RO-06): with a waiver applied, `--format text verify` shows
@@ -548,7 +581,7 @@ finding was checked against the design text and code. None is disputed.
 
 | ID | Severity | Verdict | Independent check | Change in revision 2 |
 | --- | --- | --- | --- | --- |
-| RO-01 | High | Confirmed | Revision 1 required the host only to render the PR metadata and link to `/files`. The description is author-controlled, and the link is a mutable snapshot. | T1b added. The host must review and retain an immutable comparison (merge base to bound head, full SHAs), or refuse when it is truncated. The record binds `comparison {base_sha, head_sha, material_sha256}`. Mandatory host tests added. Requirements now ship before or with waiver evaluation. |
+| RO-01 | High | Confirmed | Revision 1 required the host only to render the PR metadata and link to `/files`. The description is author-controlled, and the link is a mutable snapshot. | T1b added. The host must review and retain an immutable comparison, identified by full SHAs, or refuse when it is truncated. The record binds the comparison (base tip added in revision 3). Mandatory host tests added. Requirements now ship before or with waiver evaluation. |
 | RO-02 | Medium | Confirmed (binding gap); platform behavior not verified | The content hash omitted `draft`, and nothing documents that every event bumps `updated_at`, which has second precision. | `draft`, `author_id` and `head_repository_id` are bound and compared explicitly. `updated_at` is now an extra check. The promise is narrowed to equality of the enumerated observations. ABA and draft-only-change tests added. |
 | RO-03 | Medium | Confirmed | Revision 1 fixed the candidate set from the list before the detail reads, and treated non-candidates as `unused` without reconciling them. | Every disposed PR is read (deduplicated) and reconciled. A direct finding seen only in the detail blocks and is listed. A list/detail contradiction blocks. `unused` is decided only after the read. A read failure blocks. Residual: a PR created after the scan is not covered, and reads are not atomic (documented). |
 | RO-04 | Medium | Confirmed | No check compared the PR author with the credential. "Own drafts reference the issue" was an assumption. | A PR authored by the credential actor is never waivable. This is checked on the record's `author_id` and on the live `user.id`, and is documented to over-refuse legitimate earlier PRs from that account. |
@@ -561,3 +594,13 @@ The review's answers to the open questions are adopted:
 - keep `unused` informational, but only after reconciliation;
 - slice 1 reports `not_evaluated`, never `valid`;
 - issuer requirements ship with or before evaluation.
+
+### Round 2 (revision 3)
+
+Round 2 against revision 2 (`4a130a5`) closed RO-01 to RO-06 and raised one new
+finding. Slice 1 was judged safe to continue.
+
+| ID | Severity | Verdict | Independent check | Change in revision 3 |
+| --- | --- | --- | --- | --- |
+| RO-07 | Medium | Confirmed | `git merge-base 44bf2d5 4a130a5` and `git merge-base 5f7378f 4a130a5` differ with the head fixed, so a moving base changes the merge base. Revision 2 claimed the opposite and bound no base tip. The PR object's `base.sha` is also not guaranteed to be the current tip. | Removed the false invariant. Each comparison binds `base_tip_sha`, resolved independently from `git/ref/heads/{base.ref}`, plus the merge base and head. Verification rereads the tip once per distinct base ref and re-blocks on any change. The retained material's encoding is now defined (canonical JSON of the `files` items). The issuer refuses saturated (300-file) or patchless comparisons. Read bound updated to at most 40 logical GETs. Tests 9a added. The schema field was added to slice 1 before freezing it (`c7f7a8c`). |
+
