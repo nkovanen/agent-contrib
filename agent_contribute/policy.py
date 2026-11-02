@@ -214,7 +214,7 @@ def scan(text, path):
 class _Report:
     def __init__(self, client):
         self.client, self.requests, self.skipped = client, 0, 0
-        self.sources, self.texts, self.unassessed, self.limits = [], [], [], {}
+        self.sources, self.texts, self.unassessed, self.limits, self.keys = [], [], [], {}, []
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -224,10 +224,13 @@ class _Report:
         self.requests += 1
         return self.client.request(endpoint)
 
-    def note(self, what, reason, origin=None, line=None, link_text=None):
-        what = core.safe_text(str(what), IDENTIFIER_CHARS * 4)
-        if any(item['what'] == what[:IDENTIFIER_CHARS] for item in self.unassessed):
+    def note(self, what, reason, origin=None, line=None, link_text=None, key=None):
+        """key is the full identity (repository and path, or URL); the displayed what may be shortened."""
+        what = core.safe_text(str(what), len(str(what)))
+        key = key or what
+        if any(item_key == key for item_key in self.keys):
             return
+        self.keys.append(key)
         self.unassessed.append({'what': what[:IDENTIFIER_CHARS], 'reason': reason, 'from': origin, 'line': line,
                                 'link_text': core.safe_text(link_text, EXCERPT_CHARS) if link_text else None,
                                 'what_truncated': len(what) > IDENTIFIER_CHARS})
@@ -364,11 +367,12 @@ def _assessed(url, base_repository, base_path, refs, scanned):
 
 
 def _relative_what(url, base_path):
+    """(target, relative): an absolute URL as is, or a link path resolved inside the linking repository."""
     if urlsplit(url).scheme or url.startswith('//'):
-        return url
+        return url, False
     target = unquote(url.split('#', 1)[0].split('?', 1)[0])
     return posixpath.normpath(target.lstrip('/') if target.startswith('/') else
-                              posixpath.join(posixpath.dirname(base_path), target))
+                              posixpath.join(posixpath.dirname(base_path), target)), True
 
 
 def report(repository, commit, instructions, client, *, default_branch=None):
@@ -402,8 +406,10 @@ def report(repository, commit, instructions, client, *, default_branch=None):
             origin = f'{source["repository"]}:{source["path"]}'
             try:
                 if not _assessed(link['url'], source['repository'], path, refs, scanned):
-                    state.note(_relative_what(link['url'], path), 'referenced, not assessed', origin,
-                               link['line'], link['link_text'])
+                    target, relative = _relative_what(link['url'], path)
+                    shown = target if not relative or source['repository'] == repository else f'{source["repository"]}:{target}'
+                    state.note(shown, 'referenced, not assessed', origin, link['line'], link['link_text'],
+                               key=(source['repository'].casefold(), target) if relative else link['url'])
             except ValueError:  # e.g. 'https://[' or a netloc that NFKC-normalizes to a delimiter
                 state.note(link['url'], 'malformed reference, not assessed', origin, link['line'], link['link_text'])
     if state.skipped:
@@ -423,7 +429,8 @@ def report(repository, commit, instructions, client, *, default_branch=None):
         result['inventory_sha256'] = core.canonical_hash({
             'sources': sorted([{k: s[k] for k in ('origin', 'repository', 'path', 'sha256')} for s in result['sources_scanned']],
                               key=lambda s: (s['origin'], s['repository'], s['path'])),
-            'unassessed': sorted(item['what'] for item in result['unassessed']),
+            # Full identities, not the shortened display text (RP-20); state.keys is aligned with retained entries.
+            'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
             'limits_reached': result['limits_reached']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result

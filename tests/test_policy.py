@@ -279,6 +279,23 @@ class InventoryTests(unittest.TestCase):
         self.assertTrue(excerpt.startswith('lengthy '), excerpt[:20])
         self.assertIn('Autonomous agents are not allowed.', excerpt)
 
+    def test_references_keep_their_repository_and_full_identity(self):
+        long_a = 'https://example.org/contributing/' + 'a' * 600 + '/one'
+        long_b = 'https://example.org/contributing/' + 'a' * 600 + '/two'
+        result, _ = report({'CONTRIBUTING.md': f'See [policy](rules.md), [a]({long_a}) and [b]({long_b}).'},
+                           {'CONTRIBUTING.md': 'See [policy](rules.md).'})
+        refs = [u for u in result['unassessed'] if u['reason'] == 'referenced, not assessed']
+        self.assertEqual(sorted(u['what'] for u in refs if 'rules.md' in u['what']), ['acme/.github:rules.md', 'rules.md'])
+        self.assertEqual(sorted(u['from'] for u in refs if 'rules.md' in u['what']),
+                         ['acme/.github:CONTRIBUTING.md', 'acme/photos:CONTRIBUTING.md'])
+        long_refs = [u for u in refs if u['what'].startswith('https://example.org/contributing/aaa')]
+        self.assertEqual(len(long_refs), 2, 'URLs sharing their displayed prefix are still distinct references')
+        self.assertTrue(all(u['what_truncated'] for u in long_refs))
+        changed, _ = report({'CONTRIBUTING.md': f'See [policy](rules.md), [a]({long_a}) and [b]({long_b}x).'},
+                            {'CONTRIBUTING.md': 'See [policy](rules.md).'})
+        self.assertNotEqual(result['inventory_sha256'], changed['inventory_sha256'],
+                            'a change past the displayed prefix still changes the inventory identity')
+
     def test_links_to_scanned_sources_are_not_relisted(self):
         files = {'CONTRIBUTING.md': 'Follow the [AI Policy](https://github.com/acme/photos/blob/main/AI_POLICY.md) '
                                     'and [also](AI_POLICY.md) and [old](https://github.com/acme/photos/blob/v1/AI_POLICY.md).',
