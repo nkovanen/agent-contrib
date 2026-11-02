@@ -157,13 +157,19 @@ def _has_commit(directory, sha):
 
 
 def _ancestor(name, directory, older, newer):
+    """Only a completed count proves a negative (MA-09); a failed read or a shallow graft proves nothing."""
     if not _has_commit(directory, older) or not _has_commit(directory, newer):
         return check(name, 'not-evaluated', [[('', 'a commit is missing from the checkout history')]])
     try:
-        core.git_read(directory, 'merge-base', '--is-ancestor', older, newer)
+        if core.git_read(directory, 'rev-parse', '--is-shallow-repository') != 'false':
+            return check(name, 'not-evaluated', [[('', 'the checkout history is shallow')]])
+        # Commits reachable from older but not from newer: zero exactly when older is an ancestor of newer.
+        outside = core.git_read(directory, 'rev-list', '--count', older, '--not', newer)
     except core.ProtocolError:
-        return check(name, 'mismatch')
-    return check(name, 'match')
+        return check(name, 'not-evaluated', [[('', 'the ancestry read failed')]])
+    if not outside.isdigit():
+        return check(name, 'not-evaluated', [[('', 'the ancestry read failed')]])
+    return check(name, 'match' if outside == '0' else 'mismatch')
 
 
 def evidence_checks(task, evidence, facts, directory, head):

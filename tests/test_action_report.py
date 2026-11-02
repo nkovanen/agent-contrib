@@ -206,6 +206,30 @@ class CheckoutTests(CheckoutCase):
         self.assertEqual(model['result'], 'not-checked')
         self.assertIn('could not be evaluated', model['reason'])
 
+    def test_operational_ancestry_failure_is_not_a_mismatch(self):
+        real = core.git_read
+
+        def failing(directory, *args):
+            if args[:1] == ('rev-list',):
+                raise core.ProtocolError('git_error', 'Git evidence checkout read failed')
+            return real(directory, *args)
+        with patch.object(core, 'git_read', side_effect=failing):
+            model = self.build()
+        rows = {c['name']: c['state'] for _, checks in model['sections'] for c in checks}
+        self.assertEqual(rows['Evidence base_commit is an ancestor of the PR head'], 'not-evaluated')
+        self.assertEqual(rows['source.commit is an ancestor of evidence base_commit'], 'not-evaluated')
+        self.assertEqual((model['result'], model['mismatches']), ('not-checked', 0))
+
+    def test_shallow_history_is_not_evaluated(self):
+        shallow = pathlib.Path(self.workspace.name, 'shallow')
+        # Depth 2 still contains the base commit, so only the shallow-history rule makes this not evaluated.
+        subprocess.run(['git', 'clone', '-q', '--depth', '2', 'file://' + str(self.repo), str(shallow)], check=True)
+        environ = dict(self.environ(body(self.task, self.evidence)), AGENT_CONTRIB_CHECKOUT='shallow')
+        model = report.build(environ)
+        rows = {c['name']: c['state'] for _, checks in model['sections'] for c in checks}
+        self.assertEqual(rows['Evidence base_commit is an ancestor of the PR head'], 'not-evaluated')
+        self.assertEqual(model['result'], 'not-checked')
+
     def test_scope_violation(self):
         (self.repo / '.github').mkdir()
         (self.repo / '.github' / 'ci.yml').write_text('x')
