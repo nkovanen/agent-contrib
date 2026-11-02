@@ -8,6 +8,7 @@ metadata and every mutable read are always live. The cache is a convenience: any
 """
 import base64
 import binascii
+import errno
 import hashlib
 import os
 import re
@@ -214,32 +215,32 @@ class Cache:
             total -= size
 
 
-def _private_group(gid, uid):
-    """True when gid is this user's own group: their primary group, with no other member or primary user.
-    (User-private groups make umask 002 homes group-writable without granting anyone else access.)"""
+ACL_ATTRIBUTES = {'system.posix_acl_access', 'system.posix_acl_default'}
+
+
+def _has_acl(descriptor):
+    """Any doubt counts as an ACL: only a listing without POSIX ACL attributes, or a filesystem without xattr
+    support (ENOTSUP), rules one out. Without os.listxattr the cache is disabled."""
     try:
-        import grp
-        import pwd
-        name = pwd.getpwuid(uid).pw_name
-        return (gid == os.getgid() and set(grp.getgrgid(gid).gr_mem) <= {name} and
-                not any(entry.pw_gid == gid and entry.pw_uid != uid for entry in pwd.getpwall()))
-    except (ImportError, KeyError, OSError):
-        return False
+        return bool(ACL_ATTRIBUTES & set(os.listxattr(descriptor)))
+    except OSError as exc:
+        return exc.errno != errno.ENOTSUP
 
 
 def _check_ancestor(descriptor, uid):
     """Another account able to rename entries in an ancestor makes the cache unsafe. Each ancestor must be owned by
-    root or the user; if other-writable, or group-writable by a group other than the user's private group, it must
-    be sticky (as /tmp is)."""
+    root or the user and not group- or other-writable; the one exception is a root-owned sticky directory (/tmp).
+    A non-root-owned ancestor must also carry no POSIX ACL, which could grant another account write access."""
     info = os.fstat(descriptor)
-    shared = info.st_mode & stat.S_IWOTH or (
-        info.st_mode & stat.S_IWGRP and not (info.st_uid == uid and _private_group(info.st_gid, uid)))
-    if info.st_uid not in (0, uid) or (shared and not info.st_mode & stat.S_ISVTX):
+    shared = info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+    if info.st_uid not in (0, uid) or (shared and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)):
         raise PermissionError('Unsafe cache ancestor')
+    if info.st_uid != 0 and _has_acl(descriptor):
+        raise PermissionError('Cache ancestor carries a POSIX ACL')
 
 
 def _open_child(name, parent):
-    """Open (creating 0700 if missing, like makedirs) one directory component relative to its parent."""
+    """Open (creating 0700 if missing) one directory component relative to its parent, never following a symlink."""
     try:
         os.mkdir(name, 0o700, dir_fd=parent)
     except FileExistsError:
@@ -248,28 +249,30 @@ def _open_child(name, parent):
 
 
 def _open_directory(directory):
-    """Open the cache directory without following a substituted symlink: resolve the configured path once,
-    then walk it component by component with O_NOFOLLOW, checking every ancestor, and create the leaf 0700."""
+    """Walk every component of the absolute cache path from / with O_NOFOLLOW, so no symlink anywhere in the chain
+    is followed, checking each ancestor. The cache directory itself must be the user's, mode 0700 exactly and
+    without a POSIX ACL. Any doubt disables the cache; it is never an error."""
     if not all(function in os.supports_dir_fd for function in (os.open, os.stat, os.unlink, os.rename, os.mkdir)) or (
-            os.scandir not in os.supports_fd):
-        raise ValueError('No dir_fd support: the cache is disabled')
+            os.scandir not in os.supports_fd) or not hasattr(os, 'listxattr'):
+        raise ValueError('No dir_fd or xattr support: the cache is disabled')
     uid = os.getuid()
-    # Resolve only the parent (legitimately symlinked homes); the leaf itself is opened with O_NOFOLLOW.
-    absolute = os.path.abspath(directory)
-    parent, leaf = os.path.realpath(os.path.dirname(absolute)), os.path.basename(absolute)
+    parts = [part for part in os.path.abspath(directory).split(os.sep) if part]
+    if not parts:
+        raise ValueError('The cache directory cannot be the filesystem root')
     current = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY)
     try:
         _check_ancestor(current, uid)
-        for part in [part for part in parent.split(os.sep) if part]:
+        for part in parts[:-1]:
             following = _open_child(part, current)
             os.close(current)
             current = following
             _check_ancestor(current, uid)
-        root = _open_child(leaf, current)
+        root = _open_child(parts[-1], current)
     finally:
         os.close(current)
     info = os.fstat(root)
-    if not stat.S_ISDIR(info.st_mode) or info.st_uid != uid or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != uid or stat.S_IMODE(info.st_mode) != 0o700 or
+            _has_acl(root)):
         os.close(root)
-        raise PermissionError('Cache directory is not a private directory of this user')
+        raise PermissionError('Cache directory is not a private 0700 directory of this user')
     return root

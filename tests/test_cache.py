@@ -2,11 +2,13 @@
 import base64
 import contextlib
 import copy
+import errno
 import hashlib
 import io
 import json
 import os
 import pathlib
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -353,7 +355,8 @@ class StorageSafetyTests(CacheTestCase):
         # Review R10-02: a blocking open of a FIFO with no writer never returns, so the fallback never ran.
         import threading
         store, fake = self.store()
-        self.root.mkdir(mode=0o700, parents=True)
+        self.home.mkdir(mode=0o700, exist_ok=True)
+        self.root.mkdir(mode=0o700)
         fifo = self.root / ('blob-' + blob(INSTRUCTION))
         os.mkfifo(fifo, 0o600)
         flags, real_open, outcome = [], cache.os.open, []
@@ -375,7 +378,8 @@ class StorageSafetyTests(CacheTestCase):
         store, fake = self.store()
         secret = pathlib.Path(self.directory.name, 'secret')
         secret.write_bytes(INSTRUCTION)
-        self.root.mkdir(mode=0o700, parents=True)
+        self.home.mkdir(mode=0o700, exist_ok=True)
+        self.root.mkdir(mode=0o700)
         link = self.root / ('blob-' + blob(INSTRUCTION))
         link.symlink_to(secret)
         self.assertIsNone(store.lookup(self.contents()))
@@ -443,57 +447,131 @@ class DirectoryAnchorTests(CacheTestCase):
                          'stored and evicted in the anchored directory')
         self.assertEqual((blocked / old_entry).read_bytes(), b'not yours')
 
-    def test_foreign_owned_ancestor_is_refused(self):
-        real = os.stat(self.directory.name)
-        fake = os.stat_result((stat.S_IFDIR | 0o755, 0, 0, 0, os.getuid() + 1, 0, 0, 0, 0, 0))
-        with patch.object(cache.os, 'fstat', return_value=fake):
-            with self.assertRaises(PermissionError):
-                cache._check_ancestor(0, os.getuid())
-        with patch.object(cache.os, 'fstat', return_value=os.stat_result((stat.S_IFDIR | 0o755, 0, 0, 0, 0, 0, 0, 0, 0, 0))):
-            cache._check_ancestor(0, os.getuid())  # root-owned, not writable: fine
-        self.assertTrue(stat.S_ISDIR(real.st_mode))
+    def test_ancestor_rule_root_or_user_owned_and_not_shared(self):
+        def stat_of(mode, uid):
+            return os.stat_result((stat.S_IFDIR | mode, 0, 0, 0, uid, 0, 0, 0, 0, 0))
+        uid = os.getuid()
+        cases = [(0o755, 0, True), (0o755, uid, True), (0o700, uid, True), (0o1777, 0, True),
+                 (0o755, uid + 1, False), (0o775, uid, False), (0o757, uid, False), (0o1777, uid, False),
+                 (0o1770, 0, True), (0o777, 0, False), (0o775, 0, False)]
+        for mode, owner, usable in cases:
+            with self.subTest(mode=oct(mode), owner=owner), patch.object(cache.os, 'fstat', return_value=stat_of(mode, owner)), \
+                    patch.object(cache, '_has_acl', return_value=False):
+                if usable:
+                    cache._check_ancestor(0, uid)
+                else:
+                    with self.assertRaises(PermissionError):
+                        cache._check_ancestor(0, uid)
+
+    def test_the_filesystem_root_is_checked_too(self):
+        checked, real = [], cache._check_ancestor
+        def recording(descriptor, uid):
+            checked.append(os.fstat(descriptor).st_ino)
+            return real(descriptor, uid)
+        with patch.object(cache, '_check_ancestor', recording):
+            self.assertIsNotNone(cache.Cache(str(self.root))._root())
+        self.assertEqual(checked[0], os.stat('/').st_ino)
+        self.assertEqual(len(checked), len(pathlib.Path(self.root).parts) - 1, 'every ancestor, not the leaf')
 
     def test_writable_ancestors_disable_the_cache(self):
-        for mode, private, usable in ((0o777, True, False), (0o707, True, False), (0o770, False, False),
-                                      (0o770, True, True), (0o775, True, True), (0o1777, False, True),
-                                      (0o1770, False, True), (0o755, False, True)):
-            with self.subTest(mode=oct(mode), private_group=private):
-                shared = pathlib.Path(self.directory.name, 'shared-%o-%s' % (mode, private))
+        # Review R10-04: no private-group exception. Default Ubuntu umask 002 homes (0775) disable the cache.
+        for mode, usable in ((0o777, False), (0o707, False), (0o770, False), (0o775, False), (0o1777, False),
+                             (0o755, True), (0o750, True), (0o700, True)):
+            with self.subTest(mode=oct(mode)):
+                shared = pathlib.Path(self.directory.name, 'shared-%o' % mode)
                 shared.mkdir()
                 shared.chmod(mode)
-                with patch.object(cache, '_private_group', return_value=private):
-                    store = cache.Cache(str(shared / 'agent-contrib'))
-                    self.assertEqual(store._root() is not None, usable)
+                store = cache.Cache(str(shared / 'agent-contrib'))
+                self.assertEqual(store._root() is not None, usable)
                 store.close()
 
-    def test_private_group_requires_the_users_own_group(self):
-        import grp
-        import pwd
-        uid, gid = os.getuid(), os.getgid()
-        name = pwd.getpwuid(uid).pw_name
-        group = grp.struct_group(('g', 'x', gid, [name]))
-        others = [pwd.struct_passwd((name, 'x', uid, gid, '', '/', '/bin/sh'))]
-        with patch.object(grp, 'getgrgid', return_value=group), patch.object(pwd, 'getpwall', return_value=others):
-            self.assertTrue(cache._private_group(gid, uid))
-            self.assertFalse(cache._private_group(gid + 1, uid), 'not the primary group')
-        with patch.object(grp, 'getgrgid', return_value=grp.struct_group(('g', 'x', gid, [name, 'mallory']))), \
-                patch.object(pwd, 'getpwall', return_value=others):
-            self.assertFalse(cache._private_group(gid, uid), 'another member')
-        intruder = pwd.struct_passwd(('mallory', 'x', uid + 1, gid, '', '/', '/bin/sh'))
-        with patch.object(grp, 'getgrgid', return_value=group), patch.object(pwd, 'getpwall', return_value=others + [intruder]):
-            self.assertFalse(cache._private_group(gid, uid), 'another account with it as primary group')
-        with patch.object(grp, 'getgrgid', side_effect=KeyError):
-            self.assertFalse(cache._private_group(gid, uid), 'unknown group fails closed')
+    def test_a_named_acl_grant_on_an_ancestor_disables_the_cache(self):
+        # Review R10-04 repro: user::rwx,user:65534:rwx,group::r-x,mask::rwx shows 0775 and lets another account rename.
+        parent = pathlib.Path(self.directory.name, 'acl-parent')
+        parent.mkdir(mode=0o755)
+        if shutil.which('setfacl'):
+            subprocess.run(['setfacl', '-m', 'u:65534:rwx', str(parent)], check=True)
+            self.assertIsNone(cache.Cache(str(parent / 'agent-contrib'))._root())
+        parent.chmod(0o755)  # the mode now looks safe; the ACL xattr alone must still refuse
+        if shutil.which('setfacl'):
+            self.assertEqual(stat.S_IMODE(parent.stat().st_mode), 0o755)
+            self.assertIsNone(cache.Cache(str(parent / 'agent-contrib-2'))._root())
+            subprocess.run(['setfacl', '-b', str(parent)], check=True)
+        self.assertIsNotNone(cache.Cache(str(parent / 'agent-contrib-3'))._root())
+        real, inode = cache.os.listxattr, parent.stat().st_ino
+        for names in (['system.posix_acl_access'], ['system.posix_acl_default', 'user.x']):
+            def on_parent_only(target, *args, names=names, **kwargs):  # the leaf stays clean
+                return names if isinstance(target, int) and os.fstat(target).st_ino == inode else real(target, *args, **kwargs)
+            with self.subTest(names=names), patch.object(cache.os, 'listxattr', on_parent_only):
+                self.assertIsNone(cache.Cache(str(parent / 'agent-contrib-4'))._root())
 
-    def test_a_symlinked_ancestor_is_resolved_then_checked(self):
+    def test_an_acl_on_the_cache_directory_disables_the_cache(self):
+        self.home.mkdir(mode=0o700)
+        self.root.mkdir(mode=0o700)
+        if shutil.which('setfacl'):
+            subprocess.run(['setfacl', '-m', 'u:65534:---', str(self.root)], check=True)  # mode stays 0700
+            self.assertEqual(stat.S_IMODE(self.root.stat().st_mode), 0o700)
+            self.assertIsNone(cache.Cache(str(self.root))._root())
+            subprocess.run(['setfacl', '-b', str(self.root)], check=True)
+        self.assertIsNotNone(cache.Cache(str(self.root))._root())
+        real = cache.os.listxattr
+        def acl_on_leaf(target, *args, **kwargs):
+            names = real(target, *args, **kwargs)
+            leaf = os.fstat(target) if isinstance(target, int) else None
+            return names + ['system.posix_acl_access'] if leaf and leaf.st_ino == self.root.stat().st_ino else names
+        with patch.object(cache.os, 'listxattr', acl_on_leaf):
+            self.assertIsNone(cache.Cache(str(self.root))._root())
+
+    def test_without_xattr_support_acls_cannot_be_ruled_out(self):
+        with patch.object(cache.os, 'listxattr', side_effect=PermissionError('denied')):
+            self.assertIsNone(cache.Cache(str(self.root))._root())
+        unsupported = OSError(errno.ENOTSUP, 'Operation not supported')
+        with patch.object(cache.os, 'listxattr', side_effect=unsupported):
+            self.assertIsNotNone(cache.Cache(str(self.root))._root(), 'no xattr support means no ACL can exist')
+        with patch.object(cache, 'os', wraps=os) as wrapped:
+            del wrapped.listxattr
+            self.assertIsNone(cache.Cache(str(self.root))._root())
+
+    def test_the_cache_directory_must_be_exactly_0700(self):
+        self.home.mkdir(mode=0o700)
+        for mode, usable in ((0o700, True), (0o750, False), (0o710, False), (0o705, False)):
+            with self.subTest(mode=oct(mode)):
+                self.root.mkdir(mode=0o700, exist_ok=True)
+                self.root.chmod(mode)
+                self.assertEqual(cache.Cache(str(self.root))._root() is not None, usable)
+
+    def test_a_symlink_anywhere_in_the_chain_disables_the_cache(self):
         real = pathlib.Path(self.directory.name, 'real-home')
-        real.mkdir(mode=0o700)
+        (real / 'sub').mkdir(mode=0o700, parents=True)
+        real.chmod(0o700)
         link = pathlib.Path(self.directory.name, 'link-home')
         link.symlink_to(real, target_is_directory=True)
-        store = cache.Cache(str(link / 'agent-contrib'))
-        self.assertIsNotNone(store._root())
-        store.close()
-        self.assertTrue((real / 'agent-contrib').is_dir())
+        for path in (link / 'agent-contrib', link / 'sub' / 'agent-contrib'):
+            with self.subTest(path=str(path)):
+                self.assertIsNone(cache.Cache(str(path))._root())
+        self.assertFalse((real / 'agent-contrib').exists())
+        self.assertFalse((real / 'sub' / 'agent-contrib').exists())
+
+    def test_an_unsafe_parent_cannot_disappear_through_a_symlink(self):
+        # Review R10-05 repro: shared(0777)/cache-home -> private dir; realpath used to drop `shared` before checking.
+        shared = pathlib.Path(self.directory.name, 'shared')
+        shared.mkdir()
+        shared.chmod(0o777)
+        target = pathlib.Path(self.directory.name, 'unrelated')
+        (target / 'agent-contrib').mkdir(mode=0o700, parents=True)
+        target.chmod(0o700)
+        victim = target / 'agent-contrib' / ('blob-' + 'e' * 40)
+        victim.write_bytes(b'unrelated')
+        (shared / 'cache-home').symlink_to(target, target_is_directory=True)
+        store = cache.Cache(str(shared / 'cache-home' / 'agent-contrib'))
+        self.assertIsNone(store._root())
+        fake = ContentGitHub()
+        store.observe('repos/acme/photos', fake.request('repos/acme/photos'))
+        store.observe(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1',
+                      fake.request(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1'))
+        with patch.object(cache, 'TOTAL_LIMIT', 1):
+            store.observe(self.contents(), fake.request(self.contents()))
+        self.assertEqual(sorted(p.name for p in (target / 'agent-contrib').iterdir()), [victim.name])
 
     def test_without_dir_fd_support_the_cache_is_disabled(self):
         with patch.object(cache.os, 'supports_dir_fd', set()):
@@ -588,7 +666,8 @@ class EvictionTests(CacheTestCase):
 
     def test_eviction_touches_only_valid_entry_names(self):
         store, fake = self.store()
-        self.root.mkdir(mode=0o700, parents=True)
+        self.home.mkdir(mode=0o700, exist_ok=True)
+        self.root.mkdir(mode=0o700)
         for name in ('blob-notes', 'blob-' + 'e' * 39, 'BLOB-' + 'e' * 40, 'README'):
             (self.root / name).write_bytes(b'x' * 50)
         with patch.object(cache, 'TOTAL_LIMIT', 1):

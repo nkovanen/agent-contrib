@@ -514,13 +514,21 @@ status.
   as a FIFO, opened nonblocking) is deleted and read live. Identical files at different paths share one entry.
 - The directory is `$XDG_CACHE_HOME/agent-contrib` (an absolute
   `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`.
-  - It is opened once, walking the resolved parent path component by component
-    without following symlinks, and created with mode 0700 if missing.
-  - Every ancestor must be owned by root or by you. An ancestor that is
-    other-writable, or group-writable by a group other than your private user
-    group, must be sticky (as `/tmp` is). The cache directory itself must be
-    yours, with no group or other write permission. Otherwise the cache is
-    bypassed.
+  - It is opened once by walking every component of the absolute path from `/`
+    without following symlinks: a symlink anywhere in the path disables the
+    cache. Missing components are created with mode 0700.
+  - Every ancestor must be owned by root or by you, and not group- or
+    other-writable. The only exception is a root-owned sticky directory, such
+    as `/tmp`. Ancestors you own must carry no POSIX ACL.
+  - The cache directory itself must be yours, mode exactly 0700, with no POSIX
+    ACL.
+  - Any doubt disables the cache for that run; it is never an error. Platforms
+    without `os.listxattr`, where ACLs cannot be ruled out, disable it too.
+  - **Default Ubuntu homes disable the cache:** umask 002 makes `~/.cache`
+    0775. To enable it, point `XDG_CACHE_HOME` at a private 0700 directory, for
+    example `mkdir -m 700 ~/.agent-contrib-cache` and then
+    `XDG_CACHE_HOME=~/.agent-contrib-cache agent-contrib --cache …`. Every
+    ancestor of that directory must meet the rules above.
   - Every read, write, rename, scan and delete then works relative to that
     open directory, so renaming or replacing its name afterwards cannot
     redirect them.
