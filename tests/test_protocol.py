@@ -310,6 +310,26 @@ class VerificationTests(unittest.TestCase):
         task['behavior_criteria'][0]['description'] = '   '
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
+    def test_prerequisite_blocker_names_each_failing_id_and_status(self):
+        expected = ('Prerequisites are not satisfied with evidence: P1 (pending), '
+                    'P3 (blocked), P4 (satisfied without evidence)')
+        from agent_contribute import lifecycle
+        from tests.test_authorization import candidate_task
+        prerequisites = [{'id': 'P1', 'description': 'One', 'status': 'pending', 'evidence': ''},
+                         {'id': 'P2', 'description': 'Two', 'status': 'satisfied', 'evidence': 'Done'},
+                         {'id': 'P3', 'description': 'Three', 'status': 'blocked', 'evidence': 'Waiting'},
+                         {'id': 'P4', 'description': 'Four', 'status': 'satisfied', 'evidence': '  '}]
+        task, client = ready_contract()
+        task['prerequisites'] = prerequisites
+        result = core.verify(task, client=client)
+        self.assertFalse(result['execution_ready'])
+        self.assertIn(expected, result['errors'])
+        task, client = candidate_task()
+        task['prerequisites'] = copy.deepcopy(prerequisites)
+        self.assertIn(expected, lifecycle.reviewed_errors(task))
+        task['prerequisites'] = [prerequisites[1]]
+        self.assertFalse([item for item in lifecycle.reviewed_errors(task) if 'Prerequisites' in item])
+
     def test_duplicate_json_keys_are_rejected(self):
         with self.assertRaises(core.ProtocolError):
             core.strict_json('{"status":"draft","status":"reviewed"}')

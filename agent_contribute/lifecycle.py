@@ -64,8 +64,7 @@ def reviewed_errors(task):
             errors.append('Definition of done must cover exactly all ' + list_key)
     if not task['discovery']['complete']:
         errors.append('Prepared discovery is incomplete')
-    if any(item['status'] != 'satisfied' or not item['evidence'].strip() for item in task['prerequisites']):
-        errors.append('Prerequisites are not satisfied with evidence')
+    errors.extend(core.prerequisite_errors(task['prerequisites']))
     return errors
 
 

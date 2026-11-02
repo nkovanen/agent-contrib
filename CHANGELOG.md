@@ -39,6 +39,8 @@
   part; no Windows or macOS support claim and no CI matrix change).
 - Schema 0.2 `verify` reports `Exact-head PR history not checked: requires a
   valid mandate` instead of implying the history was read. Gates are unchanged.
+- The prerequisite blocker names each failing prerequisite ID and status, for
+  example `P1 (pending), P4 (satisfied without evidence)`.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;
