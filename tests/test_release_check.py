@@ -87,5 +87,16 @@ class VersionAgreementTests(unittest.TestCase):
         self.assertIn('agent_contribute/__init__.py', out.getvalue())
 
 
+class RunbookTests(unittest.TestCase):
+    def test_runbook_names_the_checks_the_workflow_and_rollback(self):
+        text = (ROOT / 'docs' / 'releasing.md').read_text('utf-8')
+        for phrase in ('python tools/release_check.py --release', '--tag vX.Y.Z', 'examples/release-pypi.yml',
+                       'gh attestation verify', 'pending* publisher', 'environment `pypi`', 'Never reuse',
+                       'a version number', 'Yank it', 'Never move a published tag'):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+        self.assertIn('docs/releasing.md', (ROOT / 'CONTRIBUTING.md').read_text('utf-8'))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -19,6 +19,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Release preparation (#26, not activated): `docs/releasing.md` runbook with
+  verification and rollback, `tools/release_check.py` (version statements
+  agree; `--release` needs a dated CHANGELOG heading; `--tag` checks the tag),
+  and a proposed PyPI trusted-publishing workflow with build provenance in
+  `docs/examples/release-pypi.yml`, which runs only after a maintainer adopts it.
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
   sections are unchanged, plus an optional host-issued `overlap_dispositions`
   record. It is bound to the contract, mandate and credential, and pins each
