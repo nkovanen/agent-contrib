@@ -61,7 +61,7 @@ class LegacyGoldenTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             task, _, evidence, _ = evidence_checkout(directory)
             client = FakeGitHub(labels=['agent-ok'], prs=[{'number': 2, 'title': 'Contribution', 'body': 'Fixes #12',
-                                      'html_url': 'https://github.com/acme/photos/pull/2'}])
+                                      'html_url': 'https://github.com/acme/photos/pull/2', 'head': None}])
             client.commit = task['source']['commit']
             task['approval'] = copy.deepcopy(core.prepare(core.inspect_issue('acme/photos#12', FakeGitHub()))['approval'])
             evidence['contract_sha256'] = core.canonical_hash(task)

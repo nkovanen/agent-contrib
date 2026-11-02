@@ -135,6 +135,18 @@ class OverlapScanShapeTests(unittest.TestCase):
                 self.assertFalse(result['live_complete'])
                 self.assertFalse(result['implementation_ready'])
 
+    def test_missing_body_head_or_ref_blocks_schema_02_readiness(self):
+        # R1-11: an absent key was never read; only an explicit null means empty.
+        pr_without = lambda key: {k: v for k, v in self.pr().items() if k != key}
+        cases = [(pr_without('body'), 'pull request body'), (pr_without('head'), 'pull request head'),
+                 (self.pr(head={}), 'pull request branch')]
+        for pr, description in cases:
+            with self.subTest(pr=pr):
+                result = self.verify(pr)
+                self.assertIn('Invalid GitHub ' + description, result['errors'])
+                self.assertFalse(result['live_complete'])
+                self.assertFalse(result['implementation_ready'])
+
     def test_index_rejects_false_valued_malformed_fields(self):
         for pr in (self.pr(body=[]), self.pr(head=0), self.pr(head={'ref': False})):
             with self.subTest(pr=pr), self.assertRaises(core.ProtocolError):

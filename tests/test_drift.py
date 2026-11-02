@@ -71,7 +71,7 @@ class DriftTests(unittest.TestCase):
             return value
         client.request = request
         client.labels = []
-        client.prs = [{'number': 40, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/40'}]
+        client.prs = [{'number': 40, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/40', 'head': None}]
         result = drift.drift(task, client)
         self.assertTrue(result['issue']['changed'])
         self.assertEqual(result['issue']['current_components']['assignees'], ['mallory'])
@@ -167,7 +167,7 @@ class DriftTests(unittest.TestCase):
 
     def test_new_overlapping_pr_alone_is_drift(self):
         task, client = ready_contract()
-        client.prs = [{'number': 40, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/40'}]
+        client.prs = [{'number': 40, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/40', 'head': None}]
         result = drift.drift(task, client)
         self.assert_single_reason(result, 'overlap')
         self.assertEqual(result['overlap']['added'], ['https://github.com/acme/photos/pull/40'])

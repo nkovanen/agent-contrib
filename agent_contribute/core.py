@@ -370,10 +370,15 @@ def index_prs(prs):
         number = require(pr.get('number'), int, 'pull request number')
         title = require(pr.get('title'), str, 'pull request title')
         url = require(pr.get('html_url'), str, 'pull request URL')
-        # Only null means empty: a falsy non-string must not be scanned as empty text.
-        body = require('' if pr.get('body') is None else pr['body'], str, 'pull request body')
-        head = require({} if pr.get('head') is None else pr['head'], dict, 'pull request head')
-        branch = require('' if head.get('ref') is None else head['ref'], str, 'pull request branch')
+        # Only an explicit null means empty; an absent key was never read, so it cannot be scanned as empty.
+        for key in ('body', 'head'):
+            if key not in pr:
+                raise ProtocolError('api_shape', 'Invalid GitHub pull request ' + key)
+        body = require('' if pr['body'] is None else pr['body'], str, 'pull request body')
+        head = require({'ref': None} if pr['head'] is None else pr['head'], dict, 'pull request head')
+        if 'ref' not in head:
+            raise ProtocolError('api_shape', 'Invalid GitHub pull request branch')
+        branch = require('' if head['ref'] is None else head['ref'], str, 'pull request branch')
         text = title + '\n' + body + '\n' + branch
         if len(text) > 100000:
             raise ProtocolError('scan_limit', 'PR reference scan exceeds 100 kB text limit')

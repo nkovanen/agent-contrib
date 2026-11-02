@@ -181,20 +181,20 @@ class DiscoveryTests(unittest.TestCase):
         for body, expected in cases:
             with self.subTest(body=body):
                 client = FakeGitHub(prs=[{'number': 30, 'title': 'Unrelated work', 'body': body,
-                                          'html_url': 'https://github.com/acme/photos/pull/30'}])
+                                          'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}])
                 result = core.inspect_issue('acme/photos#12', client)
                 self.assertEqual(bool(result['duplicates']), expected)
 
     def test_long_remote_pr_is_scanned_in_linear_time(self):
         started = time.monotonic()
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'Other', 'body': 'a' * 30000 + ' Fixes #12', 'html_url': 'url'}]))
+            {'number': 30, 'title': 'Other', 'body': 'a' * 30000 + ' Fixes #12', 'html_url': 'url', 'head': None}]))
         self.assertTrue(result['duplicates'])
         self.assertLess(time.monotonic() - started, 1.0)
 
     def test_project_independent_identifier_overlap_warns(self):
         client = FakeGitHub(prs=[{'number': 30, 'title': 'Other work',
-                                 'body': 'Implements ABC-FEATURE-ID', 'html_url': 'url'}])
+                                 'body': 'Implements ABC-FEATURE-ID', 'html_url': 'url', 'head': None}])
         original = client.request
         def request(endpoint):
             result = original(endpoint)
@@ -207,7 +207,7 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_topic_overlap_warns(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url'}]))
+            {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url', 'head': None}]))
         self.assertTrue(result['duplicates'])
         self.assertEqual(result['duplicates'][0]['reason'],
                          'Potential title/checklist overlap; review manually (shared title words: bounds, thumbnail)')
@@ -215,7 +215,7 @@ class DiscoveryTests(unittest.TestCase):
     def test_overlap_match_list_is_sorted_bounded_and_limited_to_the_trigger(self):
         words = ['word%02d' % n for n in range(30)]
         index = core.index_prs([{'number': 30, 'title': ' '.join(reversed(words)), 'html_url': 'url',
-                                 'body': 'Tracks ABC-ONE and ABC-TWO'}])
+                                 'body': 'Tracks ABC-ONE and ABC-TWO', 'head': None}])
         issue = {'number': 12, 'title': ' '.join(words), 'body': 'See ABC-TWO'}
         [finding] = core.duplicate_prs('acme/photos', issue, index)
         self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared title words: ' +
@@ -364,7 +364,7 @@ class VerificationTests(unittest.TestCase):
 
     def test_new_duplicate_blocks_prepared_contract(self):
         task, client = ready_contract()
-        client.prs = [{'number': 30, 'title': 'Unrelated', 'body': 'Fixes #12', 'html_url': 'url'}]
+        client.prs = [{'number': 30, 'title': 'Unrelated', 'body': 'Fixes #12', 'html_url': 'url', 'head': None}]
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
     def test_duplicate_ids_and_done_omissions_fail_readiness(self):
