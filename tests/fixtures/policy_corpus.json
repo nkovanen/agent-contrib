@@ -1,0 +1,204 @@
+{
+ "description": "Real repository policy excerpts pinned to commits (dogfood evaluation 2, 2026-11-02).",
+ "entries": [
+  {
+   "id": "C1",
+   "repository": "pallets/.github",
+   "path": "CONTRIBUTING.md",
+   "commit": "f5f5c66c7bc984f60d9df2d5690506a70c6103b3",
+   "source_url": "https://github.com/pallets/.github/blob/f5f5c66c7bc984f60d9df2d5690506a70c6103b3/CONTRIBUTING.md#L20-L25",
+   "lines": [
+    20,
+    25
+   ],
+   "license": "none declared",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "## AI-Generated Contributions\n\nAI-generated PRs and issues are closed on sight, without review or discussion.\nThis applies regardless of code quality or correctness. AI-generated\ncontributions must not be reopened, cleaned up, or used as a base for further\nwork.\n",
+   "expected_hint_kinds": [
+    "possible_ai_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C2",
+   "repository": "pallets/click",
+   "path": "docs/contributing.md",
+   "commit": "3ee9309b9c1804528842392c461526760bff0035",
+   "source_url": "https://github.com/pallets/click/blob/3ee9309b9c1804528842392c461526760bff0035/docs/contributing.md#L1-L8",
+   "lines": [
+    1,
+    8
+   ],
+   "license": "BSD-3-Clause",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "# Contributing\n\nThis is a quick reference for Click-specific development\ntasks. For setting up the development environment and the\ngeneral contribution workflow, see the Pallets [quick\nreference](https://palletsprojects.com/contributing/quick/)\nand the [detailed contributing\nguide](https://palletsprojects.com/contributing/).\n",
+   "expected_hint_kinds": [],
+   "expected_min_links": 2
+  },
+  {
+   "id": "C3",
+   "repository": "BurntSushi/ripgrep",
+   "path": "CONTRIBUTING.md",
+   "commit": "e5f627fc16766194ced7bf498b03b78823f97716",
+   "source_url": "https://github.com/BurntSushi/ripgrep/blob/e5f627fc16766194ced7bf498b03b78823f97716/CONTRIBUTING.md#L1-L8",
+   "lines": [
+    1,
+    8
+   ],
+   "license": "Unlicense OR MIT",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "# Contributing\n\n## Use of AI\n\nAll use of AI in contributions must follow the\n[AI Policy](https://github.com/BurntSushi/ripgrep/blob/master/AI_POLICY.md).\n\nContributions not following the AI Policy will be closed.\n",
+   "expected_hint_kinds": [
+    "ai_mention",
+    "possible_ai_restriction"
+   ],
+   "expected_min_links": 1
+  },
+  {
+   "id": "C4",
+   "repository": "BurntSushi/ripgrep",
+   "path": "AI_POLICY.md",
+   "commit": "4857d6fa67db69a95cd4b6f2adda5d807d4d0119",
+   "source_url": "https://github.com/BurntSushi/ripgrep/blob/4857d6fa67db69a95cd4b6f2adda5d807d4d0119/AI_POLICY.md#L20-L23",
+   "lines": [
+    20,
+    23
+   ],
+   "license": "Unlicense OR MIT",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "This project requires a human in the loop who understands the work produced by\nAI. **Autonomous agents are not allowed to be used for contributing to this\nproject**. Pull requests that appear in violation of this will be closed,\nperhaps without notice.\n",
+   "expected_hint_kinds": [
+    "possible_agent_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C5",
+   "repository": "BurntSushi/ripgrep",
+   "path": "AI_POLICY.md",
+   "commit": "4857d6fa67db69a95cd4b6f2adda5d807d4d0119",
+   "source_url": "https://github.com/BurntSushi/ripgrep/blob/4857d6fa67db69a95cd4b6f2adda5d807d4d0119/AI_POLICY.md#L3-L6",
+   "lines": [
+    3,
+    6
+   ],
+   "license": "Unlicense OR MIT",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "Using AI (i.e., LLMs) as tools for coding is welcome. A high bar is held for\nall contributions to this project. Moreover, the project maintainers remain\nresponsible for any code that is published as part of a release. Contributors\nare expected to be responsible for any code they publish.\n",
+   "expected_hint_kinds": [
+    "ai_mention"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C6",
+   "repository": "honojs/hono",
+   "path": "docs/CONTRIBUTING.md",
+   "commit": "ee88684625077a2cd0e2f4613e593e2635ffe4c7",
+   "source_url": "https://github.com/honojs/hono/blob/ee88684625077a2cd0e2f4613e593e2635ffe4c7/docs/CONTRIBUTING.md#L21-L25",
+   "lines": [
+    21,
+    25
+   ],
+   "license": "MIT",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "## AI Usage Policy\n\nYou may use AI to contribute, but it must never waste a maintainer's time or make their work unpleasant.\n\nTo enforce this, and regardless of whether AI was actually used, a maintainer may close your issue without notice and block your account.\n",
+   "expected_hint_kinds": [
+    "ai_mention",
+    "possible_ai_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C7",
+   "repository": "honojs/hono",
+   "path": "docs/CONTRIBUTING.md",
+   "commit": "ee88684625077a2cd0e2f4613e593e2635ffe4c7",
+   "source_url": "https://github.com/honojs/hono/blob/ee88684625077a2cd0e2f4613e593e2635ffe4c7/docs/CONTRIBUTING.md#L27-L29",
+   "lines": [
+    27,
+    29
+   ],
+   "license": "MIT",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "## Issues instead of Pull Requests\n\nPull requests are limited to maintainers. If you find a bug or want a change, please create an issue instead. A clear issue with a minimal reproduction helps us more than a pull request.\n",
+   "expected_hint_kinds": [
+    "possible_pr_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C8",
+   "repository": "astral-sh/.github",
+   "path": "AI_POLICY.md",
+   "commit": "88a2f5d5c9cdf229b098ded0191199e41eca4249",
+   "source_url": "https://github.com/astral-sh/.github/blob/88a2f5d5c9cdf229b098ded0191199e41eca4249/AI_POLICY.md#L17-L20",
+   "lines": [
+    17,
+    20
+   ],
+   "license": "none declared",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "Due to the foundational nature of our projects, we require a human in the loop\nwho understands the work produced by AI. **We do not allow autonomous agents to\nbe used for contributing to our projects**. We will close any pull requests that\nwe believe were created autonomously.\n",
+   "expected_hint_kinds": [
+    "possible_agent_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C9",
+   "repository": "astral-sh/.github",
+   "path": "AI_POLICY.md",
+   "commit": "88a2f5d5c9cdf229b098ded0191199e41eca4249",
+   "source_url": "https://github.com/astral-sh/.github/blob/88a2f5d5c9cdf229b098ded0191199e41eca4249/AI_POLICY.md#L5-L7",
+   "lines": [
+    5,
+    7
+   ],
+   "license": "none declared",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "**AI should not be used to generate comments when communicating with\nmaintainers**. We expect comments on our projects to be written by humans. We\nmay hide any comments that we believe are AI generated.\n",
+   "expected_hint_kinds": [
+    "possible_ai_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C10",
+   "repository": "ghostty-org/ghostty",
+   "path": "AI_POLICY.md",
+   "commit": "00c33eaf72af6c9b93d9fd8d54b6f7086612a95b",
+   "source_url": "https://github.com/ghostty-org/ghostty/blob/00c33eaf72af6c9b93d9fd8d54b6f7086612a95b/AI_POLICY.md#L1-L22",
+   "lines": [
+    1,
+    22
+   ],
+   "license": "MIT",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "# AI Usage Policy\n\nThe Ghostty project has strict rules for AI usage:\n\n- **All AI usage in any form must be disclosed.** You must state\n  the tool you used (e.g. Claude Code, Cursor, Amp) along with\n  the extent that the work was AI-assisted.\n\n- **The human-in-the-loop must fully understand all code.** If you\n  can't explain what your changes do and how they interact with the\n  greater system without the aid of AI tools, do not contribute\n  to this project.\n\n- **Issues and discussions can use AI assistance but must have a full\n  human-in-the-loop.** This means that any content generated with AI\n  must have been reviewed _and edited_ by a human before submission.\n  AI is very good at being overly verbose and including noise that\n  distracts from the main point. Humans must do their research and\n  trim this down.\n\n- **No AI-generated media is allowed (art, images, videos, audio, etc.).**\n  Text and code are the only acceptable AI-generated content, per the\n",
+   "expected_hint_kinds": [
+    "ai_mention",
+    "possible_ai_restriction"
+   ],
+   "expected_min_links": 0
+  },
+  {
+   "id": "C11",
+   "repository": "curl/curl",
+   "path": "docs/CONTRIBUTE.md",
+   "commit": "7e1001bcd69967707cf6fee9e71fc10dd244d509",
+   "source_url": "https://github.com/curl/curl/blob/7e1001bcd69967707cf6fee9e71fc10dd244d509/docs/CONTRIBUTE.md#L311-L358",
+   "lines": [
+    311,
+    358
+   ],
+   "license": "curl (NOASSERTION in API)",
+   "note": "Short verbatim excerpt for policy-detection regression tests; see source_url.",
+   "text": "# On AI use in curl\n\nGuidelines for AI use when contributing to curl.\n\n## For security reports and other issues\n\nIf you asked an AI tool to find problems in curl, you **must** make sure to\nreveal this fact in your report.\n\nYou must also double-check the findings carefully before reporting them to us\nto validate that the issues are indeed existing and working exactly as the AI\nsays. AI-based tools frequently generate inaccurate or fabricated results.\n\nFurther: it is *rarely* a good idea to copy and paste an AI generated report\nto the project. Those generated reports typically are too wordy and rarely to\nthe point (in addition to the common fabricated details). If you actually find\na problem with an AI and you have verified it yourself to be true: write the\nreport yourself and explain the problem as you have learned it. This makes\nsure the AI-generated inaccuracies and invented issues are filtered out early\nbefore they waste more people's time.\n\nAs we take security reports seriously, we investigate each report with\npriority. This work is both time and energy consuming and pulls us away from\ndoing other meaningful work. Fake and otherwise made up security problems\neffectively prevent us from doing real project work and make us waste time and\nresources.\n\nWe ban users immediately who submit made up fake reports to the project.\n\n## For pull requests\n\nWhen contributing content to the curl project, you give us permission to use\nit as-is and you must make sure you are allowed to distribute it to us. By\nsubmitting a change to us, you agree that the changes can and should be\nadopted by curl and get redistributed under the curl license. Authors should\nbe explicitly aware that the burden is on them to ensure no unlicensed code is\nsubmitted to the project.\n\nThis is independent if AI is used or not.\n\nWhen contributing a pull request you should of course always make sure that\nthe proposal is good quality and a best effort that follows our guidelines. A\nbasic rule of thumb is that if someone can spot that the contribution was made\nwith the help of AI, you have more work to do.\n\nWe can accept code written with the help of AI into the project, but the code\nmust still follow coding standards, be written clearly, be documented, feature\ntest cases and adhere to all the normal requirements we have.\n",
+   "expected_hint_kinds": [
+    "ai_mention"
+   ],
+   "expected_min_links": 0
+  }
+ ]
+}

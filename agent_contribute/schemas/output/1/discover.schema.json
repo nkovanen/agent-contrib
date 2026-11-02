@@ -487,6 +487,10 @@
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
+        },
+        "repository_policy": {
+          "$ref": "#/$defs/repository_policy",
+          "description": "Default-on, report-only; never a verdict"
         }
       },
       "required": [
@@ -601,6 +605,11 @@
           "type": "string",
           "description": "Repository of the PR, when it is not the issue source",
           "maxLength": 2147483647
+        },
+        "observed_in": {
+          "type": "string",
+          "const": "disposition_read",
+          "description": "Only in schema 0.2 verify: the match was first seen in a host-context 0.2 disposition read, not the open-PR list scan"
         }
       },
       "required": [
@@ -1203,6 +1212,350 @@
       ],
       "additionalProperties": false,
       "description": "Open-PR scan of the proposed target repository when it differs from the issue source"
+    },
+    "repository_policy": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "type": "string",
+          "enum": [
+            "policy-report/1"
+          ]
+        },
+        "review_obligation": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "sources_scanned": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "enum": [
+                  "repository",
+                  "owner-github"
+                ]
+              },
+              "repository": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "path_truncated": {
+                "type": "boolean"
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ai_policy",
+                  "agent_instructions",
+                  "contributing",
+                  "pr_template",
+                  "community",
+                  "readme",
+                  "instruction"
+                ]
+              },
+              "notes": {
+                "type": "array",
+                "maxItems": 2147483647,
+                "items": {
+                  "type": "string",
+                  "maxLength": 2147483647
+                }
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              }
+            },
+            "required": [
+              "origin",
+              "repository",
+              "path",
+              "path_truncated",
+              "commit",
+              "sha256",
+              "kind",
+              "notes",
+              "path_sanitized",
+              "identity_sha256"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "unassessed": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "what": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 2147483647
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              },
+              "link_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 300
+              },
+              "what_truncated": {
+                "type": "boolean"
+              },
+              "what_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              }
+            },
+            "required": [
+              "what",
+              "reason",
+              "from",
+              "line",
+              "link_text",
+              "what_truncated",
+              "what_sanitized",
+              "identity_sha256"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "omitted_sources": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "repository": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "path_truncated": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ai_policy",
+                  "agent_instructions",
+                  "contributing",
+                  "pr_template",
+                  "community",
+                  "readme",
+                  "instruction"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "file limit",
+                  "scan byte limit",
+                  "request limit"
+                ]
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              }
+            },
+            "required": [
+              "repository",
+              "path",
+              "path_truncated",
+              "kind",
+              "reason",
+              "path_sanitized",
+              "identity_sha256"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limits_reached": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "not_reported": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "hides_sources": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "limit",
+              "not_reported",
+              "hides_sources"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limits_hide_sources": {
+          "type": "boolean",
+          "description": "A limit hid a policy candidate or reference, or omitted_sources is non-empty"
+        },
+        "never_inspected": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          }
+        },
+        "hints": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "possible_agent_restriction",
+                  "possible_ai_restriction",
+                  "possible_pr_restriction",
+                  "ai_mention"
+                ]
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 4,
+                "description": "H1, H2, ... in report order"
+              }
+            },
+            "required": [
+              "kind",
+              "line",
+              "heading",
+              "untrusted_excerpt",
+              "source",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "reads": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "requests",
+            "limit"
+          ],
+          "additionalProperties": false
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "report",
+        "review_obligation",
+        "sources_scanned",
+        "unassessed",
+        "omitted_sources",
+        "limits_reached",
+        "limits_hide_sources",
+        "never_inspected",
+        "hints",
+        "reads",
+        "inventory_sha256"
+      ],
+      "additionalProperties": false,
+      "description": "Default-on, report-only policy inventory and hints; never a verdict"
     }
   }
 }

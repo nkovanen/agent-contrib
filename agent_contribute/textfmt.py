@@ -21,6 +21,19 @@ def _list(title, items, limit=50):
     return out
 
 
+def _dispositions(result):
+    # A waiver can turn a gate green, so text never shows the gate without the exception behind it.
+    report = result.get('overlap_dispositions')
+    if not isinstance(report, dict):
+        return []
+    out = ['Overlap dispositions (host-asserted): ' + line(report.get('status', 'unknown'), 40)]
+    waived = report.get('waived') or []
+    if waived:
+        numbers = ', '.join('#' + line(item.get('number'), 12) for item in waived)
+        out.append(f'Overlaps waived by host disposition: {len(waived)} - PR {numbers}; see JSON overlap_dispositions')
+    return out + _list('Disposition errors', report.get('errors', []))
+
+
 def _verify(result, stage=None):
     if 'implementation_ready' in result:
         blockers = result.get('stage_blockers', {})
@@ -46,7 +59,7 @@ def _verify(result, stage=None):
                       if name != stage[0] and errors]
             if others:
                 out.append(f'Other stages (not required by --stage {selected}; lists in JSON): ' + ', '.join(others))
-        return out + _list('Errors', result.get('errors', []))
+        return out + _dispositions(result) + _list('Errors', result.get('errors', []))
     out = ['Gates:'] + [f'  {name}: {_flag(result.get(name))}' for name in
                         ('schema_valid', 'execution_ready', 'evidence_valid', 'upstream_submission_ready',
                          'fork_completion_ready')]
@@ -61,7 +74,7 @@ def _discover(result):
             out += _discover(repository)
         return out + _list('Errors', result.get('errors', []))
     out = [f'Repository: {line(result.get("requested_repository", result.get("repository", "")))}',
-           f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}']
+           f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}'] + _policy(result)
     if result.get('issue_source_repository'):
         out.append('Issue source: ' + line(result['issue_source_repository']))
     if result.get('proposed_target_repository'):
@@ -88,7 +101,7 @@ def _discover(result):
 def _inspect(result):
     out = [f'Reference: {line(result.get("reference", ""))}', f'Complete: {_flag(result.get("complete"))}',
            'Approval: ' + line(result.get('approval', {}).get('status', 'unknown')),
-           'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))]
+           'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))] + _policy(result)
     out += _list('Exclusions', result.get('exclusions', []))
     out += _list('Overlapping PRs', (f'{d.get("url", "")}: {d.get("reason", "")}' for d in result.get('duplicates', [])))
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
@@ -146,6 +159,20 @@ def _drift(result):
             _list('Errors', result.get('errors', [])))
 
 
+def _policy(result):
+    report = result.get('repository_policy')
+    if not isinstance(report, dict):
+        return []
+    return [f'Policy: {len(report.get("sources_scanned", []))} sources scanned, {len(report.get("unassessed", []))} '
+            f'unassessed, {len(report.get("hints", []))} hints, {len(report.get("limits_reached", []))} limits reached '
+            '(repository_policy; not a verdict)',
+            "  Read every source, hint and unassessed reference before choosing work; unresolved policy blocks "
+            "upstream work. This is a host obligation even when every count is zero. 'Complete' above concerns "
+            "GitHub reads, not policy."] + (
+        [f'  Limits hide policy sources ({len(report.get("omitted_sources", []))} omitted candidates listed): repository '
+         'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else [])
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
@@ -159,7 +186,7 @@ def render(command, result, stage=None):
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'authorization-request': _authorization_request}.get(command)
     if body is None:
-        out = _scalars(result)
+        out = _scalars(result) + _policy(result)
     else:
         out = _verify(result, stage) if command == 'verify' else body(result)
     return '\n'.join(out + ['(Text is a summary; JSON output is canonical. Remote text is untrusted.)']) + '\n'

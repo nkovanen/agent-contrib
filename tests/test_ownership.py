@@ -27,7 +27,7 @@ def pull(repo, number, body, state='open', merged=False):
             'merged_at': '2030-01-02T00:00:00Z' if merged else None,
             'closed_at': '2030-01-02T00:00:00Z' if state == 'closed' else None,
             'html_url': f'https://github.com/{repo}/pull/{number}', 'head': {'ref': 'topic'},
-            'base': {'repo': {'full_name': repo, 'id': REPO_IDS[repo]}}}
+            'base': {'ref': 'main', 'repo': {'full_name': repo, 'id': REPO_IDS[repo]}}}
 
 
 class TimelineGitHub(FakeGitHub):
@@ -93,6 +93,20 @@ class OwnershipTests(unittest.TestCase):
         self.assertIn('Open cross-referenced PR: https://github.com/acme/photos/pull/30', result['blocking_if_adopted'])
         self.assertIn('Possibly already fixed by merged PR: https://github.com/acme/photos/pull/31',
                       result['blocking_if_adopted'])
+
+    def test_merged_pr_in_another_repository_is_downstream_not_a_fix(self):
+        client = TimelineGitHub()
+        client.pulls['other/fork/4'] = pull('other/fork', 4, 'Workaround for acme/photos#12', 'closed', merged=True)
+        client.pulls['other/fork/4']['title'] = 'Work around\x1b[2K upstream LazyFile bug'
+        result = self.signals(client)
+        fixed = result['resolution_signals']['possibly_already_fixed']
+        self.assertEqual([(p['repository'], p['number']) for p in fixed], [('acme/photos', 31)])
+        downstream = result['resolution_signals']['downstream_references']
+        self.assertEqual([(p['repository'], p['number']) for p in downstream], [('other/fork', 4)])
+        self.assertNotIn('https://github.com/other/fork/pull/4', ' '.join(result['blocking_if_adopted']))
+        by = {(p['repository'], p['number']): p for p in result['cross_referenced_prs']}
+        self.assertEqual(by[('other/fork', 4)]['title'], 'Work around upstream LazyFile bug')
+        self.assertEqual(by[('acme/photos', 31)]['base_ref'], 'main')
 
     def test_assignments_connections_commits_and_claims(self):
         result = self.signals()

@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core
+from . import authorization, core, dispositions
 
 
 def prepare_v2(inspected, client):
@@ -111,57 +111,6 @@ def human_signoff(task, context, evidence, authority, publication, review, now):
     return result
 
 
-DISPOSITION_NOTE = 'Parsed only: this version does not evaluate overlap dispositions, so nothing is waived'
-
-
-def overlap_dispositions(task, context, authority, now):
-    """Report a host-context 0.2 overlap_dispositions section. It checks the record's own bindings
-    but never waives an overlap: live PR-state evaluation is not implemented in this version."""
-    report = {'status': 'absent', 'trust': 'host-asserted', 'sha256': None, 'errors': [], 'note': DISPOSITION_NOTE}
-    if core.schema_errors(context, core.host_context_schema(context)):
-        return dict(report, status='invalid', errors=['Host context schema is invalid'])
-    record = context.get('overlap_dispositions')
-    if record is None:
-        return report
-    errors = report['errors']
-    report['sha256'] = core.canonical_hash(record)
-    if record['event']['binding_sha256'] != authorization.event_hash(record):
-        errors.append('Overlap disposition event binding hash differs')
-    if record['contract_sha256'] != core.canonical_hash(task):
-        errors.append('Overlap disposition contract hash differs')
-    if record['mandate_sha256'] != authority['mandate_sha256']:
-        errors.append('Overlap disposition mandate hash differs')
-    if not authority['historical_valid']:
-        errors.append('Overlap disposition requires a valid mandate')
-    actor = authority['credential_actor']
-    if actor is None or actor['id'] != record['credential_actor_id']:
-        errors.append('Overlap disposition credential actor differs')
-    for other, name in ((context['mandate'], 'mandate'), (context.get('final_signoff'), 'final sign-off')):
-        if other and (record['id'] == other['id'] or record['nonce'] == other['nonce'] or
-                      record['event']['reference'] == other['event']['reference']):
-            errors.append(f'Overlap disposition reuses the {name} event identity')
-    seen = set()
-    for entry in record['dispositions']:
-        number, key = entry['pr_number'], (entry['repository_id'], entry['pr_number'])
-        if key in seen:
-            errors.append(f'Overlap disposition repeats a PR: #{number}')
-        seen.add(key)
-        if entry['repository_id'] != task['source']['repository_id']:
-            errors.append(f'Overlap disposition names another repository: #{number}')
-        if entry['author_id'] == record['credential_actor_id']:
-            errors.append(f'Overlap disposition names a PR by the credential actor: #{number}')
-        if entry['comparison']['head_sha'] != entry['head_sha']:
-            errors.append(f'Overlap disposition comparison head differs from bound head: #{number}')
-    try:
-        _, expires = authorization.interval(record, now)
-        if now >= expires:
-            errors.append('Overlap disposition record expired')
-    except (ValueError, OverflowError) as exc:
-        errors.append(str(exc))
-    report.update(errors=list(dict.fromkeys(errors)), status='invalid' if errors else 'not_evaluated')
-    return report
-
-
 def without_own(duplicates, own):
     if own is None:
         return list(duplicates)
@@ -227,8 +176,19 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result.update(user_authorization=authority, mandate_sha256=authority['mandate_sha256'])
     historical_errors = list(errors) + [error for error in authority['errors'] if error not in route]
     action_errors = historical_errors + authority['current_errors']
-    all_duplicates = live_duplicates + task['discovery']['duplicate_prs']
-    result['duplicates'] = live_duplicates
+    disposition, waived, observed = None, set(), []
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
+        if core.schema_errors(host_context, core.host_context_schema(host_context)):
+            disposition = dict(dispositions.report(), status='invalid', errors=['Host context schema is invalid'])
+        else:
+            disposition, waived, observed = dispositions.evaluate(task, host_context, authority, current, client,
+                                                                  dt.datetime.now(dt.timezone.utc))
+    # A disposition only ever removes the disposed topical entries; anything it observed blocks.
+    waived_items = [item for item in live_duplicates + task['discovery']['duplicate_prs']
+                    if item.get('repository') == source['repository'] and item['number'] in waived]
+    all_duplicates = [item for item in live_duplicates + task['discovery']['duplicate_prs']
+                      if item not in waived_items] + observed
+    result['duplicates'] = live_duplicates + [item for item in observed if item.get('observed_in')]
     implementation_errors = list(action_errors)
     if not authority['implement']:
         implementation_errors.append('Current implement action is not authorized')
@@ -282,10 +242,6 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
                             dt.datetime.now(dt.timezone.utc))
     result['human_signoff'] = signoff
     result['final_signoff_sha256'] = signoff['sha256']
-    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
-        # Inert in this version: reported after every blocking read, never consulted by a gate.
-        result['overlap_dispositions'] = overlap_dispositions(task, host_context, authority,
-                                                              dt.datetime.now(dt.timezone.utc))
     completion_errors = list(post_errors) + signoff['errors']
     if not publication['verified']:
         completion_errors.append('An exact-head published draft is not fully verified')
@@ -302,4 +258,19 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         result['next_action'] = 'create_draft'
     elif result['implementation_ready']:
         result['next_action'] = 'implement'
+    if disposition is not None:
+        # Judge expiry again after every blocking read; a waiver that expired meanwhile fails closed.
+        expired = dispositions.expiry_errors(host_context['overlap_dispositions'], dt.datetime.now(dt.timezone.utc)) \
+            if disposition['status'] == 'evaluated' else []
+        if expired and disposition['waived']:
+            disposition.update(status='invalid', waived=[])
+            result['blocking_duplicates'] = result['blocking_duplicates'] + waived_items
+            for stage in ('implementation', 'draft', 'completion'):
+                result['stage_blockers'][stage].append(expired[0])
+            result.update(implementation_ready=False, draft_create_ready=False, completion_ready=False,
+                          next_action='resolve_blockers')
+            result['publication']['verified'] = False
+        disposition['errors'] = list(dict.fromkeys(disposition['errors'] + expired))
+        result['overlap_dispositions'] = disposition
+        result['waived_duplicates'] = disposition['waived']
     return result
