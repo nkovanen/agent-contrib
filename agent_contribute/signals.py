@@ -95,7 +95,7 @@ def named_paths_missing(text, known):
         if (len(parts) < 2 or '..' in parts or '' in parts or '.' in parts[0].lstrip('.') or
                 not re.fullmatch(r'[^.].*\.[A-Za-z0-9]{1,10}', parts[-1])):
             continue
-        if not any('/'.join(parts[i:]) in known for i in range(len(parts))) and token not in missing:
+        if token not in known and token not in missing:  # exact path; suffix matching is for hints only
             missing.append(token)
             if len(missing) == MAX_HINTS:
                 break

@@ -51,7 +51,11 @@ class ExtractorTests(unittest.TestCase):
                 'src/thumb.rs, and/or read/write, docs/guide, docs/../x.md, docs//x.md, proj/src/thumb.rs.\n'
                 'Also ' + 'a/' * 150 + 'x.md ' + 'a/' * 148 + 'x.mdzz')
         result = signals.location_hints(text, PATHS)
-        self.assertEqual(result['named_paths_missing'], ['docs/product-map.md', 'docs/gone.md', '.github/workflows/ci.yml'])
+        # Exact repository-relative comparison: an existing suffix (src/thumb.rs) does not hide proj/src/thumb.rs.
+        self.assertEqual(result['named_paths_missing'], ['docs/product-map.md', 'docs/gone.md', '.github/workflows/ci.yml',
+                                                         'proj/src/thumb.rs'])
+        self.assertEqual(signals.location_hints('Edit old/src/lib/decode.py and src/lib/decode.py', PATHS)
+                         ['named_paths_missing'], ['old/src/lib/decode.py'])
         self.assertEqual(result['hints'], ['src/thumb.rs', 'src/lib/decode.py', 'README.md'])
         self.assertEqual(signals.location_hints('docs/product-map.md', None)['named_paths_missing'], [])
         self.assertEqual(signals.location_hints('plain words', PATHS)['named_paths_missing'], [])

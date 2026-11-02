@@ -265,7 +265,9 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   `named_paths_missing` lists repository-relative file paths the issue names
   (`docs/x.md`, `./src/a.rs`, `.github/ci.yml`; a last segment with an
   extension) that the snapshot tree does not contain, at most 20 in order of
-  appearance. It skips absolute paths, URLs, domains, `..` traversal and
+  appearance. The named path is compared exactly: unlike hints, an existing
+  suffix (`src/a.rs` for `old/src/a.rs`) does not count. It is a heuristic, not
+  a URL parser; it skips absolute paths, ordinary URLs, domains, `..` traversal and
   tokens cut at 300 characters, and it is empty when the tree is unknown. It is a
   staleness cue only: it does not change `value`, `score` or ordering.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
