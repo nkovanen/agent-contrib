@@ -334,17 +334,29 @@ in the CLI output. Core results, prepared contracts, `instructions_sha256` and
 exit codes do not change. `--ai-policy` is accepted and does nothing more.
 
 - **Inventory.** The issue source repository (never a requested fork) at the
-  observed commit: the loaded instruction files plus policy-named files at any
-  depth: `CONTRIBUTING*`/`CONTRIBUTE*`, files under `contributing/`,
-  `contributors/` or `policy/` directories, `AI_POLICY*`/`ai.md`/`ai_usage*`,
-  `AGENTS.md`, `CLAUDE.md`, `copilot-instructions.md`, `.cursorrules`,
-  `.cursor/rules/*`, PR templates, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`,
-  `GOVERNANCE` and the root README. It also covers the owner's `.github`
-  repository (root, `.github/`, `docs/`) at its default-branch commit.
-  Contents are read by commit SHA and must match the tree's blob SHA.
+  observed commit. It covers the loaded instruction files plus policy-named
+  files at any depth. A name matches when it equals a prefix or continues it
+  after `.`, `-`, `_` or a space, case-insensitively: `contributing`,
+  `contribute`, `ai`, `llm`, `agents`, `claude`, `gemini`,
+  `copilot-instructions`, `pull_request_template`, `code_of_conduct`,
+  `code-of-conduct`, `security`, `support`, `governance`, and a root `readme`.
+  So `CONTRIBUTING.en.md`, `AI_USAGE_RULES.md`, `SECURITY-POLICY.md` and
+  `README.development.md` all match. Also matched: `.cursorrules`,
+  `.cursor/rules/*`, `llms.txt`, `.github/PULL_REQUEST_TEMPLATE/*`, and files
+  under `contributing/`, `contributors/`, `contribute/`, `policy/` or
+  `policies/` directories.
+  - Paths are classified in full and displayed shortened to 500 characters,
+    with `path_truncated`.
+  - Core instruction paths of 500 or more characters may already have been
+    shortened, so they are listed as an unresolved identity.
+  - The owner's `.github` repository (root, `.github/`, `docs/`) is read at its
+    default-branch commit. Contents are read by commit SHA, and the decoded
+    bytes must hash to the tree's Git blob SHA.
 - **Formats.** `.md`, `.markdown`, `.rst`, `.txt` and extensionless files are
-  scanned. Other policy-named files (such as `.adoc`, `.pdf` or `.html`) are
-  listed in `unassessed` as `unsupported format`.
+  scanned. Other document formats with a policy name (`.adoc`, `.pdf`, `.html`,
+  `.docx`, `.odt`, `.org`, `.textile`, `.rtf`, `.mdx`) are listed in
+  `unassessed` as `unsupported format`. Code, data and image files are not
+  policy candidates.
 - **`sources_scanned`.** Origin, repository, path, commit, SHA-256 of the file
   bytes, scan kind, and notes such as `paragraphs with non-Latin script not
   assessed: N`. The vocabulary is English only.

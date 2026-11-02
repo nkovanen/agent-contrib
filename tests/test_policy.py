@@ -236,6 +236,41 @@ class InventoryTests(unittest.TestCase):
         self.assertTrue(all('?ref=' + SOURCE_COMMIT in c or '?ref=' + OWNER_COMMIT in c
                             for c in client.calls if '/contents/' in c))
 
+    def test_translated_and_suffixed_policy_names_are_inventoried(self):
+        named = {'CONTRIBUTING.en.md': 'contributing', 'docs/CONTRIBUTING-guide.md': 'contributing',
+                 'AI_USAGE_RULES.md': 'ai_policy', 'README.development.md': 'readme', 'SECURITY-POLICY.md': 'community',
+                 'docs/CODE-OF-CONDUCT.md': 'community', 'AGENTS.override.md': 'agent_instructions',
+                 'CLAUDE.local.md': 'agent_instructions', 'GEMINI.md': 'agent_instructions', 'llms.txt': 'agent_instructions'}
+        ignored = ['aircraft.md', 'src/security.py', 'supportive.md', 'docs/README-old.md', 'ai_logo.png',
+                   'contributors.md']
+        for path, kind in named.items():
+            with self.subTest(path):
+                self.assertEqual(policy.kind_of(path), kind)
+        files = {path: 'No AI output.' for path in list(named) + ignored}
+        result, _ = report(files)
+        scanned = {s['path'] for s in result['sources_scanned']}
+        self.assertEqual(scanned, set(named))
+        listed = {u['what'] for u in result['unassessed']}
+        self.assertFalse(listed & set(ignored), 'code, images and non-policy names are not policy candidates')
+
+    def test_deep_paths_are_classified_in_full_and_marked_when_shortened(self):
+        deep = '/'.join(['d' * 50] * 12) + '/AI_POLICY.md'
+        self.assertGreater(len(deep), 600)
+        result, _ = report({deep: 'Autonomous agents are not allowed.'})
+        self.assertEqual(len(result['sources_scanned']), 1)
+        source = result['sources_scanned'][0]
+        self.assertTrue(source['path_truncated'])
+        self.assertLessEqual(len(source['path']), policy.IDENTIFIER_CHARS)
+        self.assertIn('possible_agent_restriction', kinds(result))
+
+    def test_possibly_shortened_core_instruction_paths_are_unresolved(self):
+        shortened = 'x/' * 249 + 'AG'  # core shortens instruction paths to 500 characters
+        instructions = [{'path': shortened, 'sha256': '1' * 64, 'untrusted_text': 'Agents must not open PRs.'}]
+        result, _ = report({}, instructions=instructions)
+        entry = [u for u in result['unassessed'] if u['what'] == shortened]
+        self.assertEqual(entry[0]['reason'], 'instruction path may be shortened by core; identity unresolved')
+        self.assertIn('possible_agent_restriction', kinds(result), 'its text is still scanned')
+
     def test_owner_file_is_scanned_even_when_source_has_its_own_file(self):
         result, _ = report({'docs/contributing.md': 'See the org guide.'}, {'CONTRIBUTING.md': 'No AI PRs.'})
         owner = [s for s in result['sources_scanned'] if s['origin'] == 'owner-github']

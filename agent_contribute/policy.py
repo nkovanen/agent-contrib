@@ -29,6 +29,8 @@ IDENTIFIER_CHARS = 500
 MAX_REPORT_BYTES = 256 * 1024
 WINDOW = 12
 SCANNED_FORMATS = {'', '.md', '.markdown', '.rst', '.txt'}
+# Other document formats a policy may use; listed as unsupported. Code, data and image files are not candidates.
+DOCUMENT_FORMATS = {'.adoc', '.asciidoc', '.pdf', '.html', '.htm', '.docx', '.odt', '.org', '.textile', '.rtf', '.mdx'}
 KIND_ORDER = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template', 'community', 'readme')
 HINT_ORDER = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction', 'ai_mention')
 NEVER_INSPECTED = ['GitHub wiki', 'websites outside the GitHub REST API', 'images and PDFs',
@@ -67,27 +69,30 @@ POLICY_LINK = re.compile(r'(?i)contribut|polic|guideline|pull[-_ ]?request|\bpr\
 UNDERLINE = re.compile(r'[=\-~^*+#]{3,}')
 
 
+def _named(name, prefixes):
+    """name is a prefix exactly or followed by a separator: contributing.en.md, contributing-guide.md, ai_usage_rules.md."""
+    return any(name == p or name.startswith(p) and name[len(p)] in '.-_ ' for p in prefixes)
+
+
 def kind_of(path):
-    """Scan kind for a policy-relevant path, or None. Not a GitHub fallback identity."""
+    """Scan kind for a policy-relevant path, judged on the full original path; or None. Not a GitHub fallback identity."""
     lowered = path.casefold()
     parts = lowered.split('/')
     name = parts[-1]
-    stem = name.rsplit('.', 1)[0] if '.' in name[1:] else name
-    if name == '.cursorrules' or lowered.startswith('.cursor/rules/'):
+    if name == '.cursorrules' or lowered.startswith('.cursor/rules/') or name == 'llms.txt':
         return 'agent_instructions'
-    if stem in ('agents', 'claude', 'copilot-instructions'):
+    if _named(name, ('agents', 'claude', 'gemini', 'copilot-instructions')):
         return 'agent_instructions'
-    if (stem in ('ai', 'ai_policy', 'ai-policy', 'ai_usage', 'ai-usage', 'ai_usage_policy') or
-            stem.startswith('llm') and 'polic' in stem or stem.startswith(('ai_policy', 'ai-policy'))):
+    if _named(name, ('ai', 'llm')):
         return 'ai_policy'
-    if stem in ('contributing', 'contribute') or any(p in ('contributing', 'contributors', 'contribute', 'policy',
-                                                             'policies') for p in parts[:-1]):
+    if _named(name, ('contributing', 'contribute')) or any(
+            p in ('contributing', 'contributors', 'contribute', 'policy', 'policies') for p in parts[:-1]):
         return 'contributing'
-    if stem == 'pull_request_template' or lowered.startswith('.github/pull_request_template/'):
+    if _named(name, ('pull_request_template',)) or lowered.startswith('.github/pull_request_template/'):
         return 'pr_template'
-    if stem in ('code_of_conduct', 'security', 'support', 'governance'):
+    if _named(name, ('code_of_conduct', 'code-of-conduct', 'security', 'support', 'governance')):
         return 'community'
-    if len(parts) == 1 and stem == 'readme':
+    if len(parts) == 1 and _named(name, ('readme',)):
         return 'readme'
     return None
 
@@ -269,7 +274,9 @@ class _Report:
         result = scan(text, path)
         notes = ([f'paragraphs with non-Latin script not assessed: {result["non_latin_paragraphs"]}']
                  if result['non_latin_paragraphs'] else [])
-        self.sources.append({'origin': origin, 'repository': repository, 'path': core.safe_text(path, IDENTIFIER_CHARS),
+        shown = core.safe_text(path, len(path))
+        self.sources.append({'origin': origin, 'repository': repository, 'path': shown[:IDENTIFIER_CHARS],
+                             'path_truncated': len(shown) > IDENTIFIER_CHARS,
                              'commit': commit, 'sha256': digest, 'kind': kind or 'instruction', 'notes': notes})
         self.texts.append((path, result))
 
@@ -303,8 +310,9 @@ class _Report:
     def read_candidates(self, origin, repository, commit, blobs, skip, cap, limit_name, allowed=lambda path: True):
         found = []
         for path, blob in blobs.items():
-            kind = kind_of(core.safe_text(path, IDENTIFIER_CHARS))
-            if kind is None or path in skip or not allowed(path) or origin != 'repository' and kind == 'readme':
+            kind = kind_of(core.safe_text(path, len(path)))  # classify the full path, display it shortened (RP-17)
+            if (kind is None or path in skip or not allowed(path) or origin != 'repository' and kind == 'readme' or
+                    _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
                 continue
             if _format(path) not in SCANNED_FORMATS:
                 self.note(core.safe_text(path, IDENTIFIER_CHARS) if origin == 'repository' else
@@ -398,6 +406,8 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     loaded = set()
     for item in instructions:
         loaded.add(item['path'])
+        if len(item['path']) >= IDENTIFIER_CHARS:  # core stores instruction paths shortened to 500 characters
+            state.note(item['path'], 'instruction path may be shortened by core; identity unresolved')
         state.add('repository', repository, item['path'], commit, item['sha256'], kind_of(item['path']), item['untrusted_text'])
     try:
         blobs = state.tree(repository, commit)
