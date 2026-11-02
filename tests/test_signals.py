@@ -4,11 +4,12 @@ import copy
 import datetime as dt
 import io
 import json
-import time
+import re
 import unittest
 from unittest.mock import patch
 
 from agent_contribute import cli, core, signals
+from tests.regex_shape import nested_repeats
 from tests.test_protocol import FakeGitHub
 
 NOW = dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc)
@@ -50,11 +51,13 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(signals.location_hints('src/thumb.rs', None)['value'], 'unknown')
 
     def test_adversarial_input_is_bounded_and_linear(self):
+        # Deterministic, not wall-clock: every scanning regex has no nested quantifier, and text is cut to SCAN_LIMIT.
+        self.assertTrue(nested_repeats(re.compile(r'(a+)+b')) and nested_repeats(re.compile(r'(?:x|(?:y{1,3})){2}')))
+        for pattern in [signals.TOKEN, signals.MODULE_TOKEN, signals.MODULE_SEPARATOR, *signals.MARKERS.values()]:
+            self.assertFalse(nested_repeats(pattern), pattern.pattern)
         for text in ['a/' * 200000, 'a.' * 200000, ('x' * 299 + '/') * 2000, '- [ ' * 100000, '`' * 300000,
                      ' ' * 8 + 'expected' * 50000]:
-            started = time.monotonic()
-            signals.issue_signals({'title': 't', 'body': text}, PATHS * 2000, NOW)
-            self.assertLess(time.monotonic() - started, 2.0)
+            self.assertIn('score', signals.issue_signals({'title': 't', 'body': text}, PATHS * 2000, NOW))
         hints = signals.location_hints(' '.join('src/f%d.rs' % i for i in range(100)),
                                        ['src/f%d.rs' % i for i in range(100)])['hints']
         self.assertEqual(len(hints), signals.MAX_HINTS)
@@ -220,20 +223,35 @@ class ModuleNameTests(unittest.TestCase):
                          ['src/f%d.rs' % i for i in range(20)])
 
     def test_adversarial_module_input_is_bounded(self):
+        # Deterministic work bound: at most MAX_SEGMENTS - 1 index lookups per module token, however long it is.
         paths = (['d%d/x/util.py' % i for i in range(5000)] + ['p%d/m%d.py' % (i, i) for i in range(5000)] +
                  ['/'.join(['a'] * 40) + '.py'])
+        index, real_hint = signals.module_index(tuple(paths)), signals.module_hint
+        counts = {'tokens': 0, 'lookups': 0}
+
+        class Counting(dict):
+            def get(self, key, default=None):
+                counts['lookups'] += 1
+                return dict.get(self, key, default)
+
+        def counting_hint(token, index):
+            counts['tokens'] += 1
+            return real_hint(token, index)
+
+        counted = Counting(index)
         for text in ['x.util ' * 30000, ' '.join('p%d.m%d' % (i, i) for i in range(20000)), 'a.' * 200000,
                      'a::' * 200000, ('a.' * 149 + 'a ') * 500, '.' * 300000, ':' * 300000, 'a' * 300000]:
-            started = time.monotonic()
-            signals.issue_signals({'title': 't', 'body': text}, paths, NOW)
-            self.assertLess(time.monotonic() - started, 2.0)
+            counts.update(tokens=0, lookups=0)
+            with patch.object(signals, 'module_index', lambda _: counted), \
+                    patch.object(signals, 'module_hint', counting_hint):
+                signals.issue_signals({'title': 't', 'body': text}, paths, NOW)
+            self.assertLessEqual(counts['tokens'], signals.SCAN_LIMIT // 2)
+            self.assertLessEqual(counts['lookups'], counts['tokens'] * (signals.MAX_SEGMENTS - 1))
 
     def test_deep_trees_index_only_queryable_suffixes(self):
         # Review R3-01: indexing every suffix of 10000 depth-300 paths took GiBs; only <= 16 segments are queryable.
         paths = ['/'.join(['a'] * 300 + ['m%d.py' % i]) for i in range(10000)]
-        started = time.monotonic()
         self.assertEqual(signals.location_hints('x.y', paths)['value'], 'none')
-        self.assertLess(time.monotonic() - started, 2.0)
         index = signals.module_index(tuple(paths))
         self.assertLessEqual(len(index), len(paths) * (signals.MAX_SEGMENTS - 1))
         # The deepest queryable suffix still resolves (output hints are separately truncated to 500 characters).
@@ -245,10 +263,11 @@ class ModuleNameTests(unittest.TestCase):
 
     def test_tree_index_is_reused_across_issues(self):
         paths = ['p%d/q%d/m%d.py' % (i, i, i) for i in range(20000)]
-        started = time.monotonic()
+        signals.module_index.cache_clear()
         for n in range(200):
-            signals.location_hints('q%d.m%d' % (n, n), paths)
-        self.assertLess(time.monotonic() - started, 2.0)
+            self.assertEqual(signals.location_hints('q%d.m%d' % (n, n), paths)['hints'], [paths[n]])
+        info = signals.module_index.cache_info()
+        self.assertEqual((info.misses, info.hits), (1, 199), 'one index build per tree, not per issue')
 
 
 CLOSED = 'repos/acme/photos/pulls?state=closed&sort=updated&direction=desc&per_page=100'
