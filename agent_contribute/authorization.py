@@ -71,6 +71,25 @@ def interval(record, now):
     return issued, expires
 
 
+def route_errors(task):
+    """Contract-only route checks; they need no mandate or GitHub read."""
+    errors = []
+    source, execution = task['source'], task['execution']
+    if (execution['target_repository'] != source['repository'] or execution['head_repository'] != source['repository'] or
+            execution['target_repository_id'] != source['repository_id'] or execution['head_repository_id'] != source['repository_id']):
+        errors.append('Only the same repository source/target/head route is supported')
+    if execution['mode'] != 'repository-candidate':
+        errors.append('Execution mode is pending')
+    for key in ('head_ref', 'base_ref'):
+        if not valid_ref(execution[key]):
+            errors.append('Invalid reviewed Git ref: ' + key)
+    if execution['base_ref'] != source['default_branch']:
+        errors.append('Candidate base ref must match the source default branch')
+    if execution['head_ref'] == execution['base_ref']:
+        errors.append('Head and base refs must differ')
+    return errors
+
+
 def check(task, host_context, client, now):
     result = {'authorized': False, 'historical_valid': False, 'implement': False, 'create_draft': False,
               'mandate_trust': 'host-asserted', 'mandate_sha256': None,
@@ -122,18 +141,7 @@ def check(task, host_context, client, now):
     for key, value in expected.items():
         if mandate[key] != value:
             errors.append('Mandate binding differs: ' + key)
-    if (execution['target_repository'] != source['repository'] or execution['head_repository'] != source['repository'] or
-            execution['target_repository_id'] != source['repository_id'] or execution['head_repository_id'] != source['repository_id']):
-        errors.append('Only the same repository source/target/head route is supported')
-    if execution['mode'] != 'repository-candidate':
-        errors.append('Execution mode is pending')
-    for key in ('head_ref', 'base_ref'):
-        if not valid_ref(execution[key]):
-            errors.append('Invalid reviewed Git ref: ' + key)
-    if execution['base_ref'] != source['default_branch']:
-        errors.append('Candidate base ref must match the source default branch')
-    if execution['head_ref'] == execution['base_ref']:
-        errors.append('Head and base refs must differ')
+    errors.extend(route_errors(task))
     if (len(set(mandate['actions'])) != len(mandate['actions']) or
             len(set(execution['requested_actions'])) != len(execution['requested_actions']) or
             not set(mandate['actions']).issubset(execution['requested_actions'])):
