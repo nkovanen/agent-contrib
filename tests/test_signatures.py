@@ -411,10 +411,6 @@ class LocalCommitTests(unittest.TestCase):
         script = pathlib.Path(self.directory.name, 'evil.sh')
         script.write_text('#!/bin/sh\ntouch "%s"\nexit 0\n' % marker)
         script.chmod(script.stat().st_mode | stat.S_IEXEC)
-        for key in ('gpg.program', 'gpg.openpgp.program', 'gpg.ssh.program', 'gpg.x509.program', 'core.fsmonitor',
-                    'core.pager', 'pager.cat-file', 'pager.rev-list'):
-            self.git('config', key, str(script))
-        self.git('config', 'log.showSignature', 'true')
         calls = []
         real = core.git_read
 
@@ -422,14 +418,93 @@ class LocalCommitTests(unittest.TestCase):
             calls.append(args)
             return real(directory, *args, **kwargs)
 
+        # Settings git_read forces off, or that its fixed commands never reach: the scan completes.
+        for key in ('core.fsmonitor', 'core.pager', 'pager.cat-file', 'pager.rev-list', 'core.sshCommand'):
+            self.git('config', key, str(script))
+        self.git('config', 'log.showSignature', 'true')
         with patch.object(core, 'git_read', recording):
             part = self.local(base, head)
         self.assertTrue(part['complete'], part.get('errors'))
-        self.assertFalse(marker.exists())
-        self.assertEqual({args[0] for args in calls}, {'rev-parse', 'merge-base', 'rev-list', 'cat-file'})
-        self.assertNotIn('subprocess', vars(signatures))
+        self.assertEqual({args[0] for args in calls}, {'config', 'rev-parse', 'merge-base', 'rev-list', 'cat-file'})
         for args in calls:
             self.assertFalse({'--show-signature', 'verify-commit', '--pretty', '--format'} & set(args), args)
+        self.assertNotIn('subprocess', vars(signatures))
+        # Signature programs in checkout config are refused before any read, so they cannot run either.
+        for key in ('gpg.program', 'gpg.openpgp.program', 'gpg.ssh.program', 'gpg.x509.program'):
+            with self.subTest(key=key):
+                self.git('config', key, str(script))
+                part = self.local(base, head)
+                self.assertEqual((part['complete'], part['commits']), (False, None))
+                self.assertIn(key.lower(), part['errors'][0])
+                self.git('config', '--unset', key)
+        self.assertFalse(marker.exists())
+
+class ConfiguredProgramTests(unittest.TestCase):
+    """Review R6-01: a missing object must never lazy-fetch through a repository-configured transport."""
+    def trap(self, root, include=False):
+        repo = pathlib.Path(root, 'repo')
+        repo.mkdir()
+        git = lambda *a: subprocess.run(['git', '-C', str(repo), '-c', 'user.name=T', '-c', 'user.email=t@e', *a],
+                                        capture_output=True, text=True, check=True).stdout.strip()
+        git('init', '-q')
+        git('commit', '-q', '--allow-empty', '-m', 'base')
+        marker, helper = pathlib.Path(root, 'EXECUTED'), pathlib.Path(root, 'helper.sh')
+        helper.write_text('#!/bin/sh\nprintf ran > %s\nexit 1\n' % marker)
+        helper.chmod(0o700)
+        settings = [('extensions.partialClone', 'trap'), ('remote.trap.promisor', 'true'),
+                    ('remote.trap.url', 'ext::' + str(helper)), ('protocol.ext.allow', 'always')]
+        if include:  # the same settings through a conditional include
+            included = pathlib.Path(root, 'trap.config')
+            for key, value in settings:
+                subprocess.run(['git', 'config', '--file', str(included), key, value], check=True)
+            git('config', f'includeIf.gitdir:{repo}/.git.path', str(included))
+        else:
+            for key, value in settings:
+                git('config', key, value)
+        return repo, git('rev-parse', 'HEAD'), marker
+
+    def test_promisor_transport_never_runs_and_the_part_is_incomplete(self):
+        for include in (False, True):
+            with self.subTest(include=include), tempfile.TemporaryDirectory() as root:
+                repo, base, marker = self.trap(root, include)
+                part = signatures.local_commits(str(repo), base, 'f' * 40)
+                self.assertFalse(marker.exists(), 'configured transport executed')
+                self.assertEqual((part['complete'], part['commits']), (False, None))
+                # Defense in depth for Git without GIT_NO_LAZY_FETCH: the checkout config is refused before any read.
+                self.assertIn('extensions.partialclone', part['errors'][0])
+
+    def test_promisor_transport_never_runs_through_verify(self):
+        task, base_client = ready_contract()
+        with tempfile.TemporaryDirectory() as root:
+            repo, base, marker = self.trap(root)
+            paths = pathlib.Path(root, 'task.json'), pathlib.Path(root, 'e.json')
+            paths[0].write_text(json.dumps(task))
+            paths[1].write_text(json.dumps({'git_head': 'f' * 40, 'base_commit': base}))
+            runs = []
+            for flags in ([], ['--observe-signatures']):
+                output = io.StringIO()
+                with patch.object(core, 'GitHub', return_value=SignatureGitHub(base_client, head='f' * 40)), \
+                        contextlib.redirect_stdout(output):
+                    code = cli.main(['verify', str(paths[0]), '--evidence', str(paths[1]), '--repo-dir', str(repo), *flags])
+                runs.append((code, json.loads(output.getvalue())))
+            self.assertFalse(marker.exists(), 'configured transport executed through verify')
+            self.assertEqual(runs[0][0], runs[1][0])
+            self.assertFalse(runs[1][1]['signature_observation']['local_commits']['complete'])
+
+    def test_raw_reads_inherit_every_hardening_setting(self):
+        calls = []
+
+        def capture(argv, **kwargs):
+            calls.append((argv, kwargs))
+            return subprocess.CompletedProcess(argv, 0, stdout=b'' if not kwargs.get('text') else '', stderr='')
+        with patch.object(core.subprocess, 'run', capture):
+            core.git_read('/x', 'cat-file', 'commit', 'a' * 40)
+            core.git_read('/x', 'cat-file', 'commit', 'a' * 40, raw=True)
+        (text_argv, text_kw), (raw_argv, raw_kw) = calls
+        self.assertEqual(raw_argv, text_argv)
+        self.assertEqual((text_kw.pop('text'), raw_kw.pop('text')), (True, False))
+        self.assertEqual(raw_kw, text_kw)
+        self.assertEqual((raw_kw['env'].get('GIT_NO_LAZY_FETCH'), 'protocol.allow=never' in raw_argv), ('1', True))
 
 
 class OutputSchemaTests(unittest.TestCase):

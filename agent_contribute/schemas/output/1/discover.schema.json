@@ -660,6 +660,15 @@
               "maxItems": 20,
               "description": "Repository paths matched from the issue text"
             },
+            "named_paths_missing": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 20,
+              "description": "Repository-relative file paths named in the issue text that are not in the snapshot tree (exact comparison; report only)"
+            },
             "explanation": {
               "type": "string",
               "maxLength": 2147483647
@@ -668,6 +677,7 @@
           "required": [
             "value",
             "hints",
+            "named_paths_missing",
             "explanation"
           ],
           "additionalProperties": false

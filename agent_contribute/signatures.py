@@ -105,6 +105,9 @@ def local_commits(directory, base, head):
     try:
         if not isinstance(base, str) or not core.SHA.fullmatch(base):
             raise core.ProtocolError('evidence', 'Evidence base_commit is not a full commit SHA')
+        # Like every checkout reader: refuse config a read could run as a program or use to fetch (promisor, protocol,
+        # gpg, filters) before any other read. git_read also forces the safe settings it can.
+        core.require_safe_config(directory)
         # A shallow boundary truncates base..head without an error, while merge-base may still reach the base
         # through another merge parent. Grafts and replace refs are already disabled by git_read.
         if core.git_read(directory, 'rev-parse', '--is-shallow-repository') != 'false':
