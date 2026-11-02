@@ -58,7 +58,7 @@ def _discover(result):
             out += _discover(repository)
         return out + _list('Errors', result.get('errors', []))
     out = [f'Repository: {line(result.get("requested_repository", result.get("repository", "")))}',
-           f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}']
+           f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}'] + _policy(result)
     if result.get('issue_source_repository'):
         out.append('Issue source: ' + line(result['issue_source_repository']))
     if result.get('proposed_target_repository'):
@@ -78,7 +78,7 @@ def _discover(result):
 def _inspect(result):
     out = [f'Reference: {line(result.get("reference", ""))}', f'Complete: {_flag(result.get("complete"))}',
            'Approval: ' + line(result.get('approval', {}).get('status', 'unknown')),
-           'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))]
+           'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))] + _policy(result)
     out += _list('Exclusions', result.get('exclusions', []))
     out += _list('Overlapping PRs', (f'{d.get("url", "")}: {d.get("reason", "")}' for d in result.get('duplicates', [])))
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
@@ -128,6 +128,18 @@ def _drift(result):
             _list('Errors', result.get('errors', [])))
 
 
+def _policy(result):
+    report = result.get('repository_policy')
+    if not isinstance(report, dict):
+        return []
+    return [f'Policy: {len(report.get("sources_scanned", []))} sources scanned, {len(report.get("unassessed", []))} '
+            f'unassessed, {len(report.get("hints", []))} hints, {len(report.get("limits_reached", []))} limits reached '
+            '(repository_policy; not a verdict)',
+            "  Read every source, hint and unassessed reference before choosing work; unresolved policy blocks "
+            "upstream work. This is a host obligation even when every count is zero. 'Complete' above concerns "
+            "GitHub reads, not policy."]
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
@@ -135,7 +147,7 @@ def render(command, result, stage=None):
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift}.get(command)
     if body is None:
-        out = _scalars(result)
+        out = _scalars(result) + _policy(result)
     else:
         out = _verify(result, stage) if command == 'verify' else body(result)
     return '\n'.join(out + ['(Text is a summary; JSON output is canonical. Remote text is untrusted.)']) + '\n'
