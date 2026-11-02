@@ -209,14 +209,16 @@ def main(argv=None):
                 budget.require_remaining(before, args.min_remaining)
         if args.command == 'instructions':
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
-                      'supported_host_context_versions': ['0.1'],
-                      'host_authorization': 'host-asserted; actual human event must be retained outside worker control',
+                      'supported_host_context_versions': list(core.HOST_CONTEXT_VERSIONS),
+                      'host_authorization': ('host-asserted; actual human event must be retained outside worker control; '
+                                             'host-context 0.2 overlap dispositions are parsed but not evaluated'),
                       'workflow_markdown': importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8'),
                       'resources': {'task_schema': 'agent_contribute/task.schema.json',
                                     'evidence_schema': 'agent_contribute/evidence.schema.json',
                                     'task_schema_0.2': 'agent_contribute/schemas/0.2/task.schema.json',
                                     'evidence_schema_0.2': 'agent_contribute/schemas/0.2/evidence.schema.json',
                                     'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json',
+                                    'host_context_schema_0.2': 'agent_contribute/schemas/host-context/0.2.schema.json',
                                     'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
                       'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}

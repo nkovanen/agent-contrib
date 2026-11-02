@@ -340,7 +340,9 @@ AI review, successful CI or a coordinator message. Never merge or release.
 ## Versions, exit codes and installation
 
 CLI/library version is 0.3.0; task/evidence formats are independently versioned.
-Only exact versions 0.1 and 0.2 are supported. Host-context format is 0.1.
+Only exact versions 0.1 and 0.2 are supported. Host-context formats are 0.1
+and 0.2; 0.2 adds an optional host-issued `overlap_dispositions` record that this
+version parses but never uses to waive an overlap.
 Unknown/mixed versions and extra fields fail closed. Host context and `--stage`
 are rejected for schema 0.1. No silent migration, downgrade or update occurs.
 Prepare and review a new 0.2 task to use its route; old 0.1 tasks keep old decisions.

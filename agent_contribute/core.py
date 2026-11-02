@@ -21,6 +21,7 @@ from urllib.parse import quote
 
 VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
+HOST_CONTEXT_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
 SHA = re.compile('[0-9a-f]{40}')
@@ -667,12 +668,20 @@ def schema_errors(value, schema, path='$', depth=0, root=None):
 
 
 def bundled_schema(name, version='0.1'):
-    if name not in ('task', 'evidence', 'host-context') or (version not in SUPPORTED_SCHEMA_VERSIONS or
-            (name == 'host-context' and version != '0.1')):
+    supported = HOST_CONTEXT_VERSIONS if name == 'host-context' else SUPPORTED_SCHEMA_VERSIONS
+    if name not in ('task', 'evidence', 'host-context') or version not in supported:
         raise ProtocolError('unsupported_schema', 'Unsupported schema resource or version')
     path = (f'schemas/host-context/{version}.schema.json' if name == 'host-context' else
             name + '.schema.json' if version == '0.1' else f'schemas/{version}/{name}.schema.json')
     return json.loads(importlib.resources.files('agent_contribute').joinpath(path).read_text('utf-8'))
+
+
+def host_context_schema(context):
+    """The schema named by the document's own exact version. Anything else is checked against 0.1,
+    whose schema_version constant then rejects it, so no unknown version is ever accepted."""
+    version = context.get('schema_version') if isinstance(context, dict) else None
+    exact = isinstance(version, str) and version in HOST_CONTEXT_VERSIONS
+    return bundled_schema('host-context', version if exact else '0.1')
 
 
 def validate_contract(contract):

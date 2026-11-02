@@ -58,6 +58,10 @@
           "type": "string",
           "maxLength": 2147483647
         },
+        "host_context_schema_0.2": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
         "output_schemas": {
           "type": "string",
           "description": "Package directory of these output schemas; agent-contrib schema COMMAND prints one",
@@ -70,6 +74,7 @@
         "task_schema_0.2",
         "evidence_schema_0.2",
         "host_context_schema",
+        "host_context_schema_0.2",
         "output_schemas"
       ],
       "additionalProperties": false,

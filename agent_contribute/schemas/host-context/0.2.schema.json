@@ -1,0 +1,498 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mandate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.2"
+    },
+    "mandate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "contract_sha256",
+        "source_repository_id",
+        "source_owner_id",
+        "issue_id",
+        "issue_number",
+        "target_repository",
+        "target_repository_id",
+        "head_repository",
+        "head_repository_id",
+        "head_ref",
+        "base_ref",
+        "credential_actor_id",
+        "authority",
+        "actions",
+        "policy_review",
+        "event"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 24,
+          "maxLength": 200
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_owner_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "issue_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "issue_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "target_repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$",
+          "maxLength": 200
+        },
+        "target_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$",
+          "maxLength": 200
+        },
+        "head_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_ref": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "base_ref": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "credential_actor_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "authority": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "maintainer"
+          ]
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "implement",
+              "create_draft"
+            ]
+          },
+          "maxItems": 2,
+          "minItems": 1
+        },
+        "policy_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "instructions_sha256",
+            "policy_sha256",
+            "notes"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "clear",
+                "blocked",
+                "unknown"
+              ]
+            },
+            "instructions_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "policy_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            }
+          }
+        },
+        "event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reference",
+            "text_sha256",
+            "binding_sha256"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            },
+            "text_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "binding_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository_id",
+        "pr_number",
+        "pr_id",
+        "head_sha",
+        "contract_sha256",
+        "mandate_sha256"
+      ],
+      "properties": {
+        "repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pr_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pr_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mandate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "final_signoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "contract_sha256",
+        "mandate_sha256",
+        "git_head",
+        "review_sha256",
+        "credential_actor_id",
+        "event"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 24,
+          "maxLength": 200
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mandate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "git_head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "review_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "credential_actor_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reference",
+            "text_sha256",
+            "binding_sha256"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            },
+            "text_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "binding_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "overlap_dispositions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "contract_sha256",
+        "mandate_sha256",
+        "credential_actor_id",
+        "dispositions",
+        "event"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 24,
+          "maxLength": 200
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mandate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "credential_actor_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dispositions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "repository_id",
+              "pr_number",
+              "pr_id",
+              "author_id",
+              "disposition",
+              "match_reason",
+              "pr_state",
+              "draft",
+              "head_repository_id",
+              "head_sha",
+              "updated_at",
+              "content_sha256",
+              "comparison",
+              "rationale"
+            ],
+            "properties": {
+              "repository_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pr_number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pr_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "author_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "disposition": {
+                "const": "unrelated"
+              },
+              "match_reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "pr_state": {
+                "const": "open"
+              },
+              "draft": {
+                "type": "boolean"
+              },
+              "head_repository_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "head_sha": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "updated_at": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "content_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "comparison": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "base_sha",
+                  "head_sha",
+                  "material_sha256"
+                ],
+                "properties": {
+                  "base_sha": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{40}$"
+                  },
+                  "head_sha": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{40}$"
+                  },
+                  "material_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                }
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            }
+          }
+        },
+        "event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reference",
+            "text_sha256",
+            "binding_sha256"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            },
+            "text_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "binding_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    }
+  },
+  "title": "Agent Contribution host context 0.2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
