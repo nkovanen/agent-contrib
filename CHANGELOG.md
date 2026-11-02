@@ -241,6 +241,9 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- An unwritable temporary root is skipped in favour of `/tmp` or `/var/tmp`,
+  and a temporary directory that still cannot be created reports
+  `temp_dir_error` instead of an unstructured input error (G-20).
 - Every Git read sets `GIT_ATTR_NOSYSTEM=1`, so a system-wide gitattributes file
   cannot shape how checkout files are compared (G-19).
 - The temporary index for the content check is created under a temporary root

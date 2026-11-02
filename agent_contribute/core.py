@@ -854,7 +854,8 @@ def _scratch_root(directory):
         for option in ('--absolute-git-dir', '--git-common-dir')]
     for candidate in (tempfile.gettempdir(), '/tmp', '/var/tmp'):
         root = Path(candidate).resolve()
-        if root.is_dir() and not any(root == path or root.is_relative_to(path) for path in forbidden):
+        if (root.is_dir() and os.access(root, os.W_OK | os.X_OK) and
+                not any(root == path or root.is_relative_to(path) for path in forbidden)):
             return str(root)
     raise ProtocolError('unsafe_temp_dir', 'No temporary directory outside the checkout is available; '
                         'set TMPDIR to a directory outside it')
@@ -909,7 +910,12 @@ def worktree_changes(directory, commit):
             raise ProtocolError('checkout_too_large_for_timeout', f'Hashing {tracked} tracked bytes did not finish '
                                 f'within {budget} s; the checkout is too large for the content check') from None
 
-    with tempfile.TemporaryDirectory(dir=_scratch_root(directory)) as scratch:
+    try:
+        scratch_dir = tempfile.TemporaryDirectory(dir=_scratch_root(directory))
+    except OSError:
+        raise ProtocolError('temp_dir_error', 'Could not create a temporary directory outside the checkout; '
+                            'set TMPDIR to a writable directory outside it') from None
+    with scratch_dir as scratch:
         index = os.path.join(scratch, 'index')
         git_read(directory, 'read-tree', commit, index_file=index)
         listed = timed('status', '--porcelain', '-z', '--no-renames', '--untracked-files=no', '--ignore-submodules=all',
