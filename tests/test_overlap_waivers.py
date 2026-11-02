@@ -469,6 +469,20 @@ class BaseTipTests(WaiverFixture):
         self.client.failed = {TIP_ENDPOINT}
         self.assert_blocked(self.verify(evidence=False), 'Overlap disposition base tip read failed for PR #31')
 
+    def test_a_failed_shared_base_ref_read_happens_once(self):
+        second = pr_detail(32, title='Thumbnail bounds cache')
+        self.show(self.pr, second)
+        self.dispose([entry_for(self.pr), entry_for(second)])
+        self.client.failed = {TIP_ENDPOINT}
+        self.client.calls.clear()
+        result = self.verify(evidence=False)
+        self.assertEqual(self.client.calls.count(TIP_ENDPOINT), 1)
+        for number in (31, 32):
+            self.assertIn(f'Overlap disposition base tip read failed for PR #{number}',
+                          result['overlap_dispositions']['errors'])
+        self.assertEqual(result['overlap_dispositions']['waived'], [])
+        self.assertFalse(result['implementation_ready'])
+
     def test_reads_are_bounded_and_deduplicated(self):
         second = pr_detail(32, title='Thumbnail bounds cache')
         self.show(self.pr, second)

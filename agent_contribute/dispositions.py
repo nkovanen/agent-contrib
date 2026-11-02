@@ -168,14 +168,16 @@ def evaluate(task, context, authority, current, client, now):
         ]
         stale = [name for name, ok in checks if not ok]
         ref = pr['base']['ref']
-        try:
-            if ref not in tips:
+        if ref not in tips:  # one read per distinct base ref, failures included (None)
+            try:
                 tips[ref] = _tip(repository, ref, client)
-            if tips[ref] != entry['comparison']['base_tip_sha']:
-                stale.append('base tip')
-        except (core.ProtocolError, ValueError):
+            except (core.ProtocolError, ValueError):
+                tips[ref] = None
+        if tips[ref] is None:
             errors.append(f'Overlap disposition base tip read failed for PR #{number}')
             continue
+        if tips[ref] != entry['comparison']['base_tip_sha']:
+            stale.append('base tip')
         if stale:
             errors.extend(f'Overlap disposition stale for PR #{number}: {name}' for name in stale)
             continue
