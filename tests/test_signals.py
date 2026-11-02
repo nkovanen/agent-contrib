@@ -171,6 +171,19 @@ class DiscoverSignalTests(unittest.TestCase):
                 self.assertEqual(cli.main(argv), 0)
             self.assertEqual('signals' in json.loads(output.getvalue())['issues'][0], expected)
 
+    def test_cli_reports_at_most_twenty_named_missing_paths(self):
+        class StaleGitHub(SignalGitHub):
+            def request(self, endpoint):
+                value = super().request(endpoint)
+                if endpoint.split('?')[0].endswith('/issues') and isinstance(value, list):
+                    value[1]['body'] += ' ' + ' '.join('gone/f%d.rs' % i for i in range(25))
+                return value
+        output = io.StringIO()
+        with patch.object(core, 'GitHub', return_value=StaleGitHub()), contextlib.redirect_stdout(output):
+            self.assertEqual(cli.main(['discover', 'acme/photos', '--signals']), 0)
+        issue = next(item for item in json.loads(output.getvalue())['issues'] if item['number'] == 12)
+        self.assertEqual(issue['signals']['code_location']['named_paths_missing'], ['gone/f%d.rs' % i for i in range(20)])
+
 
 
 MODULE_PATHS = ['agent_contribute/signals.py', 'agent_contribute/__init__.py', 'src/thumb/decode.rs',
