@@ -17,6 +17,7 @@ MARKERS = {'checklist': re.compile(r'(?m)^[ \t]{0,8}[-*] \[[ xX]\]'),
            'code block': re.compile(r'```')}
 MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
 # One unbounded class: each match is a complete run, never cut short. module_hint validates the segments.
+# Identifier characters outside \w (combining marks, ℘, ·) are not matched; _adjoins refuses such names whole.
 MODULE_TOKEN = re.compile(r'[\w.:]+')
 MODULE_SEPARATOR = re.compile(r'::|\.')
 MAX_SEGMENTS = 16

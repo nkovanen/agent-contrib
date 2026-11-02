@@ -214,6 +214,14 @@ class ModuleNameTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(self.hints(text, ['pkg/mod.py', 'äpkg/mod.py']), [])
 
+    def test_identifiers_outside_word_characters_are_refused_whole(self):
+        # Review R3-07: documented conservative limit. These are Python identifiers but not regex word runs;
+        # neither the whole name nor an ASCII fragment of it may resolve.
+        for name in ['e\u0301pkg', '\u2118pkg', '\u212epkg', 'p\u00b7kg']:
+            with self.subTest(name=name):
+                self.assertTrue(name.isidentifier())
+                self.assertEqual(self.hints(name + '.mod', [name + '/mod.py', 'pkg/mod.py', 'kg/mod.py']), [])
+
     def test_modules_inside_paths_are_left_to_the_path_matcher(self):
         self.assertEqual(self.hints('docs/pkg.mod and C:\\x\\pkg.mod and pkg.mod/extra and pkg-pkg.mod'), [])
 
