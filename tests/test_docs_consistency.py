@@ -75,5 +75,34 @@ class DocsConsistencyTests(unittest.TestCase):
                 self.assertRegex(text, rf'issues/{number}\)')
 
 
+    def test_label_approval_docs_state_what_is_and_is_not_verified(self):
+        # #9: policy 0.1 checks label presence only; no document may imply a verified or maintainer-applied label.
+        flat = lambda path: ' '.join((ROOT / path).read_text('utf-8').split())
+        texts = {path: flat(path) for path in ('README.md', 'SECURITY.md', 'docs/maintainers.md',
+                                               'agent_contribute/instructions.md')}
+        for path, text in texts.items():
+            with self.subTest(path=path):
+                self.assertIn('does not verify who applied it', text)
+                self.assertNotIn('maintainer-approved', text)
+        maintainers = texts['docs/maintainers.md']
+        self.assertIn('suitable only if every principal who can label issues is trusted to approve agent work',
+                      maintainers)
+        self.assertIn('A dedicated label name restricts nothing', maintainers)
+        self.assertIn('do not opt in under this policy', maintainers)
+        # R9-07/R9-08: events name an actor; what is unverifiable is its authority and label binding.
+        for path in ('README.md', 'SECURITY.md', 'agent_contribute/instructions.md'):
+            with self.subTest(path=path):
+                self.assertNotIn('cannot tell the CLI who', texts[path])
+                self.assertRegex(texts[path], r'Public (issue )?events name an? (event |labeling )?actor')
+        self.assertIn('configured label is currently present on the issue under the default-branch policy',
+                      maintainers)
+        self.assertIn('triage, write and higher roles, custom roles or grants that allow labelling', maintainers)
+        self.assertIn('use the schema 0.2 mandate route', maintainers)
+        design = flat('docs/design/2026-11-02-actor-verified-approval.md')
+        self.assertIn('R9-05', design)
+        self.assertIn('R9-06', design)
+        self.assertIn('documented limitation; labeling-actor authority cannot be verified from public REST data',
+                      flat('docs/product-map.md'))
+
 if __name__ == '__main__':
     unittest.main()

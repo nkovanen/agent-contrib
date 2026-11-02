@@ -1,4 +1,4 @@
-"""Host-context 0.2: an optional overlap_dispositions section that is parsed and reported but waives nothing yet."""
+"""Host-context 0.2: versions, schema and the overlap_dispositions report when the record cannot waive anything."""
 import contextlib
 import copy
 import datetime as dt
@@ -11,7 +11,7 @@ from agent_contribute import authorization, cli, core
 from tests import test_lifecycle
 from tests.test_authorization import NOW, event_binding
 
-SECTION_KEYS = {'status', 'trust', 'sha256', 'errors', 'note'}
+SECTION_KEYS = {'status', 'trust', 'sha256', 'errors', 'waived', 'unused'}
 
 
 def section_for(task, context, number=31, author_id=8):
@@ -104,7 +104,7 @@ class HostContextSchemaTests(unittest.TestCase):
         self.assertEqual(set(hashes), {independent(self.context['mandate'])})
 
 
-class InertVerificationTests(unittest.TestCase):
+class UnusableRecordTests(unittest.TestCase):
     setUp = test_lifecycle.IntegratedLifecycleTests.setUp
     verify = test_lifecycle.IntegratedLifecycleTests.verify
 
@@ -115,8 +115,7 @@ class InertVerificationTests(unittest.TestCase):
 
     def run_variants(self):
         base = copy.deepcopy(self.context)
-        variants = {'0.1': base, '0.2': dict(base, schema_version='0.2'),
-                    '0.2+section': dict(base, schema_version='0.2', overlap_dispositions=section_for(self.task, base))}
+        variants = {'0.1': base, '0.2': dict(base, schema_version='0.2')}
         results, calls = {}, {}
         for name, document in variants.items():
             self.context = copy.deepcopy(document)
@@ -129,46 +128,28 @@ class InertVerificationTests(unittest.TestCase):
     def assert_identical_except_section(self, results):
         reference = results['0.1']
         self.assertNotIn('overlap_dispositions', reference)
-        for name in ('0.2', '0.2+section'):
-            with self.subTest(variant=name):
-                other = dict(results[name])
-                other.pop('overlap_dispositions')
-                self.assertEqual(other, reference)
+        other = dict(results['0.2'])
+        self.assertEqual(other.pop('overlap_dispositions'), {'status': 'absent', 'trust': 'host-asserted',
+                                                              'sha256': None, 'errors': [], 'waived': [], 'unused': []})
+        self.assertEqual(other.pop('waived_duplicates'), [])
+        self.assertEqual(other, reference)
 
-    def test_valid_section_waives_nothing_and_reads_nothing_new(self):
+    def test_0_2_without_a_record_verifies_exactly_like_0_1(self):
         self.overlap()
         results, calls = self.run_variants()
         self.assert_identical_except_section(results)
-        self.assertEqual(calls['0.2+section'], calls['0.1'])
-        blocked = results['0.2+section']
-        self.assertFalse(blocked['implementation_ready'])
-        self.assertFalse(blocked['draft_create_ready'])
-        self.assertIn('Issue overlaps an open or unresolved prepared PR', blocked['stage_blockers']['implementation'])
-        self.assertEqual([item['number'] for item in blocked['duplicates']], [31])
-        self.assertEqual([item['number'] for item in blocked['blocking_duplicates']], [31])
-        report = blocked['overlap_dispositions']
-        self.assertEqual(set(report), SECTION_KEYS)
-        self.assertEqual(report['status'], 'not_evaluated')
-        self.assertEqual(report['errors'], [])
-        self.assertEqual(report['sha256'], core.canonical_hash(section_for(self.task, self.context)))
-        self.assertEqual(results['0.2']['overlap_dispositions'],
-                         {'status': 'absent', 'trust': 'host-asserted', 'sha256': None, 'errors': [],
-                          'note': report['note']})
-
-    def test_without_overlap_gates_stay_identical_too(self):
-        results, calls = self.run_variants()
-        self.assert_identical_except_section(results)
-        self.assertTrue(results['0.2+section']['implementation_ready'])
-        self.assertEqual(calls['0.2+section'], calls['0.1'])
+        self.assertEqual(calls['0.2'], calls['0.1'])
+        self.assertIn('Issue overlaps an open or unresolved prepared PR',
+                      results['0.2']['stage_blockers']['implementation'])
 
     def test_publication_and_final_signoff_verify_identically_under_0_2(self):
         test_lifecycle.IntegratedLifecycleTests.publish(self)
         self.context['final_signoff'] = test_lifecycle.signoff(self.task, self.context, self.evidence)
         results, calls = self.run_variants()
         self.assert_identical_except_section(results)
-        self.assertTrue(results['0.2+section']['completion_ready'], results['0.2+section']['stage_blockers'])
-        self.assertEqual(results['0.2+section']['human_signoff']['status'], 'passed')
-        self.assertEqual(calls['0.2+section'], calls['0.1'])
+        self.assertTrue(results['0.2']['completion_ready'], results['0.2']['stage_blockers'])
+        self.assertEqual(results['0.2']['human_signoff']['status'], 'passed')
+        self.assertEqual(calls['0.2'], calls['0.1'])
 
     def test_section_binding_errors_are_reported_without_changing_gates(self):
         self.overlap()
@@ -202,6 +183,7 @@ class InertVerificationTests(unittest.TestCase):
                 finally:
                     self.context = base
                 report = result.pop('overlap_dispositions')
+                self.assertEqual(result.pop('waived_duplicates'), [])
                 self.assertEqual(report['status'], 'invalid')
                 self.assertIn(message, report['errors'])
                 self.assertEqual(result, reference)
@@ -236,7 +218,7 @@ class InstructionsTests(unittest.TestCase):
         self.assertEqual(result['supported_host_context_versions'], ['0.1', '0.2'])
         self.assertEqual(result['resources']['host_context_schema_0.2'],
                          'agent_contribute/schemas/host-context/0.2.schema.json')
-        self.assertIn('not evaluated', result['host_authorization'])
+        self.assertIn('overlap dispositions waive only bound topical overlaps', result['host_authorization'])
 
 if __name__ == '__main__':
     unittest.main()

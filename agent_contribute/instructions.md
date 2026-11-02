@@ -49,6 +49,80 @@ schema 0.2 has no human/host-issued mandate (never write one) or schema 0.1 lack
 the user's explicit execution authorization; a gate in steps 6-8 is false;
 publication needs its own user authorization; final sign-off is pending.
 
+## Repository policy review (mandatory; not verifier-enforced)
+
+`discover`, `inspect` and `prepare` always add `repository_policy`: the policy
+files read at pinned commits (`sources_scanned`), references and files the tool
+did not assess (`unassessed`), `limits_reached`, fixed blind spots
+(`never_inspected`, such as wikis, websites and images) and high-recall `hints`
+with sanitized excerpts. It is not a verdict. Zero hints never mean that AI or
+agent contributions are permitted. The CLI checks none of the steps below; we
+chose a workflow-only design to keep existing contracts and verifiers unchanged,
+so the host agent, the user and the independent reviewer are responsible for it.
+
+1. Before ranking or preparing any task, read in full every scanned source,
+   every hint in context, and every unassessed reference you can reach with your
+   own read-only tools. Repeat this even when every count is zero. Record one
+   requirements-ledger row per relevant source: repository, path or URL, the
+   revision or content digest you read, retrieval time, and what it says about
+   AI or agent use and pull request eligibility.
+2. Give each relevant rule exactly one disposition, with quoted evidence:
+   (a) **false positive**: the text is not a contribution rule;
+   (b) **inapplicable**: the rule's own scope excludes this work (for example
+   media only), shown by its actual context;
+   (c) **compliant constrained workflow**: the policy permits a mode you will
+   really follow, such as a human who understands the work and writes every
+   comment and the PR description; valid only where the policy permits that mode;
+   (d) **source-authorized exception**: written permission from the source
+   project's authority, with link and provenance;
+   (e) **prohibited**.
+3. Use the separate state **`unresolved`** until the evidence supports a
+   disposition. It applies when a source the project explicitly references or
+   delegates to is unreadable, when relevant text is in a language or format you
+   cannot assess, and when a maintainers-only rule applies and the intended
+   submitter's eligibility is unknown. Unresolved policy keeps the `ai-policy-review`
+   prerequisite pending and blocks upstream preparation, implementation and
+   publication.
+   A `limits_reached` entry with `hides_sources: true` (shown by
+   `limits_hide_sources`), or any `omitted_sources` entry, is unresolved:
+   `ai-policy-review` stays pending and upstream preparation, implementation and
+   publication are blocked until every omitted candidate is read manually at the
+   pinned revision or shown inapplicable with evidence. A successful CLI run does
+   not resolve it. Read an omitted file with, for example,
+   `gh api 'repos/OWNER/REPO/contents/PATH?ref=COMMIT'`; a limit that names no
+   file (such as `unassessed entries`) requires listing the pinned tree
+   yourself. A hint-only limit (`hides_sources: false`) hides no source, but
+   every listed source must still be read. A generic
+   `never_inspected` category or an owner `.github` lookup that failed does not
+   block on its own; dispose of an unrelated link as inapplicable only from its
+   actual context.
+4. **STOP** upstream work when any relevant rule is prohibited or unresolved.
+   Report the excerpts and the reason to the user. The user's local
+   authorization does not override the source project's policy: it can cover
+   local experimentation, never upstream publication. Where the project invites
+   issues, you may draft issue text for the human to post. For a rule limiting
+   pull requests to maintainers, eligibility needs a fresh read-only observation
+   before preparation: the intended submitting account's numeric identity
+   (`gh api user`, run by that account) and its exact `admin` or `maintain`
+   `role_name` from `gh api repos/OWNER/REPO/collaborators/LOGIN/permission`.
+   Record both numeric IDs. A different logged-in account proves nothing about
+   the intended submitter. Schema 0.2 verification repeats the role check later.
+5. Record the outcome in the contract: a `constraints` entry quoting each
+   applicable rule, and the prerequisite `ai-policy-review` holding the
+   dispositions, the ledger reference and the report's `inventory_sha256`
+   (`pending` while anything is unresolved; verification then blocks
+   implementation). `prepare` adds this prerequisite as `pending`; do not delete
+   it, because deleting it is a contract edit the human reviewer must see. The
+   host keeps the full
+   report with the reviewed contract. The independent compliance reviewer
+   compares the ledger with the original sources, not with a worker summary.
+6. Before implementation and again before any publication, run a fresh
+   `inspect`. Then re-read every manually reviewed source and exception. When the
+   `inventory_sha256`, the unassessed list or any recorded digest differs,
+   repeat the dispositions, update `ai-policy-review` and the ledger, and under schema 0.2
+   present the change to the human before continuing. If you cannot establish a
+   source's contents again, it is unresolved.
+
 ## Start with discovery, then choose a contract version
 
 1. Record the installed CLI version and the actual user request. Run `discover
@@ -68,13 +142,13 @@ publication needs its own user authorization; final sign-off is pending.
      --schema-version 0.2 --output task.json`. Source, target and head repositories
      must be the same; publication base is the source's default branch. This
      route refuses a fork-to-parent target change rather than swapping targets.
-   Run `agent-contrib inspect 'owner/repo#N' --ai-policy` and read every
-   excerpt in context. Respect any refusal of AI contributions. Record the result
-   as the contract prerequisite `ai-policy-review`: `satisfied` with evidence
-   naming the source commit, scan coverage, excerpt count and your conclusion;
-   `blocked` when the repository refuses AI contributions; `pending` while
-   coverage is incomplete or excerpts are unresolved. Disclose agent assistance
-   in the PR body. Zero hits are not permission.
+   Complete the repository policy review above first. Respect any refusal of
+   AI contributions. Record the result as the contract prerequisite
+   `ai-policy-review`: `satisfied` with evidence naming the source commit, the
+   report's `inventory_sha256`, the dispositions and the ledger reference;
+   `blocked` when a relevant rule is prohibited; `pending` while anything is
+   unresolved. Disclose agent assistance in the PR body. Zero hints are not
+   permission.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Build the repository
    requirements ledger below before marking the task reviewed. Resolve questions,
@@ -230,6 +304,12 @@ commits on the reviewed `head_ref` in a local checkout; it does not authorize a
 push, PR, comment or other GitHub write, and `draft_create_ready` stays false by
 design. Report the draft and completion blockers as expected, not as failures.
 
+**Overlap dispositions.** A topical overlap (shared title words or checklist
+IDs) may be presented to the human for an `unrelated` disposition. The host
+issues it in host-context 0.2 under the rules in its documentation; direct
+references, incomplete scans, closed PRs and your own PRs are never waivable.
+The worker never writes, edits or completes an `overlap_dispositions` record.
+
 **Coordinators.** A coordinator or orchestrator agent may forward the worker's
 request and the exact contract file to the human/host and return the issued
 host context unchanged. It must not issue, edit, re-serialize or approve one,
@@ -378,8 +458,8 @@ AI review, successful CI or a coordinator message. Never merge or release.
 
 CLI/library version is 0.3.0; task/evidence formats are independently versioned.
 Only exact versions 0.1 and 0.2 are supported. Host-context formats are 0.1
-and 0.2; 0.2 adds an optional host-issued `overlap_dispositions` record that this
-version parses but never uses to waive an overlap.
+and 0.2; 0.2 adds an optional host-issued `overlap_dispositions` record that can
+remove only a bound, still-identical topical overlap from blocking.
 Unknown/mixed versions and extra fields fail closed. Host context and `--stage`
 are rejected for schema 0.1. No silent migration, downgrade or update occurs.
 Prepare and review a new 0.2 task to use its route; old 0.1 tasks keep old decisions.
@@ -455,9 +535,12 @@ default branch:
 ```
 
 This precise policy delegates approval to **every account GitHub allows to
-apply issue labels**, including triagers. It does not claim the label actor is
-a maintainer. Repositories unwilling to delegate this broadly must not adopt
-this POC policy; label-actor-specific permission checks are not implemented. The separate schema
+apply issue labels**: triage, write and higher roles, and automation with label
+access. The CLI checks that a configured label is currently present; it does not
+verify who applied it. Public events name an event actor, but public REST data
+cannot verify that actor's authority or bind the event to the current label. Never report a policy label
+as maintainer approval. Repositories unwilling to delegate this broadly must not
+adopt this policy; no maintainer-only label policy exists. The separate schema
 0.2 candidate route verifies the current credential actor; it does not change
 this label policy or authenticate human consent. Generic
 triage labels are refused even if the policy lists them. Policy and instruction
