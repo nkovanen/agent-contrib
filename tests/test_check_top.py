@@ -208,8 +208,9 @@ class CheckTopTests(unittest.TestCase):
             client.details[f'repos/acme/photos/pulls/{n}'] = pull('acme/photos', n, 'Refs #1')
         code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '1')
         check = result['issues'][0]['top_check']
-        self.assertEqual(check['reads'], 2 + signals.CHECK_PR_DETAILS)
-        self.assertIn(f'More than {signals.CHECK_PR_DETAILS} cross-referenced PRs; details are incomplete', check['errors'])
+        # The documented bound is four PR details, independent of the constant (review mutant R8-R2-M03).
+        self.assertEqual(check['reads'], 2 + 4)
+        self.assertIn('More than 4 cross-referenced PRs; details are incomplete', check['errors'])
         self.assertFalse(check['complete'])
 
     def test_usage_errors(self):
