@@ -54,6 +54,8 @@
   constraints and exit status; the description no longer claims JSON-only output.
 - A global option given after the subcommand is still a usage error, but the
   message now says to move it before the subcommand.
+- `discover` with no repository again reports the missing `reference` instead
+  of the 2-20 multi-repository bound. Exit status stays 2.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

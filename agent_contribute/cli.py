@@ -63,10 +63,17 @@ def write_new_json(path, value):
         raise core.ProtocolError('file_error', 'Cannot create output; choose a new writable path') from exc
 
 
+def discover_names(args):
+    names = args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else [])
+    if not names:
+        raise core.ProtocolError('usage', 'the following arguments are required: reference (or a non-empty --repositories-file)')
+    return names
+
+
 def prevalidate(args):
     """Local argument checks that must fail before the optional rate_limit read, with the same errors as without it."""
     if args.command == 'discover':
-        args.names = args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else [])
+        args.names = discover_names(args)
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
     elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
         core.parse_issue(args.reference)
@@ -247,8 +254,7 @@ def main(argv=None):
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
-            names = getattr(args, 'names', None) or (
-                args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else []))
+            names = getattr(args, 'names', None) or discover_names(args)
             if len(names) == 1:
                 result = core.discover(names[0], signals=True) if args.signals else core.discover(names[0])
             else:

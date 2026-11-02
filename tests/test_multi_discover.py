@@ -78,6 +78,19 @@ class MultiDiscoverTests(unittest.TestCase):
             big.write_text('a/b\n' * 40000)
             self.assertEqual(run(MultiGitHub(), 'discover', '--repositories-file', str(big))[1]['error']['code'], 'file_error')
 
+    def test_no_repository_names_the_missing_reference(self):
+        message = 'the following arguments are required: reference (or a non-empty --repositories-file)'
+        with tempfile.TemporaryDirectory() as tmp:
+            empty = pathlib.Path(tmp, 'empty.txt')
+            empty.write_text('# none\n\n')
+            for argv in [('discover',), ('discover', '--repositories-file', str(empty)),
+                         ('--report-budget', 'discover')]:
+                with self.subTest(argv=argv):
+                    client = MultiGitHub()
+                    code, result = run(client, *argv)
+                    self.assertEqual((code, result['error']), (2, {'code': 'usage', 'message': message}))
+                    self.assertEqual(client.calls, [])
+
 
 if __name__ == '__main__':
     unittest.main()
