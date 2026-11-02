@@ -704,6 +704,9 @@ def git_read(directory, *args):
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
                                  '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',
+                                 # Full stat and mode checks: relaxed checkout settings could hide an edit.
+                                 '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
+                                 '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
                                 capture_output=True, text=not nul_delimited, timeout=15, shell=False)
         if result.returncode:
@@ -721,12 +724,23 @@ UNSAFE_CONFIG = re.compile(r'filter\..+|gpg(\..+)?\.program|diff\.external|diff\
                            r'|extensions\.partialclone|remote\..+\.(promisor|partialclonefilter)|protocol\..+')
 
 
+def _case_insensitive(directory):
+    try:
+        return os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
+    except OSError:
+        return False
+
+
 def require_safe_config(directory):
     """Effective checkout config, includes and includeIf resolved; listing it executes nothing."""
     entries = git_read(directory, 'config', '--list', '--includes', '--show-scope', '-z').split('\0')
     for scope, entry in zip(entries[::2], entries[1::2]):
-        key = entry.split('\n', 1)[0].lower()
-        if scope != 'command' and UNSAFE_CONFIG.fullmatch(key):
+        key, _, value = entry.partition('\n')
+        key = key.lower()
+        # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
+        case_hiding = (key == 'core.ignorecase' and value.lower() not in ('false', 'no', 'off', '0') and
+                       not _case_insensitive(directory))
+        if scope != 'command' and (UNSAFE_CONFIG.fullmatch(key) or case_hiding):
             raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(key, 200)}, which a read '
                                 'could run as a program or use to hide changes; remove it or use a fresh clone')
 
