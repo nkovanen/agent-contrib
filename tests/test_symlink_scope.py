@@ -15,8 +15,13 @@ def link(tmp, path, target):
 
 
 class SymlinkScopeTests(unittest.TestCase):
+    def temporary(self):
+        directory = tempfile.TemporaryDirectory()  # TestCase.enterContext needs Python 3.11
+        self.addCleanup(directory.cleanup)
+        return directory.name
+
     def committed(self, links, extra=()):
-        tmp = self.enterContext(tempfile.TemporaryDirectory())
+        tmp = self.temporary()
         task, client, evidence, git = evidence_checkout(tmp)
         for path, target in links:
             link(tmp, path, target)
@@ -69,7 +74,7 @@ class SymlinkScopeTests(unittest.TestCase):
         self.assertNotIn('src/c2', found)
 
     def test_scope_check_also_judges_staged_and_untracked_links(self):
-        tmp = self.enterContext(tempfile.TemporaryDirectory())
+        tmp = self.temporary()
         task, _, _, git = evidence_checkout(tmp)
         link(tmp, 'src/staged', '../AGENTS.md')
         git('add', 'src/staged')
@@ -103,7 +108,7 @@ class SymlinkScopeTests(unittest.TestCase):
 
     def test_oversized_link_blob_fails_closed(self):
         import subprocess
-        tmp = self.enterContext(tempfile.TemporaryDirectory())
+        tmp = self.temporary()
         task, _, _, git = evidence_checkout(tmp)
         blob = subprocess.run(['git', '-C', tmp, 'hash-object', '-w', '--stdin'], input='a/' * 2500,
                               capture_output=True, text=True, check=True).stdout.strip()
