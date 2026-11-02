@@ -53,10 +53,58 @@ class TextFormatTests(unittest.TestCase):
     def test_error_envelope_and_generic_results(self):
         self.assertEqual(textfmt.render('verify', {'error': {'code': 'usage', 'message': 'bad\nflag'}}),
                          'error [usage]: bad flag\n')
-        text = textfmt.render('scope-check', {'within_scope': False, 'violations': [{'path': 'x'}], 'base_commit': None})
-        self.assertIn('within_scope: False\n', text)
-        self.assertIn('base_commit: None\n', text)
-        self.assertNotIn('violations', text)
+        text = textfmt.render('feedback', {'complete': False, 'reviews': [{'body': 'x'}], 'head_moved': None})
+        self.assertIn('complete: False\n', text)
+        self.assertIn('head_moved: None\n', text)
+        self.assertNotIn('reviews', text)
+
+    def test_scope_check_lists_violations_warnings_and_errors(self):
+        result = {'within_scope': False, 'base_commit': None, 'changed_paths': ['a', 'src/ok.rs'],
+                  'violations': [{'path': 'a\nwithin_scope: True', 'rule': 'not in allowed_paths'},
+                                 {'path': '.github/ci.yml', 'rule': 'prohibited_paths: .github/**'}],
+                  'errors': ['Base commit is missing or not an ancestor of HEAD'],
+                  'warnings': ['Default base source.commit is not an ancestor of HEAD'], 'evidence': 'Not evidence.'}
+        text = textfmt.render('scope-check', result)
+        for expected in ['within_scope: False\n', 'base_commit: None\n', 'Changed paths: 2\n',
+                         'Violations (2):\n  - a within_scope: True -- not in allowed_paths\n'
+                         '  - .github/ci.yml -- prohibited_paths: .github/**\n',
+                         'Warnings (1):\n  - Default base source.commit is not an ancestor of HEAD\n',
+                         'Errors (1):\n  - Base commit is missing or not an ancestor of HEAD\n']:
+            self.assertIn(expected, text)
+        self.assertNotIn('\nwithin_scope: True', text)
+
+    def test_drift_lists_each_reason_and_keeps_informational_changes_apart(self):
+        result = {'contract_sha256': 'c' * 64, 'complete': True, 'drifted': True, 'errors': [], 'notice': 'Report only.',
+                  'issue': {'changed': True},
+                  'default_branch': {'stored_branch': 'main', 'current_branch': 'trunk\nDrifted: no',
+                                     'advanced': True},
+                  'instructions': {'changed': True, 'baseline_verified': True, 'added': ['SECURITY.md'],
+                                   'removed': ['CLAUDE.md'],
+                                   'modified': [{'path': 'AGENTS.md', 'stored_sha256': 'a', 'current_sha256': 'b'}]},
+                  'policy': {'changed': True, 'stored_approval': 'candidate', 'current_approval': 'approved'},
+                  'overlap': {'added': ['https://github.com/acme/photos/pull/31'],
+                              'removed': ['https://github.com/acme/photos/pull/9']}}
+        text = textfmt.render('drift', result)
+        self.assertIn('drifted: True\n', text)
+        self.assertIn('Drift reasons (8):\n'
+                      '  - Issue content changed\n'
+                      '  - Default branch changed: main -> trunk Drifted: no\n'
+                      '  - Instruction files changed\n'
+                      '  - Instruction file added: SECURITY.md\n'
+                      '  - Instruction file removed: CLAUDE.md\n'
+                      '  - Instruction file modified: AGENTS.md\n'
+                      '  - Approval changed: candidate -> approved\n'
+                      '  - Overlapping PR added: https://github.com/acme/photos/pull/31\n', text)
+        self.assertIn('Informational (2):\n  - Default branch advanced since preparation\n'
+                      '  - Overlapping PR no longer open: https://github.com/acme/photos/pull/9\n', text)
+        quiet = {'complete': False, 'drifted': None, 'errors': ['Pinned instruction baseline could not be reconstructed'],
+                 'instructions': {'changed': True, 'baseline_verified': False, 'added': [], 'removed': [], 'modified': []},
+                 'policy': {'changed': True, 'stored_approval': 'candidate', 'current_approval': 'candidate'}}
+        text = textfmt.render('drift', quiet)
+        self.assertIn('  - Instruction files changed (per-file baseline unavailable)\n'
+                      '  - Policy state/content changed\n', text)
+        self.assertIn('Errors (1):', text)
+        self.assertNotIn('Informational', text)
 
     def test_discovery_summary_discloses_omitted_candidates(self):
         result = {'complete': True, 'issues': [

@@ -56,6 +56,8 @@
   message now says to move it before the subcommand.
 - `discover` with no repository again reports the missing `reference` instead
   of the 2-20 multi-repository bound. Exit status stays 2.
+- `--format text` for `scope-check` lists violating paths, warnings and errors;
+  for `drift` it lists each drift reason and informational changes separately.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

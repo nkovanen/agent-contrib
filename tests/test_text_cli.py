@@ -82,6 +82,20 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('Blockers [draft] (1):', output)
         self.assertNotIn('Selected stage', output)
 
+    def test_text_scope_check_and_drift_keep_exit_status(self):
+        scope = {'within_scope': False, 'base_commit': 'a' * 40, 'changed_paths': ['x'], 'errors': [], 'warnings': [],
+                 'violations': [{'path': 'x', 'rule': 'not in allowed_paths'}]}
+        drift = {'complete': True, 'drifted': True, 'errors': [], 'issue': {'changed': True}}
+        with patch('agent_contribute.core.read_json', return_value={}), \
+                patch('agent_contribute.workspace.scope_check', return_value=scope), \
+                patch('agent_contribute.drift.drift', return_value=drift):
+            code, output = self.invoke(['--format', 'text', 'scope-check', 'task.json', '--repo-dir', '.'])
+            self.assertEqual(code, 1)
+            self.assertIn('Violations (1):\n  - x -- not in allowed_paths\n', output)
+            code, output = self.invoke(['--format', 'text', 'drift', 'task.json'])
+            self.assertEqual(code, 1)
+            self.assertIn('Drift reasons (1):\n  - Issue content changed\n', output)
+
     def test_text_multi_repo_does_not_hide_failed_repository(self):
         result = {'complete': False, 'repositories': [
             {'requested_repository': 'acme/a', 'complete': True, 'issues': [], 'errors': []},

@@ -399,7 +399,10 @@ counted. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that
-exit. JSON still contains every stage. Other commands show top-level
+exit. JSON still contains every stage. `scope-check` lists each violating path
+and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
+informational changes (an advanced default branch, PRs no longer open) apart.
+Other commands show top-level
 scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured

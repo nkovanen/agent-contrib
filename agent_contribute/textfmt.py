@@ -84,13 +84,53 @@ def _inspect(result):
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
 
 
+def _scalars(result):
+    return [f'{key}: {line(value)}' for key, value in result.items() if isinstance(value, (str, int, bool)) or value is None]
+
+
+def _scope_check(result):
+    out = _scalars(result) + [f'Changed paths: {len(result.get("changed_paths", []))}']
+    out += _list('Violations', (f'{line(item.get("path", ""), 200)} -- {line(item.get("rule", ""), 200)}'
+                                for item in result.get('violations', [])))
+    return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
+
+
+def _drift(result):
+    # Reasons mirror exactly what sets drifted; other observed changes are listed apart as informational.
+    issue, branch = result.get('issue') or {}, result.get('default_branch') or {}
+    instructions, policy, overlap = (result.get(key) or {} for key in ('instructions', 'policy', 'overlap'))
+    reasons, info = [], []
+    if issue.get('changed'):
+        reasons.append('Issue content changed')
+    if branch and branch.get('stored_branch') != branch.get('current_branch'):
+        reasons.append(f'Default branch changed: {line(branch.get("stored_branch"), 100)} -> '
+                       f'{line(branch.get("current_branch"), 100)}')
+    if instructions.get('changed'):
+        reasons.append('Instruction files changed' +
+                       ('' if instructions.get('baseline_verified') else ' (per-file baseline unavailable)'))
+    for kind in ('added', 'removed'):
+        reasons += [f'Instruction file {kind}: {line(path, 200)}' for path in instructions.get(kind, [])]
+    reasons += ['Instruction file modified: ' + line(item.get('path', ''), 200) for item in instructions.get('modified', [])]
+    if policy.get('changed'):
+        reasons.append(f'Approval changed: {line(policy.get("stored_approval"), 40)} -> '
+                       f'{line(policy.get("current_approval"), 40)}' if policy.get('stored_approval') !=
+                       policy.get('current_approval') else 'Policy state/content changed')
+    reasons += ['Overlapping PR added: ' + line(url, 200) for url in overlap.get('added', [])]
+    if branch.get('advanced'):
+        info.append('Default branch advanced since preparation')
+    info += ['Overlapping PR no longer open: ' + line(url, 200) for url in overlap.get('removed', [])]
+    return (_scalars(result) + _list('Drift reasons', reasons) + _list('Informational', info) +
+            _list('Errors', result.get('errors', [])))
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
         return f'error [{line(result["error"].get("code", ""), 60)}]: {line(result["error"].get("message", ""))}\n'
-    body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect}.get(command)
+    body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
+            'drift': _drift}.get(command)
     if body is None:
-        out = [f'{key}: {line(value)}' for key, value in result.items() if isinstance(value, (str, int, bool)) or value is None]
+        out = _scalars(result)
     else:
         out = _verify(result, stage) if command == 'verify' else body(result)
     return '\n'.join(out + ['(Text is a summary; JSON output is canonical. Remote text is untrusted.)']) + '\n'
