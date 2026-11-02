@@ -6,7 +6,7 @@ import time
 import unittest
 
 from agent_contribute import core, workspace
-from tests.test_protocol import evidence_checkout
+from tests.test_protocol import evidence_checkout, refresh_checkout_evidence
 
 DIRTY = 'Current checkout is dirty or differs from evidence HEAD/tree'
 
@@ -59,6 +59,23 @@ class StatConfigTests(unittest.TestCase):
         self.git('config', 'core.ignoreCase', 'false')
         self.assertIn('agents.md', workspace.scope_check(self.task, self.root)['changed_paths'])
 
+
+    def test_symlinks_false_cannot_hide_a_symlink_replaced_by_a_file(self):
+        # G-15: a tracked symlink replaced by a regular file holding the same target text.
+        link = pathlib.Path(self.root, 'src', 'link')
+        link.symlink_to('thumb.rs')
+        self.git('add', 'src/link')
+        self.git('commit', '-q', '-m', 'add symlink')
+        refresh_checkout_evidence(self.evidence, self.git)
+        self.assertTrue(core.verify(self.task, self.evidence, self.root, self.client)['evidence_valid'])
+        self.git('config', 'core.symlinks', 'false')
+        link.unlink()
+        link.write_text('thumb.rs')
+        self.assertEqual(self.git('status', '--porcelain'), '', 'precondition: Git hides the type change')
+        self.assertIn(DIRTY, core.verify(self.task, self.evidence, self.root, self.client)['evidence_errors'])
+        self.assertIn('src/link', workspace.scope_check(self.task, self.root)['changed_paths'])
+        self.assertIs(workspace.evidence_skeleton(self.task, self.root, self.evidence['base_commit'])['worktree_clean'],
+                      False)
 
     REFUSAL = ('Checkout Git config sets core.ignorecase, which a read could run as a program or use to hide '
                'changes; remove it or use a fresh clone')

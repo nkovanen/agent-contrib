@@ -58,7 +58,8 @@ and `protocol.*`. Git reads also force `log.showSignature=false` and
 error, never a fetch. Credential, SSH, askpass, pager, editor and merge-driver
 settings are not refused because none of the fixed read commands reaches them.
 Reads also force full stat and mode checks (`core.checkStat=default`,
-`core.trustctime=true`, `core.ignoreStat=false`, `core.fileMode=true`), so
+`core.trustctime=true`, `core.ignoreStat=false`, `core.fileMode=true`, and
+`core.symlinks=true` on POSIX), so
 relaxed checkout settings cannot hide an edit or an executable bit; on a
 filesystem without executable bits every file then looks changed, which fails
 closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where

@@ -720,6 +720,8 @@ def git_read(directory, *args, index_file=None):
                                  # Full stat and mode checks: relaxed checkout settings could hide an edit.
                                  '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
+                                 # POSIX has symlinks: a file standing in for a tracked symlink is a change.
+                                 *(('-c', 'core.symlinks=true') if os.name == 'posix' else ()),
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
                                 capture_output=True, text=not nul_delimited, timeout=15, shell=False)
         if result.returncode:

@@ -161,7 +161,9 @@ channel or runtime model provider is added.
   a promisor `ext::` transport ran during status, diff, show or merge-base.
 - Git reads force `core.checkStat=default`, `core.trustctime=true`,
   `core.ignoreStat=false` and `core.fileMode=true`, so relaxed checkout stat or
-  mode settings cannot hide a same-size edit or an executable-bit change.
+  mode settings cannot hide a same-size edit or an executable-bit change. On
+  POSIX they also force `core.symlinks=true`, so a regular file replacing a
+  tracked symlink is reported.
   `core.ignoreCase=true` on a case-sensitive filesystem is refused
   (`unsafe_git_config`) because it hides case twins. The setting is read as
   Git's effective boolean (an empty or later-overridden value is false), and a
