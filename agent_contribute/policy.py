@@ -214,7 +214,8 @@ def scan(text, path):
 class _Report:
     def __init__(self, client):
         self.client, self.requests, self.skipped = client, 0, 0
-        self.sources, self.texts, self.unassessed, self.limits, self.keys = [], [], [], {}, []
+        self.sources, self.texts, self.unassessed, self.limits = [], [], [], {}
+        self.seen, self.keys = set(), []  # every identity noted; identities of retained entries (aligned)
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -228,7 +229,11 @@ class _Report:
         """key is the full identity (repository and path, or URL); the displayed what may be shortened."""
         what = core.safe_text(str(what), len(str(what)))
         key = key or what
-        if any(item_key == key for item_key in self.keys):
+        if key in self.seen:
+            return
+        self.seen.add(key)
+        if len(self.unassessed) >= MAX_UNASSESSED:  # count, do not retain: bounded memory and linear time (RP-16)
+            self.limit('unassessed entries')
             return
         self.keys.append(key)
         self.unassessed.append({'what': what[:IDENTIFIER_CHARS], 'reason': reason, 'from': origin, 'line': line,
@@ -417,10 +422,8 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     hints.sort(key=lambda hint: (HINT_ORDER.index(hint['kind']), hint['source'], hint['line']))
     if len(hints) > MAX_HINTS:
         state.limit('hints', len(hints) - MAX_HINTS)
-    if len(state.unassessed) > MAX_UNASSESSED:
-        state.limit('unassessed entries', len(state.unassessed) - MAX_UNASSESSED)
     result = {'report': 'policy-report/1', 'review_obligation': OBLIGATION, 'sources_scanned': state.sources,
-              'unassessed': state.unassessed[:MAX_UNASSESSED], 'limits_reached': [],
+              'unassessed': state.unassessed, 'limits_reached': [],
               'never_inspected': list(NEVER_INSPECTED),
               'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints[:MAX_HINTS], 1)],
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}

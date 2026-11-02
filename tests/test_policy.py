@@ -459,6 +459,23 @@ class BoundTests(unittest.TestCase):
             policy.scan(text[:policy.MAX_FILE_BYTES * 5], 'CONTRIBUTING.md')
             self.assertLess(time.monotonic() - started, 2.0, text[:20])
 
+    def test_many_unique_references_and_candidates_scale_linearly(self):
+        def run(count):
+            per_file = count // 4
+            files = {f'docs/{n}/CONTRIBUTING.md': ' '.join(f'[c](https://e.org/contributing/{n}/{i})' for i in range(per_file))
+                     for n in range(4)}
+            files.update({f'docs/policy/x{i}.pdf': '%PDF' for i in range(count // 4)})
+            started = time.monotonic()
+            result, _ = report(files)
+            return time.monotonic() - started, result
+        small, _ = run(5000)
+        large, result = run(20000)
+        self.assertEqual(len(result['unassessed']), policy.MAX_UNASSESSED)
+        self.assertEqual({item['limit']: item['not_reported'] for item in result['limits_reached']}['unassessed entries'],
+                         20000 + 5000 + 1 - policy.MAX_UNASSESSED)
+        self.assertLess(large, 6.0)
+        self.assertLess(large, max(small, 0.05) * 10, (small, large))
+
     def test_patterns_have_no_quantified_groups(self):
         source = pathlib.Path(policy.__file__).read_text('utf-8')
         patterns = re.findall(r"re\.compile\((r?'(?:[^'\\]|\\.)*')", source)
