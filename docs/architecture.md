@@ -58,7 +58,9 @@ at the tested commit. Every other overlap remains. Draft-stage success reports
 whether to create or simply return the existing verified draft; completion still
 requires final human sign-off. No draft-update lifecycle is implemented.
 
-The old schemas and evaluator retain their behavior. The new mode does not
+The old schemas and evaluator keep their formats and route meaning, apart from
+the hardening and message changes in the
+[compatibility notes](../CHANGELOG.md#compatibility-notes). The new mode does not
 change the label approval policy or reinterpret a legacy task. Full details are
 in [host authorization](host-authorization.md) and the installed workflow.
 
@@ -71,10 +73,12 @@ facts with the pinned contract without rewriting it. Multi-repository discovery
 keeps each repository's identities, errors and completeness separate.
 
 `scope-check` and evidence verification share the path-scope evaluator. Evidence
-initialization records observed Git facts and leaves claims unfilled. `pr-body`
+initialization records observed Git facts and leaves claims unfilled.
+`authorization-request` prepares an unsigned schema 0.2 mandate request and
+issues nothing. `pr-body`
 quotes live verification results with remote prose neutralized; it has no host
 context input, so it omits schema 0.2 authority gates and human sign-off
 rather than attesting or misstating them.
 
-The [development status](development-status.md) distinguishes implemented tools
-from future policy, signature, lifecycle and platform work.
+The [product map](product-map.md) lists what is shipped, partial and planned by
+issue; [development status](development-status.md) records acceptance trials.
