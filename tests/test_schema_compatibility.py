@@ -150,6 +150,24 @@ class PrepareRouteTests(unittest.TestCase):
             core.prepare(inspected, schema_version='0.2', client=client)
         self.assertEqual(caught.exception.code, 'unsupported_route')
 
+    def test_explicit_v2_refuses_case_variant_spelling_without_calling_it_a_fork(self):
+        from tests.test_authorization import CandidateGitHub
+
+        class CaseInsensitiveGitHub(CandidateGitHub):  # GitHub resolves owner/repo case-insensitively
+            def request(self, endpoint):
+                return super().request(endpoint.replace('repos/ACME/Photos', 'repos/acme/photos'))
+
+        client = CaseInsensitiveGitHub()
+        inspected = core.inspect_issue('ACME/Photos#12', client)
+        self.assertTrue(inspected['complete'], inspected['errors'])
+        self.assertEqual((inspected['proposed_target_repository'], inspected['source']['repository']),
+                         ('ACME/Photos', 'acme/photos'))
+        with self.assertRaises(core.ProtocolError) as caught:
+            core.prepare(inspected, schema_version='0.2', client=client)
+        self.assertEqual(caught.exception.code, 'case_mismatch')
+        self.assertIn('acme/photos', str(caught.exception))
+        self.assertNotIn('fork', str(caught.exception))
+
     def test_legacy_empty_host_contexts_all_reject(self):
         task, client = ready_contract()
         for value in ({}, [], 0, ''):

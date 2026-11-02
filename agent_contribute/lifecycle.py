@@ -11,6 +11,10 @@ def prepare_v2(inspected, client):
     source = inspected['source']
     proposed = inspected.get('proposed_target_repository', source['repository'])
     if proposed != source['repository']:
+        if isinstance(proposed, str) and proposed.casefold() == source['repository'].casefold():
+            # Refuse rather than rebind: a 0.2 task names exactly the spelling that was requested and reviewed.
+            raise core.ProtocolError('case_mismatch', 'Schema 0.2 requires the canonical repository spelling '
+                                     + source['repository'] + '; inspect that reference again')
         raise core.ProtocolError('unsupported_route', 'Schema 0.2 supports only a same-repository candidate; use 0.1 for forks')
     if not inspected['complete']:
         raise core.ProtocolError('refresh_incomplete', 'Cannot bind a new task to incomplete source reads')

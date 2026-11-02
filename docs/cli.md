@@ -50,7 +50,9 @@ repositories and enabled-issue forks keep their own tracker. Missing parent
 metadata, a parent without Issues, malformed responses and API failures remain
 unresolved, with errors and `complete: false`.
 
-Use the `reference` emitted by discovery for subsequent commands. In a fork
+Use the `reference` emitted by discovery for subsequent commands. It keeps the
+requested spelling; schema 0.2 `prepare` refuses a case variant of the canonical
+`issue_source_repository` with `case_mismatch`, so rerun with that spelling. In a fork
 request, `fork/repo#123` means “resolve issue 123 for this requested repository”;
 its `issue_url` names the actual source. It is not a claim that the issue exists
 on the fork. Both repositories' open PRs are scanned, including drafts; a bare
