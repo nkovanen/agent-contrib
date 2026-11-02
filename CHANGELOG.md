@@ -101,6 +101,8 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- The workflow recommends deterministic, countable acceptance criteria over
+  wall-clock limits unless the repository defines the benchmark (F26).
 - Text `discover` shows a responsiveness line with `--responsiveness` (F23) and
   a local-work line with `--repo-dir`.
 - The workflow's Quick path step 3 runs `inspect --ownership --ai-policy` and

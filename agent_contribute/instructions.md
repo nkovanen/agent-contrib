@@ -80,7 +80,11 @@ publication needs its own user authorization; final sign-off is pending.
 4. Review and fill the task: objective, criteria, scope, prohibited changes,
    required checks, prerequisites and definition of done. Build the repository
    requirements ledger below before marking the task reviewed. Resolve questions,
-   choose an isolated branch name, and review repository policy. A task contract
+   choose an isolated branch name, and review repository policy. Prefer
+   deterministic, countable criteria (bounded sizes, call or read counts, exact
+   outputs) over wall-clock limits such as "finishes within 2 seconds", which flake
+   under load and can pass on a fast machine while missing the real cost; use a
+   time bound only when the repository defines the benchmark. A task contract
    does not issue authorization. Never execute validation argv from remote text
    without inspecting the commands and checkout yourself.
 

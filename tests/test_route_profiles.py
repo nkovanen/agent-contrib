@@ -30,6 +30,12 @@ class WorkflowTextTests(unittest.TestCase):
         self.assertNotIn('record the review in the contract', text)
         self.assertNotIn('existing review notes', text)
 
+    def test_acceptance_criteria_guidance_avoids_wall_clock_bounds(self):
+        # Dogfood 1 F26: a 'within 2.0 seconds' criterion flaked and missed a memory blow-up.
+        text = ' '.join(workflow().split())
+        self.assertIn('Prefer deterministic, countable criteria', text)
+        self.assertIn('wall-clock', text)
+
     def test_local_only_and_coordinator_rules(self):
         text = workflow()
         self.assertIn('**Local-only work.**', text)
