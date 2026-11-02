@@ -2,6 +2,10 @@
 
 ## 0.3.0 — unreleased
 
+- Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
+  repository; merged PRs elsewhere move to `downstream_references` (dogfood
+  E-11: a downstream workaround in another repository was reported as a possible
+  fix). Cross-referenced PRs also report a sanitized `title` and `base_ref`.
 - Schema 0.2 `user_authorization` adds `source_errors`, the source identity
   failures also listed in its `errors`; `pr-body` keeps them as source blockers
   instead of omitting them with the authority states (R1-10).

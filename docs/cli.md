@@ -299,13 +299,16 @@ approval, overlap or readiness decision changes in any schema version.
 Reads: the issue timeline and comments (complete pagination; timeline events
 without IDs are deduplicated by content), then a fresh `pulls/{n}` read for
 each cross-referenced PR (at most 50, otherwise incomplete). Each PR reports
-repository, repository ID, number, state, draft, merged, merge/close times and
-`exact_reference`: whether the PR text references this issue exactly (local
+repository, repository ID, number, sanitized `title`, `base_ref`, state, draft, merged,
+merge/close times and `exact_reference`: whether the PR text references this issue exactly (local
 `#N` only in the issue's own repository, `owner/repo#N` or the issue URL), with
 the same parser as overlap detection.
 
 - `resolution_signals.possibly_already_fixed`: merged PRs with an exact
-  reference. `rejected_approaches`: closed, unmerged PRs with an exact reference.
+  reference whose base repository is the issue's own repository (any base
+  branch; check `base_ref`). `downstream_references`: merged PRs with an exact
+  reference in other repositories, such as downstream workarounds; they never
+  indicate a fix. `rejected_approaches`: closed, unmerged PRs with an exact reference.
 - `assignment_history`, `connected_events` and `referencing_commits` from the
   timeline.
 - `claims`: comments matching a fixed set of claim patterns ("I'm working on",
