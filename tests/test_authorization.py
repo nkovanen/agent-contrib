@@ -247,6 +247,17 @@ class AuthorizationTests(unittest.TestCase):
         self.assertFalse(result['historical_valid'])
         self.assertIn('Reviewed issue identity changed', result['errors'])
 
+    def test_mandate_actions_cannot_exceed_reviewed_requested_actions(self):
+        task, client = candidate_task()
+        task['execution']['requested_actions'] = ['implement']
+        context = host_context(task)
+        self.assertEqual(context['mandate']['actions'], ['implement', 'create_draft'])
+        result = self.check(task, client, context)
+        self.assertFalse(result['historical_valid'])
+        self.assertFalse(result['implement'])
+        self.assertFalse(result['create_draft'])
+        self.assertEqual(result['errors'], ['Mandate actions are duplicated or exceed reviewed requested actions'])
+
     def test_mandate_expires_at_the_exact_expiry_boundary(self):
         task, client = candidate_task()
         context = host_context(task)
