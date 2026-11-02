@@ -76,7 +76,8 @@ def _pull(source, number, client):
             isinstance(head.get('ref'), str) and isinstance(head.get('sha'), str) and
             re.fullmatch('[0-9a-f]{40}', head['sha']) and isinstance(base.get('ref'), str) and
             isinstance(base.get('repo'), dict) and _positive(base['repo'].get('id')) and
-            (head.get('repo') is None or (isinstance(head['repo'], dict) and _positive(head['repo'].get('id'))))):
+            # An omitted key is malformed; only an explicit null means a deleted fork (never waivable).
+            'repo' in head and (head['repo'] is None or (isinstance(head['repo'], dict) and _positive(head['repo'].get('id'))))):
         raise core.ProtocolError('api_shape', 'Malformed pull request detail')
     authorization.timestamp(pr.get('updated_at'))
     return pr

@@ -315,6 +315,13 @@ class ReconciliationTests(WaiverFixture):
         self.assert_blocked(result, 'Overlap disposition read failed for PR #31')
         self.assertEqual(result['duplicates'], [])  # an unknown is a blocker, never a claimed overlap
 
+    def test_missing_head_repository_key_is_a_structured_blocker(self):
+        head = dict(self.pr['head'])
+        del head['repo']  # omitted, not an explicit null (deleted fork)
+        self.detail_changed(head=head)
+        result = self.verify(evidence=False)
+        self.assert_blocked(result, 'Overlap disposition read failed for PR #31')
+
     def test_malformed_detail_blocks(self):
         self.detail_changed(head={'ref': 'renderer', 'repo': {'id': 101}})
         self.assert_blocked(self.verify(evidence=False), 'Overlap disposition read failed for PR #31')
