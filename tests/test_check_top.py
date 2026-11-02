@@ -123,6 +123,13 @@ class CheckTopTests(unittest.TestCase):
         self.assertEqual(result['issues'][0]['top_check']['demotions'], [])
         self.assertFalse([call for call in ownership_reads(client) if '/issues/3/' in call])
 
+    def test_assignees_appear_only_with_check_top(self):
+        # Review R8-06: plain --signals output must not gain the check-top input field.
+        code, plain = run(CheckGitHub(), 'discover', 'acme/photos', '--signals')
+        self.assertFalse([item for item in plain['issues'] if 'assignees' in item['signals']])
+        code, checked = run(CheckGitHub(), 'discover', 'acme/photos', '--signals', '--check-top', '1')
+        self.assertEqual({item['number']: item['signals']['assignees'] for item in checked['issues']}[3], ['alice'])
+
     def test_default_and_plain_signals_make_no_ownership_reads(self):
         for argv in (['discover', 'acme/photos'], ['discover', 'acme/photos', '--signals']):
             with self.subTest(argv=argv):

@@ -285,8 +285,6 @@ def issue_signals(issue, paths, now):
     demotion, meta, labels = demotions(issue)
     signals = {'code_location': location_hints(text, paths), 'acceptance_clarity': acceptance_clarity(issue['body']),
                'activity': activity(issue, now), 'maintainer': maintainer_signal(issue), 'labels': labels,
-               'assignees': [core.safe_text(user['login'], 100) for user in (issue.get('assignees') or [])[:10]
-                             if isinstance(user, dict) and isinstance(user.get('login'), str)],
                'demotion': demotion}
     score = ((signals['code_location']['value'] == 'found') +
              {'high': 2, 'medium': 1, 'low': 0}[signals['acceptance_clarity']['value']] +
@@ -332,6 +330,11 @@ class _ReadCap:
         self.reads += 1
         # One transport attempt per counted read: GitHub.request would retry transient errors up to three times.
         return getattr(self.client, 'request_once', self.client.request)(endpoint)
+
+
+def assignees(issue):
+    return [core.safe_text(user['login'], 100) for user in (issue.get('assignees') or [])[:10]
+            if isinstance(user, dict) and isinstance(user.get('login'), str)]
 
 
 def check_top(result, client, n, now):

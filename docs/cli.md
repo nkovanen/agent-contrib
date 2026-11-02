@@ -1320,7 +1320,7 @@ Added by --signals; report-only heuristics, never approval
 | `maintainer.value` | "maintainer" \| "other" \| "unknown" |  |
 | `maintainer.explanation` | string |  |
 | `labels` | string[] | Issue label names (sanitized), as used by the demotion rules |
-| `assignees` | string[] | Current assignee logins from the issue list payload (sanitized, at most 10) |
+| `assignees` | string[] (optional) | Present only with --check-top: current assignee logins from the issue list payload (sanitized, at most 10) |
 | `demotion` | object | Documented label and title demotions; each subtracts 2 from the score |
 | `demotion.value` | "demoted" \| "none" |  |
 | `demotion.reasons` | string[] | One entry per matched label group or meta-like title |

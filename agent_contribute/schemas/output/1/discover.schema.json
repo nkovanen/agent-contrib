@@ -893,7 +893,7 @@
             "maxLength": 100
           },
           "maxItems": 10,
-          "description": "Current assignee logins from the issue list payload (sanitized, at most 10)"
+          "description": "Present only with --check-top: current assignee logins from the issue list payload (sanitized, at most 10)"
         },
         "demotion": {
           "type": "object",
@@ -934,7 +934,6 @@
         "activity",
         "maintainer",
         "labels",
-        "assignees",
         "demotion",
         "score"
       ],

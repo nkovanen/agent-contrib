@@ -527,7 +527,7 @@ def inspect_issue(reference, client=None):
 
 def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None):
     client = client or GitHub()
-    result, snapshot = discover_with_snapshot(repository, client, signals=signals)
+    result, snapshot = discover_with_snapshot(repository, client, signals=signals, assignees=bool(check_top))
     if check_top and signals and snapshot is not None:
         from .signals import check_top as recheck
         result['top_check'] = recheck(result, client, check_top, dt.datetime.fromisoformat(result['fetched_at']))
@@ -539,7 +539,7 @@ def discover(repository, client=None, *, signals=False, responsiveness=False, ch
     return result
 
 
-def discover_with_snapshot(repository, client=None, *, signals=False):
+def discover_with_snapshot(repository, client=None, *, signals=False, assignees=False):
     """The snapshot is internal context for read-only reports such as audit; it is never output."""
     repository = parse_repository(repository)
     client = client or GitHub()
@@ -581,6 +581,9 @@ def discover_with_snapshot(repository, client=None, *, signals=False):
                 from .signals import issue_signals
                 issues[-1]['signals'] = issue_signals(item, snapshot['blob_paths'],
                                                       dt.datetime.fromisoformat(snapshot['fetched_at']))
+                if assignees:  # --check-top input only, so plain --signals output is unchanged
+                    from .signals import assignees as current_assignees
+                    issues[-1]['signals']['assignees'] = current_assignees(item)
             if not inspected['complete']:
                 errors.extend(inspected['errors'])
         except ProtocolError as exc:

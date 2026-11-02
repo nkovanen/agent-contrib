@@ -87,8 +87,8 @@ channel or runtime model provider is added.
   all). A merged same-repository fix, a fresh unquoted first-person claim by a
   non-maintainer or an assignee moves a
   checked issue below every other candidate that is not excluded or
-  overlapping, with the reason listed. `signals.assignees` reports current
-  assignees. Report only.
+  overlapping, with the reason listed. With `--check-top`, `signals.assignees`
+  reports current assignees. Report only.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
