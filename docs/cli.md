@@ -63,6 +63,9 @@ relaxed checkout settings cannot hide an edit or an executable bit; on a
 filesystem without executable bits every file then looks changed, which fails
 closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where
 it would hide case twins, and accepted where the filesystem really ignores case.
+Worktree content is compared with a commit through a fresh temporary index
+outside the checkout, so the checkout's stat cache is never trusted; every
+tracked file is hashed on each run.
 
 `agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
 and option of the installed version. Exit status is 0 when a command succeeds and

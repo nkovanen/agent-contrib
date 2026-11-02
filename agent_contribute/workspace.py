@@ -34,8 +34,9 @@ def scope_check(task, directory, base=None):
             raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
         paths = set(core.implementation_paths(directory, base, head))
         # Index, working tree and untracked files: everything a later commit could contain.
-        for args in (DIFF + ('--cached', base), DIFF + (base,)):
-            paths.update(path for path in core.git_read(directory, *args).split('\0') if path)
+        # The index itself is the subject only for staged changes; worktree content is judged without its stat cache.
+        paths.update(path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path)
+        paths.update(core.worktree_changes(directory, base))
         paths.update(core.untracked_paths(directory))
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
         result['violations'] = sorted(core.scope_violations(task['scope'], paths), key=lambda item: item['path'])
@@ -115,7 +116,8 @@ def evidence_skeleton(task, directory, base):
     skeleton = {'schema_version': version, 'contract_sha256': core.canonical_hash(task),
                 'git_head': head, 'git_tree': core.git_read(directory, 'rev-parse', head + '^{tree}'), 'base_commit': base,
                 'worktree_clean': not (core.git_read(directory, 'status', '--porcelain', '--untracked-files=all',
-                                                     '--ignore-submodules=all') or core.untracked_paths(directory)),
+                                                     '--ignore-submodules=all') or core.untracked_paths(directory)
+                                    or core.worktree_changes(directory, head)),
                 'implementer': '',
                 'validations': [{'id': item['id'], 'argv': item['argv'], 'status': None, 'exit_code': None,
                                  'skipped': None, 'output': '', 'started_at': '', 'finished_at': '',

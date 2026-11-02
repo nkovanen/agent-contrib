@@ -169,6 +169,11 @@ channel or runtime model provider is added.
   never starts a command inside a populated submodule with that submodule's own
   config. Previously scope-check reported the gitlink but still ran a
   submodule-configured clean filter.
+- Worktree content is compared with HEAD (and, for `scope-check`, the base)
+  through a fresh temporary index outside the checkout, so a hand-edited stat
+  cache in `.git/index` cannot hide an edit. The checkout's index is used only
+  where it is itself the subject (staged changes, index flags) and is never
+  written. Large checkouts take longer, because every tracked file is hashed.
 - Untracked files are found with only per-directory `.gitignore` rules:
   `.git/info/exclude` and a local `core.excludesFile` no longer hide an
   untracked file from `verify`, `scope-check` or `evidence init`, and an

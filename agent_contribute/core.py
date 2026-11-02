@@ -703,10 +703,12 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args):
+def git_read(directory, *args, index_file=None):
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
+        if index_file is not None:
+            env['GIT_INDEX_FILE'] = index_file
         # A missing object must be a read error, never a fetch: GIT_NO_LAZY_FETCH (Git 2.44+) and
         # protocol.allow=never; promisor config is refused by require_safe_config for older Git.
         env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_OPTIONAL_LOCKS='0',
@@ -791,6 +793,18 @@ def shallow_or(directory, error):
                          'fetch more history (git fetch --unshallow or --deepen) and retry') if shallow else error
 
 
+def worktree_changes(directory, commit):
+    """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
+    temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
+    with tempfile.TemporaryDirectory() as scratch:
+        index = os.path.join(scratch, 'index')
+        git_read(directory, 'read-tree', commit, index_file=index)
+        listed = git_read(directory, 'status', '--porcelain', '-z', '--no-renames', '--untracked-files=no',
+                          '--ignore-submodules=all', index_file=index)
+    # Porcelain v1 is 'XY path'; Y is the worktree against that index.
+    return {entry[3:] for entry in listed.split('\0') if len(entry) > 3 and entry[1] != ' '}
+
+
 def current_head(directory):
     """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
     names when the current branch is unborn or deleted, so later reads use this object ID instead."""
@@ -863,7 +877,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
         dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
-                 untracked_paths(directory))
+                 untracked_paths(directory) or worktree_changes(directory, head))
         try:  # every read that needs the base commit and its history
             if has_gitlink(directory, head, evidence['base_commit']):
                 errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
