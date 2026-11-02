@@ -38,6 +38,10 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
 
+`--repo-dir` must be the Git worktree top level. `verify`, `scope-check` and
+`evidence init` refuse a subdirectory or Git directory, because tree, index and
+untracked-file reads there would omit the rest of the checkout.
+
 `discover`, `inspect` and `prepare` wrap their results with
 `requested_repository`, `issue_source_repository`, `proposed_target_repository`
 and `resolution_provenance`. The proposed target is context, never authority.

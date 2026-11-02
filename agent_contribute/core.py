@@ -645,6 +645,12 @@ def git_read(directory, *args):
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
 
 
+def require_worktree_root(directory):
+    """ls-tree, ls-files and untracked reads only cover the working directory, so a subdirectory would hide paths."""
+    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix') != 'true':
+        raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
+
+
 def implementation_paths(directory, base):
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
                                       '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, 'HEAD').split('\0') if path]
@@ -692,6 +698,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
     if not evidence['worktree_clean']:
         errors.append('Evidence was not recorded from a clean worktree')
     try:
+        require_worktree_root(directory)
         head = git_read(directory, 'rev-parse', 'HEAD')
         tree = git_read(directory, 'rev-parse', 'HEAD^{tree}')
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:

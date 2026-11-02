@@ -14,6 +14,7 @@ def scope_check(task, directory, base=None):
     if errors:
         return result
     try:
+        core.require_worktree_root(directory)
         base = result['base_commit'] = _base(task['source']['commit'] if base is None else base)
         try:
             core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')
@@ -44,6 +45,7 @@ def evidence_skeleton(task, directory, base):
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
     base = _base(base)
+    core.require_worktree_root(directory)
     try:
         core.git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], base)
         core.git_read(directory, 'merge-base', '--is-ancestor', base, 'HEAD')

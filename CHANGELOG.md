@@ -2,6 +2,12 @@
 
 ## 0.3.0 — unreleased
 
+- Require `--repo-dir` to be the Git worktree top level for `verify`,
+  `scope-check` and `evidence init` (R1-01). From a subdirectory, Git tree, index
+  and untracked reads omitted the rest of the checkout, hiding gitlinks and
+  out-of-scope untracked files. This also changes schema 0.1 `verify`: a
+  subdirectory or Git directory now fails closed with an evidence error.
+
 - Require a source-linked repository requirements ledger in the installed
   workflow, precommit gates before commits, and independent review of compliance
   as well as code. Include required docs, PR-visible artifacts and template items;
