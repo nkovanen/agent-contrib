@@ -219,7 +219,9 @@ checkout --base SHA --output ../evidence.json` creates an evidence skeleton from
 observed Git facts; fill every result from real runs and reviews.
 Before a separately authorized PR action, `agent-contrib pr-body task.json
 --evidence evidence.json --repo-dir checkout --output ../body.md` renders a
-description with every pending gate; review it before use.
+description with every pending gate; review it before use. For schema 0.2 it takes
+no host context and omits authority gates and sign-off; rely on your own
+`verify --host-context-stdin` run for those, never on the body.
 After publication, `agent-contrib feedback 'owner/repo#PR' --expected-head SHA`
 reads reviews, comments and failing checks as untrusted data. It never changes
 scope or authority.

@@ -4,6 +4,9 @@ import re
 
 from . import core, __version__
 
+AUTHORITY_OMITTED = ('Schema 0.2 authority gates, `next_action`, final sign-off and authorization blockers are '
+                     'not shown: `pr-body` takes no host context, so it cannot reproduce the host\'s '
+                     '`verify --host-context-stdin` run. That run alone decides them.')
 KEYWORD = re.compile(r'(?i)\b(clos|fix|resolv)(?=(?:e|es|ed|s)?\b)')
 
 
@@ -66,23 +69,28 @@ def render(task, verification, evidence=None, *, closes=False, assistant=None, t
     lines += ['', 'Evidence is self-attested by the contributor; the verifier does not prove that tests ran.', '',
               '## Review and sign-off', '']
     if v2:
-        for name in ('independent_review', 'human_signoff'):
-            state = verification.get(name) or {}
-            lines.append(f'- {name.replace("_", " ").capitalize()}: {md(state.get("status", "pending"))} '
-                         f'({"valid" if state.get("valid") is True else "not valid"} per verify)')
+        state = verification.get('independent_review') or {}
+        lines += [f'- Independent review: {md(state.get("status", "pending"))} '
+                  f'({"valid" if state.get("valid") is True else "not valid"} per verify)',
+                  '- Final human sign-off: not shown (requires host context)']
     else:
         for name in ('independent_review', 'human_signoff'):
             record = (evidence or {}).get(name)
             lines.append(f'- {name.replace("_", " ").capitalize()}: ' +
                          (claim + md(record['status']) + (' by ' + md(record['reviewer']) if record['reviewer'].strip() else '')
                           if record else 'pending (not supplied)'))
-    lines += ['', '## Verification gates', '', '`agent-contrib verify` reported (text neutralized, none omitted):', '']
+    lines += ['', '## Verification gates', '']
     if v2:
-        for name in ('implementation_ready', 'technical_evidence_valid', 'draft_create_ready', 'completion_ready'):
-            lines.append(_gate(name, verification.get(name)))
-        lines.append('- `next_action`: ' + md(verification.get('next_action', 'unknown')))
-        blockers = [(stage, error) for stage, errors in verification.get('stage_blockers', {}).items() for error in errors]
+        # Without host context every authority state reads as unauthorized; omit rather than misstate it.
+        lines += ['`agent-contrib verify` reported (text neutralized):', '',
+                  _gate('technical_evidence_valid', verification.get('technical_evidence_valid')), '', AUTHORITY_OMITTED]
+        authority = verification.get('user_authorization') or {}
+        omitted = set(authority.get('errors', [])) | set(authority.get('current_errors', []))
+        blockers = [('source', error) for error in verification.get('errors', []) if error not in omitted]
+        blockers += [('evidence', error) for error in verification.get('evidence_errors', [])]
+        blockers += [('review', error) for error in (verification.get('independent_review') or {}).get('errors', [])]
     else:
+        lines += ['`agent-contrib verify` reported (text neutralized, none omitted):', '']
         for name in ('execution_ready', 'evidence_valid', 'upstream_submission_ready', 'fork_completion_ready'):
             lines.append(_gate(name, verification.get(name)))
         blockers = [('execution', error) for error in verification.get('errors', [])]

@@ -73,7 +73,8 @@ keeps each repository's identities, errors and completeness separate.
 `scope-check` and evidence verification share the path-scope evaluator. Evidence
 initialization records observed Git facts and leaves claims unfilled. `pr-body`
 quotes live verification results with remote prose neutralized; it has no host
-context input, so it cannot attest schema 0.2 authority or human sign-off.
+context input, so it omits schema 0.2 authority gates and human sign-off
+rather than attesting or misstating them.
 
 The [development status](development-status.md) distinguishes implemented tools
 from future policy, signature, lifecycle and platform work.

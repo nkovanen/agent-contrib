@@ -154,9 +154,11 @@ CLI version and contract hash. `--assistant` adds host-reported model text.
 When supplied evidence does not pass `verify`, its statuses are labelled
 `unverified claim`. Evidence that fails its schema is not quoted at all; its
 errors appear among the gates. For schema 0.2, review and sign-off states come
-from `verify`. `pr-body` takes no host context, so 0.2 mandate, publication and
-sign-off states always reflect its absence; the body does not reproduce an
-authorized `verify --host-context-stdin` run.
+from `verify`. `pr-body` takes no host context, so for 0.2 it shows only
+`technical_evidence_valid` with source, evidence and review blockers. It omits
+the implementation, draft and completion gates, `next_action`, final sign-off and
+authorization blockers, and says so, rather than misreporting authorized work as
+unauthorized. The host's `verify --host-context-stdin` run decides those.
 
 One extra bounded read of the tree at the contract's pinned `source.commit`
 finds pull request templates (`pull_request_template.md` or a

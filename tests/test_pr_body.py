@@ -98,16 +98,41 @@ class PRBodyTests(unittest.TestCase):
         self.assertIn('Fixes', visible)
         self.assertIn('@octocat', visible)
 
-    def test_schema_02_shows_stage_gates_and_blockers(self):
+    def test_schema_02_omits_authority_gates_it_cannot_reproduce(self):
+        # pr-body has no host context, so 0.2 authority states would always read "unauthorized" (A1-12).
         task, _ = candidate_task()
-        verification = {'schema_valid': True, 'implementation_ready': True, 'technical_evidence_valid': False,
-                        'draft_create_ready': False, 'completion_ready': False, 'next_action': 'implement',
-                        'stage_blockers': {'implementation': [], 'draft': ['Independent review is pending'],
+        verification = {'schema_valid': True, 'implementation_ready': False, 'technical_evidence_valid': False,
+                        'draft_create_ready': False, 'completion_ready': False, 'next_action': 'resolve_blockers',
+                        'errors': ['Missing human/host mandate', 'Live discovery is incomplete', 'Current mandate expired'],
+                        'user_authorization': {'errors': ['Missing human/host mandate'],
+                                               'current_errors': ['Current mandate expired']},
+                        'evidence_errors': ['No technical execution evidence provided'],
+                        'independent_review': {'status': 'passed', 'valid': False,
+                                               'errors': ['Independent reviewer must differ from implementer']},
+                        'stage_blockers': {'implementation': ['Current implement action is not authorized'],
                                            'completion': ['Final human signoff is pending or invalid']}}
         body = prbody.render(task, verification)
-        for line in ['- `implementation_ready`: yes', '- `draft_create_ready`: no', '- `next_action`: implement',
-                     '- draft: Independent review is pending', '- completion: Final human signoff is pending or invalid']:
+        for line in ['- `technical_evidence_valid`: no', '- source: Live discovery is incomplete',
+                     '- evidence: No technical execution evidence provided',
+                     '- review: Independent reviewer must differ from implementer',
+                     '- Independent review: passed (not valid per verify)',
+                     '- Final human sign-off: not shown (requires host context)']:
             self.assertIn(line + '\n', body)
+        self.assertIn(prbody.AUTHORITY_OMITTED, body)
+        for text in ['implementation_ready', 'draft_create_ready', 'completion_ready', '`next_action`:',
+                     'mandate', 'not authorized', 'signoff is pending']:
+            self.assertNotIn(text, body)
+
+    def test_schema_02_real_path_does_not_claim_the_work_is_unauthorized(self):
+        task, client = candidate_task()
+        client.compare_status = 'ahead'
+        body, verification = prbody.pr_body(task, None, None, client)
+        self.assertIn('Current implement action is not authorized', verification['stage_blockers']['implementation'])
+        for text in ['mandate', 'not authorized', '`implementation_ready`', '`draft_create_ready`', '`completion_ready`']:
+            self.assertNotIn(text, body)
+        self.assertIn(prbody.AUTHORITY_OMITTED, body)
+        self.assertIn('- source: Reviewed source commit is not in current source default-branch history\n', body)
+        self.assertIn('- evidence: No technical execution evidence provided\n', body)
 
     def test_argv_is_exact_unambiguous_data(self):
         task, _ = ready_contract()

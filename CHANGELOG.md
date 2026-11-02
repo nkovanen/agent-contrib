@@ -15,6 +15,10 @@
 - `feedback` classifies each reviewer's decision by the association on the review
   that made it, reported as `decision_author`; `author` is now the latest
   observation (R1-03). Previously the first review's association was kept.
+- For schema 0.2, `pr-body` shows only `technical_evidence_valid` with source,
+  evidence and review blockers, and states that authority gates, `next_action`,
+  final sign-off and authorization blockers are omitted (A1-12). Without host
+  context it previously rendered authorized work as unauthorized.
 
 - Require a source-linked repository requirements ledger in the installed
   workflow, precommit gates before commits, and independent review of compliance
