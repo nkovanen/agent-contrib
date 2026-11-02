@@ -216,11 +216,43 @@ def responsiveness(repository, client):
     return report
 
 
+# Report-only ranking demotions (E-08, E-09). Label phrases match whole words of the lower-cased label name, with
+# punctuation and separators read as spaces, so 'Status: On-Hold' matches 'on hold' but 'blockedness' matches nothing.
+DEMOTING_LABELS = (
+    ('on hold or deferred', ('icebox', 'on hold', 'blocked', 'deferred', 'postponed', 'frozen')),
+    ('needs a decision or design discussion', ('needs decision', 'needs design', 'needs discussion', 'discussion',
+                                               'question', 'rfc', 'proposal')),
+    ('not planned or not this project', ('not planned', 'out of scope', 'upstream', 'third party', 'wont do')),
+    ('major-version or breaking-change bucket', ('breaking', 'breaking change')))
+MAJOR_VERSION = re.compile(r'(?:^| )v[0-9]{1,3}(?= |$)')
+META_TITLE = re.compile(r'(?i)^\W{0,3}(?:meta|wip|tracking|tracker|roadmap|rfc|umbrella|epic)\s{0,3}[]:)-]|'
+                        r'\b(?:meta|tracking|umbrella) issue\b|\broadmap\b|\bfeatures? list\b')
+DEMOTION = 2
+
+
+def demotions(issue):
+    reasons, meta = [], bool(META_TITLE.search(issue['title'][:300]))
+    labels = [label['name'] for label in issue.get('labels') or [] if isinstance(label, dict) and isinstance(label.get('name'), str)]
+    for group, phrases in DEMOTING_LABELS:
+        for name in labels:
+            words = ' ' + ' '.join(re.sub(r'[^a-z0-9]+', ' ', name.casefold().replace("'", '')).split()) + ' '
+            if any(' ' + phrase + ' ' in words for phrase in phrases) or (
+                    group.startswith('major') and MAJOR_VERSION.search(words.strip())):
+                reasons.append(f'label "{core.safe_text(name, 100)}": {group}')
+                break
+    if meta:
+        reasons.append('title: meta, tracking, roadmap or work-in-progress item; maintainer authorship not counted')
+    return {'value': 'demoted' if reasons else 'none', 'reasons': reasons}, meta, [core.safe_text(n, 100) for n in labels[:100]]
+
+
 def issue_signals(issue, paths, now):
     text = issue['title'] + '\n' + issue['body']
+    demotion, meta, labels = demotions(issue)
     signals = {'code_location': location_hints(text, paths), 'acceptance_clarity': acceptance_clarity(issue['body']),
-               'activity': activity(issue, now), 'maintainer': maintainer_signal(issue)}
-    signals['score'] = ((signals['code_location']['value'] == 'found') +
-                        {'high': 2, 'medium': 1, 'low': 0}[signals['acceptance_clarity']['value']] +
-                        (signals['maintainer']['value'] == 'maintainer'))
+               'activity': activity(issue, now), 'maintainer': maintainer_signal(issue), 'labels': labels,
+               'demotion': demotion}
+    score = ((signals['code_location']['value'] == 'found') +
+             {'high': 2, 'medium': 1, 'low': 0}[signals['acceptance_clarity']['value']] +
+             (signals['maintainer']['value'] == 'maintainer' and not meta))
+    signals['score'] = max(0, score - DEMOTION * len(demotion['reasons']))
     return signals

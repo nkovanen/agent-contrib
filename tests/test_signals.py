@@ -86,6 +86,60 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(signals.maintainer_signal({'author_association': 7})['value'], 'unknown')
 
 
+class DemotionTests(unittest.TestCase):
+    def signals_for(self, title='Crash in src/thumb.rs', labels=(), association='NONE'):
+        issue = {'title': title, 'body': '- [ ] bounds\n## Expected\nerror', 'author_association': association,
+                 'labels': [{'name': name} for name in labels], 'comments': 0,
+                 'created_at': NOW.isoformat(), 'updated_at': NOW.isoformat()}
+        return signals.issue_signals(issue, PATHS, NOW)
+
+    def test_documented_label_groups_demote_case_insensitively_by_whole_words(self):
+        base = self.signals_for()
+        self.assertEqual((base['score'], base['demotion']), (3, {'value': 'none', 'reasons': []}))
+        cases = {'icebox': 'on hold or deferred', 'Status: On-Hold': 'on hold or deferred',
+                 'blocked': 'on hold or deferred', 'Needs Decision': 'needs a decision or design discussion',
+                 'needs-discussion': 'needs a decision or design discussion', 'RFC': 'needs a decision or design discussion',
+                 'question': 'needs a decision or design discussion', 'kind/proposal': 'needs a decision or design discussion',
+                 'not planned': 'not planned or not this project', 'upstream': 'not planned or not this project',
+                 'v5': 'major-version or breaking-change bucket', 'Breaking Change': 'major-version or breaking-change bucket'}
+        for label, reason in cases.items():
+            with self.subTest(label=label):
+                result = self.signals_for(labels=['bug', label])
+                self.assertEqual(result['demotion'], {'value': 'demoted', 'reasons': [f'label "{label}": {reason}']})
+                self.assertEqual(result['score'], 1)
+                self.assertEqual(result['labels'], ['bug', label])
+        for label in ['bug', 'docs', 'design-system', 'blockedness', 'v5x', 'questionable', 'hold']:
+            with self.subTest(label=label):
+                self.assertEqual(self.signals_for(labels=[label])['demotion']['value'], 'none')
+
+    def test_meta_titles_demote_and_withhold_the_maintainer_point(self):
+        for title in ['Meta Issue for Project Opinions', 'WIP: Help page customization', 'v5 features list',
+                      '[WIP] new router', 'Tracking: Node.js 22 support', 'Roadmap for 2027', 'RFC - typed context',
+                      'Umbrella issue for parser work', 'Epic: plugins']:
+            with self.subTest(title=title):
+                result = self.signals_for(title=title + ' src/thumb.rs', association='MEMBER')
+                self.assertEqual(result['demotion']['reasons'],
+                                 ['title: meta, tracking, roadmap or work-in-progress item; maintainer authorship '
+                                  'not counted'])
+                self.assertEqual(result['maintainer']['value'], 'maintainer')
+                self.assertEqual(result['score'], 1)  # 1 location + 2 clarity, no maintainer point, minus 2
+        for title in ['Metadata lost on copy', 'Tracking pixel breaks layout', 'wipe cache flag', 'Epicycle math',
+                      'Support RFC-7231 dates', 'Add a tracking: true option',
+                      'Fix router']:
+            with self.subTest(title=title):
+                self.assertEqual(self.signals_for(title=title, association='MEMBER')['demotion']['value'], 'none')
+
+    def test_each_group_counts_once_and_the_score_never_goes_below_zero(self):
+        result = self.signals_for(title='WIP: thing', labels=['icebox', 'blocked', 'needs decision', 'v5'])
+        self.assertEqual(len(result['demotion']['reasons']), 4)  # icebox and blocked share one group
+        self.assertEqual(result['score'], 0)
+        plain = signals.issue_signals({'title': 't', 'body': ''}, PATHS, NOW)
+        self.assertEqual((plain['labels'], plain['demotion']['value'], plain['score']), ([], 'none', 0))
+        many = self.signals_for(labels=['l%d' % i for i in range(150)])
+        self.assertEqual(len(many['labels']), 100)
+        self.assertEqual(self.signals_for(labels=['icebox\x1b[2K'])['labels'], ['icebox'])
+
+
 class DiscoverSignalTests(unittest.TestCase):
     def test_default_discover_is_unchanged_and_makes_the_same_reads(self):
         plain, opted = SignalGitHub(), SignalGitHub()

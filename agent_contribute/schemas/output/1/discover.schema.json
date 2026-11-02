@@ -785,10 +785,46 @@
           ],
           "additionalProperties": false
         },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "maxItems": 100,
+          "description": "Issue label names (sanitized), as used by the demotion rules"
+        },
+        "demotion": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": [
+                "demoted",
+                "none"
+              ]
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 5,
+              "description": "One entry per matched label group or meta-like title"
+            }
+          },
+          "required": [
+            "value",
+            "reasons"
+          ],
+          "additionalProperties": false,
+          "description": "Documented label and title demotions; each subtracts 2 from the score"
+        },
         "score": {
           "type": "integer",
           "minimum": 0,
-          "description": "code_location found (1) + acceptance clarity (0-2) + maintainer author (1)"
+          "description": "code_location found (1) + acceptance clarity (0-2) + maintainer author (1, not for a meta-like title) - 2 per demotion, floored at 0"
         }
       },
       "required": [
@@ -796,6 +832,8 @@
         "acceptance_clarity",
         "activity",
         "maintainer",
+        "labels",
+        "demotion",
         "score"
       ],
       "additionalProperties": false,

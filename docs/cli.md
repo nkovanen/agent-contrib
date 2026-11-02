@@ -276,8 +276,29 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   issue list payload; malformed fields are `null`.
 - `maintainer`: whether the issue author's association is OWNER, MEMBER or
   COLLABORATOR.
+- `labels`: the issue's label names (sanitized, at most 100).
+- `demotion`: documented, report-only demotions with one reason each. A label
+  matches a phrase when the phrase's words appear as whole words in the
+  lower-cased label name, with punctuation and separators read as spaces
+  (`Status: On-Hold` matches `on hold`; `blockedness` matches nothing). Each
+  group counts once:
+  - on hold or deferred: `icebox`, `on hold`, `blocked`, `deferred`,
+    `postponed`, `frozen`;
+  - needs a decision or design discussion: `needs decision`, `needs design`,
+    `needs discussion`, `discussion`, `question`, `rfc`, `proposal`;
+  - not planned or not this project: `not planned`, `out of scope`,
+    `upstream`, `third party`, `wont do`;
+  - major-version or breaking-change bucket: `breaking`, `breaking change` or a
+    `vN` word such as `v5`.
+  A title counts as meta-like when it starts with `meta`, `wip`, `tracking`,
+  `tracker`, `roadmap`, `rfc`, `umbrella` or `epic` followed by `:`, `]`, `)` or
+  `-`, or contains `meta issue`, `tracking issue`, `umbrella issue`, `roadmap`
+  or `features list`. These rules come from dogfood evidence where icebox'd,
+  maintainer-reserved `v5`, question-labelled and tracking issues ranked first.
+  They are heuristics: a label can be stale, and titles can mislead.
 - `score`: one point for found locations, up to two for clarity, one for a
-  maintainer author.
+  maintainer author unless the title is meta-like, minus two per demotion,
+  never below zero.
 
 Ordering stays exclusions first, then overlaps, then low success likelihood;
 only then does a higher `score` come first, with the issue number as the final
@@ -1193,7 +1214,11 @@ Added by --signals; report-only heuristics, never approval
 | `maintainer` | object |  |
 | `maintainer.value` | "maintainer" \| "other" \| "unknown" |  |
 | `maintainer.explanation` | string |  |
-| `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1) |
+| `labels` | string[] | Issue label names (sanitized), as used by the demotion rules |
+| `demotion` | object | Documented label and title demotions; each subtracts 2 from the score |
+| `demotion.value` | "demoted" \| "none" |  |
+| `demotion.reasons` | string[] | One entry per matched label group or meta-like title |
+| `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1, not for a meta-like title) - 2 per demotion, floored at 0 |
 
 #### `issue_unresolved`
 

@@ -70,6 +70,11 @@ channel or runtime model provider is added.
   part), `verify --observe-ci` (#17, part) and `--report-budget` /
   `--min-remaining` (#27, part). An opted-in report that is incomplete exits 1
   where documented.
+- `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
+  and lowers the score by 2 for each documented label group (on hold, needs a
+  decision, not planned, major-version bucket) and for meta, tracking, roadmap
+  or WIP titles, whose maintainer point is no longer counted (E-08, E-09).
+  Default discover output and ordering are unchanged.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
