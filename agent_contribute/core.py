@@ -430,7 +430,13 @@ def overlap_matches(words, ids):
         return title + ': ' + ', '.join(items[:limit]) + (f' and {len(items) - limit} more' if len(items) > limit else '')
     parts = ([listed('shared title words', words)] if len(words) >= 2 else []) + (
         [listed('shared checklist IDs', ids)] if ids else [])
+    # Explanation only: a standards-shaped ID may still be a real ticket, so the match keeps blocking.
+    parts += [f'{item} may name a standard, not a work item' for item in sorted(ids & STANDARD_TOKENS)[:10]]
     return '(' + '; '.join(parts) + ')'
+
+
+STANDARD_TOKENS = {'AES-128', 'AES-192', 'AES-256', 'CRC-32', 'ISO-8601', 'ISO-8859-1', 'RSA-2048', 'RSA-4096', 'SHA-1',
+                   'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512', 'SHA3-256', 'SHA3-512', 'UTF-16', 'UTF-32', 'UTF-8'}
 
 
 def ranking(issue, duplicates):

@@ -225,6 +225,30 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared checklist IDs: ABC-TWO)')
         self.assertEqual(sorted(finding), ['number', 'reason', 'url'])
 
+    def test_standards_shaped_ticket_ids_still_overlap_and_block_readiness(self):
+        class TicketGitHub(FakeGitHub):
+            def request(self, endpoint):
+                value = super().request(endpoint)
+                if endpoint.split('?')[0].endswith('/issues/12'):
+                    value['body'] += ' Tracks SHA-1234, ISO-123456 and SHA-256.'
+                return value
+        task, _ = ready_contract()
+        client = TicketGitHub(*[{'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
+                                 'label_authority': 'repository-label-permission'}, ['agent-ok']])
+        task['source'] = core.prepare(core.inspect_issue('acme/photos#12', client))['source']
+        self.assertTrue(core.verify(task, client=client)['execution_ready'])
+        for token, note in [('SHA-1234', ''), ('ISO-123456', ''),
+                            ('SHA-256', '; SHA-256 may name a standard, not a work item')]:
+            with self.subTest(token=token):
+                client.prs = [{'number': 30, 'title': 'Other work', 'body': 'Implements ' + token, 'html_url': 'url',
+                               'head': None}]
+                result = core.verify(task, client=client)
+                self.assertFalse(result['execution_ready'])
+                self.assertIn('Live issue is excluded or overlaps an open PR', result['errors'])
+                self.assertEqual([item['reason'] for item in result['duplicates']],
+                                 ['Potential title/checklist overlap; review manually '
+                                  f'(shared checklist IDs: {token}{note})'])
+
     def test_failed_pr_policy_or_tree_reads_cannot_be_complete(self):
         for path in ['/pulls', '/git/trees', '/contents/AGENTS.md', '/labels']:
             client = FakeGitHub()

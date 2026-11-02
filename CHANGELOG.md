@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- A heuristic overlap on a well-known standard name such as `SHA-256` says the
+  token may name a standard. The overlap still blocks (review R7-01; the
+  earlier F34 exemption was reverted).
 - A failed GitHub read now says when it was HTTP 404 (not found or not visible
   to this account) or HTTP 401 (not authenticated) instead of always "check gh
   auth" (E-17). `gh` output is still never echoed; codes and exits are unchanged.
