@@ -479,8 +479,14 @@ def inspect_issue(reference, client=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False):
-    return discover_with_snapshot(repository, client, signals=signals)[0]
+def discover(repository, client=None, *, signals=False, responsiveness=False):
+    client = client or GitHub()
+    result = discover_with_snapshot(repository, client, signals=signals)[0]
+    if responsiveness:
+        from .signals import responsiveness as report
+        # Only a completed snapshot names the source to read; otherwise the report is unknown without a read.
+        result['repository_signals'] = {'responsiveness': report(result['repository'] if 'commit' in result else None, client)}
+    return result
 
 
 def discover_with_snapshot(repository, client=None, *, signals=False):

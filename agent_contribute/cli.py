@@ -89,6 +89,7 @@ def main(argv=None):
         sub.add_argument('reference', nargs='*' if command == 'discover' else None)
         if command == 'discover':
             sub.add_argument('--signals', action='store_true')
+            sub.add_argument('--responsiveness', action='store_true')
             sub.add_argument('--repositories-file')
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true')
@@ -216,11 +217,12 @@ def main(argv=None):
         elif args.command == 'discover':
             names = getattr(args, 'names', None) or (
                 args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else []))
-            if len(names) == 1:
-                result = core.discover(names[0], signals=True) if args.signals else core.discover(names[0])
-            else:
-                result = multi.discover_many(names, signals=args.signals)
+            options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
+            result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
             code = 0 if result['complete'] else 1
+            if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
+                reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
+                code = code or (0 if all(r and r['complete'] for r in reports) else 1)
         elif args.command in ('inspect', 'prepare'):
             result = core.inspect_issue(args.reference)
             code = 0 if result['complete'] else 1

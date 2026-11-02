@@ -15,6 +15,7 @@ The Skill stays portable and all GitHub operations in the CLI remain read-only.
 | [#14](https://github.com/nkovanen/agent-contrib/issues/14), [#15](https://github.com/nkovanen/agent-contrib/issues/15) | Unfilled evidence skeletons and offline local scope checks using the same path rules as verification. |
 | [#19](https://github.com/nkovanen/agent-contrib/issues/19) | PR-description rendering with live blockers, neutralized remote text and a pinned template pointer. It neither fills templates nor publishes. |
 | [#20](https://github.com/nkovanen/agent-contrib/issues/20) | Read-only feedback on reviews, comments and exact-head checks, with strict response and pagination validation. |
+| [#12](https://github.com/nkovanen/agent-contrib/issues/12) | Opt-in location (paths, file and module names), clarity, activity and association signals, and an opt-in one-read repository responsiveness sample. Association is not verified maintainer identity. |
 
 ## Partially implemented
 
@@ -22,7 +23,6 @@ The Skill stays portable and all GitHub operations in the CLI remain read-only.
 | --- | --- | --- |
 | #5, #6 | Opt-in ownership, claims and prior-resolution reports | Adoption into readiness rules; current reports never change gates |
 | #8 | Located AI-policy excerpts with explicit scan coverage | A versioned machine-readable refusal policy; excerpts are not a policy verdict |
-| #12 | Optional location, clarity, activity and association signals | Repository responsiveness and module-name resolution; association is not verified maintainer identity |
 | #16 | Aggregate issue/policy/overlap drift and pinned per-file instruction comparison | Historical per-component issue baselines in a new task schema |
 | #17 | Exact-head CI observations | Required-check declarations and readiness enforcement |
 | #24 | Opt-in text CLI summaries | Output JSON Schemas and an explicit output-schema version |

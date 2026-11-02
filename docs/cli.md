@@ -20,6 +20,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
 | `agent-contrib discover owner/a owner/b ... [--repositories-file FILE]` | Two to 20 repositories in one run, each with its own result, plus a merged candidate order |
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
+| `agent-contrib discover owner/repo --responsiveness` | One extra read of recently closed PRs, reported as `repository_signals.responsiveness`; issues and ordering unchanged |
 | `agent-contrib audit owner/repo [--print-policy]` | Read-only maintainer report: policy validity, labels, instruction coverage, issue-quality and overlap counts, non-binding suggestions |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
@@ -174,7 +175,16 @@ without extra API calls. Without the flag, output and ordering are unchanged.
 - `code_location`: paths in the issue title/body (first 64 KiB) that exist in
   the snapshot tree, including repository-relative suffixes of stack-frame
   paths and file names that match exactly one tree path (at most 20). It is
-  `unknown` when the tree read was incomplete. Module names are not resolved.
+  `unknown` when the tree read was incomplete. Module names of two or more
+  segments joined by `.` or `::` (`pkg.mod`, `pkg.mod.func`, `crate::a::b`)
+  also count when they name exactly one file: the file's path without its
+  extension, or a package directory holding `__init__.py`, `mod.rs` or
+  `index.*`, must end with the segments. A leading Rust `crate`, `self` or
+  `super` is ignored. Trailing segments are treated as members, so the longest
+  prefix that names any module decides; an ambiguous match gives no hint and
+  never falls back to a shorter prefix. Single names (`signals`) and names
+  inside paths are not resolved. Path and file-name matches come first and the
+  same limit of 20 applies.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
   expected/actual sections, reproduction steps and code blocks.
 - `activity`: age and last-update days, comment and reaction counts from the
@@ -187,8 +197,32 @@ without extra API calls. Without the flag, output and ordering are unchanged.
 Ordering stays exclusions first, then overlaps, then low success likelihood;
 only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
-reading the issue. The optional repository-responsiveness read from #12 is not
-implemented.
+reading the issue.
+
+## Repository responsiveness
+
+`discover --responsiveness` makes exactly one additional GET for the issue
+source repository, `repos/{source}/pulls?state=closed&sort=updated&direction=desc&per_page=100`,
+and adds a top-level `repository_signals.responsiveness` report. Without the
+flag, reads and output are unchanged, including with `--signals`. The report is
+a one-page sample of the most recently updated closed PRs, never full history:
+
+- `sample_size`: closed PRs read; `external_closed` and `external_merged`: of
+  those, PRs whose author association is not OWNER, MEMBER or COLLABORATOR and
+  whose author is not a bot.
+- `value: measured` with `external_merge_rate` and `median_days_to_close`
+  (creation to close, merged or not) when at least `minimum_external` (5)
+  external PRs are present; otherwise `insufficient`, with the rate and median
+  `null`.
+- `value: unknown`, `complete: false` and an error when the read fails, a page
+  or entry is malformed, or discovery did not complete its source snapshot (then
+  nothing is read).
+
+Each report has an `explanation`. No PR text is copied. The report never changes
+approval, exclusions, overlaps, ordering or discovery `complete`. As with
+`inspect --ownership`, exit 1 also covers an incomplete opted-in report; in a
+multi-repository run each repository carries its own report. Author association
+is not verified identity, and responsiveness is a heuristic, never approval.
 
 ## PR feedback
 

@@ -19,6 +19,10 @@
   and live verify gates, with untrusted text neutralized and `Refs` by default.
 - Add opt-in `discover --signals` (#12): code-location, acceptance-clarity,
   activity and maintainer signals with explanations; default output unchanged.
+  Code location also resolves unique dotted and `::` module names.
+- Add opt-in `discover --responsiveness` (#12): one extra read of recently
+  closed PRs reporting the external merge rate and median days to close.
+  Report only; an incomplete report exits 1 and changes no gate or ordering.
 - Add read-only `audit owner/repo` (#10) for maintainers, using exactly the
   reads `discover` makes. Discover output and read order are frozen by goldens.
 - Add read-only `feedback 'owner/repo#PR'` (#20): latest reviews, comments,

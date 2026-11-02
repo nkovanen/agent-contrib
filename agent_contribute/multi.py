@@ -22,13 +22,14 @@ def validate(repositories):
     return names
 
 
-def discover_many(repositories, client=None, *, signals=False):
+def discover_many(repositories, client=None, *, signals=False, responsiveness=False):
     names = validate(repositories)
     client = client or core.GitHub()
     results, errors, candidates = [], [], []
     for name in names:
         try:
-            result = core.discover(name, client, signals=signals) if signals else core.discover(name, client)
+            options = {key: True for key, value in (('signals', signals), ('responsiveness', responsiveness)) if value}
+            result = core.discover(name, client, **options)
         except core.ProtocolError as exc:  # one failure never aborts or completes another repository
             result = {'requested_repository': name, 'complete': False, 'errors': [str(exc)], 'issues': []}
         results.append(result)
