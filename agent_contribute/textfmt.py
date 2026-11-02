@@ -82,6 +82,17 @@ def _discover(result):
         out.append(f'Overlapping issues: {sum(bool(issue.get("duplicates")) for issue in issues)} of {len(issues)}; '
                    f'excluded issues: {sum(bool(issue.get("exclusions")) for issue in issues)} of {len(issues)} '
                    '(all issues, including omitted)')
+    check = result.get('top_check')
+    if isinstance(check, dict):
+        # Discovery completeness and the opted-in check are separate; an incomplete check alone exits 1.
+        out.append(f'Top check: complete {_flag(check.get("complete"))}; checked {line(check.get("checked"), 10)} of '
+                   f'{line(check.get("requested"), 10)}; {line(check.get("reads"), 10)} GitHub reads '
+                   f'(cap {line(check.get("read_cap"), 10)})')
+        checked = [(issue.get('reference', ''), issue['top_check']) for issue in issues if isinstance(issue.get('top_check'), dict)]
+        out += _list('Top check demotions', (f'{line(ref, 200)}: {reason}' for ref, item in checked
+                                             for reason in item.get('demotions', [])))
+        out += _list('Top check errors', (f'{line(ref, 200)}: {error}' for ref, item in checked
+                                          for error in item.get('errors', [])))
     return out + _list('Errors', result.get('errors', []))
 
 

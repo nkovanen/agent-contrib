@@ -180,6 +180,20 @@ class CheckTopTests(unittest.TestCase):
         self.assertEqual(client.once, len(ownership_reads(client)))
         self.assertIn('without retries', result['top_check']['notice'])
 
+    def test_text_output_shows_top_check_status_demotions_and_errors(self):
+        # Review R8-05: text said 'Complete: yes' with no hint why --check-top exited 1.
+        client = CheckGitHub()
+        client.timelines[4] = [{'id': 1000 + i, 'event': 'labeled'} for i in range(100)]
+        output = io.StringIO()
+        with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
+            code = cli.main(['--format', 'text', 'discover', 'acme/photos', '--signals', '--check-top', '5'])
+        text = output.getvalue()
+        self.assertEqual(code, 1)
+        self.assertIn('Complete: yes\n', text)
+        self.assertIn('Top check: complete no; checked 5 of 5; 11 GitHub reads (cap 30)\n', text)
+        self.assertIn('Top check demotions (3):\n  - acme/photos#1: possibly already fixed', text)
+        self.assertIn('Top check errors (1):\n  - acme/photos#4: Pagination reached the 1-page limit\n', text)
+
     def test_pr_detail_cap(self):
         client = CheckGitHub()
         client.timelines[1] = [xref('acme/photos', n) for n in range(40, 46)]
