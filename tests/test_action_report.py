@@ -209,10 +209,10 @@ class CheckoutTests(CheckoutCase):
     def test_operational_ancestry_failure_is_not_a_mismatch(self):
         real = core.git_read
 
-        def failing(directory, *args):
+        def failing(directory, *args, **kwargs):
             if args[:1] == ('rev-list',):
                 raise core.ProtocolError('git_error', 'Git evidence checkout read failed')
-            return real(directory, *args)
+            return real(directory, *args, **kwargs)
         with patch.object(core, 'git_read', side_effect=failing):
             model = self.build()
         rows = {c['name']: c['state'] for _, checks in model['sections'] for c in checks}
