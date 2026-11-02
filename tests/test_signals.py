@@ -156,6 +156,13 @@ class ModuleNameTests(unittest.TestCase):
         self.assertEqual(self.hints('Import pkgs.tools here'), ['lib/pkgs/tools/__init__.py'])
         self.assertEqual(self.hints('Render web.widgets.'), ['web/widgets/index.ts'])
 
+    def test_relative_rust_paths_and_package_directories(self):
+        # Review R3-M02/M03: self:: and super:: prefixes, and mod.rs / __init__.py naming their directory.
+        for text in ('self::r::s', 'super::r::s::f', 'r.s'):
+            with self.subTest(text=text):
+                self.assertEqual(self.hints(text, ['src/r/s/mod.rs']), ['src/r/s/mod.rs'])
+        self.assertEqual(self.hints('self.r.s', ['src/r/s/mod.rs']), [], 'only :: paths drop a Rust prefix')
+
     def test_longest_known_prefix_decides_and_ambiguity_never_falls_back(self):
         self.assertEqual(self.hints('pkg.mod.sub'), ['pkg/mod/sub.py'])
         self.assertEqual(self.hints('pkg.mod.other_function'), ['pkg/mod.py'])
@@ -326,6 +333,12 @@ class ResponsivenessTests(unittest.TestCase):
                 self.assertTrue(report['errors'])
                 self.assertEqual({report[k] for k in ('sample_size', 'external_closed', 'external_merged',
                                                        'external_merge_rate', 'median_days_to_close')}, {None})
+
+    def test_close_time_uses_offsets_and_fractional_days(self):
+        # Review R3-M04/M05: 18:00+06:00 to 00:00Z is 12 hours, not 0 or 6.
+        page = [dict(closed_pr(i), created_at='2029-12-01T18:00:00+06:00', closed_at='2029-12-02T00:00:00+00:00',
+                     merged_at=None) for i in range(1, 6)]
+        self.assertEqual(self.report(page)['median_days_to_close'], 0.5)
 
     def test_api_error_is_unknown(self):
         report = self.report(None)
