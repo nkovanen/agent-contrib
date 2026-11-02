@@ -4,6 +4,7 @@ from pathlib import Path
 
 from . import core
 
+REVISION = re.compile(r'(?P<name>[^~^:?*\[\\\s]+)(?P<suffix>(?:[~^][0-9]{0,9})*)')
 DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--no-renames', '--name-only', '-z')
 
 
@@ -49,6 +50,11 @@ def resolve_base(directory, rev):
             char.isspace() or not char.isprintable() for char in rev):
         raise core.ProtocolError('invalid_base', 'Base must be a SHA, branch or tag name; it cannot be blank, '
                                  'start with "-" or contain spaces or control characters')
+    # Only names with ancestry suffixes: forms such as :/regex, @{...} or ^{type} would change meaning under ^{commit}.
+    match = REVISION.fullmatch(rev)
+    if not match or '@{' in match['name'] or '..' in match['name']:
+        raise core.ProtocolError('invalid_base', 'Base must be a SHA, HEAD, or a branch, tag or full ref name, '
+                                 'optionally followed by ~N or ^N; other revision syntax is not supported')
     try:
         return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet', rev + '^{commit}'))
     except core.ProtocolError:

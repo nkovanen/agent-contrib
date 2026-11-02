@@ -127,8 +127,10 @@ that is the same host-asserted boundary as the CLI, not a privileged API.
 `verify` uses for evidence. It reads only the local checkout: committed changes
 from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
 and untracked files that are not ignored. Renames report both paths. The base
-must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts any local
-revision (SHA, abbreviated SHA, branch or tag), resolved in the checkout with
+must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts a full or
+abbreviated SHA, `HEAD`, or a branch, tag or full ref name, optionally followed
+by `~N` or `^N`. Other revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths,
+ranges) is refused. The value is resolved in the checkout with
 `git rev-parse --verify 'REV^{commit}'` under the same hook, fsmonitor and
 replacement-object protections as other Git reads; `base_commit` reports the
 full SHA. A value that is blank, starts with `-` or contains whitespace or

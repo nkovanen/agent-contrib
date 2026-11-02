@@ -107,6 +107,22 @@ class ScopeCheckTests(unittest.TestCase):
                 workspace.resolve_base(tmp, 'HEAD')
             git_read.assert_called_once_with(tmp, 'rev-parse', '--verify', '--quiet', 'HEAD^{commit}')
 
+    def test_unsupported_revision_forms_are_refused_by_name(self):
+        grammar = ('Base must be a SHA, HEAD, or a branch, tag or full ref name, optionally followed by '
+                   '~N or ^N; other revision syntax is not supported')
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            self.assertEqual(git('rev-parse', '--verify', ':/upstream'), evidence['base_commit'])
+            for rev in [':/upstream', '@{-1}', 'HEAD@{0}', 'HEAD:AGENTS.md', 'HEAD^{tree}', 'HEAD^{/upstream}',
+                        'HEAD~1..HEAD', 'a*', 'main^!']:
+                with self.subTest(rev=rev):
+                    result = workspace.scope_check(task, tmp, rev)
+                    self.assertEqual((result['within_scope'], result['base_commit'], result['errors']),
+                                     (False, None, [grammar]))
+                    with self.assertRaises(core.ProtocolError) as raised:
+                        workspace.evidence_skeleton(task, tmp, rev)
+                    self.assertEqual(str(raised.exception), grammar)
+
     def test_default_base_outside_head_history_warns_and_still_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, git = self.checkout(tmp)
