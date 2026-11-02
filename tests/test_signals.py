@@ -4,11 +4,13 @@ import copy
 import datetime as dt
 import io
 import json
-import time
+import re
+import sys
 import unittest
 from unittest.mock import patch
 
 from agent_contribute import cli, core, signals
+from tests.regex_shape import nested_repeats
 from tests.test_protocol import FakeGitHub
 
 NOW = dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc)
@@ -50,11 +52,20 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(signals.location_hints('src/thumb.rs', None)['value'], 'unknown')
 
     def test_adversarial_input_is_bounded_and_linear(self):
+        # Deterministic, not wall-clock: no scanning regex nests a quantifier, and text is cut to SCAN_LIMIT.
+        # The nesting check is one catastrophic-backtracking shape, not a linear-time proof.
+        nested = [r'(a+)+b', r'(?:x|(?:y{1,3})){2}', r'(?=(a+)+b)', r'(?!(a+)+)', r'(?<=(?:a{2}){2})x']
+        if sys.version_info >= (3, 11):
+            nested.append(r'(?>(a+)+b)')  # review R3-08: atomic-group bodies were skipped
+        for pattern in nested:
+            self.assertTrue(nested_repeats(re.compile(pattern)), pattern)
+        for pattern in [r'a+b+', r'(ab)c+', r'[a+]+', r'(?=ab)c*']:
+            self.assertFalse(nested_repeats(re.compile(pattern)), pattern)
+        for pattern in [signals.TOKEN, signals.MODULE_TOKEN, signals.MODULE_SEPARATOR, *signals.MARKERS.values()]:
+            self.assertFalse(nested_repeats(pattern), pattern.pattern)
         for text in ['a/' * 200000, 'a.' * 200000, ('x' * 299 + '/') * 2000, '- [ ' * 100000, '`' * 300000,
                      ' ' * 8 + 'expected' * 50000]:
-            started = time.monotonic()
-            signals.issue_signals({'title': 't', 'body': text}, PATHS * 2000, NOW)
-            self.assertLess(time.monotonic() - started, 2.0)
+            self.assertIn('score', signals.issue_signals({'title': 't', 'body': text}, PATHS * 2000, NOW))
         hints = signals.location_hints(' '.join('src/f%d.rs' % i for i in range(100)),
                                        ['src/f%d.rs' % i for i in range(100)])['hints']
         self.assertEqual(len(hints), signals.MAX_HINTS)
@@ -156,6 +167,13 @@ class ModuleNameTests(unittest.TestCase):
         self.assertEqual(self.hints('Import pkgs.tools here'), ['lib/pkgs/tools/__init__.py'])
         self.assertEqual(self.hints('Render web.widgets.'), ['web/widgets/index.ts'])
 
+    def test_relative_rust_paths_and_package_directories(self):
+        # Review R3-M02/M03: self:: and super:: prefixes, and mod.rs / __init__.py naming their directory.
+        for text in ('self::r::s', 'super::r::s::f', 'r.s'):
+            with self.subTest(text=text):
+                self.assertEqual(self.hints(text, ['src/r/s/mod.rs']), ['src/r/s/mod.rs'])
+        self.assertEqual(self.hints('self.r.s', ['src/r/s/mod.rs']), [], 'only :: paths drop a Rust prefix')
+
     def test_longest_known_prefix_decides_and_ambiguity_never_falls_back(self):
         self.assertEqual(self.hints('pkg.mod.sub'), ['pkg/mod/sub.py'])
         self.assertEqual(self.hints('pkg.mod.other_function'), ['pkg/mod.py'])
@@ -168,6 +186,49 @@ class ModuleNameTests(unittest.TestCase):
         noise = ('signals agent_contribute crate::thumb 0.3.0 v1.2 e.g. github.com a:b a:::b bin.tool '
                  'mod.rs.backup __init__ thumb::')
         self.assertEqual(self.hints(noise), [])
+
+    def test_partial_tokens_are_refused_never_truncated(self):
+        # Review R3-02: a cut-off token must not resolve to the module its prefix happens to name.
+        segments = ['a%d' % i for i in range(17)]
+        sixteen, seventeen = '/'.join(segments[:16]) + '.py', '/'.join(segments) + '.py'
+        self.assertEqual(self.hints('.'.join(segments[:16]), [sixteen, seventeen]), [sixteen])
+        self.assertEqual(self.hints('.'.join(segments), [sixteen, seventeen]), [], 'over 16 segments is refused')
+        self.assertEqual(self.hints('a.b.c.d', ['a/b/c.py', 'a/b/c/d.py']), ['a/b/c/d.py'])
+        self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 150, ['p' * 150 + '/' + 'a' * 149 + '.py']), [],
+                         'a long identifier is read whole, never as its first 300 characters')
+        # Review R3-02 round 2: a name longer than the 300-character index bound is refused whole. Otherwise an
+        # unindexed longer module (unique or ambiguous) would be skipped and a shorter prefix named instead.
+        p, q, r = 'p' * 140, 'q' * 140, 'r' * 30
+        short, full = p + '/' + q + '.py', p + '/' + q + '/' + r + '.py'
+        for tree in ([short, full], [short, 'x/' + full, 'y/' + full], [short]):
+            self.assertEqual(self.hints('.'.join([p, q, r]), tree), [])
+        exact = 'p' * 150 + '/' + 'a' * 149 + '.py'
+        self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 149, [exact]), [exact], 'exactly 300 characters resolves')
+        rust = 'crate::' + 'p' * 150 + '::' + 'a' * 149  # 307 characters as written, 300 as a slash path
+        self.assertEqual(self.hints(rust, [exact.replace('.py', '.rs')]), [exact.replace('.py', '.rs')])
+        over = 'p' * 150 + '/' + 'a' * 150 + '.py'
+        self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 150, [over]), [], '301 characters is refused')
+        # Literal 64 KiB: the documented scan bound, independent of the constant.
+        self.assertEqual(self.hints(' ' * 65533 + 'a.bc', ['a/b.py', 'a/bc.py']), [], 'a token cut by the scan limit is refused')
+        self.assertEqual(self.hints(' ' * 65536 + 'a.b', ['a/b.py']), [], 'text past the scan limit')
+        self.assertEqual(self.hints('pkg.mod-extra', MODULE_PATHS), [])
+
+    def test_unicode_identifiers_are_read_whole(self):
+        # Review R3-03: ASCII-only boundaries resolved the pkg.mod tail of äpkg.mod to an unrelated file.
+        self.assertEqual(self.hints('äpkg.mod', ['pkg/mod.py', 'äpkg/mod.py']), ['äpkg/mod.py'])
+        self.assertEqual(self.hints('Fehler in päck.mod', ['päck/mod.py']), ['päck/mod.py'])
+        self.assertEqual(self.hints('«pkg.mod»', ['pkg/mod.py']), ['pkg/mod.py'])
+        for text in ['xäpkg.mod', 'e\u0301pkg.mod', 'pkg.mod\u0301x', '\u0663pkg.mod', '1pkg.mod']:
+            with self.subTest(text=text):
+                self.assertEqual(self.hints(text, ['pkg/mod.py', 'äpkg/mod.py']), [])
+
+    def test_identifiers_outside_word_characters_are_refused_whole(self):
+        # Review R3-07: documented conservative limit. These are Python identifiers but not regex word runs;
+        # neither the whole name nor an ASCII fragment of it may resolve.
+        for name in ['e\u0301pkg', '\u2118pkg', '\u212epkg', 'p\u00b7kg']:
+            with self.subTest(name=name):
+                self.assertTrue(name.isidentifier())
+                self.assertEqual(self.hints(name + '.mod', [name + '/mod.py', 'pkg/mod.py', 'kg/mod.py']), [])
 
     def test_modules_inside_paths_are_left_to_the_path_matcher(self):
         self.assertEqual(self.hints('docs/pkg.mod and C:\\x\\pkg.mod and pkg.mod/extra and pkg-pkg.mod'), [])
@@ -188,20 +249,70 @@ class ModuleNameTests(unittest.TestCase):
                          ['src/f%d.rs' % i for i in range(20)])
 
     def test_adversarial_module_input_is_bounded(self):
+        # Deterministic work bound: at most MAX_SEGMENTS - 1 index lookups per module token, however long it is.
         paths = (['d%d/x/util.py' % i for i in range(5000)] + ['p%d/m%d.py' % (i, i) for i in range(5000)] +
                  ['/'.join(['a'] * 40) + '.py'])
+        index, real_hint = signals.module_index(tuple(paths)), signals.module_hint
+        counts = {'tokens': 0, 'lookups': 0}
+
+        class Counting(dict):
+            def get(self, key, default=None):
+                counts['lookups'] += 1
+                return dict.get(self, key, default)
+
+        def counting_hint(token, index):
+            counts['tokens'] += 1
+            return real_hint(token, index)
+
+        counted = Counting(index)
         for text in ['x.util ' * 30000, ' '.join('p%d.m%d' % (i, i) for i in range(20000)), 'a.' * 200000,
                      'a::' * 200000, ('a.' * 149 + 'a ') * 500, '.' * 300000, ':' * 300000, 'a' * 300000]:
-            started = time.monotonic()
-            signals.issue_signals({'title': 't', 'body': text}, paths, NOW)
-            self.assertLess(time.monotonic() - started, 2.0)
+            counts.update(tokens=0, lookups=0)
+            with patch.object(signals, 'module_index', lambda _: counted), \
+                    patch.object(signals, 'module_hint', counting_hint):
+                signals.issue_signals({'title': 't', 'body': text}, paths, NOW)
+            self.assertLessEqual(counts['tokens'], signals.SCAN_LIMIT // 2)
+            self.assertLessEqual(counts['lookups'], counts['tokens'] * (signals.MAX_SEGMENTS - 1))
+
+    def test_deep_trees_index_only_queryable_suffixes(self):
+        # Review R3-01: indexing every suffix of 10000 depth-300 paths took GiBs; only <= 16 segments are queryable.
+        paths = ['/'.join(['a'] * 300 + ['m%d.py' % i]) for i in range(10000)]
+        self.assertEqual(signals.location_hints('x.y', paths)['value'], 'none')
+        index = signals.module_index(tuple(paths))
+        self.assertLessEqual(len(index), len(paths) * (signals.MAX_SEGMENTS - 1))
+        # Review R3-08: count generated suffixes (open-ended slices of the split path), not only retained keys,
+        # so building every suffix and filtering afterwards is caught.
+        slices = []
+
+        class Parts(list):
+            def __getitem__(self, item):
+                if isinstance(item, slice) and item.start is not None and item.stop is None:
+                    slices.append(item)
+                return Parts(super().__getitem__(item)) if isinstance(item, slice) else super().__getitem__(item)
+
+            def __add__(self, other):
+                return Parts(super().__add__(other))
+
+        class Path(str):
+            def split(self, *args):
+                return Parts(super().split(*args))
+
+        signals.module_index(tuple(Path(p) for p in paths[:50]))
+        self.assertEqual(len(slices), 50 * (signals.MAX_SEGMENTS - 1))
+        # The deepest queryable suffix still resolves (output hints are separately truncated to 500 characters).
+        self.assertEqual(signals.module_hint('.'.join(['a'] * 15 + ['m7']), index), paths[7])
+        long_names = ('p' * 200 + '/' + 'q' * 200 + '.py',)
+        self.assertEqual(signals.module_index(long_names), {}, 'suffixes longer than any token are never stored')
+        near_limit = 'p' * 140 + '/' + 'q' * 140 + '.py'
+        self.assertEqual(self.hints('p' * 140 + '.' + 'q' * 140, [near_limit]), [near_limit])
 
     def test_tree_index_is_reused_across_issues(self):
         paths = ['p%d/q%d/m%d.py' % (i, i, i) for i in range(20000)]
-        started = time.monotonic()
+        signals.module_index.cache_clear()
         for n in range(200):
-            signals.location_hints('q%d.m%d' % (n, n), paths)
-        self.assertLess(time.monotonic() - started, 2.0)
+            self.assertEqual(signals.location_hints('q%d.m%d' % (n, n), paths)['hints'], [paths[n]])
+        info = signals.module_index.cache_info()
+        self.assertEqual((info.misses, info.hits), (1, 199), 'one index build per tree, not per issue')
 
 
 CLOSED = 'repos/acme/photos/pulls?state=closed&sort=updated&direction=desc&per_page=100'
@@ -227,6 +338,9 @@ class ClosedGitHub(SignalGitHub):
             if self.closed is None or (self.fail_closed_after is not None and self.closed_reads > self.fail_closed_after):
                 raise core.ProtocolError('api_error', 'GitHub read failed')
             return copy.deepcopy(self.closed)
+        if any(key in endpoint for key in self.failed):  # SignalGitHub answers issue listings before FakeGitHub checks
+            self.calls.append(endpoint)
+            raise core.ProtocolError('api_error', 'GitHub read failed')
         return super().request(endpoint)
 
 
@@ -267,7 +381,15 @@ class ResponsivenessTests(unittest.TestCase):
                  'user': broken(user=None), 'user type': broken(user={'type': 7}), 'association': broken(author_association=[]),
                  'closed missing': broken(closed_at=None), 'closed bad': broken(closed_at='soon'),
                  'naive': broken(closed_at='2029-12-05T00:00:00'), 'created after closed': broken(created_at='2030-02-01T00:00:00Z'),
-                 'merged type': broken(merged_at=5), 'merged bad': broken(merged_at='later')}
+                 'merged type': broken(merged_at=5), 'merged bad': broken(merged_at='later'),
+                 # Review R3-04: a missing field is not "unmerged", and a merge must lie within the PR's lifetime.
+                 'merged missing': [{k: v for k, v in pr.items() if k != 'merged_at'} for pr in broken()],
+                 'merged empty': broken(merged_at=''), 'merged before created': broken(merged_at='2028-01-01T00:00:00Z'),
+                 'merged after closed': broken(merged_at='2031-01-01T00:00:00Z'),
+                 # Review R3-05: repeated or unidentified entries must not fill the minimum sample.
+                 'repeated': [closed_pr(1)] * 5, 'repeated once': broken(number=1),
+                 'number missing': broken()[:1] + [{k: v for k, v in closed_pr(2).items() if k != 'number'}] + broken()[2:],
+                 'number bool': [dict(closed_pr(1), number=True)] + [closed_pr(i) for i in range(2, 7)], 'number zero': broken(number=0), 'number text': broken(number='2')}
         for name, closed in cases.items():
             with self.subTest(name):
                 report = self.report(closed)
@@ -275,6 +397,24 @@ class ResponsivenessTests(unittest.TestCase):
                 self.assertTrue(report['errors'])
                 self.assertEqual({report[k] for k in ('sample_size', 'external_closed', 'external_merged',
                                                        'external_merge_rate', 'median_days_to_close')}, {None})
+
+    def test_close_time_uses_offsets_and_fractional_days(self):
+        # Review R3-M04/M05: 18:00+06:00 to 00:00Z is 12 hours, not 0 or 6.
+        page = [dict(closed_pr(i), created_at='2029-12-01T18:00:00+06:00', closed_at='2029-12-02T00:00:00+00:00',
+                     merged_at=None) for i in range(1, 6)]
+        self.assertEqual(self.report(page)['median_days_to_close'], 0.5)
+
+    def test_merge_lifetime_compares_instants_and_bots_are_validated(self):
+        # Review round 2 mutants R2-M03/M04: offsets matter for the merge interval, and excluded bots are still
+        # validated and deduplicated.
+        def page(merged):
+            return [dict(closed_pr(i), created_at='2029-12-01T18:00:00+06:00', merged_at=merged,
+                         closed_at='2029-12-02T02:00:00+02:00') for i in range(1, 6)]
+        valid = self.report(page('2029-12-01T11:00:00-02:00'))  # 13:00Z, between 12:00Z and 00:00Z
+        self.assertEqual((valid['complete'], valid['external_merge_rate'], valid['median_days_to_close']), (True, 1.0, 0.5))
+        self.assertEqual(self.report(page('2029-12-01T19:00:00+10:00'))['value'], 'unknown')  # 09:00Z, before creation
+        self.assertEqual(self.report([closed_pr(1, kind='Bot')] * 5 + [closed_pr(i) for i in range(2, 7)])['value'],
+                         'unknown')
 
     def test_api_error_is_unknown(self):
         report = self.report(None)
@@ -318,12 +458,20 @@ class DiscoverResponsivenessTests(unittest.TestCase):
         self.assertEqual((report['repository'], report['endpoint']), ('acme/photos', CLOSED))
 
     def test_unresolved_discover_reports_unknown_without_reading(self):
+        # Review R3-06: a snapshot with a commit but a failed tree or instruction read is still incomplete.
+        for failure in ('/commits/main', '/git/trees/', '/contents/'):
+            with self.subTest(failure=failure):
+                client = ClosedGitHub(SAMPLE)
+                client.failed.add(failure)
+                result = core.discover('acme/photos', client, responsiveness=True)
+                report = result['repository_signals']['responsiveness']
+                self.assertEqual((result['complete'], report['complete'], report['value']), (False, False, 'unknown'))
+                self.assertNotIn(CLOSED, client.calls)
+        # A complete source snapshot is still reported when only the issue listing fails, as documented.
         client = ClosedGitHub(SAMPLE)
-        client.failed.add('/commits/main')
+        client.failed.add('issues?state=open')
         result = core.discover('acme/photos', client, responsiveness=True)
-        report = result['repository_signals']['responsiveness']
-        self.assertEqual((result['complete'], report['complete'], report['value']), (False, False, 'unknown'))
-        self.assertNotIn(CLOSED, client.calls)
+        self.assertEqual((result['complete'], result['repository_signals']['responsiveness']['value']), (False, 'measured'))
 
     def run_cli(self, client, *argv):
         output = io.StringIO()

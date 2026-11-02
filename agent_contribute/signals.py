@@ -16,10 +16,12 @@ MARKERS = {'checklist': re.compile(r'(?m)^[ \t]{0,8}[-*] \[[ xX]\]'),
            'reproduction steps': re.compile(r'(?i)\b(steps to reproduce|to reproduce|reproduction)\b'),
            'code block': re.compile(r'```')}
 MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
-# Same shape as TOKEN; the lookbehind keeps dotted names inside paths for the path matcher.
-MODULE_TOKEN = re.compile(r'(?<![A-Za-z0-9_./\\:-])[A-Za-z_][A-Za-z0-9_.:]{0,299}')
+# One unbounded class: each match is a complete run, never cut short. module_hint validates the segments.
+# Identifier characters outside \w (combining marks, ℘, ·) are not matched; _adjoins refuses such names whole.
+MODULE_TOKEN = re.compile(r'[\w.:]+')
 MODULE_SEPARATOR = re.compile(r'::|\.')
 MAX_SEGMENTS = 16
+MAX_TOKEN = 300
 RUST_PREFIXES = {'crate', 'self', 'super'}
 PACKAGE_FILES = {'__init__.py', 'mod.rs'}
 AMBIGUOUS = object()
@@ -28,7 +30,11 @@ MIN_EXTERNAL = 5
 
 @functools.lru_cache(maxsize=1)
 def module_index(paths):
-    """Module suffix (two or more segments, slash-joined) -> its single file, or AMBIGUOUS. One build per tree."""
+    """Module suffix -> its single file, or AMBIGUOUS. One build per tree.
+
+    Only queryable suffixes are stored: 2 to MAX_SEGMENTS segments and at most MAX_TOKEN characters,
+    so memory stays linear in the tree size however deep its paths are.
+    """
     index = {}
     for path in paths:
         parts = path.split('/')
@@ -40,18 +46,28 @@ def module_index(paths):
         if name in PACKAGE_FILES or stem == 'index':
             keys.append(parts[:-1])
         for key in keys:
-            for start in range(len(key) - 1):
+            for start in range(max(0, len(key) - MAX_SEGMENTS), len(key) - 1):
                 suffix = '/'.join(key[start:])
-                index[suffix] = path if index.get(suffix, path) == path else AMBIGUOUS
+                if len(suffix) <= MAX_TOKEN:
+                    index[suffix] = path if index.get(suffix, path) == path else AMBIGUOUS
     return index
 
 
+def _adjoins(char):
+    """A neighbour that would extend an identifier (including marks \\w misses) or place the token in a path."""
+    return bool(char) and (char in './\\:-' or ('a' + char).isidentifier())
+
+
 def module_hint(token, index):
-    segments = MODULE_SEPARATOR.split(token)[:MAX_SEGMENTS]
+    segments = MODULE_SEPARATOR.split(token)
     if not all(segment.isidentifier() for segment in segments):
         return None
     if '::' in token and segments[0] in RUST_PREFIXES:
         segments = segments[1:]
+    if len(segments) > MAX_SEGMENTS or len('/'.join(segments)) > MAX_TOKEN:
+        # Refuse the whole name: only then is every prefix within the index bounds, so a longer (or ambiguous)
+        # module can never be skipped in favour of a shorter, different one.
+        return None
     # The longest prefix naming any module decides; trailing segments are members. Never fall back past ambiguity.
     for end in range(len(segments), 1, -1):
         match = index.get('/'.join(segments[:end]))
@@ -85,7 +101,8 @@ def location_hints(text, paths):
     if len(hints) < MAX_HINTS:
         index = None
         for found in MODULE_TOKEN.finditer(text, 0, SCAN_LIMIT):
-            if text[found.end():found.end() + 1] in ('/', '\\'):
+            # Refuse partial tokens: inside a longer identifier or path, or cut by the scan limit.
+            if _adjoins(text[found.start() - 1:found.start()]) or _adjoins(text[found.end():found.end() + 1]):
                 continue
             token = found.group().rstrip('.:')
             if '.' not in token and '::' not in token:
@@ -158,22 +175,29 @@ def responsiveness(repository, client):
         page = client.request(endpoint)
         if not isinstance(page, list) or len(page) > 100:
             raise core.ProtocolError('api_shape', 'Expected one bounded closed-PR list page')
-        days, merged = [], 0
+        days, merged, numbers = [], 0, set()
         for pr in page:
             if not isinstance(pr, dict) or not isinstance(pr.get('user'), dict):
                 raise core.ProtocolError('api_shape', 'Closed PR entry lacks a user object')
+            # Like paginate, a repeated identity means the page is not a trustworthy sample.
+            if type(pr.get('number')) is not int or pr['number'] < 1 or pr['number'] in numbers:
+                raise core.ProtocolError('api_shape', 'Closed PR number is missing, malformed or repeated')
+            numbers.add(pr['number'])
             kind, association = pr['user'].get('type'), pr.get('author_association')
             created, closed = _timestamp(pr.get('created_at')), _timestamp(pr.get('closed_at'))
             if not isinstance(kind, str) or not isinstance(association, str):
                 raise core.ProtocolError('api_shape', 'Closed PR author type or association is malformed')
             if created is None or closed is None or closed < created:
                 raise core.ProtocolError('api_shape', 'Closed PR timestamps are missing or inconsistent')
-            if pr.get('merged_at') is not None and _timestamp(pr.get('merged_at')) is None:
-                raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed')
+            if 'merged_at' not in pr:
+                raise core.ProtocolError('api_shape', 'Closed PR merge state is missing')
+            merged_at = None if pr['merged_at'] is None else _timestamp(pr['merged_at'])
+            if pr['merged_at'] is not None and (merged_at is None or not created <= merged_at <= closed):
+                raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed or outside its lifetime')
             if kind == 'Bot' or association in MAINTAINER_ASSOCIATIONS:
                 continue
             days.append((closed - created).total_seconds() / 86400)
-            merged += pr.get('merged_at') is not None
+            merged += merged_at is not None
     except core.ProtocolError as exc:
         report['errors'] = [str(exc)]
         report['explanation'] = 'Closed pull requests could not be read completely; responsiveness is unknown'
