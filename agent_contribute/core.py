@@ -738,24 +738,34 @@ UNSAFE_CONFIG = re.compile(r'filter\..+|gpg(\..+)?\.program|diff\.external|diff\
 
 
 def _case_insensitive(directory):
+    """Only a real filesystem property counts: a .GIT symlink or mount is a second directory entry, which a
+    case-insensitive filesystem cannot list next to .git."""
     try:
-        return os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
+        variants = [name for name in os.listdir(directory) if name.lower() == '.git']
+        return variants == ['.git'] and os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
     except OSError:
+        return False
+
+
+def _config_true(directory, key):
+    """Git's own effective boolean (last value wins, empty is false); unset or unreadable reads as false."""
+    try:
+        return git_read(directory, 'config', '--type=bool', '--get', key) == 'true'
+    except ProtocolError:
         return False
 
 
 def require_safe_config(directory):
     """Effective checkout config, includes and includeIf resolved; listing it executes nothing."""
     entries = git_read(directory, 'config', '--list', '--includes', '--show-scope', '-z').split('\0')
-    for scope, entry in zip(entries[::2], entries[1::2]):
-        key, _, value = entry.partition('\n')
-        key = key.lower()
-        # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
-        case_hiding = (key == 'core.ignorecase' and value.lower() not in ('false', 'no', 'off', '0') and
-                       not _case_insensitive(directory))
-        if scope != 'command' and (UNSAFE_CONFIG.fullmatch(key) or case_hiding):
-            raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(key, 200)}, which a read '
-                                'could run as a program or use to hide changes; remove it or use a fresh clone')
+    keys = [entry.split('\n', 1)[0].lower() for scope, entry in zip(entries[::2], entries[1::2]) if scope != 'command']
+    unsafe = [key for key in keys if UNSAFE_CONFIG.fullmatch(key)]
+    # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
+    if _config_true(directory, 'core.ignorecase') and not _case_insensitive(directory):
+        unsafe.append('core.ignorecase')
+    if unsafe:
+        raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(unsafe[0], 200)}, which a read '
+                            'could run as a program or use to hide changes; remove it or use a fresh clone')
 
 
 def require_worktree_root(directory):

@@ -163,7 +163,10 @@ channel or runtime model provider is added.
   `core.ignoreStat=false` and `core.fileMode=true`, so relaxed checkout stat or
   mode settings cannot hide a same-size edit or an executable-bit change.
   `core.ignoreCase=true` on a case-sensitive filesystem is refused
-  (`unsafe_git_config`) because it hides case twins.
+  (`unsafe_git_config`) because it hides case twins. The setting is read as
+  Git's effective boolean (an empty or later-overridden value is false), and a
+  `.GIT` symlink or second entry cannot make a case-sensitive filesystem look
+  case-insensitive.
 - `scope-check` stops on a gitlink before any index or worktree diff, and every
   index or worktree diff and status passes `--ignore-submodules=all`, so Git
   never starts a command inside a populated submodule with that submodule's own

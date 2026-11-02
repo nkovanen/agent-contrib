@@ -60,5 +60,33 @@ class StatConfigTests(unittest.TestCase):
         self.assertIn('agents.md', workspace.scope_check(self.task, self.root)['changed_paths'])
 
 
+    REFUSAL = ('Checkout Git config sets core.ignorecase, which a read could run as a program or use to hide '
+               'changes; remove it or use a fresh clone')
+
+    def test_symlinked_dot_git_cannot_fake_a_case_insensitive_filesystem(self):
+        # G-13 / R1-17: .GIT -> .git made samefile() report a case-insensitive filesystem.
+        pathlib.Path(self.root, '.GIT').symlink_to('.git')
+        self.git('config', 'core.ignoreCase', 'true')
+        pathlib.Path(self.root, 'agents.md').write_text('case twin Git would hide')
+        self.assertIn(self.REFUSAL, core.verify(self.task, self.evidence, self.root, self.client)['evidence_errors'])
+        self.assertEqual(workspace.scope_check(self.task, self.root)['errors'], [self.REFUSAL])
+        with self.assertRaises(core.ProtocolError) as caught:
+            workspace.evidence_skeleton(self.task, self.root, self.evidence['base_commit'])
+        self.assertEqual(caught.exception.code, 'unsafe_git_config')
+
+    def test_ignore_case_uses_gits_effective_boolean(self):
+        # R1-18: an empty value and a true later overridden by false are both false to Git.
+        config = pathlib.Path(self.root, '.git', 'config')
+        for extra in ('[core]\n\tignoreCase =\n', '[core]\n\tignoreCase = true\n[core]\n\tignoreCase = off\n'):
+            with self.subTest(extra=extra):
+                original = config.read_text()
+                config.write_text(original + extra)
+                self.assertEqual(self.git('config', '--type=bool', '--get', 'core.ignorecase'), 'false')
+                self.assertTrue(workspace.scope_check(self.task, self.root)['within_scope'])
+                self.assertTrue(core.verify(self.task, self.evidence, self.root, self.client)['evidence_valid'])
+                config.write_text(original)
+        config.write_text(config.read_text() + '[core]\n\tignoreCase = yes\n')
+        self.assertEqual(workspace.scope_check(self.task, self.root)['errors'], [self.REFUSAL])
+
 if __name__ == '__main__':
     unittest.main()
