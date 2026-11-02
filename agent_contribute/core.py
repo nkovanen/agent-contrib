@@ -390,12 +390,23 @@ def duplicate_prs(repository, issue, index, *, pr_repository=None):
     for pr in index:
         direct = ((repository.casefold(), number) in pr['references'] or
                   (repository.casefold() == (pr_repository or repository).casefold() and number in pr['local']))
-        overlap = len(words.intersection(pr['words'])) >= 2 or bool(checklist.intersection(pr['checklist']))
+        shared_words, shared_ids = words.intersection(pr['words']), checklist.intersection(pr['checklist'])
+        overlap = len(shared_words) >= 2 or bool(shared_ids)
         if direct or overlap:
             findings.append({'number': pr['number'], 'url': pr['url'],
                              'reason': 'Explicit reference to this issue' if direct else
-                             'Potential title/checklist overlap; review manually'})
+                             'Potential title/checklist overlap; review manually ' + overlap_matches(shared_words, shared_ids)})
     return findings
+
+
+def overlap_matches(words, ids):
+    # Only the triggering matches; both token patterns are restricted to safe characters.
+    def listed(title, items, limit=10):
+        items = sorted(items)
+        return title + ': ' + ', '.join(items[:limit]) + (f' and {len(items) - limit} more' if len(items) > limit else '')
+    parts = ([listed('shared title words', words)] if len(words) >= 2 else []) + (
+        [listed('shared checklist IDs', ids)] if ids else [])
+    return '(' + '; '.join(parts) + ')'
 
 
 def ranking(issue, duplicates):

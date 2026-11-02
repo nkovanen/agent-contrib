@@ -44,6 +44,8 @@
 - `--format text verify --stage X` leads with stage X, its exit gate and its
   blockers, and reduces other stages to blocker counts. JSON and exit codes are
   unchanged.
+- Heuristic overlap reasons name the shared title words and checklist IDs that
+  triggered the match. Duplicate entry fields and matching are unchanged.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

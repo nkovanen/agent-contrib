@@ -202,13 +202,28 @@ class DiscoveryTests(unittest.TestCase):
                 result['title'] = 'ABC-FEATURE-ID reset'
             return result
         client.request = request
-        self.assertTrue(core.inspect_issue('acme/photos#12', client)['duplicates'])
+        self.assertEqual([item['reason'] for item in core.inspect_issue('acme/photos#12', client)['duplicates']],
+                         ['Potential title/checklist overlap; review manually (shared checklist IDs: ABC-FEATURE-ID)'])
 
     def test_topic_overlap_warns(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url'}]))
         self.assertTrue(result['duplicates'])
-        self.assertIn('overlap', result['duplicates'][0]['reason'])
+        self.assertEqual(result['duplicates'][0]['reason'],
+                         'Potential title/checklist overlap; review manually (shared title words: bounds, thumbnail)')
+
+    def test_overlap_match_list_is_sorted_bounded_and_limited_to_the_trigger(self):
+        words = ['word%02d' % n for n in range(30)]
+        index = core.index_prs([{'number': 30, 'title': ' '.join(reversed(words)), 'html_url': 'url',
+                                 'body': 'Tracks ABC-ONE and ABC-TWO'}])
+        issue = {'number': 12, 'title': ' '.join(words), 'body': 'See ABC-TWO'}
+        [finding] = core.duplicate_prs('acme/photos', issue, index)
+        self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared title words: ' +
+                         ', '.join(words[:10]) + ' and 20 more; shared checklist IDs: ABC-TWO)')
+        issue['title'] = 'word00 unrelated'
+        [finding] = core.duplicate_prs('acme/photos', issue, index)
+        self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared checklist IDs: ABC-TWO)')
+        self.assertEqual(sorted(finding), ['number', 'reason', 'url'])
 
     def test_failed_pr_policy_or_tree_reads_cannot_be_complete(self):
         for path in ['/pulls', '/git/trees', '/contents/AGENTS.md', '/labels']:

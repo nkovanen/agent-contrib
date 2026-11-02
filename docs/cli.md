@@ -46,6 +46,11 @@ repositories and enabled-issue forks keep their own tracker. Missing parent
 metadata, a parent without Issues, malformed responses and API failures remain
 unresolved, with errors and `complete: false`.
 
+A heuristic overlap's `reason` ends with what triggered it: the shared title
+words (two or more) and/or shared checklist IDs, sorted, at most ten of each with
+a count of the rest. An explicit issue reference keeps its own reason. The
+duplicate entry fields are unchanged.
+
 Use the `reference` emitted by discovery for subsequent commands. In a fork
 request, `fork/repo#123` means “resolve issue 123 for this requested repository”;
 its `issue_url` names the actual source. It is not a claim that the issue exists
