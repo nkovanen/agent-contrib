@@ -791,10 +791,11 @@ def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None
     if isinstance(task, dict) and task.get('schema_version') == '0.2':
         from .lifecycle import verify as verify_v2
         return verify_v2(task, evidence, repo_dir, host_context=host_context, client=client)
-    errors = validate_contract(task)
+    contract_errors = validate_contract(task)
+    errors = list(contract_errors)
     if host_context is not None:
         errors.append('Host context is unsupported for schema 0.1')
-    result = {'schema_version': VERSION, 'schema_valid': not errors, 'execution_ready': False,
+    result = {'schema_version': VERSION, 'schema_valid': not contract_errors, 'execution_ready': False,
               'evidence_valid': False, 'upstream_submission_ready': False, 'fork_completion_ready': False,
               'approval': {'status': 'unknown', 'reason': 'Not refreshed'}, 'errors': errors,
               'evidence_errors': [], 'evidence_trust': 'self-attested; identity and truth are not authenticated',

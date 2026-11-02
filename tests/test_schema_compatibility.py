@@ -107,9 +107,12 @@ class SchemaSelectionTests(unittest.TestCase):
 
     def test_legacy_host_input_is_explicitly_rejected(self):
         task, client = ready_contract()
+        client.calls.clear()
         result = core.verify(task, client=client, host_context={})
         self.assertFalse(result['execution_ready'])
         self.assertIn('Host context is unsupported for schema 0.1', result['errors'])
+        self.assertTrue(result['schema_valid'], 'a valid contract stays schema-valid (A1-16)')
+        self.assertEqual(client.calls, [], 'rejected before any GitHub read')
 
     def test_evidence_cannot_mix_versions_or_smuggle_human_approval(self):
         from tests.test_authorization import candidate_task
