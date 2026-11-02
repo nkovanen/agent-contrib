@@ -89,6 +89,42 @@ class CIObservationTests(unittest.TestCase):
         pages[1]['total_count'] = 101
         self.assertTrue(ci.observe(task, {'git_head': HEAD}, client)['complete'])
 
+    def observe_pages(self, pages):
+        task, base = ready_contract()
+        client = CIGitHub(base)
+        original = client.request
+        def request(endpoint):
+            if endpoint.split('?')[0].endswith('/status'):
+                page = int(endpoint.rsplit('page=', 1)[1])
+                return copy.deepcopy(pages[page - 1] if page <= len(pages) else dict(pages[-1], statuses=[]))
+            return original(endpoint)
+        client.request = request
+        return ci.observe(task, {'git_head': HEAD}, client)
+
+    def statuses(self, ids):
+        return [{'id': i, 'context': 'c%d' % i, 'state': 'success', 'target_url': None} for i in ids]
+
+    def test_combined_state_changing_between_pages_is_incomplete(self):
+        result = self.observe_pages([
+            {'sha': HEAD, 'state': 'pending', 'total_count': 101, 'statuses': self.statuses(range(1, 101))},
+            {'sha': HEAD, 'state': 'success', 'total_count': 101, 'statuses': self.statuses([101])}])
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['errors'], ['Combined status changed during pagination'])
+
+    def test_repeated_status_id_is_incomplete_even_when_counts_match(self):
+        result = self.observe_pages([
+            {'sha': HEAD, 'state': 'success', 'total_count': 100, 'statuses': self.statuses(range(1, 101))},
+            {'sha': HEAD, 'state': 'success', 'total_count': 100, 'statuses': self.statuses([5])}])
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['errors'], ['Pagination repeated a status; results may have moved'])
+        self.assertEqual(len(result['combined_status']['statuses']), 100)
+
+    def test_oversized_status_page_is_malformed(self):
+        result = self.observe_pages([
+            {'sha': HEAD, 'state': 'success', 'total_count': 101, 'statuses': self.statuses(range(1, 102))}])
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['errors'], ['Invalid GitHub status page size'])
+
     def test_cli_opt_in_does_not_change_exit_or_gates(self):
         task, base = ready_contract()
         with tempfile.TemporaryDirectory() as tmp:
