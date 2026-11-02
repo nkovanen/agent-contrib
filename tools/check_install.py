@@ -227,6 +227,7 @@ def main():
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
                     "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py",
                     "tools/benchmark/benchlib.py", "tools/benchmark/collect.py", "tools/benchmark/score.py",
+                    "tools/benchmark/experiment.py",
                     "tools/benchmark/README.md",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
                     ".github/workflows/ci.yml"}

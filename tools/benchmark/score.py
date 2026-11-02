@@ -15,7 +15,7 @@ from agent_contribute import core  # noqa: E402
 import benchlib  # noqa: E402
 
 
-def score(paths, ks, bodies_dir=None, reps=2000, seed=0):
+def score(paths, ks, bodies_dir=None, reps=2000, seed=0, raw_labels=False):
     snapshots = [core.strict_json(pathlib.Path(path).read_text('utf-8')) for path in paths]
     report = {'snapshots': [], 'variants': {}}
     variants = {'default': {}, 'signals': {'signals': True}}
@@ -25,7 +25,7 @@ def score(paths, ks, bodies_dir=None, reps=2000, seed=0):
         if bodies_dir:
             source = pathlib.Path(bodies_dir) / (pathlib.Path(path).stem + '.bodies.json')
             bodies = core.strict_json(source.read_text('utf-8'))
-        labels = {issue['number']: issue['outcome'] for issue in snapshot['issues']}
+        labels = benchlib.labels(snapshot, claimed_at_cutoff=raw_labels)
         counts = {name: sum(value == name for value in labels.values()) for name in ('positive', 'negative', 'excluded')}
         report['snapshots'].append({'repository': snapshot['repository'], 'cutoff': snapshot['cutoff'],
                                     'horizon_days': snapshot['horizon_days'], **counts})
@@ -63,8 +63,9 @@ def main():
     parser.add_argument('--reps', type=int, default=2000)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--json', action='store_true')
+    parser.add_argument('--raw-labels', action='store_true', help='Keep positives whose fixing PR was already open at T')
     args = parser.parse_args()
-    report = score(args.snapshots, args.k, args.bodies, args.reps, args.seed)
+    report = score(args.snapshots, args.k, args.bodies, args.reps, args.seed, args.raw_labels)
     print(json.dumps(report, indent=1) if args.json else table(report))
 
 

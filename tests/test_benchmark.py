@@ -129,7 +129,44 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(ranked[0], 2)
 
 
+class LabelTests(unittest.TestCase):
+    def test_a_fix_whose_pr_was_already_open_at_the_cutoff_was_not_an_available_task(self):
+        snap = snapshot([{'number': 1, 'title': 'A', 'outcome': 'positive', 'evidence': {'pr': 9}},
+                         {'number': 2, 'title': 'B', 'outcome': 'positive', 'evidence': {'pr': 12}},
+                         {'number': 3, 'title': 'C', 'outcome': 'negative'}],
+                        prs=[{'number': 9, 'title': 'Unrelated title'}])
+        self.assertEqual(bench.labels(snap), {1: 'excluded', 2: 'positive', 3: 'negative'})
+        self.assertEqual(bench.labels(snap, claimed_at_cutoff=True), {1: 'positive', 2: 'positive', 3: 'negative'})
+
+
+class VariantTests(unittest.TestCase):
+    def test_recent_activity_tie_break_and_help_wanted_promotion(self):
+        snap = snapshot([{'number': 1, 'title': 'Alpha', 'updated_at': '2026-01-01T00:00:00Z'},
+                         {'number': 2, 'title': 'Beta', 'updated_at': '2026-04-01T00:00:00Z'},
+                         {'number': 3, 'title': 'Gamma', 'updated_at': '2026-03-01T00:00:00Z',
+                          'labels': ['help wanted']},
+                         {'number': 4, 'title': 'Delta', 'labels': ['wontfix'], 'updated_at': '2026-04-30T00:00:00Z'}])
+        self.assertEqual(bench.rank(snap, 'default'), [1, 2, 3, 4])
+        self.assertEqual(bench.rank(snap, 'recent'), [2, 3, 1, 4])  # exclusions still last
+        self.assertEqual(bench.rank(snap, 'help-wanted'), [3, 1, 2, 4])
+        self.assertEqual(bench.rank(snap, 'signals'), bench.replay(snap, signals=True))
+        with self.assertRaises(ValueError):
+            bench.rank(snap, 'unknown')
+
+    def test_help_wanted_labels_match_case_insensitively(self):
+        snap = snapshot([{'number': 1, 'title': 'Alpha'}, {'number': 2, 'title': 'Beta', 'labels': ['Good First Issue']}])
+        self.assertEqual(bench.rank(snap, 'help-wanted'), [2, 1])
+
+
 class MetricTests(unittest.TestCase):
+    def test_random_reference_has_a_seeded_interval(self):
+        labels = {n: ('positive' if n % 4 == 0 else 'negative') for n in range(1, 41)}
+        runs = [(list(range(1, 41)), labels)]
+        first = bench.bootstrap_base_rate(runs, reps=300, seed=3)
+        self.assertEqual(first, bench.bootstrap_base_rate(runs, reps=300, seed=3))
+        self.assertLessEqual(first['low'], bench.base_rate(runs))
+        self.assertGreaterEqual(first['high'], bench.base_rate(runs))
+
     def test_precision_and_recall_at_k_ignore_excluded_issues(self):
         labels = {1: 'positive', 2: 'excluded', 3: 'negative', 4: 'positive', 5: 'negative'}
         result = bench.at_k([2, 1, 3, 4, 5], labels, 2)
@@ -179,6 +216,23 @@ class ScoreTests(unittest.TestCase):
         self.assertEqual(report['variants']['signals']['@1']['precision'], 1.0)
         self.assertEqual(report['random_precision'], 0.5)
         self.assertIn('| default | 1 | 1.00', scorer.table(report))
+
+
+class ExperimentTests(unittest.TestCase):
+    def test_a_variant_qualifies_only_above_the_random_interval(self):
+        spec = importlib.util.spec_from_file_location('benchexperiment', PATH.parent / 'experiment.py')
+        experiment = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(experiment)
+        issues = [{'number': n, 'title': f'Issue {n}', 'outcome': 'positive' if n > 36 else 'negative',
+                   'updated_at': f'2026-04-{n % 28 + 1:02d}T00:00:00Z' if n > 36 else '2026-01-01T00:00:00Z'}
+                  for n in range(1, 41)]
+        snap = snapshot(issues)
+        rows = experiment.evaluate({'held-out': [snap]}, ['default', 'recent'], [4], reps=200)
+        by_variant = {row['variant']: row for row in rows}
+        self.assertFalse(by_variant['default']['beats_random'])  # oldest first: all negatives
+        self.assertTrue(by_variant['recent']['beats_random'])
+        self.assertEqual(by_variant['recent']['precision'], 1.0)
+        self.assertIn('| held-out | recent | 4 | 1.00', experiment.table(rows))
 
 
 class DataTests(unittest.TestCase):

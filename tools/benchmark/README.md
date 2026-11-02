@@ -20,7 +20,22 @@ python tools/benchmark/collect.py owner/repo --cutoff 2026-03-01T00:00:00Z \
 
 # Score (offline: replays the real discover code against the snapshots)
 python tools/benchmark/score.py tools/benchmark/data/*.json --k 5 10 20 [--bodies DIR] [--json]
+
+# Held-out experiment: candidate orderings on tuning, held-out and all snapshots
+python tools/benchmark/experiment.py --tune A.json B.json --heldout C.json D.json \
+  --variants default signals recent help-wanted --k 5 10
 ```
+
+`experiment.py` adds a 95% interval for the random-order reference, using the
+same resampling. A variant "beats random" only when its precision interval lies
+wholly above the random interval.
+
+The variants are:
+- `default` and `signals`: discover itself.
+- `recent`: discover's exclusion, overlap and likelihood keys, then the most
+  recent activity at T first.
+- `help-wanted`: the same keys, then issues labelled `help wanted` or `good first
+  issue` at T first.
 
 `score.py` patches the clock to T and serves `discover` only snapshot data
 through a fake client. Any other request raises, so scoring cannot touch the
@@ -36,7 +51,11 @@ the end of the window.
 | --- | --- | --- |
 | positive | Closed as completed inside the window, by a PR in the same repository that was merged inside the window and within 24 hours of the close. The PR's author association must not be OWNER, MEMBER or COLLABORATOR, and its author must not be a bot. | Work an outside contributor demonstrably landed: what agent-contrib tries to find. |
 | negative | Still open at the horizon (including closed, then reopened), or closed as `not_planned` or `duplicate`. | Nobody landed it in the window, or the project declined it. |
-| excluded | Closed as completed without such a PR: a maintainer's PR, a direct commit, a bot, or an unlinked close. | Ambiguous: maintainers may reserve work, or an outsider might have succeeded. Counting it either way would bias the score. |
+| excluded | Closed as completed without such a PR: a maintainer's PR, a direct commit, a bot, or an unlinked close. Also excluded at scoring time: a positive whose fixing PR was **already open at T**. | Ambiguous: maintainers may reserve work, or an outsider might have succeeded. A fix already in flight at T was not an available task, and discover deliberately demotes overlapping issues. Counting either way would bias the score. |
+
+Snapshots store the outcome as collected. `benchlib.labels()` applies the
+claimed-at-T exclusion when scoring; `--raw-labels` on `score.py` and
+`experiment.py` keeps it as positive.
 
 Excluded issues are removed before scoring. Precision@k counts positives among
 the first k decidable issues; recall@k is the share of all positives found in

@@ -75,6 +75,21 @@ def classify(events, cutoff, horizon_days, repository):
     return dict(result, outcome='excluded', reason='closed as completed without an external merged PR')
 
 
+def labels(snapshot, *, claimed_at_cutoff=False):
+    """Outcome per issue for scoring. A positive whose fixing PR was already open at the cutoff was
+    not an available task at T (someone had claimed it), so it is excluded unless claimed_at_cutoff
+    asks for the raw collected label."""
+    open_prs = {pr['number'] for pr in snapshot['open_prs_at_cutoff']}
+    result = {}
+    for issue in snapshot['issues']:
+        outcome = issue['outcome']
+        if (not claimed_at_cutoff and outcome == 'positive' and
+                issue.get('evidence', {}).get('pr') in open_prs):
+            outcome = 'excluded'
+        result[issue['number']] = outcome
+    return result
+
+
 def reconstruct(item, events, cutoff):
     """Title, labels, comment count and last activity as of the cutoff, from current values and the
     timeline. Bodies are never stored: their edit history is not available through REST."""
@@ -142,6 +157,35 @@ class SnapshotClient:
 
 def replay(snapshot, *, signals=False, bodies=None):
     """Issue numbers in the order discover ranks them at the cutoff."""
+    return [issue['number'] for issue in discover_at_cutoff(snapshot, signals=signals, bodies=bodies)]
+
+
+# Labels a project uses to say outside help is wanted (GitHub's defaults). A ranking prior, never approval.
+HELP_WANTED = {'help wanted', 'good first issue'}
+
+
+def rank(snapshot, variant, bodies=None):
+    """Candidate orderings measured against the same snapshot. 'default' and 'signals' are discover
+    itself; 'recent' and 'help-wanted' keep discover's exclusion, overlap and likelihood keys and change
+    only what follows them (most recent activity at T first, or help-wanted labels first)."""
+    if variant in ('default', 'signals'):
+        return replay(snapshot, signals=variant == 'signals', bodies=bodies)
+    if variant not in ('recent', 'help-wanted'):
+        raise ValueError('Unknown ranking variant: ' + variant)
+    facts = {issue['number']: issue for issue in snapshot['issues']}
+
+    def key(issue):
+        base = (bool(issue['exclusions']), bool(issue['duplicates']),
+                issue['ranking']['success_likelihood']['value'] == 'low')
+        fact = facts[issue['number']]
+        if variant == 'recent':
+            return base + (-when(fact['updated_at']).timestamp(), issue['number'])
+        wanted = any(label.lower() in HELP_WANTED for label in fact['labels'])
+        return base + (not wanted, issue['number'])
+    return [issue['number'] for issue in sorted(discover_at_cutoff(snapshot, bodies=bodies), key=key)]
+
+
+def discover_at_cutoff(snapshot, *, signals=False, bodies=None):
     cutoff = when(snapshot['cutoff'])
 
     class Clock(dt.datetime):
@@ -151,8 +195,7 @@ def replay(snapshot, *, signals=False, bodies=None):
 
     client = SnapshotClient(snapshot, bodies)
     with patch.object(core.dt, 'datetime', Clock):
-        result = core.discover(snapshot['repository'], client, signals=signals)
-    return [issue['number'] for issue in result['issues']]
+        return core.discover(snapshot['repository'], client, signals=signals)['issues']
 
 
 def at_k(ranking, labels, k):
@@ -182,28 +225,39 @@ def base_rate(runs):
     return sum(rates) / len(rates) if rates else None
 
 
-def bootstrap(runs, k, metric, *, reps=2000, seed=0):
-    """Percentile 95% interval of the pooled metric, resampling decidable issues within each repository
-    (with replacement) while keeping each issue's original rank position."""
-    rng = random.Random(seed)
-    prepared = []
-    for ranking, labels in runs:
-        decided = [(position, number) for position, number in enumerate(ranking)
-                   if labels.get(number) in ('positive', 'negative')]
-        prepared.append((decided, labels))
-    values = []
-    for _ in range(reps):
-        sample_runs = []
-        for decided, labels in prepared:
-            sample = sorted(rng.choice(decided) for _ in decided) if decided else []
-            # Duplicated issues need distinct identities so each copy keeps its label.
-            ranking = [(number, index) for index, (_, number) in enumerate(sample)]
-            sample_runs.append(([key for key in ranking], {key: labels[key[0]] for key in ranking}))
-        value = pooled(sample_runs, k, metric)
-        if value is not None:
-            values.append(value)
+def _resampled(prepared, rng):
+    sample_runs = []
+    for decided, labels in prepared:
+        sample = sorted(rng.choice(decided) for _ in decided) if decided else []
+        # Duplicated issues need distinct identities so each copy keeps its label.
+        ranking = [(number, index) for index, (_, number) in enumerate(sample)]
+        sample_runs.append((ranking, {key: labels[key[0]] for key in ranking}))
+    return sample_runs
+
+
+def _prepare(runs):
+    return [([(position, number) for position, number in enumerate(ranking)
+              if labels.get(number) in ('positive', 'negative')], labels) for ranking, labels in runs]
+
+
+def _interval(values):
     if not values:
         return {'low': None, 'high': None, 'reps': 0}
     values.sort()
     return {'low': values[int(0.025 * (len(values) - 1))], 'high': values[int(0.975 * (len(values) - 1))],
             'reps': len(values)}
+
+
+def bootstrap_base_rate(runs, *, reps=2000, seed=0):
+    """Interval of the random-order reference under the same resampling as bootstrap()."""
+    rng, prepared = random.Random(seed), _prepare(runs)
+    values = [base_rate(_resampled(prepared, rng)) for _ in range(reps)]
+    return _interval([value for value in values if value is not None])
+
+
+def bootstrap(runs, k, metric, *, reps=2000, seed=0):
+    """Percentile 95% interval of the pooled metric, resampling decidable issues within each repository
+    (with replacement) while keeping each issue's original rank position."""
+    rng, prepared = random.Random(seed), _prepare(runs)
+    values = [pooled(_resampled(prepared, rng), k, metric) for _ in range(reps)]
+    return _interval([value for value in values if value is not None])
