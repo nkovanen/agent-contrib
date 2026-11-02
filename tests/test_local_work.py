@@ -134,6 +134,56 @@ class LocalWorkTests(unittest.TestCase):
                 self.assertIn(f'Commit {commit_id} is larger than 65536 bytes; its message was not read', report['errors'])
             self.assertEqual(report['commits_scanned'], 1)
 
+    def raw_commit(self, git, message, literally=False):
+        head = git('rev-parse', 'HEAD')
+        prefix = (f'tree {git("rev-parse", "HEAD^{tree}")}\nparent {head}\n'
+                  'author T <t@e> 1700000000 +0000\ncommitter T <t@e> 1700000000 +0000\n\n').encode()
+        body = prefix + (message if isinstance(message, bytes) else message.encode())
+        argv = ['git', '-C', git.directory, 'hash-object', '-w', '-t', 'commit', '--stdin'] + (['--literally'] if literally else [])
+        sha = subprocess.run(argv, input=body, capture_output=True, check=True).stdout.decode().strip()
+        git('update-ref', git('symbolic-ref', 'HEAD'), sha)
+        return sha, len(body)
+
+    def test_exact_object_size_boundary(self):
+        # Review mutant C-M11: accept exactly 65,536 bytes, refuse 65,537, independent of the constant.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            sha, size = self.raw_commit(git, 'Fix #1 ')
+            pad = 65536 - size
+            git('update-ref', git('symbolic-ref', 'HEAD'), base)
+            sha, size = self.raw_commit(git, 'Fix #1 ' + 'x' * pad)
+            self.assertEqual(size, 65536)
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual((report['complete'], report['issues']), (True, [{'number': 1, 'commits': [sha]}]))
+            git('update-ref', git('symbolic-ref', 'HEAD'), base)
+            sha, size = self.raw_commit(git, 'Fix #1 ' + 'x' * (pad + 1))
+            self.assertEqual(size, 65537)
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['issues'], [])
+
+    def test_nul_bearing_commit_message_is_incomplete_not_shortened(self):
+        # Review R11-03: %B stops at an embedded NUL, so a later 'Fix #1' vanished from a complete report.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            sha, _ = self.raw_commit(git, b'Unrelated text\0Fix #1\n', literally=True)
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['issues'], [])
+            self.assertIn(f'Commit {sha} has a NUL byte in its message; it was not read', report['errors'])
+            client = SignalGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--signals', '--repo-dir', tmp)
+            self.assertEqual(code, 1)
+            self.assertEqual({item['signals']['local_work']['value'] for item in result['issues']}, {'unknown'})
+
+    def test_only_the_message_is_parsed_not_the_commit_headers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            git('commit', '-q', '--allow-empty', '--author', 'Fixer #7 <fixer@example.org>', '-m', 'Refs #8')
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual([item['number'] for item in report['issues']], [8])
+
     def test_total_message_bytes_are_bounded(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)

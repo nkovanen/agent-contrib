@@ -22,8 +22,9 @@ channel or runtime model provider is added.
 - `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
   referenced by local commits that are not in the source default branch, read
   with the hardened Git reader and capped at 500 commits, 64 KiB per commit and
-  4 MiB in total, checked by object size before any message is read; a shallow
-  checkout is incomplete. With `--signals`,
+  4 MiB in total, checked by object size before any message is read; messages
+  come from raw commit objects, and a shallow checkout or a NUL byte in a
+  message is incomplete. With `--signals`,
   referenced issues rank below the other candidates that are not excluded or
   overlapping.
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1

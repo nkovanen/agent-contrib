@@ -426,8 +426,10 @@ whole messages: a commit larger than 64 KiB is skipped, and reading stops once
 messages would exceed 4 MiB in total. Reads use the hardened Git reader after the
 worktree-root and checkout-config checks. A missing base commit (the CLI never
 fetches), a shallow checkout (a shallow boundary can hide commits), an unsafe
-config, a subdirectory, more than 500 commits or a skipped message make it
-incomplete, which exits 1. With `--signals`, each issue gets `signals.local_work`
+config, a subdirectory, more than 500 commits, a skipped message or a message
+containing a NUL byte make it incomplete, which exits 1. Messages are read from
+the raw commit objects (`git cat-file --batch`), never reformatted, and commit
+headers such as the author are not parsed. With `--signals`, each issue gets `signals.local_work`
 (`referenced`, `none` or `unknown`), and a referenced issue ranks below every
 other candidate that is not excluded or overlapping. Its score, gates and
 exclusions are unchanged. Without `--signals` the issue order is unchanged. A

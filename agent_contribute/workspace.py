@@ -186,14 +186,14 @@ def local_issue_references(directory, repository, base):
             else:
                 readable.append(sha)
                 total += int(size)
-        raw = core.git_read(directory, 'log', '-z', '--no-walk=unsorted', '--no-decorate', '--no-show-signature',
-                            '--no-color', '--format=%H%n%B', *readable) if readable else ''
-        entries = [entry for entry in raw.split('\0') if entry.strip()]
+        entries = []
+        for sha, message in _raw_messages(directory, readable):
+            if b'\0' in message:  # %B would stop at the NUL and silently drop later references (review R11-03)
+                report['errors'].append(f'Commit {sha} has a NUL byte in its message; it was not read')
+            else:
+                entries.append((sha, message.decode('utf-8', errors='surrogateescape')))
         referenced = {}
-        for entry in entries:
-            sha, _, message = entry.strip('\n').partition('\n')
-            if not core.SHA.fullmatch(sha):
-                raise core.ProtocolError('git_error', 'Unexpected git log output')
+        for sha, message in entries:
             for number in _issue_refs(message, repository):  # whole message: never a cut token
                 commits = referenced.setdefault(number, [])
                 if sha not in commits and len(commits) < 10:
@@ -204,6 +204,24 @@ def local_issue_references(directory, repository, base):
         report['errors'].append(str(exc))
     report['complete'] = not report['errors']
     return report
+
+
+def _raw_messages(directory, shas):
+    """Raw commit objects (already size-bounded) through cat-file --batch; yields (sha, message bytes)."""
+    if not shas:
+        return
+    raw = core.git_read(directory, 'cat-file', '--batch', raw=True, input=b''.join(sha.encode() + b'\n' for sha in shas))
+    position = 0
+    for expected in shas:
+        end = raw.find(b'\n', position)
+        header = raw[position:end].decode('ascii', errors='replace').split(' ')
+        if end < 0 or len(header) != 3 or header[0] != expected or header[1] != 'commit' or not header[2].isdigit():
+            raise core.ProtocolError('git_error', 'Unexpected git cat-file output')
+        body = raw[end + 1:end + 1 + int(header[2])]
+        position = end + 1 + int(header[2]) + 1
+        if len(body) != int(header[2]):
+            raise core.ProtocolError('git_error', 'Unexpected git cat-file output')
+        yield expected, body.partition(b'\n\n')[2]
 
 
 def _issue_refs(text, repository):
