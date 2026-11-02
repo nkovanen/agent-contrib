@@ -40,8 +40,16 @@ def read_host_context_stdin():
                                  'Cannot read explicit bounded UTF-8 host context from stdin') from exc
 
 
+GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining')
+
+
 class Parser(argparse.ArgumentParser):
     def error(self, message):
+        # Global options are parsed only before the subcommand; say so instead of a bare rejection.
+        if message.startswith('unrecognized arguments: ') and any(
+                token.split('=', 1)[0] in GLOBAL_OPTIONS for token in message.split()[2:]):
+            message += ('; global options --format, --report-budget and --min-remaining go before the subcommand, '
+                        'for example: agent-contrib --format text verify task.json')
         raise core.ProtocolError('usage', message)
 
 

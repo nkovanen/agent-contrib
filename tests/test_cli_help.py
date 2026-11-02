@@ -2,6 +2,7 @@
 import argparse
 import contextlib
 import io
+import json
 import unittest
 from unittest.mock import patch
 
@@ -50,6 +51,28 @@ class HelpTests(unittest.TestCase):
         for command in ('discover', 'verify', 'scope-check', 'pr-body'):
             line = next(item for item in text.splitlines() if item.strip().startswith(command + ' '))
             self.assertGreater(len(line.split(None, 1)[1]), 10, line)
+
+
+class GlobalOptionPlacementTests(unittest.TestCase):
+    def invoke(self, *args):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = cli.main(list(args))
+        return code, json.loads(output.getvalue())
+
+    def test_global_option_after_subcommand_names_the_fix(self):
+        hint = ('global options --format, --report-budget and --min-remaining go before the subcommand, '
+                'for example: agent-contrib --format text verify task.json')
+        for args in [('discover', 'acme/photos', '--format', 'text'), ('verify', 'task.json', '--format=text'),
+                     ('discover', 'acme/photos', '--report-budget'), ('drift', 'task.json', '--min-remaining', '5')]:
+            with self.subTest(args=args):
+                code, result = self.invoke(*args)
+                self.assertEqual(code, 2)
+                self.assertEqual(result['error']['code'], 'usage')
+                self.assertTrue(result['error']['message'].startswith('unrecognized arguments: '), result)
+                self.assertTrue(result['error']['message'].endswith('; ' + hint), result)
+        code, result = self.invoke('discover', 'acme/photos', '--formatting')
+        self.assertEqual((code, result['error']['message']), (2, 'unrecognized arguments: --formatting'))
 
 
 if __name__ == '__main__':

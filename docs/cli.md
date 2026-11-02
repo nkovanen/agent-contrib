@@ -404,6 +404,9 @@ scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured
 JSON when argument parsing has not produced a valid format selection.
+A global option (`--format`, `--report-budget`, `--min-remaining`) placed after
+the subcommand is still a usage error (exit 2); its message says to move the
+option before the subcommand.
 
 The text option uses the same stdout handling as JSON. Closed output returns 1
 quietly; writable output retains the command's normal exit status. Output JSON

@@ -52,6 +52,8 @@
   default base is not an ancestor of HEAD.
 - `agent-contrib --help` describes every command and option, including input
   constraints and exit status; the description no longer claims JSON-only output.
+- A global option given after the subcommand is still a usage error, but the
+  message now says to move it before the subcommand.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;
