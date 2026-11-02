@@ -300,7 +300,7 @@ class _Report:
         self.texts.append((path, result))
 
     def fetch(self, origin, repository, commit, path, blob, kind):
-        shown = core.safe_text(path, IDENTIFIER_CHARS)
+        shown = core.safe_text(path, len(path))  # note() shortens the display; the full path is the identity
         try:
             value = core.require(self.get(f'repos/{repository}/contents/{quote(path, safe="/")}?ref={commit}'),
                                  dict, 'file')
@@ -334,8 +334,9 @@ class _Report:
                     _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
                 continue
             if _format(path) not in SCANNED_FORMATS:
-                self.note(core.safe_text(path, IDENTIFIER_CHARS) if origin == 'repository' else
-                          f'{repository}:{core.safe_text(path, IDENTIFIER_CHARS)}', 'unsupported format')
+                shown = core.safe_text(path, len(path))
+                self.note(shown if origin == 'repository' else f'{repository}:{shown}', 'unsupported format',
+                          key=(repository.casefold(), path))
                 continue
             found.append((KIND_ORDER.index(kind), path, blob, kind))
         found.sort()
@@ -349,8 +350,8 @@ class _Report:
 
 def _pinned(blob, reported, data):
     """The returned bytes are the tree's blob: both SHA fields agree and the Git blob SHA-1 of the bytes matches."""
-    if not isinstance(blob, str) or not re.fullmatch('[0-9a-f]{40}', blob) or reported != blob:
-        return False
+    if not isinstance(blob, str) or reported != blob:
+        return False  # the SHA-1 comparison below also rejects a malformed or non-lowercase identity
     return hashlib.sha1(b'blob %d\x00' % len(data) + data).hexdigest() == blob
 
 

@@ -331,6 +331,19 @@ class InventoryTests(unittest.TestCase):
         self.assertNotEqual(result['inventory_sha256'], changed['inventory_sha256'],
                             'a change past the displayed prefix still changes the inventory identity')
 
+    def test_a_reference_from_several_sources_is_listed_once(self):
+        result, _ = report({'CONTRIBUTING.md': 'See [rules](https://example.org/contributing).',
+                            'docs/CONTRIBUTING.md': 'See [rules](https://example.org/contributing).'})
+        refs = [u for u in result['unassessed'] if u['what'] == 'https://example.org/contributing']
+        self.assertEqual(len(refs), 1)
+
+    def test_inventory_hash_uses_full_identities_of_unscanned_entries(self):
+        prefix = 'docs/policy/' + 'a' * 600
+        one, _ = report({prefix + '/x.pdf': '%PDF'})
+        two, _ = report({prefix + '/y.pdf': '%PDF'})
+        self.assertEqual([u['what'] for u in one['unassessed']], [u['what'] for u in two['unassessed']])
+        self.assertNotEqual(one['inventory_sha256'], two['inventory_sha256'])
+
     def test_links_to_scanned_sources_are_not_relisted(self):
         files = {'CONTRIBUTING.md': 'Follow the [AI Policy](https://github.com/acme/photos/blob/main/AI_POLICY.md) '
                                     'and [also](AI_POLICY.md) and [old](https://github.com/acme/photos/blob/v1/AI_POLICY.md).',
@@ -353,6 +366,18 @@ class InventoryTests(unittest.TestCase):
         result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
         self.assertEqual(result['sources_scanned'], [])
         self.assertEqual(result['unassessed'][0]['reason'], 'content did not match the pinned tree entry')
+
+    def test_inconsistent_response_metadata_is_not_trusted(self):
+        client = PolicyGitHub({'AI_POLICY.md': 'No LLM output.'})
+        original = client.request
+        def request(endpoint):
+            value = original(endpoint)
+            if '/contents/' in endpoint:
+                value['sha'] = '0' * 40  # correct bytes, contradictory metadata
+            return value
+        client.request = request
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        self.assertEqual(result['sources_scanned'], [])
 
     def test_malformed_tree_blob_identity_is_not_trusted(self):
         client = PolicyGitHub({'AI_POLICY.md': 'No LLM output.'})
@@ -499,7 +524,27 @@ class BoundTests(unittest.TestCase):
         self.assertTrue(all(len(item['path']) < policy.IDENTIFIER_CHARS for item in instructions))
         result, _ = report({}, instructions=instructions)
         self.assertLessEqual(len(json.dumps(result, ensure_ascii=True).encode()), policy.MAX_REPORT_BYTES)
-        self.assertTrue(any(item['limit'].startswith('report size') for item in result['limits_reached']))
+        limits = {item['limit'] for item in result['limits_reached']}
+        self.assertIn('report size: shortened paths', limits)
+        self.assertEqual(len(result['sources_scanned']), 60, 'shortening paths suffices; no source is dropped')
+        self.assertTrue(all(s['path_truncated'] for s in result['sources_scanned']))
+
+    def test_unlisted_sources_are_a_hiding_limit(self):
+        component = '\U0001f600' * 60
+        instructions = [{'path': f'{n:03d}/' + '/'.join([component] * 7) + '/AGENTS.md', 'sha256': '1' * 64,
+                         'untrusted_text': 'Build.'} for n in range(260)]
+        result, _ = report({}, instructions=instructions)
+        self.assertLessEqual(len(json.dumps(result, ensure_ascii=True).encode()), policy.MAX_REPORT_BYTES)
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertTrue(limits['report size: sources not listed']['hides_sources'])
+        self.assertTrue(result['limits_hide_sources'])
+        self.assertLess(len(result['sources_scanned']), 260)
+
+    def test_loaded_instruction_bytes_count_toward_the_scan_bound(self):
+        instructions = [{'path': f'docs/{n}/AGENTS.md', 'sha256': '1' * 64, 'untrusted_text': '中' * 50000}
+                        for n in range(7)]
+        result, _ = report({}, instructions=instructions)
+        self.assertIn('scanned bytes', {item['limit'] for item in result['limits_reached']})
 
     def test_adversarial_input_scans_in_linear_time(self):
         cases = ['ai not ' * 150000, ('<' * 5000 + 'a' * 100) * 100, '&#' * 300000, '[' * 300000 + '](',
@@ -557,6 +602,13 @@ class HiddenSourceTests(unittest.TestCase):
         limits = {item['limit']: item for item in result['limits_reached']}
         self.assertEqual(limits['policy files'], {'limit': 'policy files', 'not_reported': 1, 'hides_sources': True})
         self.assertTrue(result['limits_hide_sources'])
+
+    def test_inventory_hash_tracks_which_candidate_was_omitted(self):
+        base = {f'AI_POLICY_{n:02d}.md': 'x' for n in range(12)}
+        one, _ = report({**base, 'AI_POLICY_12.md': 'y'})
+        two, _ = report({**base, 'AI_POLICY_13.md': 'y'})
+        self.assertEqual([s['path'] for s in one['sources_scanned']], [s['path'] for s in two['sources_scanned']])
+        self.assertNotEqual(one['inventory_sha256'], two['inventory_sha256'])
 
     def test_byte_and_request_limits_name_their_omissions(self):
         files = {f'docs/{n}/CONTRIBUTING.md': 'word ' * 39000 for n in range(8)}
