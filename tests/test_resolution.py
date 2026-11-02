@@ -38,6 +38,8 @@ class RepositoryGitHub:
             return copy.deepcopy(self.overrides[endpoint])
         parts = endpoint.split('/')
         repo = '/'.join(parts[1:3])
+        if repo.split('?')[0] not in self.metadata:  # e.g. an owner .github repository read by the policy report
+            raise core.ProtocolError('api_error', 'GitHub read failed')
         if len(parts) == 3:
             return copy.deepcopy(self.metadata[repo])
         result = self.repos[repo].request(endpoint)

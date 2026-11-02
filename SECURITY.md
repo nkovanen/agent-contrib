@@ -21,8 +21,10 @@ security maintenance commitment.
 - Validation argv is data. `verify` never executes it. The host agent must inspect
   a checkout and its build scripts before running tests with its own tools.
 - Source approval, execution authority and publication authority are separate.
-  Policy v0 delegates approval to all accounts permitted to apply labels. Label actors are
-  not individually authenticated by that policy. The separate schema 0.2 route
+  Policy 0.1 checks that a configured label is currently present; it does not
+  verify who applied it. It delegates approval to every account permitted to
+  label issues. Public events name a labeling actor, but its approval authority
+  and its binding to the current label cannot be verified from public REST data (#9). The separate schema 0.2 route
   verifies the current personal credential's numeric identity and exact admin or
   maintain role; it does not turn a candidate into policy-approved work.
 - The schema 0.2 mandate and final sign-off are separate host assertions. Stdin,
@@ -58,7 +60,9 @@ build tooling: review the source and pin a trusted release or immutable commit.
 See the [installed workflow](agent_contribute/instructions.md) for exact limits.
 
 Optional reports are not additional authority. Ownership comments, author
-associations, AI-policy excerpts and observed CI results remain untrusted signals.
+associations, repository policy hints, observed CI results and signature observations
+remain untrusted signals. GitHub's "verified" commit status is not approval, and
+the CLI never runs gpg, ssh-keygen or other signature programs on a checkout.
 Incomplete observations are reported as such even when a separate verification
 stage succeeds. Evidence skeletons and generated PR descriptions are local files,
 not attestations that work ran or that publication is permitted. Text output is

@@ -38,6 +38,8 @@ def _pull_detail(repository, repository_id, number, source, issue_number, client
         remote.bad('pull request identity (different number returned)')
     base = core.require(pr.get('base'), dict, 'pull request base')
     name, base_id = remote.repository(base.get('repo'), 'pull request base repository')
+    base_ref = core.safe_text(remote.text(base.get('ref'), 'pull request base ref', nullable=True) or '', 200)
+    title = ' '.join(core.safe_text(remote.text(pr.get('title'), 'pull request title', nullable=True) or '', 1000).split())[:300]
     if name.casefold() != repository.casefold() or base_id != repository_id:
         remote.bad('pull request repository identity (differs from the timeline reference)')
     url = remote.pull_url(pr.get('html_url'), repository, number)
@@ -51,15 +53,16 @@ def _pull_detail(repository, repository_id, number, source, issue_number, client
     exact = ((source.casefold(), issue_number) in entry['references'] or
              (repository.casefold() == source.casefold() and issue_number in entry['local']))
     return {'repository': name, 'repository_id': base_id, 'number': number, 'url': core.safe_text(url, 500),
-            'state': state, 'draft': remote.flag(pr.get('draft'), 'pull request draft flag'), 'merged': merged,
+            'title': title, 'base_ref': base_ref, 'state': state, 'draft': remote.flag(pr.get('draft'), 'pull request draft flag'), 'merged': merged,
             'merged_at': merged_at, 'closed_at': closed_at, 'exact_reference': exact}
 
 
-def ownership_signals(source, number, client, now=None):
+def ownership_signals(source, number, client, now=None, *, max_pages=core.MAX_PAGES, max_pr_details=MAX_PR_DETAILS):
+    """The caps bound reads for discover --check-top; reaching either one makes the report incomplete."""
     now = now or dt.datetime.now(dt.timezone.utc)
     errors = []
-    timeline = core.paginate(client, f'repos/{source}/issues/{number}/timeline', key=_event_key)
-    comments = core.paginate(client, f'repos/{source}/issues/{number}/comments')
+    timeline = core.paginate(client, f'repos/{source}/issues/{number}/timeline', key=_event_key, max_pages=max_pages)
+    comments = core.paginate(client, f'repos/{source}/issues/{number}/comments', max_pages=max_pages)
     errors += timeline['errors'] + comments['errors']
     referenced, assignments, connections, commits = {}, [], [], []
     for event in timeline['items']:
@@ -92,9 +95,9 @@ def ownership_signals(source, number, client, now=None):
             errors.append('Malformed timeline event: ' + str(exc))
     pulls = []
     targets = sorted(referenced.values(), key=lambda item: (item[0].casefold(), item[2]))
-    if len(targets) > MAX_PR_DETAILS:
-        errors.append(f'More than {MAX_PR_DETAILS} cross-referenced PRs; details are incomplete')
-    for name, repo_id, pr_number in targets[:MAX_PR_DETAILS]:
+    if len(targets) > max_pr_details:
+        errors.append(f'More than {max_pr_details} cross-referenced PRs; details are incomplete')
+    for name, repo_id, pr_number in targets[:max_pr_details]:
         try:
             pulls.append(_pull_detail(name, repo_id, pr_number, source, number, client))
         except (core.ProtocolError, ValueError) as exc:
@@ -118,7 +121,9 @@ def ownership_signals(source, number, client, now=None):
                                'age_days': age, 'stale': age is None or age > STALE_DAYS,
                                'untrusted_excerpt': core.safe_text(body[start:start + 280], 280)})
                 break
-    fixed = [pr for pr in pulls if pr['merged'] and pr['exact_reference']]
+    # Only a merge into the issue's own repository can have fixed it; elsewhere it is a downstream reference.
+    fixed = [pr for pr in pulls if pr['merged'] and pr['exact_reference'] and pr['repository'].casefold() == source.casefold()]
+    downstream = [pr for pr in pulls if pr['merged'] and pr['exact_reference'] and pr not in fixed]
     rejected = [pr for pr in pulls if pr['state'] == 'closed' and not pr['merged'] and pr['exact_reference']]
     open_refs = [pr for pr in pulls if pr['state'] == 'open']
     preview = ['Open cross-referenced PR: ' + pr['url'] for pr in open_refs]
@@ -131,7 +136,8 @@ def ownership_signals(source, number, client, now=None):
                       'pull_details': len(pulls)},
             'cross_referenced_prs': pulls, 'assignment_history': assignments, 'connected_events': connections,
             'referencing_commits': commits, 'claims': claims,
-            'resolution_signals': {'possibly_already_fixed': fixed, 'rejected_approaches': rejected,
+            'resolution_signals': {'possibly_already_fixed': fixed, 'downstream_references': downstream,
+                                   'rejected_approaches': rejected,
                                    'status': 'complete' if not errors else 'unknown'},
             'blocking_if_adopted': preview,
             'notice': 'Report only. These signals never change approval, overlap or readiness gates, and comment '

@@ -39,6 +39,8 @@ class FakeGitHub:
         if any(key in endpoint for key in self.failed):
             raise core.ProtocolError('api_error', 'GitHub read failed')
         path = endpoint.split('?')[0]
+        if path.split('/')[2:3] == ['.github']:  # no owner .github repository (policy report reads)
+            raise core.ProtocolError('api_error', 'GitHub read failed')
         if path == 'repos/acme/photos':
             return {'full_name': 'acme/photos', 'default_branch': 'main', 'fork': False, 'has_issues': True}
         if path == 'repos/human/photos':
@@ -80,6 +82,9 @@ class FakeGitHub:
 def ready_contract():
     client = FakeGitHub({'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'], 'label_authority': 'repository-label-permission'}, ['agent-ok'])
     task = core.prepare(core.inspect_issue('acme/photos#12', client))
+    # A contract reviewed before prepare added the pending ai-policy-review prerequisite: existing contracts and
+    # their verify goldens are unchanged. New contracts must satisfy or visibly remove it (tests/test_policy.py).
+    task['prerequisites'] = []
     task.update(status='reviewed', objective='Reject out-of-bounds thumbnails',
                 behavior_criteria=[{'id': 'bounds', 'description': 'Malformed dimensions return an error'}],
                 code_locations=['src/thumb.rs'], constraints=['Preserve valid thumbnails'],
@@ -552,6 +557,24 @@ class VerificationTests(unittest.TestCase):
             client.failed.add('/compare/')
             self.assertFalse(core.verify(task, evidence, tmp, client)['evidence_valid'])
 
+    def test_base_errors_name_the_base_and_the_commit_it_was_compared_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, git = evidence_checkout(tmp)
+            client.commit = 'c' * 40
+            base = evidence['base_commit']
+            client.compare_status = 'ahead'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is ahead of '
+                          f'acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.compare_status = 'diverged'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is diverged '
+                          f'from acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.failed.add('/compare/')
+            self.assertIn(f'Could not authenticate evidence base against source default-branch history: base {base} '
+                          f'compared with acme/photos default branch main at {"c" * 40}: GitHub read failed',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+
     def test_git_commit_utc_z_timestamp_preserves_evidence_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, client, evidence, git = evidence_checkout(tmp)
@@ -561,11 +584,11 @@ class VerificationTests(unittest.TestCase):
 
             patched = []
 
-            def read_git(directory, *args):
+            def read_git(directory, *args, **options):
                 if args == ('show', '-s', '--format=%cI', evidence['git_head']):  # the captured HEAD (R4-05)
                     patched.append(args)
                     return utc_timestamp
-                return original_git_read(directory, *args)
+                return original_git_read(directory, *args, **options)
 
             with patch.object(core, 'git_read', side_effect=read_git):
                 result = core.verify(task, evidence, tmp, client)

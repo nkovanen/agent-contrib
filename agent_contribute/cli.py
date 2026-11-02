@@ -9,8 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import (aipolicy, audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, prbody,
-               remote, textfmt, workspace, __version__)
+from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+               prbody, remote, signals, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -78,6 +78,12 @@ def prevalidate(args):
     """The single local argument check, run before any GitHub read (including the optional rate_limit read)."""
     if args.command == 'discover':
         args.names = discover_names(args)
+        if args.check_top is not None and (not args.signals or not 1 <= args.check_top <= signals.CHECK_TOP_MAX or
+                                           len(args.names) != 1):
+            raise core.ProtocolError('usage', f'--check-top needs --signals, one repository and N from 1 to '
+                                     f'{signals.CHECK_TOP_MAX}')
+        if args.repo_dir is not None and len(args.names) != 1:
+            raise core.ProtocolError('usage', '--repo-dir with discover supports one repository')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
     elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
         core.parse_issue(args.reference)
@@ -132,13 +138,19 @@ def main(argv=None):
                              help='Add report-only code-location, clarity, activity and maintainer signals')
             sub.add_argument('--responsiveness', action='store_true',
                              help='Add a report-only repository responsiveness report from one read of recently closed PRs')
+            sub.add_argument('--check-top', type=int, metavar='N',
+                             help='With --signals and one repository: read ownership signals (one timeline and comment '
+                                  'page, at most 4 PR details) for the top N (1-5) and re-rank only those N; report only')
             sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
+            sub.add_argument('--repo-dir', metavar='CHECKOUT',
+                             help='One repository only: report issues referenced by local commits not in the source '
+                                  'default branch (with --signals they rank below other candidates); report only')
         else:
             sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
             sub.add_argument('--ai-policy', action='store_true',
-                             help='Add located AI-contribution policy excerpts from the loaded instructions')
+                             help='Syntax-compatible only: accepted and ignored; inspect always adds repository_policy')
         if command == 'prepare':
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
@@ -162,8 +174,14 @@ def main(argv=None):
                           'not proof of human consent')
     sub.add_argument('--observe-ci', action='store_true',
                      help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub.add_argument('--observe-signatures', action='store_true',
+                     help='Add report-only commit-signature observations for the evidence range; never verifies '
+                          'locally or changes the exit status')
     sub = commands.add_parser('authorization-request',
                               help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub = commands.add_parser('lint', help='Offline check of a contract against its schema and the reviewed-contract '
+                                           'rules; no GitHub or Git reads')
     sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
@@ -205,7 +223,7 @@ def main(argv=None):
         cache.configure(args.cache)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'scope-check', 'evidence'):
+        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence'):
             raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
         prevalidate(args)
         if args.report_budget:
@@ -214,14 +232,16 @@ def main(argv=None):
                 budget.require_remaining(before, args.min_remaining)
         if args.command == 'instructions':
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
-                      'supported_host_context_versions': ['0.1'],
-                      'host_authorization': 'host-asserted; actual human event must be retained outside worker control',
+                      'supported_host_context_versions': list(core.HOST_CONTEXT_VERSIONS),
+                      'host_authorization': ('host-asserted; actual human event must be retained outside worker control; '
+                                             'host-context 0.2 overlap dispositions waive only bound topical overlaps'),
                       'workflow_markdown': importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8'),
                       'resources': {'task_schema': 'agent_contribute/task.schema.json',
                                     'evidence_schema': 'agent_contribute/evidence.schema.json',
                                     'task_schema_0.2': 'agent_contribute/schemas/0.2/task.schema.json',
                                     'evidence_schema_0.2': 'agent_contribute/schemas/0.2/evidence.schema.json',
                                     'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json',
+                                    'host_context_schema_0.2': 'agent_contribute/schemas/host-context/0.2.schema.json',
                                     'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
                       'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}
@@ -235,6 +255,9 @@ def main(argv=None):
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
+        elif args.command == 'lint':
+            result = core.lint(core.read_json(args.contract))
+            code = 0 if result['reviewed'] else 1
         elif args.command == 'scope-check':
             result = workspace.scope_check(core.read_json(args.contract), args.repo_dir, args.base)
             code = 0 if result['within_scope'] else 1
@@ -261,16 +284,6 @@ def main(argv=None):
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
-        elif args.command == 'inspect' and (args.ownership or args.ai_policy):
-            client = core.GitHub()
-            result = core.inspect_issue(args.reference, client)
-            code = 0 if result['complete'] and 'source' in result else 1
-            if 'source' in result and args.ownership:
-                result['ownership_signals'] = ownership.ownership_signals(
-                    result['issue_source_repository'], result['source']['issue'], client)
-                code = code or (0 if result['ownership_signals']['complete'] else 1)
-            if 'source' in result and args.ai_policy:
-                result['ai_policy'] = aipolicy.ai_policy_excerpts(result)
         elif args.command == 'ownership':
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
@@ -282,22 +295,45 @@ def main(argv=None):
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
-            names = args.names
-            result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
+            names, client = args.names, core.GitHub()
+            if args.check_top is not None:
+                options['check_top'] = args.check_top
+            if args.repo_dir is not None:
+                options['repo_dir'] = args.repo_dir
+            result = (core.discover(names[0], client, **options) if len(names) == 1 else
+                      multi.discover_many(names, client, **options))
             code = 0 if result['complete'] else 1
+            # An incomplete opted-in report is a nonzero exit, as for --responsiveness.
+            if args.check_top is not None:
+                code = code or (0 if result.get('top_check', {}).get('complete') else 1)
+            if args.repo_dir is not None:
+                code = code or (0 if result['local_work']['complete'] else 1)
+            for single in result.get('repositories', [result]):
+                if 'commit' in single:  # report only: never part of completeness or the exit code
+                    single['repository_policy'] = policy.report(single['repository'], single['commit'],
+                                                                single['instructions'], client)
             if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
                 reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
                 code = code or (0 if all(r and r['complete'] for r in reports) else 1)
         elif args.command in ('inspect', 'prepare'):
-            result = core.inspect_issue(args.reference)
+            client = core.GitHub()
+            result = core.inspect_issue(args.reference, client)
             code = 0 if result['complete'] else 1
+            # Default-on, report only: the policy report never changes the result, the contract or the exit code.
+            report = policy.for_inspected(result, client) if 'source' in result else None
+            if args.command == 'inspect' and 'source' in result:
+                if args.ownership:
+                    result['ownership_signals'] = ownership.ownership_signals(
+                        result['issue_source_repository'], result['source']['issue'], client)
+                    code = code or (0 if result['ownership_signals']['complete'] else 1)
+                result['repository_policy'] = report
             if args.command == 'prepare' and 'source' in result:
                 task = core.prepare(result) if args.schema_version == '0.1' else core.prepare(result, schema_version=args.schema_version)
                 write_new_json(args.output, task)
                 context = {k: result[k] for k in ('requested_repository', 'issue_source_repository',
                                                   'proposed_target_repository', 'resolution_provenance', 'reference')}
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
-                          'warning': 'Draft saved; inspect and review before execution'}
+                          'warning': 'Draft saved; inspect and review before execution', 'repository_policy': report}
         else:
             task, evidence = args.task, args.evidence_data
             version = task.get('schema_version') if isinstance(task, dict) else None
@@ -317,6 +353,8 @@ def main(argv=None):
                 code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
             if args.observe_ci and result.get('schema_valid') is True:
                 result['ci_observation'] = ci.observe(task, evidence)  # report only; code is already decided
+            if args.observe_signatures and result.get('schema_valid') is True:
+                result['signature_observation'] = signatures.observe(task, evidence, args.repo_dir)  # report only
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:

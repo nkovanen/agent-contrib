@@ -23,12 +23,21 @@ from . import cache
 
 VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
+HOST_CONTEXT_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
 SHA = re.compile('[0-9a-f]{40}')
 GENERIC_LABELS = {'bug', 'enhancement', 'help wanted', 'good first issue', 'documentation',
                   'question', 'roadmap', 'backlog', 'in progress', 'duplicate', 'invalid',
                   'wontfix', "won't fix", 'needs info', 'fixed'}
+# Every newly prepared contract starts with the installed workflow's policy review as a pending prerequisite,
+# so dropping it is a visible contract edit; existing contracts are not reinterpreted.
+POLICY_REVIEW_PREREQUISITE = {
+    'id': 'ai-policy-review',
+    'description': ('Repository policy review (installed workflow): read repository_policy and every source it lists; '
+                    'record each disposition, the ledger reference and inventory_sha256 here. Keep pending while '
+                    'anything is unresolved; blocked when the source project refuses this work.'),
+    'status': 'pending', 'evidence': ''}
 EXCLUDED_LABELS = {'duplicate', 'invalid', 'wontfix', "won't fix", 'in progress', 'needs info', 'fixed'}
 
 
@@ -114,19 +123,23 @@ def safe_text(value, limit=100000):
 
 class GitHub:
     """Only fixed GET endpoints; no gh aliases, shell, writes, or remote argv."""
-    def request(self, endpoint):
+    def request_once(self, endpoint):
+        """One transport attempt, no retry: for callers that bound and report their own GitHub reads."""
+        return self.request(endpoint, attempts=1)
+
+    def request(self, endpoint, attempts=3):
         store = cache.active()  # opt-in --cache: verified file contents at a pinned commit only
         if store is not None:
             hit = store.lookup(endpoint)
             if hit is not None:
                 return hit
-        value = self._live(endpoint)
+        value = self._live(endpoint, attempts)
         if store is not None:
             store.observe(endpoint, value)
         return value
 
-    def _live(self, endpoint):
-        for attempt in range(3):
+    def _live(self, endpoint, attempts):
+        for attempt in range(attempts):
             try:
                 env = dict(os.environ, GH_PROMPT_DISABLED='1', GH_NO_UPDATE_NOTIFIER='1')
                 env.pop('GH_DEBUG', None)
@@ -146,7 +159,7 @@ class GitHub:
                     except UnicodeError as exc:
                         raise ProtocolError('api_error', 'GitHub returned invalid UTF-8') from exc
                 transient = bool(re.search(r'(?i)\b(429|500|502|503|504)\b|rate.limit|secondary.limit', error))
-                if transient and attempt < 2:
+                if transient and attempt < attempts - 1:
                     time.sleep(attempt + 1)
                     continue
                 # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
@@ -164,11 +177,11 @@ class GitHub:
         return paginate(self, endpoint)
 
 
-def paginate(client, endpoint, key=None):
+def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
     """key derives an identity for endpoints whose items lack id/number/name (timeline events)."""
     items, errors, seen = [], [], set()
     page_count = 0
-    for page in range(1, MAX_PAGES + 1):
+    for page in range(1, max_pages + 1):
         separator = '&' if '?' in endpoint else '?'
         try:
             data = client.request(f'{endpoint}{separator}per_page=100&page={page}')
@@ -192,7 +205,7 @@ def paginate(client, endpoint, key=None):
             errors.append(str(exc))
             break
     else:
-        errors.append('Pagination reached the 40-page limit')
+        errors.append(f'Pagination reached the {max_pages}-page limit')
     return {'items': items, 'complete': False, 'pages': page_count, 'errors': errors}
 
 
@@ -534,9 +547,15 @@ def inspect_issue(reference, client=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False):
+def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None):
     client = client or GitHub()
-    result, snapshot = discover_with_snapshot(repository, client, signals=signals)
+    result, snapshot = discover_with_snapshot(repository, client, signals=signals, assignees=bool(check_top))
+    if repo_dir is not None:
+        local_work(result, snapshot, repo_dir, signals)
+    # Checked after the local re-sort, so locally referenced issues are not spent from the top N.
+    if check_top and signals and snapshot is not None:
+        from .signals import check_top as recheck
+        result['top_check'] = recheck(result, client, check_top, dt.datetime.fromisoformat(result['fetched_at']))
     if responsiveness:
         from .signals import responsiveness as report
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
@@ -545,7 +564,49 @@ def discover(repository, client=None, *, signals=False, responsiveness=False):
     return result
 
 
-def discover_with_snapshot(repository, client=None, *, signals=False):
+def local_work(result, snapshot, repo_dir, signals):
+    """F12, report only: with --signals, locally referenced issues move below every other candidate that is not
+    excluded or overlapping (known work below unknown); scores, gates and exclusions are unchanged."""
+    from .workspace import local_issue_references, LOCAL_NOTICE
+    if snapshot is None:
+        report = {'complete': False, 'head': None, 'base': None, 'commits_scanned': 0, 'commit_limit': 0, 'issues': [],
+                  'errors': ['Discovery did not resolve a source snapshot; the checkout was not read'],
+                  'notice': LOCAL_NOTICE}
+    else:
+        report = local_issue_references(repo_dir, snapshot['repository'], snapshot['commit'])
+    result['local_work'] = report
+    if not signals or snapshot is None:
+        return
+    commits = {item['number']: item['commits'] for item in report['issues']}
+    for issue in result['issues']:
+        found = commits.get(issue['number'])
+        issue['signals']['local_work'] = (
+            {'value': 'referenced', 'commits': found, 'explanation': f'Referenced by {len(found)} local commit(s) not in '
+             'the source default branch; the work may already exist'} if found else
+            {'value': 'none' if report['complete'] else 'unknown', 'commits': [],
+             'explanation': 'No local reference found' if report['complete'] else 'The checkout was not read completely'})
+    result['issues'].sort(key=lambda item: issue_order(item, True))
+    result['ordering'] = KNOWN_BAD_ORDERING
+
+
+KNOWN_BAD_ORDERING = ('exclusions, overlaps, known bad (locally referenced, or demoted by --check-top), low '
+                      'likelihood, then higher signal score, then issue number')
+
+
+def known_bad(item):
+    """Evidence that the work is done or taken: a local commit reference (--repo-dir) or a --check-top demotion."""
+    return bool(item.get('top_check', {}).get('demotions') or
+                (item.get('signals') or {}).get('local_work', {}).get('value') == 'referenced')
+
+
+def issue_order(item, signals):
+    # One key for every ordering: known-bad issues go below every other candidate, never below blocked ones.
+    return (bool(item['exclusions']), bool(item['duplicates']), known_bad(item),
+            item['ranking']['success_likelihood']['value'] == 'low',
+            -item['signals']['score'] if signals else 0, item['number'])
+
+
+def discover_with_snapshot(repository, client=None, *, signals=False, assignees=False):
     """The snapshot is internal context for read-only reports such as audit; it is never output."""
     repository = parse_repository(repository)
     client = client or GitHub()
@@ -587,13 +648,14 @@ def discover_with_snapshot(repository, client=None, *, signals=False):
                 from .signals import issue_signals
                 issues[-1]['signals'] = issue_signals(item, snapshot['blob_paths'],
                                                       dt.datetime.fromisoformat(snapshot['fetched_at']))
+                if assignees:  # --check-top input only, so plain --signals output is unchanged
+                    from .signals import assignees as current_assignees
+                    issues[-1]['signals']['assignees'] = current_assignees(item)
             if not inspected['complete']:
                 errors.extend(inspected['errors'])
         except ProtocolError as exc:
             errors.append(str(exc))
-    issues.sort(key=lambda item: (bool(item['exclusions']), bool(item['duplicates']),
-                                  item['ranking']['success_likelihood']['value'] == 'low',
-                                  -item['signals']['score'] if signals else 0, item['number']))
+    issues.sort(key=lambda item: issue_order(item, signals))
     extra = {'ordering': 'exclusions, overlaps, low likelihood, then higher signal score, then issue number'} if signals else {}
     return {**context, **extra, 'schema_version': VERSION, 'repository': source, 'commit': snapshot['commit'],
             'fetched_at': snapshot['fetched_at'], 'complete': not errors, 'errors': sorted(set(errors)),
@@ -617,7 +679,8 @@ def prepare(inspected, schema_version='0.1', client=None):
     return {'schema_version': VERSION, 'status': 'draft', 'source': inspected['source'],
             'scope': {'allowed_paths': [], 'prohibited_paths': []},
             'objective': '', 'behavior_criteria': [], 'code_locations': [], 'constraints': [],
-            'prohibited_changes': [], 'validation': [], 'prerequisites': [], 'approval': inspected['approval'],
+            'prohibited_changes': [], 'validation': [], 'prerequisites': [dict(POLICY_REVIEW_PREREQUISITE)],
+            'approval': inspected['approval'],
             'execution': {'mode': 'pending', 'target_repository': target, 'authorized_by': '', 'authorization_evidence': ''},
             'discovery': {'complete': inspected['complete'], 'duplicate_prs': inspected['duplicates'],
                           'warnings': (inspected['warnings'] + inspected['errors'] + inspected['exclusions'])[:100]},
@@ -691,12 +754,20 @@ def schema_errors(value, schema, path='$', depth=0, root=None):
 
 
 def bundled_schema(name, version='0.1'):
-    if name not in ('task', 'evidence', 'host-context') or (version not in SUPPORTED_SCHEMA_VERSIONS or
-            (name == 'host-context' and version != '0.1')):
+    supported = HOST_CONTEXT_VERSIONS if name == 'host-context' else SUPPORTED_SCHEMA_VERSIONS
+    if name not in ('task', 'evidence', 'host-context') or version not in supported:
         raise ProtocolError('unsupported_schema', 'Unsupported schema resource or version')
     path = (f'schemas/host-context/{version}.schema.json' if name == 'host-context' else
             name + '.schema.json' if version == '0.1' else f'schemas/{version}/{name}.schema.json')
     return json.loads(importlib.resources.files('agent_contribute').joinpath(path).read_text('utf-8'))
+
+
+def host_context_schema(context):
+    """The schema named by the document's own exact version. Anything else is checked against 0.1,
+    whose schema_version constant then rejects it, so no unknown version is ever accepted."""
+    version = context.get('schema_version') if isinstance(context, dict) else None
+    exact = isinstance(version, str) and version in HOST_CONTEXT_VERSIONS
+    return bundled_schema('host-context', version if exact else '0.1')
 
 
 def validate_contract(contract):
@@ -716,28 +787,40 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args):
+def git_read(directory, *args, index_file=None, raw=False, timeout=15, input=None):
+    """raw=True returns Git's exact output bytes: no decoding and no newline conversion (object parsing).
+    input, when given, is sent on stdin (object IDs for cat-file --batch-check); otherwise stdin is closed."""
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
+        if index_file is not None:
+            env['GIT_INDEX_FILE'] = index_file
         # A missing object must be a read error, never a fetch: GIT_NO_LAZY_FETCH (Git 2.44+) and
         # protocol.allow=never; promisor config is refused by require_safe_config for older Git.
         env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_OPTIONAL_LOCKS='0',
                    GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull, GIT_NO_LAZY_FETCH='1',
-                   GIT_PROTOCOL_FROM_USER='0', GIT_TERMINAL_PROMPT='0')
+                   GIT_PROTOCOL_FROM_USER='0', GIT_TERMINAL_PROMPT='0', GIT_ATTR_NOSYSTEM='1')
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
                                  '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',
+                                 '-c', 'core.attributesFile=' + os.devnull,
                                  # Full stat and mode checks: relaxed checkout settings could hide an edit.
                                  '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
-                                 '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
-                                capture_output=True, text=not nul_delimited, timeout=15, shell=False)
+                                 # POSIX has symlinks: a file standing in for a tracked symlink is a change.
+                                 *(('-c', 'core.symlinks=true') if os.name == 'posix' else ()),
+                                 '-C', str(directory), *args], env=env, capture_output=True,
+                                text=not (nul_delimited or raw), timeout=timeout, shell=False,
+                                **({'stdin': subprocess.DEVNULL} if input is None else {'input': input}))
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
+        if raw:
+            return result.stdout
         # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
         return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except subprocess.TimeoutExpired as exc:
+        raise ProtocolError('git_timeout', 'Could not inspect evidence checkout') from exc
+    except OSError as exc:
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
 
 
@@ -749,24 +832,44 @@ UNSAFE_CONFIG = re.compile(r'filter\..+|gpg(\..+)?\.program|diff\.external|diff\
 
 
 def _case_insensitive(directory):
+    """Only a real filesystem property counts: a .GIT symlink or mount is a second directory entry, which a
+    case-insensitive filesystem cannot list next to .git."""
     try:
-        return os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
+        variants = [name for name in os.listdir(directory) if name.lower() == '.git']
+        return variants == ['.git'] and os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
     except OSError:
+        return False
+
+
+def _config_true(directory, key):
+    """Git's own effective boolean (last value wins, empty is false); unset or unreadable reads as false."""
+    try:
+        return git_read(directory, 'config', '--type=bool', '--get', key) == 'true'
+    except ProtocolError:
         return False
 
 
 def require_safe_config(directory):
     """Effective checkout config, includes and includeIf resolved; listing it executes nothing."""
     entries = git_read(directory, 'config', '--list', '--includes', '--show-scope', '-z').split('\0')
-    for scope, entry in zip(entries[::2], entries[1::2]):
-        key, _, value = entry.partition('\n')
-        key = key.lower()
-        # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
-        case_hiding = (key == 'core.ignorecase' and value.lower() not in ('false', 'no', 'off', '0') and
-                       not _case_insensitive(directory))
-        if scope != 'command' and (UNSAFE_CONFIG.fullmatch(key) or case_hiding):
-            raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(key, 200)}, which a read '
-                                'could run as a program or use to hide changes; remove it or use a fresh clone')
+    keys = [entry.split('\n', 1)[0].lower() for scope, entry in zip(entries[::2], entries[1::2]) if scope != 'command']
+    unsafe = [key for key in keys if UNSAFE_CONFIG.fullmatch(key)]
+    # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
+    if _config_true(directory, 'core.ignorecase') and not _case_insensitive(directory):
+        unsafe.append('core.ignorecase')
+    if unsafe:
+        raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(unsafe[0], 200)}, which a read '
+                            'could run as a program or use to hide changes; remove it or use a fresh clone')
+    # --attr-source does not cover $GIT_DIR/info/attributes, so any rule there is refused.
+    attributes = Path(directory, git_read(directory, 'rev-parse', '--git-path', 'info/attributes'))
+    if attributes.exists() or attributes.is_symlink():
+        try:
+            rules = [line.strip() for line in read_regular(attributes, MAX_BYTES).decode('utf-8').splitlines()]
+        except (OSError, UnicodeError):
+            rules = ['unreadable']
+        if any(rule and not rule.startswith('#') for rule in rules):
+            raise ProtocolError('unsafe_git_attributes', 'Checkout sets local Git attributes in info/attributes, '
+                                'which could change how files are compared; remove them or use a fresh clone')
 
 
 def require_worktree_root(directory):
@@ -804,6 +907,102 @@ def shallow_or(directory, error):
                          'fetch more history (git fetch --unshallow or --deepen) and retry') if shallow else error
 
 
+# Re-hashing every tracked byte needs time proportional to size; assume at least 32 MiB/s.
+CONTENT_TIMEOUT_FLOOR, CONTENT_TIMEOUT_CEILING, CONTENT_HASH_RATE = 15, 900, 32 * 1024 * 1024
+
+
+def content_timeout(tracked_bytes):
+    return min(CONTENT_TIMEOUT_CEILING, CONTENT_TIMEOUT_FLOOR + tracked_bytes // CONTENT_HASH_RATE)
+
+
+def _scratch_root(directory):
+    """A temporary root whose real path is outside the worktree and its Git directories; TMPDIR may point inside."""
+    forbidden = [Path(directory).resolve()] + [
+        Path(directory, git_read(directory, 'rev-parse', option)).resolve()
+        for option in ('--absolute-git-dir', '--git-common-dir')]
+    for candidate in (tempfile.gettempdir(), '/tmp', '/var/tmp'):
+        root = Path(candidate).resolve()
+        if (root.is_dir() and os.access(root, os.W_OK | os.X_OK) and
+                not any(root == path or root.is_relative_to(path) for path in forbidden)):
+            return str(root)
+    raise ProtocolError('unsafe_temp_dir', 'No temporary directory outside the checkout is available; '
+                        'set TMPDIR to a directory outside it')
+
+
+def _hash_chunks(paths, limit=500, size=60000):
+    chunk, used = [], 0
+    for path in paths:
+        if chunk and (len(chunk) >= limit or used + len(path) > size):
+            yield chunk
+            chunk, used = [], 0
+        chunk.append(path)
+        used += len(path) + 1
+    if chunk:
+        yield chunk
+
+
+def _regular_file(directory, path):
+    try:
+        return stat.S_ISREG(os.lstat(Path(directory, path)).st_mode)
+    except OSError:
+        return False
+
+
+def worktree_changes(directory, commit):
+    """Tracked paths whose worktree bytes are neither the committed blob nor exactly what checkout writes for it.
+
+    A fresh temporary index outside the checkout has no stat cache, so its status hashes every tracked file and
+    reports deletions, type and mode changes. Status compares after clean conversion, which ident, eol and
+    working-tree-encoding can use to hide an edit, so every other regular file is also hashed raw
+    (hash-object --no-filters). A raw mismatch counts only if the bytes also differ from the commit's checkout
+    output (cat-file --filters), so a legitimately converted checkout stays clean. Attributes come only from the
+    checkout's .gitattributes files (a changed one is itself reported): info/attributes is refused,
+    core.attributesFile and system attributes are ignored, and autocrlf/eol are forced."""
+    blobs = []
+    for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0'):
+        if entry:
+            meta, path = entry.split('\t', 1)
+            mode, kind, oid, size = meta.split()
+            if kind == 'blob':
+                blobs.append((mode, oid, int(size), path))
+    tracked = sum(size for _, _, size, _ in blobs)
+    budget = content_timeout(tracked)
+
+    def timed(*args, **options):
+        try:
+            return git_read(directory, '-c', 'core.autocrlf=false', '-c', 'core.eol=lf', *args,
+                            timeout=budget, **options)
+        except ProtocolError as exc:
+            if exc.code != 'git_timeout':
+                raise
+            raise ProtocolError('checkout_too_large_for_timeout', f'Hashing {tracked} tracked bytes did not finish '
+                                f'within {budget} s; the checkout is too large for the content check') from None
+
+    try:
+        scratch_dir = tempfile.TemporaryDirectory(dir=_scratch_root(directory))
+    except OSError:
+        raise ProtocolError('temp_dir_error', 'Could not create a temporary directory outside the checkout; '
+                            'set TMPDIR to a writable directory outside it') from None
+    with scratch_dir as scratch:
+        index = os.path.join(scratch, 'index')
+        git_read(directory, 'read-tree', commit, index_file=index)
+        listed = timed('status', '--porcelain', '-z', '--no-renames', '--untracked-files=no', '--ignore-submodules=all',
+                       index_file=index)
+    # Porcelain v1 is 'XY path'; Y is the worktree against that index.
+    changed = {entry[3:] for entry in listed.split('\0') if len(entry) > 3 and entry[1] != ' '}
+    expected = {path: oid for mode, oid, _, path in blobs
+                if mode in ('100644', '100755') and path not in changed and _regular_file(directory, path)}
+    for chunk in _hash_chunks(sorted(expected)):
+        actual = timed('hash-object', '--no-filters', '--', *chunk).split('\n')
+        if len(actual) != len(chunk):
+            raise ProtocolError('git_error', 'Git evidence checkout read failed')
+        for path, oid in zip(chunk, actual):
+            if oid != expected[path] and Path(directory, path).read_bytes() != timed(
+                    'cat-file', '--filters', f'{commit}:{path}', raw=True):
+                changed.add(path)
+    return changed
+
+
 def current_head(directory):
     """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
     names when the current branch is unborn or deleted, so later reads use this object ID instead."""
@@ -818,6 +1017,8 @@ def current_head(directory):
 
 
 def implementation_paths(directory, base, head=None):
+    # Commit-to-commit only: no worktree is read, so no submodule command can start, and =none keeps gitlink
+    # paths visible to the scope check. Every index or worktree diff/status uses --ignore-submodules=all.
     head = head or current_head(directory)
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
                                       '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, head).split('\0') if path]
@@ -841,6 +1042,15 @@ def scope_violations(scope, paths):
     return violations
 
 
+def base_relation(task, base, tip, status=None):
+    """Names the offending base and what it was compared with; the SHAs are schema/API-validated, the rest sanitized."""
+    where = f'{safe_text(task["source"]["repository"], 200)} default branch {safe_text(task["source"]["default_branch"], 200)} at {tip}'
+    if status is None:
+        return f'base {base} compared with {where}'
+    phrase = {'ahead': 'is ahead of', 'diverged': 'is diverged from'}.get(status) if isinstance(status, str) else None
+    return f'base {base} {phrase or "has comparison status " + safe_text(str(status), 40) + " against"} {where}'
+
+
 def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None,
                    schema_version='0.1', attestations=('independent_review', 'human_signoff')):
     errors = schema_errors(evidence, bundled_schema('evidence', schema_version))
@@ -857,9 +1067,11 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
             # GitHub compares HEAD (evidence base) against BASE (observed upstream tip).
             # Only behind/identical proves the evidence base belongs to upstream history.
             if comparison.get('status') not in ('behind', 'identical'):
-                errors.append('Evidence base is not in current source default-branch history')
-        except ProtocolError:
-            errors.append('Could not authenticate evidence base against source default-branch history')
+                errors.append('Evidence base is not in current source default-branch history: ' +
+                              base_relation(task, evidence['base_commit'], current_commit, comparison.get('status')))
+        except ProtocolError as exc:
+            errors.append('Could not authenticate evidence base against source default-branch history: ' +
+                          base_relation(task, evidence['base_commit'], current_commit) + ': ' + str(exc))
     if evidence['contract_sha256'] != digest:
         errors.append('Evidence contract hash is stale')
     if not evidence['worktree_clean']:
@@ -874,7 +1086,7 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
         dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
-                 untracked_paths(directory))
+                 untracked_paths(directory) or worktree_changes(directory, head))
         try:  # every read that needs the base commit and its history
             if has_gitlink(directory, head, evidence['base_commit']):
                 errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
@@ -996,6 +1208,20 @@ def reviewed_contract_errors(task, schema_version):
         errors.append('Prepared discovery is incomplete or has unresolved duplicates')
     errors.extend(prerequisite_errors(task['prerequisites']))
     return errors
+
+
+def lint(task):
+    """Offline contract checks (F17): the bundled schema, then the reviewed-contract rules verify applies first."""
+    errors = validate_contract(task)
+    version = task.get('schema_version') if isinstance(task, dict) else None
+    result = {'schema_version': safe_text(version, 20) if isinstance(version, str) else None, 'schema_valid': not errors,
+              'schema_errors': errors, 'review_errors': [], 'reviewed': False, 'contract_sha256': None,
+              'network': 'No GitHub or Git reads. Live source, approval, overlap, authorization and evidence checks '
+                         'still need verify.'}
+    if not errors:
+        result.update(contract_sha256=canonical_hash(task), review_errors=reviewed_contract_errors(task, version))
+        result['reviewed'] = not result['review_errors']
+    return result
 
 
 def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None):

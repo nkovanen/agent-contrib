@@ -1,0 +1,15 @@
+name: Agent Contrib passive verification
+description: Report-only check that an agent PR's contract and evidence describe this PR. Grants nothing and writes only the job summary.
+inputs:
+  checkout-path:
+    description: Workspace-relative path of the PR head checkout (actions/checkout with ref set to the PR head SHA)
+    required: false
+    default: pr-head
+runs:
+  using: composite
+  steps:
+    - name: Check the PR contract and evidence
+      shell: bash
+      env:
+        AGENT_CONTRIB_CHECKOUT: ${{ inputs.checkout-path }}
+      run: python3 -I "$GITHUB_ACTION_PATH/report.py"

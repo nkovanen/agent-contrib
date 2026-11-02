@@ -261,6 +261,11 @@
           "type": "string",
           "description": "Repository of the PR, when it is not the issue source",
           "maxLength": 2147483647
+        },
+        "observed_in": {
+          "type": "string",
+          "const": "disposition_read",
+          "description": "Only in schema 0.2 verify: the match was first seen in a host-context 0.2 disposition read, not the open-PR list scan"
         }
       },
       "required": [
@@ -433,6 +438,303 @@
       ],
       "additionalProperties": false
     },
+    "signature_github_verification": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "verified": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "GitHub key-to-account match; not approval. Null when unread"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "bad_cert",
+            "bad_email",
+            "expired_key",
+            "gpgverify_error",
+            "gpgverify_unavailable",
+            "invalid",
+            "malformed_signature",
+            "no_user",
+            "not_signing_key",
+            "ocsp_pending",
+            "unknown_key",
+            "unknown_signature_type",
+            "unsigned",
+            "unverified_email",
+            "valid",
+            "unrecognized",
+            null
+          ],
+          "description": "GitHub verification reason; unrecognized values are not echoed"
+        },
+        "verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Timezone-bearing time GitHub verified, or null"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "verified_means": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "What verified does and does not show"
+        }
+      },
+      "required": [
+        "complete",
+        "verified",
+        "reason",
+        "verified_at",
+        "errors",
+        "verified_means"
+      ],
+      "additionalProperties": false,
+      "description": "GitHub verification object for the evidence head (git/commits)"
+    },
+    "signature_local_commit": {
+      "type": "object",
+      "properties": {
+        "sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "signature_header": {
+          "type": "string",
+          "enum": [
+            "present",
+            "absent"
+          ],
+          "description": "Header presence only, never validity"
+        }
+      },
+      "required": [
+        "sha",
+        "signature_header"
+      ],
+      "additionalProperties": false
+    },
+    "signature_local_commits": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "commits": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/signature_local_commit"
+          },
+          "maxItems": 1000,
+          "description": "base_commit..git_head, oldest first; null when incomplete, never truncated"
+        },
+        "with_header": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "without_header": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Commit cap; more is reported as incomplete"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "commits",
+        "with_header",
+        "without_header",
+        "limit",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Local signature-header presence; no signature program runs"
+    },
+    "signature_observation": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "Repository read: the execution target, else the source"
+        },
+        "head_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "Evidence git_head; null when the evidence has none"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "github_verification": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/signature_github_verification"
+            }
+          ]
+        },
+        "required_signatures": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/signature_required"
+            }
+          ]
+        },
+        "local_commits": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "const": "not_requested"
+                }
+              },
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/signature_local_commits"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "repository",
+        "head_sha",
+        "complete",
+        "github_verification",
+        "required_signatures",
+        "local_commits",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Report-only commit-signature observation (verify --observe-signatures); never a gate"
+    },
+    "signature_required": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Base branch whose active rules were read"
+        },
+        "required": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "An active required_signatures ruleset rule applies; null when unread"
+        },
+        "ruleset_ids": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxItems": 4000,
+          "description": "Rulesets requiring signatures, ascending; null when unread"
+        },
+        "classic_branch_protection": {
+          "const": "not_observed",
+          "description": "Classic protection needs admin access and is never read"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "branch",
+        "required",
+        "ruleset_ids",
+        "classic_branch_protection",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "Active ruleset rules for the base branch (rules/branches)"
+    },
     "target_pulls_scan": {
       "type": "object",
       "properties": {
@@ -541,6 +843,9 @@
         },
         "ci_observation": {
           "$ref": "#/$defs/ci_observation"
+        },
+        "signature_observation": {
+          "$ref": "#/$defs/signature_observation"
         },
         "contract_sha256": {
           "type": "string",
@@ -736,6 +1041,9 @@
         },
         "ci_observation": {
           "$ref": "#/$defs/ci_observation"
+        },
+        "signature_observation": {
+          "$ref": "#/$defs/signature_observation"
         }
       },
       "required": [
@@ -960,6 +1268,21 @@
         },
         "ci_observation": {
           "$ref": "#/$defs/ci_observation"
+        },
+        "signature_observation": {
+          "$ref": "#/$defs/signature_observation"
+        },
+        "overlap_dispositions": {
+          "$ref": "#/$defs/verify_overlap_dispositions",
+          "description": "Present only for a host-context 0.2 document"
+        },
+        "waived_duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_waived_overlap"
+          },
+          "maxItems": 20,
+          "description": "Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them"
         }
       },
       "required": [
@@ -1811,6 +2134,124 @@
       ],
       "additionalProperties": false,
       "description": "Host-asserted mandate checked against live credential facts; never proof of human consent. mandate_id, event_reference and event_text_sha256 are present once the host context validates"
+    },
+    "verify_overlap_dispositions": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "absent",
+            "evaluated",
+            "invalid"
+          ],
+          "description": "absent: no section; evaluated: bindings valid and each entry checked against fresh reads; invalid: schema, binding or expiry errors, nothing waived"
+        },
+        "trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64,
+          "description": "Canonical hash of the overlap_dispositions section; null when absent or the host context is invalid"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "waived": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_waived_overlap"
+          },
+          "maxItems": 20
+        },
+        "unused": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 20,
+          "description": "Disposed PRs that match nothing now; informational"
+        }
+      },
+      "required": [
+        "status",
+        "trust",
+        "sha256",
+        "errors",
+        "waived",
+        "unused"
+      ],
+      "additionalProperties": false,
+      "description": "Host-context 0.2 overlap_dispositions report; waives only topical overlaps whose bound observations still hold"
+    },
+    "verify_waived_overlap": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "number": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "pr_id": {
+          "type": "integer"
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "base_tip_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "updated_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "untrusted_rationale": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "Host-supplied rationale, sanitized; untrusted text"
+        }
+      },
+      "required": [
+        "repository",
+        "number",
+        "url",
+        "reason",
+        "pr_id",
+        "head_sha",
+        "base_tip_sha",
+        "updated_at",
+        "untrusted_rationale"
+      ],
+      "additionalProperties": false,
+      "description": "A topical overlap waived by a host disposition at the observed PR state"
     }
   }
 }

@@ -68,6 +68,16 @@ class DocsConsistencyTests(unittest.TestCase):
                 with self.subTest(path=path.name, target=target):
                     self.assertTrue((path.parent / target).exists())
 
+    def test_product_map_lists_shipped_output_schemas_as_implemented(self):
+        # Dogfood 3 F45: the map still listed the shipped output schemas as missing.
+        from agent_contribute import outputs
+        text = (ROOT / 'docs' / 'product-map.md').read_text('utf-8')
+        implemented = text.split('### Implemented')[1].split('### Partly implemented')[0]
+        self.assertTrue(outputs.SCHEMAS)
+        self.assertIn('G1 ', implemented)
+        self.assertNotIn('Missing: output JSON Schemas', text)
+        self.assertNotIn('G1 output schemas', text)
+
     def test_product_map_covers_every_tracked_issue(self):
         text = (ROOT / 'docs' / 'product-map.md').read_text('utf-8')
         for number in [n for n in range(1, 29) if n != 2]:  # #2 is a pull request, not an issue
@@ -81,6 +91,35 @@ class DocsConsistencyTests(unittest.TestCase):
         missing = [line for line in text.splitlines() if 'Missing:' in line]
         self.assertFalse([line for line in missing if re.search(r'(?i)output (json )?schemas?|output-schema version', line)])
 
+
+    def test_label_approval_docs_state_what_is_and_is_not_verified(self):
+        # #9: policy 0.1 checks label presence only; no document may imply a verified or maintainer-applied label.
+        flat = lambda path: ' '.join((ROOT / path).read_text('utf-8').split())
+        texts = {path: flat(path) for path in ('README.md', 'SECURITY.md', 'docs/maintainers.md',
+                                               'agent_contribute/instructions.md')}
+        for path, text in texts.items():
+            with self.subTest(path=path):
+                self.assertIn('does not verify who applied it', text)
+                self.assertNotIn('maintainer-approved', text)
+        maintainers = texts['docs/maintainers.md']
+        self.assertIn('suitable only if every principal who can label issues is trusted to approve agent work',
+                      maintainers)
+        self.assertIn('A dedicated label name restricts nothing', maintainers)
+        self.assertIn('do not opt in under this policy', maintainers)
+        # R9-07/R9-08: events name an actor; what is unverifiable is its authority and label binding.
+        for path in ('README.md', 'SECURITY.md', 'agent_contribute/instructions.md'):
+            with self.subTest(path=path):
+                self.assertNotIn('cannot tell the CLI who', texts[path])
+                self.assertRegex(texts[path], r'Public (issue )?events name an? (event |labeling )?actor')
+        self.assertIn('configured label is currently present on the issue under the default-branch policy',
+                      maintainers)
+        self.assertIn('triage, write and higher roles, custom roles or grants that allow labelling', maintainers)
+        self.assertIn('use the schema 0.2 mandate route', maintainers)
+        design = flat('docs/design/2026-11-02-actor-verified-approval.md')
+        self.assertIn('R9-05', design)
+        self.assertIn('R9-06', design)
+        self.assertIn('documented limitation; labeling-actor authority cannot be verified from public REST data',
+                      flat('docs/product-map.md'))
 
 if __name__ == '__main__':
     unittest.main()
