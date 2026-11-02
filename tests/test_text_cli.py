@@ -2,6 +2,8 @@
 import copy
 import io
 import json
+import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 from agent_contribute import cli
@@ -81,6 +83,19 @@ class TextCliTests(unittest.TestCase):
         self.assertTrue(output.startswith('Gates:\n'), output)
         self.assertIn('Blockers [draft] (1):', output)
         self.assertNotIn('Selected stage', output)
+
+    def test_text_stage_for_schema_invalid_contract_shows_the_shared_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            contract = pathlib.Path(tmp, 'task.json')
+            contract.write_text('{"schema_version": "0.2"}')
+            with patch('agent_contribute.core.GitHub', side_effect=AssertionError('no GitHub read')):
+                code, output = self.invoke(['--format', 'text', 'verify', str(contract), '--stage', 'implementation'])
+        self.assertEqual(code, 1)
+        self.assertTrue(output.startswith('Selected stage: implementation (exit gate: no)\n'
+                                          'Blockers [implementation]: not evaluated; see Errors\n'), output)
+        self.assertIn('  schema_valid: no\n', output)
+        self.assertIn('Errors (16):\n  - $.status: missing\n', output)
+        self.assertNotIn('Other stages', output)
 
     def test_text_scope_check_and_drift_keep_exit_status(self):
         scope = {'within_scope': False, 'base_commit': 'a' * 40, 'changed_paths': ['x'], 'errors': [], 'warnings': [],
