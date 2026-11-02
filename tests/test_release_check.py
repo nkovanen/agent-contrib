@@ -114,7 +114,9 @@ class RunbookTests(unittest.TestCase):
         text = (ROOT / 'docs' / 'releasing.md').read_text('utf-8')
         for phrase in ('python tools/release_check.py --release', '--tag vX.Y.Z', 'examples/release-pypi.yml',
                        'gh attestation verify', 'pending* publisher', 'environment `pypi`', 'Never reuse',
-                       'a version number', 'Yank it', 'Never move a published tag'):
+                       'a version number', 'Yank it', 'Never move a published tag',
+                       'Check for partial uploads first', 'Re-run failed jobs', 'Re-run all jobs',
+                       'short-lived PyPI token'):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)
         self.assertIn('docs/releasing.md', (ROOT / 'CONTRIBUTING.md').read_text('utf-8'))

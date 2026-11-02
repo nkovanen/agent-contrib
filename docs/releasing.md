@@ -122,7 +122,8 @@ test keeps an adopted copy identical to the example).
   - attests their build provenance with `actions/attest-build-provenance`;
   - publishes them with `pypa/gh-action-pypi-publish` using OIDC trusted
     publishing.
-- No secret or API token exists anywhere.
+- No long-lived credential is configured: trusted publishing exchanges the job's
+  OIDC token for a short-lived PyPI token during the upload.
 - The provenance attestation runs in the publish job so `id-token: write`
   never reaches the job that runs the test suite and the build.
 
@@ -164,6 +165,12 @@ time without hash pinning. The attestation records which workflow run built
 the files, not that those inputs were the expected ones. Hash-pinned build
 requirements are a possible follow-up.
 
+The pinned PyPI action runs a container image chosen by a registry tag named
+after the action commit, not by an image digest, so the action SHA does not
+freeze every transitive input either. The build-provenance attestation binds
+the uploaded bytes to this workflow run and commit. It is not a hermetic or
+isolated-builder guarantee.
+
 ## 7. Rollback
 
 - **Before the tag is pushed:** delete the local tag (`git tag -d vX.Y.Z`) and
@@ -179,11 +186,21 @@ requirements are a possible follow-up.
   exactly. Then release a fixed `X.Y.(Z+1)` through the same steps. Never reuse
   a version number. Attestations of the yanked files remain and stay valid for
   those exact files.
-- **The workflow failed before publishing:** nothing reached PyPI.
-  - If the cause was setup only (trusted publisher or environment), fix it and
-    re-run the failed run from the Actions page. It rebuilds the same tagged
-    commit.
-  - If the release commit itself is wrong, do not move the tag. Mark the GitHub
-    release as withdrawn and release `X.Y.(Z+1)` from step 1.
-  - A failed run never retries on its own, and the workflow has no manual
-    trigger.
+- **The workflow failed:** a failed job is not proof that nothing reached PyPI.
+  1. **Check for partial uploads first.** Open the version's page on PyPI, or
+     run `python -m pip download --no-deps agent-contrib==X.Y.Z`. If any file
+     of the version is there, the version is published. Treat it as above:
+     never retry into it; yank it if needed and release `X.Y.(Z+1)`.
+  2. **Nothing reached PyPI, and the cause was setup only** (trusted publisher
+     or environment). Fix the setup, then choose the retry:
+     - **"Re-run failed jobs"** reruns only `publish`. It downloads and uploads
+       the artifact the original `build` job produced. This is the preferred
+       retry, because the distributions stay byte-identical.
+     - **"Re-run all jobs"** rebuilds from the same tagged commit. Unpinned
+       build dependencies may resolve differently, so the new files can differ
+       from the ones that were tested and attested first.
+  3. **The release commit itself is wrong:** do not move the tag. Mark the
+     GitHub release as withdrawn and release `X.Y.(Z+1)` from step 1.
+
+  A failed run never retries on its own, and the workflow has no manual
+  trigger.
