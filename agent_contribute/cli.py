@@ -56,7 +56,7 @@ def write_new_json(path, value):
 
 
 def prevalidate(args):
-    """Local argument checks that must fail before the optional rate_limit read, with the same errors as without it."""
+    """The single local argument check, run before any GitHub read (including the optional rate_limit read)."""
     if args.command == 'discover':
         args.names = args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else [])
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
@@ -67,14 +67,17 @@ def prevalidate(args):
     elif args.command == 'audit':
         core.parse_repository(args.repository)
     elif args.command in ('verify', 'drift', 'pr-body'):
-        if getattr(args, 'evidence', None):
+        if args.command == 'pr-body' and args.evidence:
             core.read_json(args.evidence)
         task = core.read_json(args.contract)
         if args.command in ('drift', 'pr-body') and core.validate_contract(task):
             raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
-        version = task.get('schema_version') if isinstance(task, dict) else None
-        if args.command == 'verify' and version != '0.2' and (args.stage is not None or args.host_context_stdin):
-            raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
+        if args.command == 'verify':
+            version = task.get('schema_version') if isinstance(task, dict) else None
+            if version != '0.2' and (args.stage is not None or args.host_context_stdin):
+                raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
+            if args.evidence:
+                core.read_json(args.evidence)
 
 
 def main(argv=None):
@@ -137,10 +140,10 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
+        if args.report_budget and args.command in ('instructions', 'skill', 'scope-check', 'evidence'):
+            raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
+        prevalidate(args)
         if args.report_budget:
-            if args.command in ('instructions', 'skill', 'scope-check', 'evidence'):
-                raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
-            prevalidate(args)
             before = budget.snapshot()
             if args.min_remaining is not None:
                 budget.require_remaining(before, args.min_remaining)
@@ -214,12 +217,10 @@ def main(argv=None):
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
-            names = getattr(args, 'names', None) or (
-                args.reference + (multi.read_repositories_file(args.repositories_file) if args.repositories_file else []))
-            if len(names) == 1:
-                result = core.discover(names[0], signals=True) if args.signals else core.discover(names[0])
+            if len(args.names) == 1:
+                result = core.discover(args.names[0], signals=True) if args.signals else core.discover(args.names[0])
             else:
-                result = multi.discover_many(names, signals=args.signals)
+                result = multi.discover_many(args.names, signals=args.signals)
             code = 0 if result['complete'] else 1
         elif args.command in ('inspect', 'prepare'):
             result = core.inspect_issue(args.reference)
@@ -234,8 +235,6 @@ def main(argv=None):
         else:
             task = core.read_json(args.contract)
             version = task.get('schema_version') if isinstance(task, dict) else None
-            if version != '0.2' and (args.stage is not None or args.host_context_stdin):
-                raise core.ProtocolError('schema_options', 'Lifecycle options require an explicit schema 0.2 task')
             evidence = core.read_json(args.evidence) if args.evidence else None
             if version == '0.2':
                 context = read_host_context_stdin() if args.host_context_stdin else None

@@ -110,6 +110,29 @@ class BudgetTests(unittest.TestCase):
                 plain_code, plain = run(BudgetGitHub(), *argv)
                 self.assertEqual((plain_code, plain['error']['code']), (result_code, result['error']['code']))
 
+    def test_budget_flag_never_changes_which_input_error_is_reported(self):
+        # One validation path: the first failing check is the same with or without --report-budget (A1-11).
+        from tests.test_protocol import ready_contract
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory, 'task.json')
+            task.write_text(json.dumps(ready_contract()[0]))
+            invalid = Path(directory, 'invalid.json')
+            invalid.write_text('{"schema_version":"0.1"}')
+            missing = str(Path(directory, 'missing.json'))
+            cases = [(['verify', str(task), '--stage', 'draft', '--evidence', missing], 'schema_options'),
+                     (['verify', str(task), '--host-context-stdin', '--evidence', missing], 'schema_options'),
+                     (['verify', str(task), '--evidence', missing], 'file_error'),
+                     (['verify', missing, '--evidence', missing], 'file_error'),
+                     (['pr-body', str(invalid), '--evidence', missing, '--output', missing], 'file_error')]
+            for argv, expected in cases:
+                with self.subTest(argv=argv[0:3]):
+                    plain_code, plain = run(BudgetGitHub(), *argv)
+                    client = BudgetGitHub()
+                    code, result = run(client, '--report-budget', *argv)
+                    self.assertEqual(plain['error']['code'], expected)
+                    self.assertEqual((code, result), (plain_code, plain))
+                    self.assertEqual(client.calls, [])
+
     def test_invalid_report_contract_is_rejected_before_budget_or_threshold(self):
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory, 'task.json')
