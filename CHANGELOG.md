@@ -152,6 +152,11 @@ channel or runtime model provider is added.
   mode settings cannot hide a same-size edit or an executable-bit change.
   `core.ignoreCase=true` on a case-sensitive filesystem is refused
   (`unsafe_git_config`) because it hides case twins.
+- Untracked files are found with only per-directory `.gitignore` rules:
+  `.git/info/exclude` and a local `core.excludesFile` no longer hide an
+  untracked file from `verify`, `scope-check` or `evidence init`, and an
+  untracked `.gitignore` is always reported. A committed `.gitignore` still
+  applies.
 
 ### Fixed
 
@@ -174,6 +179,8 @@ channel or runtime model provider is added.
     checkout, now fails with `index_flags`.
   - A checkout with the Git config keys listed under Security fails with
     `unsafe_git_config`.
+  - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
+    evidence dirty.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;

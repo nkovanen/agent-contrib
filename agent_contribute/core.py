@@ -761,6 +761,15 @@ def require_plain_index(directory):
                             'checkout); use a full checkout without these flags')
 
 
+def untracked_paths(directory):
+    """Untracked files under only the per-directory .gitignore rules a commit can carry. .git/info/exclude and
+    core.excludesFile are local and never hide a file. Untracked .gitignore files are listed unfiltered, so one
+    cannot ignore itself away."""
+    listed = git_read(directory, 'ls-files', '-z', '--others', '--exclude-per-directory=.gitignore')
+    listed += git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore')
+    return {path for path in listed.split('\0') if path}
+
+
 def current_head(directory):
     """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
     names when the current branch is unborn or deleted, so later reads use this object ID instead."""
@@ -832,7 +841,8 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
             errors.append('Checkout branch differs from reviewed head ref')
         if has_gitlink(directory, head, evidence['base_commit']):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
-        dirty = git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all')
+        dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
+                 untracked_paths(directory))
         # A base from another checkout cannot satisfy this task, even with a matching string.
         git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
         git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)

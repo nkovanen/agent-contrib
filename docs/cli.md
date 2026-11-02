@@ -177,7 +177,11 @@ host context: piping it to `verify --host-context-stdin` fails schema validation
 `scope.allowed_paths` and `scope.prohibited_paths` with the same function that
 `verify` uses for evidence. It reads only the local checkout: committed changes
 from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
-and untracked files that are not ignored. Renames report both paths. The base
+and untracked files that are not ignored. Only per-directory `.gitignore` files
+count as ignore rules; `.git/info/exclude` and `core.excludesFile` never hide a
+file, and an untracked `.gitignore` is always reported. Files ignored by a
+committed `.gitignore` are not reported (`verify` and `evidence init` apply the
+same rule). Renames report both paths. The base
 must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts exactly a
 full 40-character SHA, `HEAD`, or a full ref name such as `refs/heads/NAME` or
 `refs/tags/NAME`, each optionally followed by `~N` or `^N` (for example
