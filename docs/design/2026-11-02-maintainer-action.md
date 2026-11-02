@@ -2,8 +2,8 @@
 
 - Date: 2026-11-02
 - Status: proposal, revision 2. Hostile review round 1 (MA-01 to MA-06) is
-  resolved in [Review resolution](#review-resolution). Nothing is implemented
-  yet; slice 1 is next.
+  resolved in [Review resolution](#review-resolution). Slice 1 is implemented
+  on `rsi/maintainer-action`; later slices are not.
 - Base: `76632f8` (unreleased v0.3.0 candidate; task/evidence schemas 0.1 and
   0.2, host-context 0.1, output schemas 1).
 - Input: issue #11 (product map C4).
@@ -475,7 +475,7 @@ schema or library change. Maintainer docs (`docs/maintainers.md`,
 
 ## Slices
 
-1. **Offline report:** payload, parser, route
+1. **Offline report.** Done: payload, parser, route
    and evidence binding, checkout and scope checks, summary renderer,
    `action.yml`, example workflow, tests 1 to 8.
 2. **Live checks**, under the preconditions above.

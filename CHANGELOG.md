@@ -2,6 +2,14 @@
 
 ## 0.3.0 — unreleased
 
+- A report-only maintainer GitHub Action, slice 1 (#11):
+  `actions/verify/` with an example workflow. It reads only the
+  `pull_request` event payload and the PR-head checkout, needs only
+  `contents: read` and makes no API calls. It checks that the contract and
+  evidence blocks in the PR body describe this PR's route, head, tree, base
+  and scope, and writes a job summary. It never runs PR code and never writes
+  to GitHub. Live checks (freshness, overlap, approval, identity) are listed as
+  not evaluated.
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
 handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
