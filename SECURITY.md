@@ -21,8 +21,10 @@ security maintenance commitment.
 - Validation argv is data. `verify` never executes it. The host agent must inspect
   a checkout and its build scripts before running tests with its own tools.
 - Source approval, execution authority and publication authority are separate.
-  Policy v0 delegates approval to all accounts permitted to apply labels. Label actors are
-  not individually authenticated by that policy. The separate schema 0.2 route
+  Policy 0.1 checks that a configured label is currently present; it does not
+  verify who applied it. It delegates approval to every account permitted to
+  label issues. Public events name a labeling actor, but its approval authority
+  and its binding to the current label cannot be verified from public REST data (#9). The separate schema 0.2 route
   verifies the current personal credential's numeric identity and exact admin or
   maintain role; it does not turn a candidate into policy-approved work.
 - The schema 0.2 mandate and final sign-off are separate host assertions. Stdin,

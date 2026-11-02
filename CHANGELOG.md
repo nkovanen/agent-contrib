@@ -221,6 +221,11 @@ channel or runtime model provider is added.
   (15 s plus one second per 32 MiB, at most 900 s), and running out reports
   `checkout_too_large_for_timeout` with the byte count instead of a generic
   read error. Other Git reads keep their 15 s limit (G-16).
+- Approval-label documentation states what policy 0.1 checks: a configured
+  label currently present, not who applied it. The policy is suitable only if
+  everyone who can label issues is trusted to approve agent work. Public events
+  name a labeling actor, but its approval authority cannot be verified from
+  public REST data (#9). No behaviour changes.
 - In a shallow clone that lacks the base or its history, `verify`,
   `scope-check` and `evidence init` now say so (`shallow_checkout`, with a
   fetch hint) instead of a generic read or base error. They still fail closed.
