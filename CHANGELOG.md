@@ -2,6 +2,11 @@
 
 ## 0.3.0 — unreleased
 
+- Schema 0.2 `verify` lists contract route errors (pending mode, invalid or
+  equal refs, a different target or head repository) in its errors and every
+  stage's blockers even without a host context, as `authorization-request`
+  already did. With a mandate they appear once. Only blockers are added
+  (A2-02).
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
 handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
