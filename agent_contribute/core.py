@@ -732,7 +732,7 @@ def git_read(directory, *args, index_file=None, raw=False, timeout=15):
         # protocol.allow=never; promisor config is refused by require_safe_config for older Git.
         env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_OPTIONAL_LOCKS='0',
                    GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE=os.devnull, GIT_NO_LAZY_FETCH='1',
-                   GIT_PROTOCOL_FROM_USER='0', GIT_TERMINAL_PROMPT='0')
+                   GIT_PROTOCOL_FROM_USER='0', GIT_TERMINAL_PROMPT='0', GIT_ATTR_NOSYSTEM='1')
         result = subprocess.run(['git', '--no-optional-locks', '-c', 'core.fsmonitor=false',
                                  '-c', 'core.hooksPath=' + os.devnull, '-c', 'core.untrackedCache=false',
                                  '-c', 'log.showSignature=false', '-c', 'protocol.allow=never',

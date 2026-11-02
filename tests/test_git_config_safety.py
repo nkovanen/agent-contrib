@@ -127,6 +127,18 @@ class LegacyConfigSafetyTests(unittest.TestCase):
             self.assertTrue(workspace.scope_check(task, root)['within_scope'])
 
 
+class EnvironmentTests(unittest.TestCase):
+    def test_every_read_ignores_system_attributes_and_cannot_fetch(self):
+        # G-19: /etc/gitattributes (or $(prefix)/etc/gitattributes) must not shape any read.
+        with tempfile.TemporaryDirectory() as root:
+            evidence_checkout(root)
+            with patch.object(core.subprocess, 'run', wraps=core.subprocess.run) as run:
+                core.git_read(root, 'rev-parse', 'HEAD')
+            env = run.call_args.kwargs['env']
+            self.assertEqual((env['GIT_ATTR_NOSYSTEM'], env['GIT_NO_LAZY_FETCH'], env['GIT_CONFIG_NOSYSTEM']),
+                             ('1', '1', '1'))
+
+
 class SubmoduleConfigTests(unittest.TestCase):
     # G-12: a populated submodule's own config must never run, whatever the superproject config says.
     def populated_submodule(self, root, git, outside):

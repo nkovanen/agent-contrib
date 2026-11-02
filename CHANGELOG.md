@@ -241,6 +241,8 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- Every Git read sets `GIT_ATTR_NOSYSTEM=1`, so a system-wide gitattributes file
+  cannot shape how checkout files are compared (G-19).
 - The temporary index for the content check is created under a temporary root
   whose real path is outside the worktree and its Git directories (falling
   back from `TMPDIR` to `/tmp` or `/var/tmp`, else `unsafe_temp_dir`), so a
