@@ -391,12 +391,23 @@ def duplicate_prs(repository, issue, index, *, pr_repository=None):
     for pr in index:
         direct = ((repository.casefold(), number) in pr['references'] or
                   (repository.casefold() == (pr_repository or repository).casefold() and number in pr['local']))
-        overlap = len(words.intersection(pr['words'])) >= 2 or bool(checklist.intersection(pr['checklist']))
+        shared_words, shared_ids = words.intersection(pr['words']), checklist.intersection(pr['checklist'])
+        overlap = len(shared_words) >= 2 or bool(shared_ids)
         if direct or overlap:
             findings.append({'number': pr['number'], 'url': pr['url'],
                              'reason': 'Explicit reference to this issue' if direct else
-                             'Potential title/checklist overlap; review manually'})
+                             'Potential title/checklist overlap; review manually ' + overlap_matches(shared_words, shared_ids)})
     return findings
+
+
+def overlap_matches(words, ids):
+    # Only the triggering matches; both token patterns are restricted to safe characters.
+    def listed(title, items, limit=10):
+        items = sorted(items)
+        return title + ': ' + ', '.join(items[:limit]) + (f' and {len(items) - limit} more' if len(items) > limit else '')
+    parts = ([listed('shared title words', words)] if len(words) >= 2 else []) + (
+        [listed('shared checklist IDs', ids)] if ids else [])
+    return '(' + '; '.join(parts) + ')'
 
 
 def ranking(issue, duplicates):
@@ -627,6 +638,13 @@ def validate_contract(contract):
 def unique_ids(items):
     ids = [item['id'] for item in items]
     return len(ids) == len(set(ids))
+
+
+def prerequisite_errors(prerequisites):
+    # IDs match the schema's safe pattern and statuses are an enum, so echoing them is safe.
+    failing = [item['id'] + ' (' + (item['status'] if item['status'] != 'satisfied' else 'satisfied without evidence') + ')'
+               for item in prerequisites if item['status'] != 'satisfied' or not item['evidence'].strip()]
+    return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
 def git_read(directory, *args):
@@ -883,8 +901,7 @@ def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None
             errors.append('Definition of done must cover exactly all ' + list_key)
     if not task['discovery']['complete'] or task['discovery']['duplicate_prs']:
         errors.append('Prepared discovery is incomplete or has unresolved duplicates')
-    if any(item['status'] != 'satisfied' or not item['evidence'].strip() for item in task['prerequisites']):
-        errors.append('Prerequisites are not satisfied with evidence')
+    errors.extend(prerequisite_errors(task['prerequisites']))
     execution = task['execution']
     result['execution_authorization'] = execution
     if not execution['authorized_by'].strip() or not execution['authorization_evidence'].strip():

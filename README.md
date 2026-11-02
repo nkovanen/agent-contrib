@@ -164,7 +164,7 @@ for unfinished parts and [the command reference](docs/cli.md) for exact outputs.
 | Locate AI-contribution statements | `inspect 'owner/repo#123' --ai-policy` |
 | Check repository setup | `audit owner/repo` |
 | Check local changes against a contract | `scope-check task.json --repo-dir checkout` |
-| Start an unfilled evidence record | `evidence init task.json --repo-dir checkout --base FULL_SHA --output evidence.json` |
+| Start an unfilled evidence record | `evidence init task.json --repo-dir checkout --base REV --output evidence.json` |
 | Review changes since preparation | `drift task.json` |
 | Observe CI without changing readiness | `verify task.json --evidence evidence.json --observe-ci` |
 | Prepare a description for human review | `pr-body task.json --output body.md` |

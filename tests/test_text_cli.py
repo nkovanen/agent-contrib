@@ -1,4 +1,5 @@
 """Text is opt-in presentation; JSON bytes and readiness exits remain canonical."""
+import copy
 import io
 import json
 import unittest
@@ -44,6 +45,58 @@ class TextCliTests(unittest.TestCase):
         self.assertIn('  execution_ready: yes', output)
         self.assertIn('  evidence_valid: no', output)
         self.assertIn('No real run', output)
+
+    def test_text_verify_stage_leads_with_that_stage_and_collapses_others(self):
+        result = {'schema_valid': True, 'implementation_ready': False, 'technical_evidence_valid': False,
+                  'draft_create_ready': False, 'completion_ready': False,
+                  'publication': {'verified': True}, 'next_action': 'none',
+                  'stage_blockers': {'implementation': ['Current implement action is not authorized'],
+                                     'draft': ['Both implement and create_draft actions must be authorized'],
+                                     'completion': ['Final human signoff is pending or invalid', 'Second']},
+                  'errors': []}
+
+        def invoke(*args):
+            with patch('agent_contribute.core.read_json', return_value={'schema_version': '0.2'}), \
+                    patch('agent_contribute.core.verify', return_value=copy.deepcopy(result)):
+                return self.invoke(list(args))
+        code, output = invoke('--format', 'text', 'verify', 'task.json', '--stage', 'implementation')
+        self.assertEqual(code, 1)
+        self.assertTrue(output.startswith('Selected stage: implementation (exit gate: no)\n'
+                                          'Blockers [implementation] (1):\n'
+                                          '  - Current implement action is not authorized\nGates:\n'), output)
+        self.assertNotIn('create_draft actions', output)
+        self.assertNotIn('Final human signoff', output)
+        self.assertNotIn('Blockers [draft]', output)
+        self.assertIn('Other stages (not required by --stage implementation; lists in JSON): '
+                      'draft 1 blocker(s), completion 2 blocker(s)\n', output)
+        code, output = invoke('--format', 'text', 'verify', 'task.json', '--stage', 'draft')
+        self.assertEqual(code, 0)
+        self.assertTrue(output.startswith('Selected stage: draft (exit gate: yes)\n'
+                                          'Blockers [draft] (1):\n'), output)
+        self.assertIn('implementation 1 blocker(s), completion 2 blocker(s)', output)
+        self.assertEqual(invoke('verify', 'task.json', '--stage', 'implementation'),
+                         (1, json.dumps(result, indent=2, ensure_ascii=True) + '\n'))
+        code, output = invoke('--format', 'text', 'verify', 'task.json')
+        self.assertEqual(code, 1)
+        self.assertTrue(output.startswith('Gates:\n'), output)
+        self.assertIn('Blockers [draft] (1):', output)
+        self.assertNotIn('Selected stage', output)
+
+    def test_text_scope_check_and_drift_keep_exit_status(self):
+        scope = {'within_scope': False, 'base_commit': 'a' * 40, 'changed_paths': ['x'], 'errors': [], 'warnings': [],
+                 'violations': [{'path': 'x', 'rule': 'not in allowed_paths'}]}
+        drift = {'complete': True, 'drifted': True, 'errors': [], 'issue': {'changed': True}}
+        # prevalidate always checks the drift contract (A1-11); the stub contract is declared valid here.
+        with patch('agent_contribute.core.read_json', return_value={}), \
+                patch('agent_contribute.core.validate_contract', return_value=[]), \
+                patch('agent_contribute.workspace.scope_check', return_value=scope), \
+                patch('agent_contribute.drift.drift', return_value=drift):
+            code, output = self.invoke(['--format', 'text', 'scope-check', 'task.json', '--repo-dir', '.'])
+            self.assertEqual(code, 1)
+            self.assertIn('Violations (1):\n  - x -- not in allowed_paths\n', output)
+            code, output = self.invoke(['--format', 'text', 'drift', 'task.json'])
+            self.assertEqual(code, 1)
+            self.assertIn('Drift reasons (1):\n  - Issue content changed\n', output)
 
     def test_text_multi_repo_does_not_hide_failed_repository(self):
         result = {'complete': False, 'repositories': [

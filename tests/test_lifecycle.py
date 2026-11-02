@@ -238,6 +238,23 @@ class LifecycleTests(unittest.TestCase):
         result = self.verify(evidence=False)
         self.assertFalse(result['implementation_ready'])
 
+    def test_unread_exact_head_history_is_reported_as_not_checked(self):
+        unchecked = 'Exact-head PR history not checked: requires a valid mandate'
+        self.context['mandate']['event']['binding_sha256'] = '0' * 64
+        for context in (False, True):
+            with self.subTest(context=context):
+                result = self.verify(context=context)
+                self.assertFalse(result['user_authorization']['historical_valid'])
+                self.assertEqual(result['publication']['status'], 'unknown')
+                self.assertFalse(result['implementation_ready'])
+                self.assertFalse(result['draft_create_ready'])
+                self.assertEqual(result['next_action'], 'resolve_blockers')
+                for stage in ('implementation', 'draft'):
+                    blockers = result['stage_blockers'][stage]
+                    self.assertIn(unchecked, blockers)
+                    self.assertFalse([item for item in blockers if item != unchecked and 'PR history' in item], blockers)
+        self.boundary.assert_not_called()
+
 
 class IntegratedGitHub(CandidateGitHub):
     def __init__(self):

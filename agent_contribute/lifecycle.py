@@ -68,8 +68,7 @@ def reviewed_errors(task):
             errors.append('Definition of done must cover exactly all ' + list_key)
     if not task['discovery']['complete']:
         errors.append('Prepared discovery is incomplete')
-    if any(item['status'] != 'satisfied' or not item['evidence'].strip() for item in task['prerequisites']):
-        errors.append('Prerequisites are not satisfied with evidence')
+    errors.extend(core.prerequisite_errors(task['prerequisites']))
     return errors
 
 
@@ -216,13 +215,16 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     review = independent_review(task, evidence, now)
     result['independent_review'] = review
     publication = result['publication']
+    # Exact-head history is read only under a valid mandate; say so rather than implying it was read.
+    unchecked = 'Exact-head PR history not checked: requires a valid mandate'
     if authority['historical_valid']:
         claim = host_context.get('publication')
         head = evidence['git_head'] if result['technical_evidence_valid'] else None
         publication = check_publication(authority['binding'], claim, head, client)
         result['publication'] = publication
     if publication['status'] != 'absent' or not publication['creation_clear'] or publication['errors']:
-        implementation_errors.append('Implementation requires complete empty exact-head PR history')
+        implementation_errors.append('Implementation requires complete empty exact-head PR history'
+                                     if authority['historical_valid'] else unchecked)
     result['implementation_ready'] = not implementation_errors
     stage_errors = historical_errors + result['evidence_errors'] + review['errors']
     if not review['valid'] and not review['errors']:
@@ -245,7 +247,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not authority['implement'] or not authority['create_draft']:
         draft_errors.append('Current implement/create_draft actions are not authorized')
     if not publication['creation_clear']:
-        draft_errors.append('Exact-head PR history does not permit creation')
+        draft_errors.append('Exact-head PR history does not permit creation' if authority['historical_valid'] else unchecked)
     result['draft_create_ready'] = not draft_errors and not identity_verified
     signoff = human_signoff(task, host_context, evidence, authority, publication, review, now)
     result['human_signoff'] = signoff

@@ -134,6 +134,16 @@ class PRBodyTests(unittest.TestCase):
         self.assertIn('- source: Reviewed source commit is not in current source default-branch history\n', body)
         self.assertIn('- evidence: No technical execution evidence provided\n', body)
 
+    def test_next_action_enum_is_never_mangled_or_echoed_for_schema_02(self):
+        # A1-14 kept the enum from being mangled; A1-12 omits it, so neither form may appear as a gate.
+        task, _ = candidate_task()
+        for value in ('resolve_blockers', 'create_draft', 'implement', 'none', 'Fixes #1 `x`'):
+            with self.subTest(value=value):
+                body = prbody.render(task, {'schema_valid': True, 'next_action': value})
+                self.assertNotIn('- `next_action`:', body)
+                self.assertNotIn(prbody.md(value), body.replace(prbody.AUTHORITY_OMITTED, ''))
+                self.assertIn(prbody.AUTHORITY_OMITTED, body)
+
     def test_argv_is_exact_unambiguous_data(self):
         task, _ = ready_contract()
         task['validation'][0]['argv'] = ['python3', '-c', 'print("hello world")', 'a`b``c', '\n@x #1']

@@ -55,6 +55,30 @@
   per-repository results and a merged candidate order; one repository is unchanged.
 - Pin literal POSIX scope and artifact path decisions across platforms (#25,
   part; no Windows or macOS support claim and no CI matrix change).
+- Schema 0.2 `verify` reports `Exact-head PR history not checked: requires a
+  valid mandate` instead of implying the history was read. Gates are unchanged.
+- The prerequisite blocker names each failing prerequisite ID and status, for
+  example `P1 (pending), P4 (satisfied without evidence)`.
+- `--format text verify --stage X` leads with stage X, its exit gate and its
+  blockers, and reduces other stages to blocker counts. JSON and exit codes are
+  unchanged.
+- Heuristic overlap reasons name the shared title words and checklist IDs that
+  triggered the match. Duplicate entry fields and matching are unchanged.
+- `scope-check --base` and `evidence init --base` accept any local revision,
+  resolved with hardened `git rev-parse --verify 'REV^{commit}'`; option-like
+  values are refused. `scope-check` adds a `warnings` list and warns when the
+  default base is not an ancestor of HEAD.
+- `agent-contrib --help` describes every command and option, including input
+  constraints and exit status; the description no longer claims JSON-only output.
+- A global option given after the subcommand is still a usage error, but the
+  message now says to move it before the subcommand.
+- `discover` with no repository again reports the missing `reference` instead
+  of the 2-20 multi-repository bound. Exit status stays 2.
+- `--format text` for `scope-check` lists violating paths, warnings and errors;
+  for `drift` it lists each drift reason and informational changes separately.
+- `pr-body` no longer renders a mangled `next_action` (previously
+  `resolve_blockers` was escaped); with the A1-12 change it omits the value for
+  schema 0.2 instead of showing it.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;
