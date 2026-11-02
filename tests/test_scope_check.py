@@ -248,6 +248,11 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertEqual(workspace.scope_check(task, tmp)['warnings'], [], 'one commit is not a stack')
             git('add', 'outside.txt')
             git('commit', '-q', '-m', 'stacked unpublished work')
+            # Boundary: two commits behind is already a stack.
+            self.assertEqual(workspace.scope_check(task, tmp)['warnings'], [
+                f'Default base source.commit {base} is 2 commits behind HEAD and paths outside the scope changed; '
+                'if your change is stacked on other unpublished commits, pass --base naming the commit it '
+                'starts from (for example HEAD~1)'])
             pathlib.Path(tmp, 'src/more.rs').write_text('in scope')
             git('add', 'src/more.rs')
             git('commit', '-q', '-m', 'the actual change')
