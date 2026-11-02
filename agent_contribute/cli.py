@@ -53,14 +53,17 @@ class Parser(argparse.ArgumentParser):
         raise core.ProtocolError('usage', message)
 
 
-def write_new_json(path, value):
-    """Exclusive creation avoids clobbering a hand-reviewed contract or symlink."""
+def create_new(path, text, what, newline=''):
+    """Exclusive creation avoids clobbering a hand-reviewed file or symlink."""
     try:
-        with Path(path).open('x', encoding='utf-8') as handle:
-            json.dump(value, handle, indent=2, ensure_ascii=False, allow_nan=False)
-            handle.write('\n')
+        with Path(path).open('x', encoding='utf-8', newline=newline) as handle:
+            handle.write(text)
     except OSError as exc:
-        raise core.ProtocolError('file_error', 'Cannot create output; choose a new writable path') from exc
+        raise core.ProtocolError('file_error', f'Cannot create {what}; choose a new writable path') from exc
+
+
+def write_new_json(path, value):
+    create_new(path, json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + '\n', 'output', newline=None)
 
 
 def discover_names(args):
@@ -205,11 +208,7 @@ def main(argv=None):
             code = 0
         elif args.command == 'skill':
             adapter = importlib.resources.files('agent_contribute').joinpath('adapters/agent-contribute/SKILL.md').read_text('utf-8')
-            try:
-                with Path(args.output).open('x', encoding='utf-8', newline='') as handle:
-                    handle.write(adapter)
-            except OSError as exc:
-                raise core.ProtocolError('file_error', 'Cannot create adapter; choose a new writable path') from exc
+            create_new(args.output, adapter, 'adapter')
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
@@ -228,11 +227,7 @@ def main(argv=None):
         elif args.command == 'pr-body':
             body, verification = prbody.pr_body(args.task, args.evidence_data, args.repo_dir,
                                                 closes=args.closes, assistant=args.assistant)
-            try:
-                with Path(args.output).open('x', encoding='utf-8', newline='') as handle:
-                    handle.write(body)
-            except OSError as exc:
-                raise core.ProtocolError('file_error', 'Cannot create PR body; choose a new writable path') from exc
+            create_new(args.output, body, 'PR body')
             result = {'output': str(args.output), 'sha256': hashlib.sha256(body.encode()).hexdigest(),
                       'contract_sha256': verification.get('contract_sha256'),
                       'warning': 'Rendered text only; it grants no publication authority and the CLI never writes to GitHub'}
