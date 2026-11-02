@@ -664,3 +664,34 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertNotEqual(result['next_action'], 'implement')
         self.assertEqual(result['stage_blockers']['implementation'],
                          ['Issue overlaps an open or unresolved prepared PR'])
+
+    def test_each_reviewed_contract_gate_blocks_implementation_despite_valid_mandate(self):
+        pending = {'id': 'upstream', 'description': 'Upstream fix lands', 'status': 'satisfied', 'evidence': 'Merged'}
+        cases = [
+            ('prerequisites', [dict(pending, status='pending')], 'Prerequisites are not satisfied with evidence'),
+            ('prerequisites', [dict(pending, status='blocked')], 'Prerequisites are not satisfied with evidence'),
+            ('prerequisites', [dict(pending, evidence=' ')], 'Prerequisites are not satisfied with evidence'),
+            ('discovery', False, 'Prepared discovery is incomplete'),
+            ('allowed_paths', ['src\\thumb.rs'], 'Scope patterns must be repository-relative without parent traversal'),
+            ('prohibited_paths', ['.github\\**'], 'Scope patterns must be repository-relative without parent traversal'),
+        ]
+        original = copy.deepcopy(self.task)
+        for key, value, message in cases:
+            with self.subTest(key=key, value=value):
+                self.task = copy.deepcopy(original)
+                if key == 'discovery':
+                    self.task['discovery']['complete'] = value
+                elif key == 'prerequisites':
+                    self.task['prerequisites'] = value
+                else:
+                    self.task['scope'][key] = value
+                self.rebind()
+                result = self.verify(evidence=False)
+                self.assertTrue(result['schema_valid'], result['errors'])
+                self.assertTrue(result['user_authorization']['authorized'])
+                self.assertFalse(result['implementation_ready'])
+                self.assertEqual(result['errors'], [message])
+        self.task = original
+        self.task['prerequisites'] = [pending]
+        self.rebind()
+        self.assertTrue(self.verify(evidence=False)['implementation_ready'])
