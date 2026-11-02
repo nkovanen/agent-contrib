@@ -75,6 +75,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 
 ### Partly implemented
 - [~] B3 Reviewed overlap dispositions bound to live PR state, host-context 0.2 ([#7](https://github.com/nkovanen/agent-contrib/issues/7)). Missing: a native host issuer that can produce the records
+- [~] F3 Draft updates: an inert, strictly validated host-context 0.2 `draft_update` record and host round requirements ([#21](https://github.com/nkovanen/agent-contrib/issues/21)). Missing: recognition after a push, pre-push readiness and the workflow ([design](design/2026-11-02-draft-updates.md))
 - [~] B1 Ownership claims and cross-repository linked PRs, report only ([#5](https://github.com/nkovanen/agent-contrib/issues/5)). Missing: adoption into readiness gates
 - [~] B2 Possible prior fixes and rejected approaches, report only ([#6](https://github.com/nkovanen/agent-contrib/issues/6)). Missing: adoption into readiness gates
 - [~] C1 Default-on `repository_policy` report: bounded inventory of policy files incl. the owner `.github` repository, high-recall hints, unassessed and omitted sources, no verdict; mandatory workflow review recorded as `ai-policy-review` ([#8](https://github.com/nkovanen/agent-contrib/issues/8)). Missing: a versioned machine-readable opt-out policy and verifier enforcement
@@ -90,7 +91,6 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 
 - [ ] Bounded `discover --limit` display ([#1](https://github.com/nkovanen/agent-contrib/issues/1), draft [PR #2](https://github.com/nkovanen/agent-contrib/pull/2), not part of the candidate)
 - [ ] C4 Passive verification GitHub Action for maintainers ([#11](https://github.com/nkovanen/agent-contrib/issues/11))
-- [ ] F3 Fast-forward draft updates with fresh evidence ([#21](https://github.com/nkovanen/agent-contrib/issues/21))
 - [ ] F4 Fork-to-upstream route in schema 0.2 ([#22](https://github.com/nkovanen/agent-contrib/issues/22)) (after C1)
 - [ ] G3 PyPI trusted publishing with build provenance ([#26](https://github.com/nkovanen/agent-contrib/issues/26)) (needs maintainer decision)
 - [ ] H1 Blind task-selection benchmark from historical issues ([#28](https://github.com/nkovanen/agent-contrib/issues/28))

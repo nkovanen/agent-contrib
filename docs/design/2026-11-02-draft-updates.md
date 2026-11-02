@@ -1,7 +1,7 @@
 # Updating a recognized draft after review (#21): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, **revision 4**. Review rounds 1 to 3 (DU-01 to DU-08) are resolved in [Review resolution](#review-resolution). Design only; no code in this change.
+- Status: proposal, **revision 4**. Review rounds 1 to 3 (DU-01 to DU-08) are resolved in [Review resolution](#review-resolution). **Slice 1 (inert schema and host requirements) is implemented**; slices 2 to 4 are not.
 - Base: `rsi/v03-land` at `e454848` (unreleased v0.3.0 candidate: task and evidence schemas 0.1 and 0.2, host-context 0.1 and 0.2).
 - Issue: [#21](https://github.com/nkovanen/agent-contrib/issues/21), product-map key F3. Depends on #3. Uses #20 (`feedback`).
 

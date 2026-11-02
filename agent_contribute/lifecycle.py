@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core, dispositions
+from . import authorization, core, dispositions, draft_updates
 
 
 def prepare_v2(inspected, client):
@@ -269,4 +269,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         disposition['errors'] = list(dict.fromkeys(disposition['errors'] + expired))
         result['overlap_dispositions'] = disposition
         result['waived_duplicates'] = disposition['waived']
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2' and 'draft_update' in host_context:
+        # Slice 1 is inert: reported after every blocking read, never consulted by a gate.
+        result['draft_update'] = draft_updates.evaluate(task, host_context, authority, dt.datetime.now(dt.timezone.utc))
     return result
