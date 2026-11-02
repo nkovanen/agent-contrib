@@ -99,7 +99,7 @@ def _format(path):
 
 def normalize(text):
     text = core.safe_text(html.unescape(core.safe_text(text)))
-    text = TAG.sub(' ', text.replace('<!--', ' ').replace('-->', ' '))
+    text = TAG.sub(' ', text)  # a tag starts with a letter, so HTML comment bodies stay and are scanned
     return NOT_CONTRACTION.sub(' not', unicodedata.normalize('NFKC', text))
 
 

@@ -27,11 +27,12 @@ def blob_sha(text):
 
 class PolicyGitHub:
     """A source repository and optional owner .github repository, with immutable-ref contents reads."""
-    def __init__(self, files=None, owner_files=None, owner_error=None):
+    def __init__(self, files=None, owner_files=None, owner_error=None, truncated=False):
         self.repos = {'acme/photos': {'commit': SOURCE_COMMIT, 'branch': 'main', 'files': dict(files or {})}}
         if owner_files is not None:
             self.repos['acme/.github'] = {'commit': OWNER_COMMIT, 'branch': 'trunk', 'files': dict(owner_files)}
         self.owner_error = owner_error
+        self.truncated = truncated
         self.calls = []
         self.served = {}
 
@@ -46,7 +47,7 @@ class PolicyGitHub:
             if path == f'repos/{name}/commits/{repo["branch"]}':
                 return {'sha': repo['commit']}
             if path == f'repos/{name}/git/trees/{repo["commit"]}':
-                return {'truncated': False, 'tree': [{'path': p, 'type': 'blob', 'sha': blob_sha(t)}
+                return {'truncated': self.truncated and name == 'acme/photos', 'tree': [{'path': p, 'type': 'blob', 'sha': blob_sha(t)}
                                                      for p, t in repo['files'].items()]}
             prefix = f'repos/{name}/contents/'
             if path.startswith(prefix):
@@ -125,10 +126,27 @@ class RecallTests(unittest.TestCase):
             ('Intro <!--\nNo LLM output, ever.\n--> outro', 'possible_ai_restriction', 'CONTRIBUTING.md'),
             ('Vibe-coded PRs are closed.', 'possible_ai_restriction', 'CONTRIBUTING.md'),
             ('Do not submit ChatGPT output.', 'possible_ai_restriction', 'CONTRIBUTING.md'),
+            ("We don't accept AI patches.", 'possible_ai_restriction', 'CONTRIBUTING.md'),
+            ('A&#8203;I-generated patches are rejected.', 'possible_ai_restriction', 'CONTRIBUTING.md'),
+            ('GPT4o output is not accepted.', 'possible_ai_restriction', 'CONTRIBUTING.md'),
+            ('This project bans autonomous submissions.', 'possible_agent_restriction', 'CONTRIBUTING.md'),
+            ('Use x < y comparisons; AI-generated code is not accepted > here.', 'possible_ai_restriction', 'CONTRIBUTING.md'),
         ]
         for text, kind, path in cases:
             with self.subTest(text):
                 self.assertHint(text, kind, path)
+
+    def test_proximity_window_is_exactly_twelve_tokens(self):
+        filler = ' '.join(f'w{n}' for n in range(11))
+        near = policy.scan(f'AI {filler} not', 'CONTRIBUTING.md')['hints']
+        far = policy.scan(f'AI {filler} w11 not', 'CONTRIBUTING.md')['hints']
+        self.assertIn('possible_ai_restriction', {h['kind'] for h in near})
+        self.assertNotIn('possible_ai_restriction', {h['kind'] for h in far})
+
+    def test_decoded_entities_are_sanitized(self):
+        hint = policy.scan('No AI&#27;[2K here&#8238;.', 'CONTRIBUTING.md')['hints'][0]
+        self.assertNotIn('\x1b', hint['untrusted_excerpt'])
+        self.assertNotIn('\u202e', hint['untrusted_excerpt'])
 
     def test_heading_is_context_even_when_body_has_no_ai_term(self):
         result = policy.scan('# AI Policy\n\nWe close such pull requests without review.\n', 'CONTRIBUTING.md')
@@ -187,9 +205,9 @@ class InventoryTests(unittest.TestCase):
     def test_policy_named_files_and_owner_defaults_are_read_at_pinned_commits(self):
         files = {'README.md': 'Photos.', 'AI_POLICY.md': 'Autonomous agents are not allowed.',
                  'docs/CONTRIBUTE.md': 'Run tests.', 'src/ai.md': 'Not a policy location? still a name match.',
-                 'src/main.py': 'print(1)'}
+                 'src/main.py': 'print(1)', 'src/README.md': 'Module notes.', '.cursorrules': 'Never open PRs.'}
         owner = {'CONTRIBUTING.md': 'AI-generated PRs are closed on sight.', '.github/SECURITY.md': 'Report privately.',
-                 'profile/README.md': 'Org profile.'}
+                 'profile/README.md': 'Org profile.', 'README.md': 'Org readme.', 'misc/CONTRIBUTING.md': 'Elsewhere.'}
         result, client = report(files, owner)
         scanned = {(s['origin'], s['repository'], s['path']) for s in result['sources_scanned']}
         self.assertIn(('repository', 'acme/photos', 'AI_POLICY.md'), scanned)
@@ -199,6 +217,11 @@ class InventoryTests(unittest.TestCase):
         self.assertIn(('owner-github', 'acme/.github', '.github/SECURITY.md'), scanned)
         self.assertNotIn(('repository', 'acme/photos', 'src/main.py'), scanned)
         self.assertNotIn(('owner-github', 'acme/.github', 'profile/README.md'), scanned)
+        self.assertNotIn(('owner-github', 'acme/.github', 'README.md'), scanned, 'owner READMEs are not policy files')
+        self.assertNotIn(('owner-github', 'acme/.github', 'misc/CONTRIBUTING.md'), scanned,
+                         'owner defaults live in root, .github/ or docs/ only')
+        self.assertNotIn(('repository', 'acme/photos', 'src/README.md'), scanned, 'only the root README')
+        self.assertIn(('repository', 'acme/photos', '.cursorrules'), scanned)
         by_path = {s['path']: s for s in result['sources_scanned']}
         self.assertEqual(by_path['CONTRIBUTING.md']['commit'], OWNER_COMMIT)
         self.assertEqual(by_path['AI_POLICY.md']['commit'], SOURCE_COMMIT)
@@ -295,9 +318,26 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(first['inventory_sha256'], moved['inventory_sha256'])
         changed, _ = report({'AI_POLICY.md': 'LLM output welcome.'})
         self.assertNotEqual(first['inventory_sha256'], changed['inventory_sha256'])
+        reachable, _ = report({'AI_POLICY.md': 'No LLM output.'}, {})
+        self.assertNotEqual(first['inventory_sha256'], reachable['inventory_sha256'],
+                            'an unassessed owner lookup is part of the inventory identity')
+        self.assertEqual([s['path'] for s in first['sources_scanned']], [s['path'] for s in reachable['sources_scanned']])
         linked, _ = report({'AI_POLICY.md': 'No LLM output. See [policy](https://example.org/policy).'})
         unlinked, _ = report({'AI_POLICY.md': 'No LLM output. See [policy](https://example.org/policy2).'})
         self.assertNotEqual(linked['inventory_sha256'], unlinked['inventory_sha256'])
+
+    def test_default_branch_is_read_when_not_given(self):
+        files = {'CONTRIBUTING.md': 'See [AI Policy](https://github.com/acme/photos/blob/main/AI_POLICY.md).',
+                 'AI_POLICY.md': 'No LLM output.'}
+        client = PolicyGitHub(files, {})
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client)
+        self.assertEqual(client.calls[0], 'repos/acme/photos')
+        self.assertEqual([u for u in result['unassessed'] if u['reason'] == 'referenced, not assessed'], [])
+
+    def test_truncated_tree_is_unassessed(self):
+        result, _ = report({'AI_POLICY.md': 'No LLM output.'}, truncated=True)
+        self.assertEqual(result['sources_scanned'], [])
+        self.assertEqual(result['unassessed'][0]['reason'], 'repository tree not read')
 
     def test_source_tree_failure_is_unassessed(self):
         client = PolicyGitHub({'README.md': 'x'})
