@@ -86,6 +86,7 @@ class CacheTestCase(unittest.TestCase):
         self.addCleanup(self.environment.stop)
         self.addCleanup(cache.configure, False)
         self.root = self.home / 'agent-contrib'
+        self.home.mkdir(mode=0o700)  # ancestors must exist; only the cache directory itself is ever created
 
     def run_cli(self, fake, *argv):
         calls, output = [], io.StringIO()
@@ -355,7 +356,6 @@ class StorageSafetyTests(CacheTestCase):
         # Review R10-02: a blocking open of a FIFO with no writer never returns, so the fallback never ran.
         import threading
         store, fake = self.store()
-        self.home.mkdir(mode=0o700, exist_ok=True)
         self.root.mkdir(mode=0o700)
         fifo = self.root / ('blob-' + blob(INSTRUCTION))
         os.mkfifo(fifo, 0o600)
@@ -378,7 +378,6 @@ class StorageSafetyTests(CacheTestCase):
         store, fake = self.store()
         secret = pathlib.Path(self.directory.name, 'secret')
         secret.write_bytes(INSTRUCTION)
-        self.home.mkdir(mode=0o700, exist_ok=True)
         self.root.mkdir(mode=0o700)
         link = self.root / ('blob-' + blob(INSTRUCTION))
         link.symlink_to(secret)
@@ -387,7 +386,6 @@ class StorageSafetyTests(CacheTestCase):
         self.assertEqual(secret.read_bytes(), INSTRUCTION)
 
     def test_io_errors_fall_back_to_live_reads(self):
-        self.home.mkdir()
         self.home.chmod(0o500)
         self.addCleanup(self.home.chmod, 0o700)
         plain = self.run_cli(ContentGitHub(), 'discover', 'acme/photos')
@@ -463,6 +461,32 @@ class DirectoryAnchorTests(CacheTestCase):
                     with self.assertRaises(PermissionError):
                         cache._check_ancestor(0, uid)
 
+    def test_missing_ancestors_are_never_created(self):
+        # Round 3 note 2: a refused or impossible run must not leave directories behind.
+        missing = pathlib.Path(self.directory.name, 'missing', 'deeper')
+        self.assertIsNone(cache.Cache(str(missing / 'agent-contrib'))._root())
+        self.assertFalse(missing.parent.exists())
+        shared = pathlib.Path(self.directory.name, 'shared')
+        shared.mkdir()
+        shared.chmod(0o777)
+        self.assertIsNone(cache.Cache(str(shared / 'agent-contrib'))._root())
+        self.assertEqual(list(shared.iterdir()), [], 'no cache directory under a refused parent')
+        self.assertIsNotNone(cache.Cache(str(self.root))._root())
+        self.assertEqual(stat.S_IMODE(self.root.stat().st_mode), 0o700, 'the cache directory itself is created 0700')
+
+    def test_the_configured_path_is_read_lexically(self):
+        # Round 3 note 3: abspath collapses link/.. before the walk, and no link is ever followed.
+        real = pathlib.Path(self.directory.name, 'real')
+        (real / 'inner').mkdir(mode=0o700, parents=True)
+        real.chmod(0o700)
+        (self.home / 'link').symlink_to(real / 'inner', target_is_directory=True)
+        lexical = str(self.home / 'link' / '..' / 'agent-contrib')  # the shell would resolve it to real/agent-contrib
+        store = cache.Cache(lexical)
+        self.assertIsNotNone(store._root())
+        store.close()
+        self.assertTrue(self.root.is_dir())
+        self.assertFalse((real / 'agent-contrib').exists())
+
     def test_the_filesystem_root_is_checked_too(self):
         checked, real = [], cache._check_ancestor
         def recording(descriptor, uid):
@@ -506,7 +530,6 @@ class DirectoryAnchorTests(CacheTestCase):
                 self.assertIsNone(cache.Cache(str(parent / 'agent-contrib-4'))._root())
 
     def test_an_acl_on_the_cache_directory_disables_the_cache(self):
-        self.home.mkdir(mode=0o700)
         self.root.mkdir(mode=0o700)
         if shutil.which('setfacl'):
             subprocess.run(['setfacl', '-m', 'u:65534:---', str(self.root)], check=True)  # mode stays 0700
@@ -533,7 +556,6 @@ class DirectoryAnchorTests(CacheTestCase):
             self.assertIsNone(cache.Cache(str(self.root))._root())
 
     def test_the_cache_directory_must_be_exactly_0700(self):
-        self.home.mkdir(mode=0o700)
         for mode, usable in ((0o700, True), (0o750, False), (0o710, False), (0o705, False)):
             with self.subTest(mode=oct(mode)):
                 self.root.mkdir(mode=0o700, exist_ok=True)
@@ -664,9 +686,27 @@ class EvictionTests(CacheTestCase):
         self.assertLessEqual(sum(remaining.values()), 100)
         self.assertEqual(sorted(remaining), sorted([stuck, 'blob-' + blob(fake.files[names[3]])]))
 
+    def test_stale_temporary_files_are_removed_and_fresh_ones_counted(self):
+        # Round 3 note 1: an orphaned .tmp- file from a crashed store was never collected or counted.
+        store, fake = self.store()
+        self.root.mkdir(mode=0o700)
+        stale, fresh = self.root / ('.tmp-' + 'a' * 32), self.root / ('.tmp-' + 'b' * 32)
+        other = self.root / '.tmp-notours'
+        for path in (stale, fresh, other):
+            path.write_bytes(b't' * 100)
+        old = cache.time.time() - cache.STALE_TEMPORARY - 10
+        os.utime(stale, (old, old))
+        os.utime(other, (old, old))
+        with patch.object(cache, 'TOTAL_LIMIT', 100 + len(INSTRUCTION) - 1):  # the fresh temp counts: evict the entry
+            store.observe(self.contents(), fake.request(self.contents()))
+        self.assertFalse(stale.exists(), 'a stale temporary file is removed')
+        self.assertTrue(fresh.exists(), 'a fresh one may belong to a concurrent store')
+        self.assertTrue(other.exists(), 'only our own temporary names are touched')
+        self.assertEqual(self.entries(), [], 'the fresh temporary file counted toward the total')
+        self.assertEqual(cache.STALE_TEMPORARY, 3600)
+
     def test_eviction_touches_only_valid_entry_names(self):
         store, fake = self.store()
-        self.home.mkdir(mode=0o700, exist_ok=True)
         self.root.mkdir(mode=0o700)
         for name in ('blob-notes', 'blob-' + 'e' * 39, 'BLOB-' + 'e' * 40, 'README'):
             (self.root / name).write_bytes(b'x' * 50)

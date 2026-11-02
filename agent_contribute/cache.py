@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import stat
+import time
 from urllib.parse import quote, unquote
 
 ENTRY_LIMIT = 8 * 1024 * 1024  # the response cap; GitHub contents responses are smaller
@@ -25,6 +26,8 @@ TREE = re.compile(rf'repos/({_NAME})/git/trees/([0-9a-f]{{40}})\?recursive=1')
 CONTENTS = re.compile(rf'repos/({_NAME})/contents/([^?#]+)\?ref=([0-9a-f]{{40}})')
 BLOB = re.compile(r'[0-9a-f]{40}')
 ENTRY = re.compile(PREFIX + r'[0-9a-f]{40}')  # eviction touches only valid entry names
+TEMPORARY = re.compile(r'\.tmp-[0-9a-f]{32}')  # our own in-progress store files
+STALE_TEMPORARY = 3600  # seconds; an older temporary file is left over from a crashed store
 
 _active = None
 
@@ -193,16 +196,24 @@ class Cache:
         self._evict()
 
     def _evict(self):
-        entries = []
+        entries, pending, stale_before = [], 0, time.time() - STALE_TEMPORARY
         with os.scandir(self._fd) as listing:
             for entry in listing:
                 try:
-                    if ENTRY.fullmatch(entry.name) and entry.is_file(follow_symlinks=False):
+                    if not entry.is_file(follow_symlinks=False):
+                        continue
+                    if ENTRY.fullmatch(entry.name):
                         info = entry.stat(follow_symlinks=False)
                         entries.append((info.st_mtime, entry.name, info.st_size))
+                    elif TEMPORARY.fullmatch(entry.name):
+                        info = entry.stat(follow_symlinks=False)
+                        if info.st_mtime < stale_before:  # orphaned by a crashed store
+                            os.unlink(entry.name, dir_fd=self._fd)
+                        else:  # possibly a concurrent store in progress: it counts, but is not ours to delete
+                            pending += info.st_size
                 except FileNotFoundError:  # another invocation evicted it meanwhile; it no longer counts
                     continue
-        total = sum(size for _, _, size in entries)
+        total = pending + sum(size for _, _, size in entries)
         for _, name, size in sorted(entries):
             if total <= TOTAL_LIMIT:
                 break
@@ -239,12 +250,14 @@ def _check_ancestor(descriptor, uid):
         raise PermissionError('Cache ancestor carries a POSIX ACL')
 
 
-def _open_child(name, parent):
-    """Open (creating 0700 if missing) one directory component relative to its parent, never following a symlink."""
-    try:
-        os.mkdir(name, 0o700, dir_fd=parent)
-    except FileExistsError:
-        pass
+def _open_child(name, parent, create=False):
+    """Open one directory component relative to its parent, never following a symlink. Only the cache directory
+    itself is created (0700), after every ancestor passed, so a refused run leaves nothing behind."""
+    if create:
+        try:
+            os.mkdir(name, 0o700, dir_fd=parent)
+        except FileExistsError:
+            pass
     return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
 
 
@@ -267,7 +280,7 @@ def _open_directory(directory):
             os.close(current)
             current = following
             _check_ancestor(current, uid)
-        root = _open_child(parts[-1], current)
+        root = _open_child(parts[-1], current, create=True)
     finally:
         os.close(current)
     info = os.fstat(root)

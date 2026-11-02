@@ -516,13 +516,19 @@ status.
   `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`.
   - It is opened once by walking every component of the absolute path from `/`
     without following symlinks: a symlink anywhere in the path disables the
-    cache. Missing components are created with mode 0700.
+    cache. Ancestors must already exist; only the cache directory itself is
+    created (0700), after every ancestor passed.
+  - The configured path is read lexically. `os.path.abspath` collapses `..`
+    before the walk, so `a/link/../c` means `a/c`, even where a shell following
+    `link` would land elsewhere.
   - Every ancestor must be owned by root or by you, and not group- or
     other-writable. The only exception is a root-owned sticky directory, such
     as `/tmp`. Ancestors you own must carry no POSIX ACL.
   - The cache directory itself must be yours, mode exactly 0700, with no POSIX
     ACL.
-  - Any doubt disables the cache for that run; it is never an error. Platforms
+  - Any doubt disables the cache for that run; it is never an error and, by
+    design, prints no diagnostic, so output stays identical. If warm runs never
+    get faster, check these rules for your `XDG_CACHE_HOME`. Platforms
     without `os.listxattr`, where ACLs cannot be ruled out, disable it too.
   - **Default Ubuntu homes disable the cache:** umask 002 makes `~/.cache`
     0775. To enable it, point `XDG_CACHE_HOME` at a private 0700 directory, for
@@ -533,7 +539,9 @@ status.
     open directory, so renaming or replacing its name afterwards cannot
     redirect them.
   - Writes are atomic and private (0600), and eviction touches only valid
-    entry names.
+    entry names and the CLI's own temporary files. A temporary file older than
+    one hour, left by a crashed store, is removed. Younger ones count toward the
+    total but are never deleted, since they may belong to a concurrent store.
   - Without POSIX ownership checks or `dir_fd` support, the cache is bypassed.
 - Entries are at most 8 MiB. After each store the total is brought under
   256 MiB by deleting the oldest entries. Entries another invocation removes
