@@ -36,7 +36,8 @@ CI success into evidence that the required contract checks ran.
 
 Overlap dispositions (#7), actor-specific label approval (#9), a reusable Action
 (#11), signed evidence (#18), draft updates (#21), a new fork route (#22) and
-mandate issuance (#23) need separate trust-boundary designs. In particular, fork
+mandate issuance (#23) need separate trust-boundary designs; for #23, issuer
+requirements are specified; no native issuer ships. In particular, fork
 ownership is not permission to publish upstream, and a local interactive prompt
 is not proof of human presence. PyPI publication (#26) and an external benchmark
 (#28) have not been implemented.

@@ -57,6 +57,18 @@ class LifecycleFixture(unittest.TestCase):
     rebind = test_lifecycle.IntegratedLifecycleTests.rebind
 
 
+class IssuerRequirementTests(unittest.TestCase):
+    def test_issuer_requirements_are_normative_and_keep_post_expiry_recognition(self):
+        text = flat((ROOT / 'docs' / 'host-authorization.md').read_text('utf-8'))
+        self.assertIn('## Host issuer requirements', text)
+        for phrase in ('one parsed snapshot', 'agent-callable', '`active`, `revoked` or `superseded`',
+                       'Expiry is not a status', 'never substitutes a fresh mandate',
+                       'whatever the gates say', 'Single-use per mandate', 'Mandatory issuer tests'):
+            self.assertIn(phrase, text)
+        status = flat((ROOT / 'docs' / 'development-status.md').read_text('utf-8'))
+        self.assertIn('issuer requirements are specified; no native issuer ships', status)
+
+
 class PrerequisitePins(LifecycleFixture):
     """The documented ai-policy-review convention relies on existing prerequisite gating."""
 
