@@ -78,60 +78,84 @@ def prevalidate(args):
 
 
 def main(argv=None):
-    parser = Parser(prog='agent-contrib', description='Read-only GitHub agent contribution protocol (JSON output)')
+    parser = Parser(prog='agent-contrib',
+                    description='Read-only GitHub agent contribution protocol. Output is JSON unless --format text.',
+                    epilog='Exit status: 0 when the command succeeds and its gate passes; 1 when a gate is not passed, '
+                           'a read is incomplete or an error occurs; 2 for usage errors.')
     parser.add_argument('--version', action='version', version=__version__)
-    parser.add_argument('--format', choices=('json', 'text'), default='json')
-    parser.add_argument('--report-budget', action='store_true')
-    parser.add_argument('--min-remaining', type=int)
-    commands = parser.add_subparsers(dest='command', required=True)
+    parser.add_argument('--format', choices=('json', 'text'), default='json',
+                        help='Output format (default json; text is an abridged summary). Give it before the subcommand')
+    parser.add_argument('--report-budget', action='store_true',
+                        help='Add GitHub rate-limit snapshots around a GitHub-reading command')
+    parser.add_argument('--min-remaining', type=int, metavar='N',
+                        help='With --report-budget, refuse to start below N remaining core requests')
+    commands = parser.add_subparsers(dest='command', required=True, metavar='COMMAND')
+    summaries = {'discover': 'Rank open issues of one repository, or 2-20, with policy and overlap context',
+                 'inspect': 'Inspect one issue: approval, instructions, exclusions and overlapping PRs',
+                 'prepare': 'Write a draft task contract for one issue; it grants no authorization'}
     for command in ('discover', 'inspect', 'prepare'):
-        sub = commands.add_parser(command)
-        sub.add_argument('reference', nargs='*' if command == 'discover' else None)
+        sub = commands.add_parser(command, help=summaries[command])
         if command == 'discover':
-            sub.add_argument('--signals', action='store_true')
-            sub.add_argument('--repositories-file')
+            sub.add_argument('reference', nargs='*', help='owner/repo; give 2-20 for a multi-repository run')
+            sub.add_argument('--signals', action='store_true',
+                             help='Add report-only code-location, clarity, activity and maintainer signals')
+            sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
+        else:
+            sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
         if command == 'inspect':
-            sub.add_argument('--ownership', action='store_true')
-            sub.add_argument('--ai-policy', action='store_true')
+            sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
+            sub.add_argument('--ai-policy', action='store_true',
+                             help='Add located AI-contribution policy excerpts from the loaded instructions')
         if command == 'prepare':
-            sub.add_argument('--output', required=True)
-            sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1')
-    commands.add_parser('instructions')
-    sub = commands.add_parser('skill')
-    sub.add_argument('--output', required=True)
-    sub = commands.add_parser('verify')
-    sub.add_argument('contract')
-    sub.add_argument('--evidence')
-    sub.add_argument('--repo-dir')
-    sub.add_argument('--stage', choices=('implementation', 'draft', 'completion'))
-    sub.add_argument('--host-context-stdin', action='store_true')
-    sub.add_argument('--observe-ci', action='store_true')
-    sub = commands.add_parser('scope-check')
-    sub.add_argument('contract')
-    sub.add_argument('--repo-dir', required=True)
-    sub.add_argument('--base')
-    sub = commands.add_parser('evidence').add_subparsers(dest='evidence_command', required=True).add_parser('init')
-    sub.add_argument('contract')
-    sub.add_argument('--repo-dir', required=True)
-    sub.add_argument('--base', required=True)
-    sub.add_argument('--output', required=True)
-    sub = commands.add_parser('audit')
-    sub.add_argument('repository')
-    sub.add_argument('--print-policy', action='store_true')
-    sub = commands.add_parser('ownership')
-    sub.add_argument('reference')
-    sub = commands.add_parser('drift')
-    sub.add_argument('contract')
-    sub = commands.add_parser('feedback')
-    sub.add_argument('reference')
-    sub.add_argument('--expected-head')
-    sub = commands.add_parser('pr-body')
-    sub.add_argument('contract')
-    sub.add_argument('--evidence')
-    sub.add_argument('--repo-dir')
-    sub.add_argument('--closes', action='store_true')
-    sub.add_argument('--assistant')
-    sub.add_argument('--output', required=True)
+            sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
+            sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
+                             help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
+    commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
+    sub = commands.add_parser('skill', help='Export the canonical agent Skill')
+    sub.add_argument('--output', required=True, help='New file for SKILL.md; never overwritten')
+    sub = commands.add_parser('verify', help='Check a contract and optional evidence against live GitHub state; '
+                                             'never runs validation argv')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub.add_argument('--evidence', help='Evidence JSON file for this contract')
+    sub.add_argument('--repo-dir', help='Local checkout the evidence describes')
+    sub.add_argument('--stage', choices=('implementation', 'draft', 'completion'),
+                     help='Schema 0.2: stage whose gate sets the exit status (default completion)')
+    sub.add_argument('--host-context-stdin', action='store_true',
+                     help='Schema 0.2: read a host-issued record as JSON on stdin (8 MiB, 5 s timeout); '
+                          'not proof of human consent')
+    sub.add_argument('--observe-ci', action='store_true',
+                     help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
+    sub.add_argument('--base', metavar='REV',
+                     help='Base commit, branch or tag (default source.commit); must be an ancestor of HEAD')
+    sub = commands.add_parser('evidence', help='Evidence file helpers').add_subparsers(
+        dest='evidence_command', required=True, metavar='COMMAND').add_parser(
+        'init', help='Write an unfilled evidence skeleton from observed Git facts; runs nothing')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub.add_argument('--repo-dir', required=True, help='Local checkout the evidence will describe')
+    sub.add_argument('--base', required=True, metavar='REV',
+                     help='Base commit, branch or tag; must descend from source.commit and be an ancestor of HEAD')
+    sub.add_argument('--output', required=True, help='New evidence file outside the checkout; never overwritten')
+    sub = commands.add_parser('audit', help='Read-only maintainer report: policy, labels, instructions, issue quality')
+    sub.add_argument('repository', help='owner/repo')
+    sub.add_argument('--print-policy', action='store_true', help='Include an example policy file; nothing is written')
+    sub = commands.add_parser('ownership', help='Report-only ownership and resolution signals for one issue')
+    sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
+    sub = commands.add_parser('drift', help='Report what changed since the contract was prepared; never rewrites it')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub = commands.add_parser('feedback', help='Latest reviews, comments and checks for one pull request')
+    sub.add_argument('reference', help="Pull request reference such as 'owner/repo#45'")
+    sub.add_argument('--expected-head', metavar='SHA',
+                     help='Full 40-character head SHA; reports head_moved if the PR head differs')
+    sub = commands.add_parser('pr-body', help='Render a Markdown PR description; grants no publication authority')
+    sub.add_argument('contract', help='Task contract JSON file')
+    sub.add_argument('--evidence', help='Evidence JSON file for this contract')
+    sub.add_argument('--repo-dir', help='Local checkout the evidence describes')
+    sub.add_argument('--closes', action='store_true', help="Write 'Closes' instead of the default 'Refs' issue link")
+    sub.add_argument('--assistant', help='Host-reported AI assistant name to disclose')
+    sub.add_argument('--output', required=True, help='New file for the Markdown body; never overwritten')
     args = None
     stage_gate = None
     try:

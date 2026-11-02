@@ -50,6 +50,8 @@
   resolved with hardened `git rev-parse --verify 'REV^{commit}'`; option-like
   values are refused. `scope-check` adds a `warnings` list and warns when the
   default base is not an ancestor of HEAD.
+- `agent-contrib --help` describes every command and option, including input
+  constraints and exit status; the description no longer claims JSON-only output.
 
 - Add explicit schema 0.2 for task-scoped same-repository candidate authorization.
   Live credential/role checks stay separate from host-asserted human mandates;

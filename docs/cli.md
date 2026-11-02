@@ -38,6 +38,11 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib --version` | CLI/library semantic version |
 
+`agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
+and option of the installed version. Exit status is 0 when a command succeeds and
+its gate passes, 1 when a gate is not passed, a read is incomplete or an error
+occurs, and 2 for usage errors.
+
 `discover`, `inspect` and `prepare` wrap their results with
 `requested_repository`, `issue_source_repository`, `proposed_target_repository`
 and `resolution_provenance`. The proposed target is context, never authority.
