@@ -105,6 +105,10 @@ def local_commits(directory, base, head):
     try:
         if not isinstance(base, str) or not core.SHA.fullmatch(base):
             raise core.ProtocolError('evidence', 'Evidence base_commit is not a full commit SHA')
+        # A shallow boundary truncates base..head without an error, while merge-base may still reach the base
+        # through another merge parent. Grafts and replace refs are already disabled by git_read.
+        if core.git_read(directory, 'rev-parse', '--is-shallow-repository') != 'false':
+            raise core.ProtocolError('shallow', 'Shallow repository: base_commit..git_head may be truncated; not observed')
         if core.git_read(directory, 'merge-base', base, head) != base:
             raise core.ProtocolError('evidence', 'Evidence base_commit is not an ancestor of git_head')
         listed = core.git_read(directory, 'rev-list', '--reverse', '--max-count', str(MAX_COMMITS + 1),

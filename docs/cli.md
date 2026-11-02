@@ -469,12 +469,15 @@ the source when the target is blank. It has three parts:
 - `local_commits` (only with `--repo-dir`; otherwise `not_requested`): the
   commits in evidence `base_commit..git_head`, oldest first, each with
   `signature_header: present` or `absent`, plus counts. This is header
-  presence, not validity; anyone can write a forged header. Only `merge-base`,
-  `rev-list` and `cat-file` run, through the hardened Git reads. No signature
+  presence, not validity; anyone can write a forged header. Only `rev-parse
+  --is-shallow-repository`, `merge-base`, `rev-list` and `cat-file` run, through
+  the hardened Git reads. No signature
   program runs: no gpg, ssh-keygen, `verify-commit` or `--show-signature`, so
   repository-configured programs are never executed. The base must be a full SHA
-  and an ancestor of the head. More than 1000 commits is reported as incomplete
-  and the list is never truncated.
+  and an ancestor of the head. A shallow repository is reported as incomplete,
+  because its boundary can silently cut the range even when the base is
+  reachable through a merge. More than 1000 commits is also reported as
+  incomplete; the list is never truncated.
 
 Any failed, partial or malformed read makes that part, and the observation,
 `complete: false` with fixed error strings. Contract-required verified heads and

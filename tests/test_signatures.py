@@ -320,6 +320,50 @@ class LocalCommitTests(unittest.TestCase):
         part = self.local(base, head)
         self.assertEqual((part['complete'], part['commits']), (True, [{'sha': head, 'signature_header': 'present'}]))
 
+    def test_shallow_history_is_incomplete_even_when_the_base_is_reachable(self):
+        # Review R6-06: in a shallow clone, base..head stops at the shallow boundary while merge-base still finds the
+        # base through a merge parent, so a truncated list looked complete.
+        self.git('init', '-q', '-b', 'main')
+        self.git('commit', '-q', '--allow-empty', '-m', 'B')
+        base, tree = self.git('rev-parse', 'HEAD'), self.git('rev-parse', 'HEAD^{tree}')
+
+        def commit(parents, extra=b'', number=0):
+            lines = [f'tree {tree}'] + [f'parent {p}' for p in parents] + [
+                f'author A <a@e> {number} +0000', f'committer A <a@e> {number} +0000']
+            content = '\n'.join(lines).encode() + b'\n' + extra + b'\n' + f'commit {number}\n'.encode()
+            return subprocess.run(['git', '-C', self.repo, 'hash-object', '-t', 'commit', '-w', '--stdin'], input=content,
+                                  capture_output=True, check=True).stdout.decode().strip()
+        signed = commit([base], b'gpgsig -----BEGIN\n FORGED\n', 1)
+        side = commit([signed], number=2)
+        merge = commit([base, side], number=3)
+        self.git('update-ref', 'refs/heads/main', merge)
+        full = self.local(base, merge)
+        self.assertEqual((full['complete'], full['with_header'], full['without_header']), (True, 1, 2))
+        shallow = os.path.join(self.directory.name, 'shallow')
+        subprocess.run(['git', 'clone', '-q', '--depth=2', '--branch', 'main', 'file://' + self.repo, shallow],
+                       capture_output=True, check=True)
+        self.assertEqual(subprocess.run(['git', '-C', shallow, 'merge-base', base, merge], capture_output=True,
+                                        text=True, check=True).stdout.strip(), base, 'fixture: base stays reachable')
+        result = observe(SignatureGitHub(ready_contract()[1], head=merge),
+                         evidence={'git_head': merge, 'base_commit': base}, repo_dir=shallow)[0]
+        part = result['local_commits']
+        self.assertEqual((part['complete'], part['commits'], part['with_header'], result['complete']), (False, None, None, False))
+        self.assertTrue(any('shallow' in error.lower() for error in part['errors']))
+        with patch.object(signatures, 'MAX_COMMITS', 2):  # the cap cannot be bypassed through a shallow graph
+            self.assertFalse(self.local(base, merge)['complete'])
+            self.assertFalse(observe(evidence={'git_head': merge, 'base_commit': base}, repo_dir=shallow)[0]
+                             ['local_commits']['complete'])
+
+    def test_unexpected_shallow_answer_fails_closed(self):
+        base, head, _ = self.build()
+        real = core.git_read
+        for answer in ('true', '--is-shallow-repository', '', 'False'):
+            with self.subTest(answer=answer):
+                def fake(directory, *args, **kwargs):
+                    return answer if args[:1] == ('rev-parse',) else real(directory, *args, **kwargs)
+                with patch.object(core, 'git_read', fake):
+                    self.assertFalse(self.local(base, head)['complete'])
+
     def test_over_the_cap_is_incomplete_not_truncated(self):
         base, head, _ = self.build((False, False, False))
         with patch.object(signatures, 'MAX_COMMITS', 2):
@@ -382,7 +426,7 @@ class LocalCommitTests(unittest.TestCase):
             part = self.local(base, head)
         self.assertTrue(part['complete'], part.get('errors'))
         self.assertFalse(marker.exists())
-        self.assertEqual({args[0] for args in calls}, {'merge-base', 'rev-list', 'cat-file'})
+        self.assertEqual({args[0] for args in calls}, {'rev-parse', 'merge-base', 'rev-list', 'cat-file'})
         self.assertNotIn('subprocess', vars(signatures))
         for args in calls:
             self.assertFalse({'--show-signature', 'verify-commit', '--pretty', '--format'} & set(args), args)
