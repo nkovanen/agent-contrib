@@ -1,9 +1,12 @@
 # Actor-verified approval labels: design proposal
 
 - Date: 2026-11-02
-- Status: proposal, **revision 2**, not implemented. Issue [#9](https://github.com/nkovanen/agent-contrib/issues/9).
-  Revision 1 (`7c1b2e9`) was blocked by hostile review R9; see
-  [Review resolution](#review-resolution).
+- Status: **revision 2**. Issue [#9](https://github.com/nkovanen/agent-contrib/issues/9).
+  - Part 1 (documentation) was reviewed SHIP in R9 round 2 and is implemented.
+  - Part 2 (`audit --label-actors`) is **deferred**, with R9-05 and R9-06 open
+    (see [Deferred](#deferred-part-2-open-findings)).
+  - Revision 1 (`7c1b2e9`) was blocked by R9 round 1; see
+    [Review resolution](#review-resolution).
 - Base: `d0bdf3d` (unreleased v0.3.0 candidate).
 
 ## Summary
@@ -60,7 +63,8 @@ exists in the REST GET surface this CLI uses.
 | Party | Reads labels and events | Reads an actor's repository role | Has a stronger authority path |
 | --- | --- | --- | --- |
 | Outside contributor (no push access) | yes (public issue) | **no**: 403 on the permission endpoint (live) | no |
-| Triager, write collaborator | yes | yes (push access); write was observed, triage is not yet confirmed | not by default |
+| Triager | yes | not confirmed: triage grants labelling, not code push access | not by default |
+| Write collaborator | yes | yes (push access) | not by default |
 | Maintainer, admin, or their agent | yes | yes | yes: the schema 0.2 mandate route |
 | GitHub App or bot | depends on its permissions | depends on its permissions | not used by this project |
 
@@ -72,12 +76,12 @@ or do not need, authority. That is why revision 2 drops the policy change.
 The existing policy text (`docs/maintainers.md`, the approval policy section)
 gains these statements:
 
-- Label approval means "an account GitHub lets apply this label applied it".
-  The CLI does not and cannot verify that account's role for outside
-  contributors.
-- To make approval maintainer-only, restrict who can apply labels, for example
-  by not granting triage to accounts you would not let approve agent work. Use
-  a dedicated label name, and re-check the label after renaming labels.
+- The CLI checks that a configured label is currently present under repository
+  policy; it does not verify who applied it.
+- Policy 0.1 is suitable only if every principal who can label issues is
+  trusted to approve agent work: triage, write and higher roles, custom grants,
+  and automation. A dedicated label name restricts nothing. Repositories that
+  need a narrower authority model should not opt in.
 - For your own agents, prefer the schema 0.2 mandate route over label approval.
 - `audit --label-actors`, if shipped, is the maintainer-side check.
 
@@ -198,6 +202,33 @@ on. Confirm before Slice 3:
 - what a triage credential gets from the permission endpoint;
 - what a known GitHub App user-token label event carries in
   `performed_via_github_app`.
+
+## Deferred: Part 2 open findings
+
+Part 2 is not implemented. If revived, it must first resolve:
+
+- **R9-05 (Medium).** A per-item "maintainer" result and an exit status
+  implying "all actors are maintainers" overstate attribution, because the
+  report cannot identify which label an event applied (name matching).
+  - Report neutral observations instead: "latest same-name event" and "that
+    event actor's current role", with attribution marked unresolved per item
+    (also in text output).
+  - Exit status reflects availability and read completeness only.
+  - No clean, verified or approved aggregate.
+  - Tests show that name ambiguity cannot yield a verified attribution, and
+    that the report never affects approval, prepare, verify or task hashes.
+- **R9-06 (Medium).** Class names inferred unsupported facts.
+  - A missing `performed_via_github_app` is `unverifiable`, not `automation`.
+    `automation` is reserved for an observed Bot type or explicit non-null App
+    attribution.
+  - Custom roles are reported by their observed name (`unsupported_role`), not
+    as below-maintainer. A custom role can be based on `maintain`.
+  - No organization role definitions are fetched.
+- **Also required:**
+  - Unknown or incomplete issue listings, unavailable credentials, and relevant
+    events with unusable timestamps or kinds give explicit
+    unavailable/incomplete outcomes, never empty success.
+  - Reuse the existing role-read validation without requiring a host mandate.
 
 ## Review resolution
 

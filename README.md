@@ -96,9 +96,12 @@ submit it there.
 ## Approval and authorization
 
 An ordinary issue is a **candidate**. Labels such as `help wanted` do not permit
-agent-generated work. A task is **maintainer-approved** only through an explicit
-`.agent-contrib.json` policy and a matching label; that v0 policy trusts everyone
-who can apply labels, including triagers. See [maintainer setup](docs/maintainers.md).
+agent-generated work. A task is **policy-approved** only through an explicit
+`.agent-contrib.json` policy and a configured label currently on the issue. The
+CLI checks the label; it does not verify who applied it. The policy trusts every
+account that can label issues (triage, write and higher, and automation with
+label access), and public GitHub data cannot tell the CLI who the labeller was.
+See [maintainer setup](docs/maintainers.md).
 
 Each contract uses one of two task schemas:
 

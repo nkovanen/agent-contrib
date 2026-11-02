@@ -196,6 +196,11 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- Approval-label documentation states what policy 0.1 checks: a configured
+  label currently present, not who applied it. The policy is suitable only if
+  everyone who can label issues is trusted to approve agent work, and actor
+  verification is not available from public REST data (#9). No behaviour
+  changes.
 - In a shallow clone that lacks the base or its history, `verify`,
   `scope-check` and `evidence init` now say so (`shallow_checkout`, with a
   fetch hint) instead of a generic read or base error. They still fail closed.

@@ -75,5 +75,22 @@ class DocsConsistencyTests(unittest.TestCase):
                 self.assertRegex(text, rf'issues/{number}\)')
 
 
+    def test_label_approval_docs_state_what_is_and_is_not_verified(self):
+        # #9: policy 0.1 checks label presence only; no document may imply a verified or maintainer-applied label.
+        flat = lambda path: ' '.join((ROOT / path).read_text('utf-8').split())
+        texts = {path: flat(path) for path in ('README.md', 'SECURITY.md', 'docs/maintainers.md',
+                                               'agent_contribute/instructions.md')}
+        for path, text in texts.items():
+            with self.subTest(path=path):
+                self.assertIn('does not verify who applied it', text)
+                self.assertNotIn('maintainer-approved', text)
+        maintainers = texts['docs/maintainers.md']
+        self.assertIn('suitable only if every principal who can label issues is trusted to approve agent work',
+                      maintainers)
+        self.assertIn('A dedicated label name restricts nothing', maintainers)
+        self.assertIn('do not opt in under this policy', maintainers)
+        self.assertIn('documented limitation; actor verification not available on public REST data',
+                      flat('docs/product-map.md'))
+
 if __name__ == '__main__':
     unittest.main()

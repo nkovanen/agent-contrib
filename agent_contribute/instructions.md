@@ -455,9 +455,11 @@ default branch:
 ```
 
 This precise policy delegates approval to **every account GitHub allows to
-apply issue labels**, including triagers. It does not claim the label actor is
-a maintainer. Repositories unwilling to delegate this broadly must not adopt
-this POC policy; label-actor-specific permission checks are not implemented. The separate schema
+apply issue labels**: triage, write and higher roles, and automation with label
+access. The CLI checks that a configured label is currently present; it does not
+verify who applied it, and public REST data cannot. Never report a policy label
+as maintainer approval. Repositories unwilling to delegate this broadly must not
+adopt this policy; no maintainer-only label policy exists. The separate schema
 0.2 candidate route verifies the current credential actor; it does not change
 this label policy or authenticate human consent. Generic
 triage labels are refused even if the policy lists them. Policy and instruction
