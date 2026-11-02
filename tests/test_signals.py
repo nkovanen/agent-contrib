@@ -188,8 +188,18 @@ class ModuleNameTests(unittest.TestCase):
         self.assertEqual(self.hints('a.b.c.d', ['a/b/c.py', 'a/b/c/d.py']), ['a/b/c/d.py'])
         self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 150, ['p' * 150 + '/' + 'a' * 149 + '.py']), [],
                          'a long identifier is read whole, never as its first 300 characters')
-        long_member = 'p' * 150 + '.' + 'a' * 149 + '.member_function'
-        self.assertEqual(self.hints(long_member, ['p' * 150 + '/' + 'a' * 149 + '.py']), ['p' * 150 + '/' + 'a' * 149 + '.py'])
+        # Review R3-02 round 2: a name longer than the 300-character index bound is refused whole. Otherwise an
+        # unindexed longer module (unique or ambiguous) would be skipped and a shorter prefix named instead.
+        p, q, r = 'p' * 140, 'q' * 140, 'r' * 30
+        short, full = p + '/' + q + '.py', p + '/' + q + '/' + r + '.py'
+        for tree in ([short, full], [short, 'x/' + full, 'y/' + full], [short]):
+            self.assertEqual(self.hints('.'.join([p, q, r]), tree), [])
+        exact = 'p' * 150 + '/' + 'a' * 149 + '.py'
+        self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 149, [exact]), [exact], 'exactly 300 characters resolves')
+        rust = 'crate::' + 'p' * 150 + '::' + 'a' * 149  # 307 characters as written, 300 as a slash path
+        self.assertEqual(self.hints(rust, [exact.replace('.py', '.rs')]), [exact.replace('.py', '.rs')])
+        over = 'p' * 150 + '/' + 'a' * 150 + '.py'
+        self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 150, [over]), [], '301 characters is refused')
         # Literal 64 KiB: the documented scan bound, independent of the constant.
         self.assertEqual(self.hints(' ' * 65533 + 'a.bc', ['a/b.py', 'a/bc.py']), [], 'a token cut by the scan limit is refused')
         self.assertEqual(self.hints(' ' * 65536 + 'a.b', ['a/b.py']), [], 'text past the scan limit')

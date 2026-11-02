@@ -63,8 +63,10 @@ def module_hint(token, index):
         return None
     if '::' in token and segments[0] in RUST_PREFIXES:
         segments = segments[1:]
-    if len(segments) > MAX_SEGMENTS:
-        return None  # Refuse rather than resolve a shorter, different module.
+    if len(segments) > MAX_SEGMENTS or len('/'.join(segments)) > MAX_TOKEN:
+        # Refuse the whole name: only then is every prefix within the index bounds, so a longer (or ambiguous)
+        # module can never be skipped in favour of a shorter, different one.
+        return None
     # The longest prefix naming any module decides; trailing segments are members. Never fall back past ambiguity.
     for end in range(len(segments), 1, -1):
         match = index.get('/'.join(segments[:end]))
