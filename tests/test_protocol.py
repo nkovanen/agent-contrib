@@ -325,10 +325,18 @@ class VerificationTests(unittest.TestCase):
         task['behavior_criteria'][0]['description'] = '   '
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
+    def test_legacy_prepared_duplicate_blocks_execution_without_a_live_overlap(self):
+        task, client = ready_contract()
+        self.assertTrue(core.verify(task, client=client)['execution_ready'])
+        task['discovery']['duplicate_prs'] = [{'number': 30, 'url': 'https://github.com/acme/photos/pull/30',
+                                               'reason': 'Explicit reference to this issue'}]
+        result = core.verify(task, client=client)
+        self.assertEqual(result['errors'], ['Prepared discovery is incomplete or has unresolved duplicates'])
+        self.assertFalse(result['execution_ready'])
+
     def test_prerequisite_blocker_names_each_failing_id_and_status(self):
         expected = ('Prerequisites are not satisfied with evidence: P1 (pending), '
                     'P3 (blocked), P4 (satisfied without evidence)')
-        from agent_contribute import lifecycle
         from tests.test_authorization import candidate_task
         prerequisites = [{'id': 'P1', 'description': 'One', 'status': 'pending', 'evidence': ''},
                          {'id': 'P2', 'description': 'Two', 'status': 'satisfied', 'evidence': 'Done'},
@@ -341,9 +349,9 @@ class VerificationTests(unittest.TestCase):
         self.assertIn(expected, result['errors'])
         task, client = candidate_task()
         task['prerequisites'] = copy.deepcopy(prerequisites)
-        self.assertIn(expected, lifecycle.reviewed_errors(task))
+        self.assertIn(expected, core.reviewed_contract_errors(task, '0.2'))
         task['prerequisites'] = [prerequisites[1]]
-        self.assertFalse([item for item in lifecycle.reviewed_errors(task) if 'Prerequisites' in item])
+        self.assertFalse([item for item in core.reviewed_contract_errors(task, '0.2') if 'Prerequisites' in item])
 
     def test_duplicate_json_keys_are_rejected(self):
         with self.assertRaises(core.ProtocolError):

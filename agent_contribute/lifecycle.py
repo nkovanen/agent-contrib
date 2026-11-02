@@ -41,37 +41,6 @@ def check_publication(binding, publication_claim, expected_head, client):
     return check(binding, publication_claim, expected_head, client)
 
 
-def reviewed_errors(task):
-    errors = []
-    if task['status'] != 'reviewed' or task['questions']:
-        errors.append('Contract is draft or has unanswered questions')
-    for key in ('objective', 'behavior_criteria', 'code_locations', 'constraints', 'prohibited_changes', 'validation'):
-        value = task[key]
-        if not value or (isinstance(value, str) and not value.strip()):
-            errors.append('Reviewed contract requires ' + key)
-    scope = task['scope']
-    if not scope['allowed_paths'] or not scope['prohibited_paths']:
-        errors.append('Reviewed contract requires allowed paths and explicit prohibited paths')
-    for pattern in scope['allowed_paths']:
-        first = pattern.split('/')[0]
-        if first in ('', '.', '..') or any(char in first for char in '*?['):
-            errors.append('Allowed scope requires a concrete root file or directory prefix')
-    for pattern in scope['allowed_paths'] + scope['prohibited_paths']:
-        if pattern.startswith(('/', '\\')) or '\\' in pattern or '..' in pattern.split('/'):
-            errors.append('Scope patterns must be repository-relative without parent traversal')
-    for key in ('behavior_criteria', 'validation', 'prerequisites'):
-        if not core.unique_ids(task[key]):
-            errors.append('Duplicate IDs in ' + key)
-    for list_key, ids_key in [('behavior_criteria', 'criteria_ids'), ('validation', 'validation_ids')]:
-        ids = task['done'][ids_key]
-        if len(ids) != len(set(ids)) or set(ids) != {item['id'] for item in task[list_key]}:
-            errors.append('Definition of done must cover exactly all ' + list_key)
-    if not task['discovery']['complete']:
-        errors.append('Prepared discovery is incomplete')
-    errors.extend(core.prerequisite_errors(task['prerequisites']))
-    return errors
-
-
 def independent_review(task, evidence, now):
     result = {'valid': False, 'status': 'pending', 'errors': [], 'trust': 'self-attested'}
     if evidence is None:
@@ -166,7 +135,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     source = task['source']
     result.update(contract_sha256=digest, source_identity={key: source[key] for key in
                   ('repository', 'repository_id', 'owner_id', 'issue', 'issue_id')}, live_complete=False)
-    errors.extend(reviewed_errors(task))
+    errors.extend(core.reviewed_contract_errors(task, '0.2'))
     current = None
     live_duplicates = []
     try:
