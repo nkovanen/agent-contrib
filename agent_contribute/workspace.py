@@ -5,7 +5,8 @@ from pathlib import Path
 from . import core
 
 REVISION = re.compile(r'(?P<name>[0-9a-f]{40}|HEAD|refs/[^~^:?*\[\\\s]+)(?P<suffix>(?:[~^][0-9]{0,9})*)')
-DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--no-renames', '--name-only', '-z')
+# --ignore-submodules=all: Git never starts a command inside a submodule with that submodule's own config.
+DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=all', '--no-renames', '--name-only', '-z')
 
 
 def scope_check(task, directory, base=None):
@@ -29,8 +30,8 @@ def scope_check(task, directory, base=None):
                                           'rebased work pass --base REV naming the commit your change starts from')
             raise core.shallow_or(directory, core.ProtocolError(
                 'git_error', 'Base commit is missing or not an ancestor of HEAD')) from None
-        if core.has_gitlink(directory, head, base):
-            errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
+        if core.has_gitlink(directory, head, base):  # stop before any index or worktree diff
+            raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
         paths = set(core.implementation_paths(directory, base, head))
         # Index, working tree and untracked files: everything a later commit could contain.
         for args in (DIFF + ('--cached', base), DIFF + (base,)):

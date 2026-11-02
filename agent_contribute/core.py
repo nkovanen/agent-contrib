@@ -805,6 +805,8 @@ def current_head(directory):
 
 
 def implementation_paths(directory, base, head=None):
+    # Commit-to-commit only: no worktree is read, so no submodule command can start, and =none keeps gitlink
+    # paths visible to the scope check. Every index or worktree diff/status uses --ignore-submodules=all.
     head = head or current_head(directory)
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
                                       '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, head).split('\0') if path]

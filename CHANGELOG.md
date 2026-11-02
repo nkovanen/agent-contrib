@@ -164,6 +164,11 @@ channel or runtime model provider is added.
   mode settings cannot hide a same-size edit or an executable-bit change.
   `core.ignoreCase=true` on a case-sensitive filesystem is refused
   (`unsafe_git_config`) because it hides case twins.
+- `scope-check` stops on a gitlink before any index or worktree diff, and every
+  index or worktree diff and status passes `--ignore-submodules=all`, so Git
+  never starts a command inside a populated submodule with that submodule's own
+  config. Previously scope-check reported the gitlink but still ran a
+  submodule-configured clean filter.
 - Untracked files are found with only per-directory `.gitignore` rules:
   `.git/info/exclude` and a local `core.excludesFile` no longer hide an
   untracked file from `verify`, `scope-check` or `evidence init`, and an
