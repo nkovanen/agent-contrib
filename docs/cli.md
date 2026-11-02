@@ -262,6 +262,12 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   name containing other identifier characters, such as combining marks, `℘` or
   `·`, is refused; its fragments are never resolved either.
   Path and file-name matches come first and the same limit of 20 applies.
+  `named_paths_missing` lists repository-relative file paths the issue names
+  (`docs/x.md`, `./src/a.rs`, `.github/ci.yml`; a last segment with an
+  extension) that the snapshot tree does not contain, at most 20 in order of
+  appearance. It skips absolute paths, URLs, domains, `..` traversal and
+  tokens cut at 300 characters, and it is empty when the tree is unknown. It is a
+  staleness cue only: it does not change `value`, `score` or ordering.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
   expected/actual sections, reproduction steps and code blocks.
 - `activity`: age and last-update days, comment and reaction counts from the

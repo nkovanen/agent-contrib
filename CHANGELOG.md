@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- `discover --signals` adds `code_location.named_paths_missing`: file paths the
+  issue names that are not in the snapshot tree (F13). Report only; score and
+  ordering are unchanged.
 - Text `discover` shows each issue's overlapping-PR count, excluded flag and
   (with `--signals`) score, plus overlapping and excluded totals that include
   issues beyond the 20-line cap (F8). JSON is unchanged.
