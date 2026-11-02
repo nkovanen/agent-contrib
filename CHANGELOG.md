@@ -137,6 +137,12 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Installed workflow Quick path (N-02): the stop rule now matches the policy
+  section ("a relevant rule that is prohibited or unresolved" instead of "a
+  refusal or restriction"), the policy step comes before ranking and selection,
+  and a constrained policy (a human must review, submit or write every comment)
+  requires asking the user to commit to that mode first. Disposition (c) is
+  valid only after that commitment.
 - Text output of `discover`, `inspect` and `prepare` lists up to five policy
   restriction hints (kind, `repository:path:line`, sanitized excerpt) under the
   Policy line, plus a count of the rest. Before, only counts were shown, so

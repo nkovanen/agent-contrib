@@ -16,11 +16,13 @@ A summary of the sections below; it never overrides them. Global options such as
 `--report-budget` and `--format` go before the subcommand.
 
 1. Record `agent-contrib --version` and the user's exact request.
-2. `agent-contrib --report-budget discover owner/repo --signals` ranks issues
-   (`--signals` re-ranks heuristically, never approves); add `--responsiveness`
-   to see whether outside PRs get merged. Drop excluded or overlapping issues.
+2. Run `agent-contrib --report-budget discover owner/repo --signals` (it re-ranks,
+   never approves; `--responsiveness` samples outside merges). Before ranking or
+   selecting, complete the repository policy step below; for a constrained policy
+   (a human must review, submit or write every comment), first ask the user to
+   commit to that mode. Drop excluded or overlapping issues.
 3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
-   (claims, linked PRs, prior fixes) and complete the repository policy step below.
+   (claims, linked PRs, prior fixes).
 4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add
    `--schema-version 0.2` for the owner/maintainer same-repository route). Fill
    the contract and the requirements ledger as described below.
@@ -43,7 +45,7 @@ A summary of the sections below; it never overrides them. Global options such as
    report the draft as pending acceptance. Never mark the PR ready, merge or release.
 
 **Stop and report** (contract, hash, blockers) when: the user made a bare help
-request; the repository policy step finds a refusal or restriction, or is
+request; the repository policy step finds a relevant rule that is prohibited or
 unresolved; a PR, claim or prior fix overlaps the task, or a read is incomplete;
 schema 0.2 has no human/host-issued mandate (never write one) or schema 0.1 lacks
 the user's explicit execution authorization; a gate in steps 6-8 is false;
@@ -72,7 +74,8 @@ so the host agent, the user and the independent reviewer are responsible for it.
    media only), shown by its actual context;
    (c) **compliant constrained workflow**: the policy permits a mode you will
    really follow, such as a human who understands the work and writes every
-   comment and the PR description; valid only where the policy permits that mode;
+   comment and the PR description; valid only where the policy permits that mode
+   and after the user commits to it;
    (d) **source-authorized exception**: written permission from the source
    project's authority, with link and provenance;
    (e) **prohibited**.
