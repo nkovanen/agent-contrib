@@ -1,7 +1,8 @@
 # Command reference
 
 Commands emit JSON by default except help/version. Exit codes: **0** for a complete read,
-successful export/draft write or completion-ready verification; **1** for an
+successful export/draft write or a passed verification gate (completion
+readiness for schema 0.1, the selected `--stage` for 0.2); **1** for an
 expected error, incomplete read or unresolved verification; **2** for usage
 errors. An exit code is not authorization.
 
@@ -437,7 +438,8 @@ decreased; a negative difference is never reported. A snapshot is rejected
 (`null` values with an error, never zero) unless its counters are non-negative
 integers with `used + remaining == limit`. Command arguments are validated
 before the first snapshot: malformed repository references, unreadable input
-files and schema-invalid `drift`/`pr-body` contracts cause no GitHub read.
+files and schema-invalid `drift`/`pr-body`/`authorization-request` contracts
+cause no GitHub read.
 `verify` still reports schema and evidence failures in its normal result envelope;
 optional budget reads do not turn those failures into success. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
