@@ -119,6 +119,17 @@ class EvidenceInitTests(unittest.TestCase):
             self.assertEqual((code, result['error']['code']), (1, 'output_in_checkout'))
             self.assertFalse(pathlib.Path(tmp, 'e.json').exists())
 
+    def test_subdirectory_repo_dir_still_contains_output_at_checkout_root(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as out:
+            task, _, evidence, _ = evidence_checkout(tmp)
+            contract = pathlib.Path(out, 'task.json')
+            contract.write_text(json.dumps(task))
+            target = pathlib.Path(tmp, 'evidence.json')
+            code, result = self.invoke('evidence', 'init', str(contract), '--repo-dir', str(pathlib.Path(tmp, 'src')),
+                                       '--base', evidence['base_commit'], '--output', str(target))
+            self.assertFalse(target.exists())
+            self.assertEqual((code, result.get('error', {}).get('code')), (1, 'output_in_checkout'))
+
     def test_checkout_root_with_trailing_whitespace_still_contains_output(self):
         # Git output is stripped by git_read; the containment root must not be.
         for suffix in [' ', '\t', '\n', ' \n ']:
