@@ -301,8 +301,12 @@ without extra API calls. Without the flag, output and ordering are unchanged.
     `needs discussion`, `discussion`, `question`, `rfc`, `proposal`;
   - not planned or not this project: `not planned`, `out of scope`,
     `upstream`, `third party`, `wont do`;
-  - major-version or breaking-change bucket: `breaking`, `breaking change` or a
-    `vN` word such as `v5`.
+  - major-version or breaking-change bucket: only an explicit bucket, where the
+    label or its last `:` or `/` part is exactly `breaking`, `breaking change`,
+    `breaking changes`, `vN` or `vN.x` (`v5`, `kind/breaking`, `target: v6`).
+    `non-breaking`, `v5-compat` and `bug: v5 regression` are not buckets.
+  A phrase right after `non`, `not`, `no` or `un` does not match, so
+  `not blocked` and `no discussion needed` are not demotions.
   A title counts as meta-like when it starts with `meta`, `wip`, `tracking`,
   `tracker`, `roadmap`, `rfc`, `umbrella` or `epic` followed by `:`, `]`, `)` or
   `-`, or contains `meta issue`, `tracking issue`, `umbrella issue`, `roadmap`

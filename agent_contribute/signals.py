@@ -218,16 +218,23 @@ def responsiveness(repository, client):
 
 # Report-only ranking demotions (E-08, E-09). Label phrases match whole words of the lower-cased label name, with
 # punctuation and separators read as spaces, so 'Status: On-Hold' matches 'on hold' but 'blockedness' matches nothing.
+# A phrase right after a negation ('not blocked', 'non breaking') does not match. The major-version group needs an
+# explicit bucket: the label, or its last ':' or '/' part, is exactly a bucket name (R8-01: 'v5-compat' is not one).
 DEMOTING_LABELS = (
     ('on hold or deferred', ('icebox', 'on hold', 'blocked', 'deferred', 'postponed', 'frozen')),
     ('needs a decision or design discussion', ('needs decision', 'needs design', 'needs discussion', 'discussion',
                                                'question', 'rfc', 'proposal')),
     ('not planned or not this project', ('not planned', 'out of scope', 'upstream', 'third party', 'wont do')),
-    ('major-version or breaking-change bucket', ('breaking', 'breaking change')))
-MAJOR_VERSION = re.compile(r'(?:^| )v[0-9]{1,3}(?= |$)')
+    ('major-version or breaking-change bucket', ()))
+NEGATIONS = ('non', 'not', 'no', 'un')
+MAJOR_BUCKET = re.compile(r'breaking(?: changes?)?|v[0-9]{1,3}(?: x)?')
 META_TITLE = re.compile(r'(?i)^\W{0,3}(?:meta|wip|tracking|tracker|roadmap|rfc|umbrella|epic)\s{0,3}[]:)-]|'
                         r'\b(?:meta|tracking|umbrella) issue\b|\broadmap\b|\bfeatures? list\b')
 DEMOTION = 2
+
+
+def _words(name):
+    return ' ' + ' '.join(re.sub(r'[^a-z0-9]+', ' ', name.casefold().replace("'", '')).split()) + ' '
 
 
 def demotions(issue):
@@ -235,9 +242,10 @@ def demotions(issue):
     labels = [label['name'] for label in issue.get('labels') or [] if isinstance(label, dict) and isinstance(label.get('name'), str)]
     for group, phrases in DEMOTING_LABELS:
         for name in labels:
-            words = ' ' + ' '.join(re.sub(r'[^a-z0-9]+', ' ', name.casefold().replace("'", '')).split()) + ' '
-            if any(' ' + phrase + ' ' in words for phrase in phrases) or (
-                    group.startswith('major') and MAJOR_VERSION.search(words.strip())):
+            words = _words(name)
+            bucket = _words(re.split(r'[:/]', name)[-1])
+            if any(' ' + phrase + ' ' in words and not any(f' {negation} {phrase} ' in words for negation in NEGATIONS)
+                   for phrase in phrases) or (not phrases and MAJOR_BUCKET.fullmatch(bucket.strip())):
                 reasons.append(f'label "{core.safe_text(name, 100)}": {group}')
                 break
     if meta:

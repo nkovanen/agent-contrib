@@ -108,6 +108,15 @@ class DemotionTests(unittest.TestCase):
                 self.assertEqual(result['demotion'], {'value': 'demoted', 'reasons': [f'label "{label}": {reason}']})
                 self.assertEqual(result['score'], 1)
                 self.assertEqual(result['labels'], ['bug', label])
+        for label in ['Kind/Breaking', 'semver: breaking', 'v5.x', 'target: v6']:
+            with self.subTest(label=label):
+                self.assertEqual(self.signals_for(labels=[label])['demotion']['reasons'],
+                                 [f'label "{label}": major-version or breaking-change bucket'])
+        # Review R8-01: negated or qualified labels are compatibility work, not a future-version bucket.
+        for label in ['non-breaking', 'non-breaking change', 'not breaking', 'v5-compat', 'bug: v5 regression',
+                      'affects v5', 'not blocked', 'no discussion needed', 'unblocked', 'un-blocked']:
+            with self.subTest(label=label):
+                self.assertEqual(self.signals_for(labels=[label])['demotion']['value'], 'none')
         for label in ['bug', 'docs', 'design-system', 'blockedness', 'v5x', 'questionable', 'hold']:
             with self.subTest(label=label):
                 self.assertEqual(self.signals_for(labels=[label])['demotion']['value'], 'none')

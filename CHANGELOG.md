@@ -75,7 +75,8 @@ channel or runtime model provider is added.
   where documented.
 - `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
   and lowers the score by 2 for each documented label group (on hold, needs a
-  decision, not planned, major-version bucket) and for meta, tracking, roadmap
+  decision, not planned, explicit major-version bucket; negated labels do not
+  match) and for meta, tracking, roadmap
   or WIP titles, whose maintainer point is no longer counted (E-08, E-09).
   Default discover output and ordering are unchanged. An offline regression
   replays the dogfood-2 click, ripgrep and hono rankings; precision@5 is
