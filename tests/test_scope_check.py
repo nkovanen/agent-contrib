@@ -3,8 +3,10 @@ import contextlib
 import copy
 import io
 import json
+import os
 import pathlib
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -73,13 +75,14 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertFalse(result['within_scope'])
             self.assertIn('Submodule/gitlink evidence is unsupported; no submodule commands were run', result['errors'])
 
-    def test_base_accepts_local_revisions_resolved_to_the_full_commit(self):
+    def test_base_accepts_full_sha_head_and_exact_refs_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, git = self.checkout(tmp)
             base = evidence['base_commit']
             git('branch', 'work-base', base)
             git('tag', '-a', '-m', 'annotated', 'v-base', base)
-            for rev in ['work-base', 'v-base', 'HEAD~1', base[:12], base]:
+            for rev in ['refs/heads/work-base', 'refs/tags/v-base', 'refs/heads/work-base~0^0', 'HEAD~1', 'HEAD^', base,
+                        git('rev-parse', 'HEAD') + '~1']:
                 with self.subTest(rev=rev):
                     result = workspace.scope_check(task, tmp, rev)
                     self.assertTrue(result['within_scope'], result)
@@ -92,31 +95,38 @@ class ScopeCheckTests(unittest.TestCase):
     def test_base_errors_hint_at_accepted_forms_and_resolution_ignores_replacements(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, git = self.checkout(tmp)
-            self.assertEqual(workspace.scope_check(task, tmp, 'nope')['errors'],
-                             ['Base does not name a commit in this checkout; give a SHA, branch or tag '
-                              '(resolved locally with git rev-parse --verify REV^{commit})'])
+            self.assertEqual(workspace.scope_check(task, tmp, 'refs/heads/nope')['errors'],
+                             ['Base does not name a commit in this checkout; give a full SHA, HEAD or an '
+                              'existing refs/... name'])
             self.assertEqual(workspace.scope_check(task, tmp, '--output=x')['errors'],
-                             ['Base must be a SHA, branch or tag name; it cannot be blank, '
+                             ['Base must be a full SHA, HEAD or refs/... name; it cannot be blank, '
                               'start with "-" or contain spaces or control characters'])
             # A replacement object must not redirect the resolved base.
             git('replace', '-f', evidence['base_commit'], git('rev-parse', 'HEAD^{tree}'))
-            result = workspace.scope_check(task, tmp, evidence['base_commit'][:12])
+            result = workspace.scope_check(task, tmp, evidence['base_commit'])
             self.assertEqual(result['base_commit'], evidence['base_commit'])
             self.assertTrue(result['within_scope'], result)
-            with patch.object(core, 'git_read', wraps=core.git_read) as git_read:
-                workspace.resolve_base(tmp, 'HEAD')
-            # Every lookup, including the ambiguity check, goes through the hardened Git reader.
-            self.assertEqual([call.args[1] for call in git_read.call_args_list], ['rev-parse', 'for-each-ref', 'rev-parse'])
-            git_read.assert_called_with(tmp, 'rev-parse', '--verify', '--quiet', 'HEAD^{commit}')
+            head, branch = evidence['git_head'], git('symbolic-ref', 'HEAD')
+            for rev, lookup in [('HEAD~1', ('rev-parse', '--verify', '--quiet', 'HEAD')),
+                                (branch + '~1', ('show-ref', '--verify', '--hash', branch))]:
+                with self.subTest(rev=rev), patch.object(core, 'git_read', wraps=core.git_read) as git_read:
+                    self.assertEqual(workspace.resolve_base(tmp, rev), evidence['base_commit'])
+                # Every lookup goes through the hardened Git reader; the suffix applies to the captured ID.
+                self.assertEqual([call.args for call in git_read.call_args_list],
+                                 [(tmp,) + lookup, (tmp, 'rev-parse', '--verify', '--quiet', head + '~1^{commit}')])
 
-    def test_unsupported_revision_forms_are_refused_by_name(self):
-        grammar = ('Base must be a SHA, HEAD, or a branch, tag or full ref name, optionally followed by '
-                   '~N or ^N; other revision syntax is not supported')
+    def test_unsupported_revision_forms_are_refused_with_a_conversion_hint(self):
+        grammar = ('Base must be a full 40-character SHA, HEAD or a full ref name such as refs/heads/NAME or '
+                   'refs/tags/NAME, optionally followed by ~N or ^N; convert an abbreviated SHA with '
+                   'git rev-parse ABBREV')
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, git = self.checkout(tmp)
-            self.assertEqual(git('rev-parse', '--verify', ':/upstream'), evidence['base_commit'])
+            base = evidence['base_commit']
+            git('branch', 'work-base', base)
+            self.assertEqual(git('rev-parse', '--verify', ':/upstream'), base)
             for rev in [':/upstream', '@{-1}', 'HEAD@{0}', 'HEAD:AGENTS.md', 'HEAD^{tree}', 'HEAD^{/upstream}',
-                        'HEAD~1..HEAD', 'a*', 'main^!', '/HEAD']:
+                        'HEAD~1..HEAD', 'refs/heads/*', 'HEAD^!', '/HEAD', 'work-base', 'heads/work-base',
+                        base[:12], base.upper(), 'FETCH_HEAD', 'ORIG_HEAD', '@', 'head', 'refs/']:
                 with self.subTest(rev=rev):
                     result = workspace.scope_check(task, tmp, rev)
                     self.assertEqual((result['within_scope'], result['base_commit'], result['errors']),
@@ -125,43 +135,67 @@ class ScopeCheckTests(unittest.TestCase):
                         workspace.evidence_skeleton(task, tmp, rev)
                     self.assertEqual(str(raised.exception), grammar)
 
-    def test_ambiguous_names_are_refused_instead_of_picking_one(self):
-        ambiguous = ('Base name is ambiguous in this checkout (for example a branch and a tag); '
-                     'use a full ref name such as refs/heads/NAME or a full SHA')
+    def test_colliding_names_resolve_exactly_and_never_by_git_preference(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, _, evidence, git = self.checkout(tmp)
-            base, head = evidence['base_commit'], evidence['git_head']
+            base = evidence['base_commit']
             pathlib.Path(tmp, 'outside.txt').write_text('out of scope')
             git('add', 'outside.txt')
             git('commit', '-q', '-m', 'out of scope')
+            head = git('rev-parse', 'HEAD')
             git('branch', 'work-base', base)
             git('tag', 'work-base', 'HEAD')
-            git('branch', base[:7], 'HEAD')
-            git('branch', 'gitdir-name', base)
-            pathlib.Path(tmp, '.git', 'gitdir-name').write_text(head + '\n')
+            git('update-ref', 'refs/tags/refs/heads/work-base', 'HEAD')
+            git('update-ref', 'refs/refs/heads/ghost', 'HEAD')
             git('update-ref', 'refs/heads/HEAD', base)
-            # Raw Git silently prefers one meaning for each of these.
-            self.assertEqual(git('rev-parse', '--verify', 'work-base'), git('rev-parse', 'HEAD'))
-            for rev in ['work-base', 'work-base~0', base[:7], 'gitdir-name', 'HEAD', 'HEAD~1']:
-                with self.subTest(rev=rev):
-                    result = workspace.scope_check(task, tmp, rev)
-                    self.assertEqual((result['within_scope'], result['base_commit'], result['errors']),
-                                     (False, None, [ambiguous]))
-                    with self.assertRaises(core.ProtocolError) as raised:
-                        workspace.evidence_skeleton(task, tmp, rev)
-                    self.assertEqual(str(raised.exception), ambiguous)
-            git('update-ref', '-d', 'refs/heads/HEAD')
-            # A Git-directory file that is not a ref (here .git/config) is not a second meaning.
-            git('branch', 'config', base)
-            for rev, expected in [('config', base), ('refs/heads/work-base', base), ('refs/tags/work-base', git('rev-parse', 'HEAD')),
-                                  ('HEAD~2', base), (base[:12], base), (base, base)]:
+            git('update-ref', 'refs/heads/FETCH_HEAD', 'HEAD')
+            pathlib.Path(tmp, '.git', 'FETCH_HEAD').write_text(base + '\t\tbranch main of https://github.com/acme/photos\n')
+            pathlib.Path(tmp, '.git', 'refs', 'heads', 'crlf').write_text(base + '\r\n', newline='')
+            os.mkfifo(pathlib.Path(tmp, '.git', 'slow-ref'))
+            git('branch', 'slow-ref', base)
+            # Raw Git silently prefers one meaning; the resolver only accepts exact names.
+            self.assertEqual(git('rev-parse', '--verify', 'work-base'), head)
+            self.assertEqual(git('rev-parse', '--verify', 'refs/heads/ghost'), head)
+            for rev, expected in [('refs/heads/work-base', base), ('refs/tags/work-base', head),
+                                  ('refs/tags/refs/heads/work-base', head), ('HEAD', head), ('refs/heads/HEAD', base),
+                                  ('refs/heads/FETCH_HEAD', head), ('refs/heads/crlf', base),
+                                  ('refs/heads/slow-ref', base)]:
                 with self.subTest(rev=rev):
                     self.assertEqual(workspace.resolve_base(tmp, rev), expected)
             result = workspace.scope_check(task, tmp, 'refs/heads/work-base')
             self.assertEqual(result['violations'], [{'path': 'outside.txt', 'rule': 'not in allowed_paths'}])
-            # A full ref name is checked too: a tag literally named refs/heads/work-base is a second meaning.
-            git('update-ref', 'refs/tags/refs/heads/work-base', 'HEAD')
-            self.assertEqual(workspace.scope_check(task, tmp, 'refs/heads/work-base')['errors'], [ambiguous])
+            with self.assertRaises(core.ProtocolError) as raised:
+                workspace.resolve_base(tmp, 'refs/heads/ghost')
+            self.assertEqual(raised.exception.code, 'invalid_base')
+            self.assertEqual(workspace.evidence_skeleton(task, tmp, 'refs/heads/work-base')['base_commit'], base)
+            # A FIFO under .git is never opened: the CLI answers promptly for short and exact names.
+            contract = pathlib.Path(tmp).parent / (pathlib.Path(tmp).name + '-task.json')
+            contract.write_text(json.dumps(task))
+            self.addCleanup(contract.unlink)
+            for rev, code in [('slow-ref', 1), ('refs/heads/slow-ref', 1)]:
+                with self.subTest(rev=rev):
+                    completed = subprocess.run([sys.executable, '-m', 'agent_contribute', 'scope-check', str(contract),
+                                                '--repo-dir', tmp, '--base', rev], capture_output=True, text=True,
+                                               timeout=10, cwd=pathlib.Path(__file__).resolve().parent.parent)
+                    self.assertEqual(completed.returncode, code)
+            self.assertEqual(json.loads(completed.stdout)['base_commit'], base)
+
+    def test_ref_moving_after_lookup_does_not_change_the_selected_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            base = evidence['base_commit']
+            git('branch', 'race', base)
+            real = core.git_read
+
+            def moving(directory, *args):
+                output = real(directory, *args)
+                if args[0] == 'show-ref':
+                    git('update-ref', 'refs/heads/race', 'HEAD')
+                    git('tag', 'race', 'HEAD')
+                return output
+            with patch.object(core, 'git_read', side_effect=moving):
+                self.assertEqual(workspace.resolve_base(tmp, 'refs/heads/race'), base)
+            self.assertEqual(workspace.resolve_base(tmp, 'refs/heads/race'), evidence['git_head'])
 
     def test_default_base_outside_head_history_warns_and_still_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -238,6 +272,8 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertEqual((code, result['base_commit']), (1, None))
             code, result = run('--base', 'HEAD~1')
             self.assertEqual((code, result['base_commit']), (1, task['source']['commit']))
+            code, result = run('--base', task['source']['commit'][:12])
+            self.assertEqual((code, result['base_commit']), (1, None))
 
 
 if __name__ == '__main__':

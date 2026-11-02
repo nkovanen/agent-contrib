@@ -144,14 +144,16 @@ def main(argv=None):
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
     sub.add_argument('--base', metavar='REV',
-                     help='Base commit, branch or tag (default source.commit); must be an ancestor of HEAD')
+                     help='Full SHA, HEAD or refs/... name, optionally ~N/^N (default source.commit); '
+                          'must be an ancestor of HEAD')
     sub = commands.add_parser('evidence', help='Evidence file helpers').add_subparsers(
         dest='evidence_command', required=True, metavar='COMMAND').add_parser(
         'init', help='Write an unfilled evidence skeleton from observed Git facts; runs nothing')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout the evidence will describe')
     sub.add_argument('--base', required=True, metavar='REV',
-                     help='Base commit, branch or tag; must descend from source.commit and be an ancestor of HEAD')
+                     help='Full SHA, HEAD or refs/... name, optionally ~N/^N; must descend from source.commit '
+                          'and be an ancestor of HEAD')
     sub.add_argument('--output', required=True, help='New evidence file outside the checkout; never overwritten')
     sub = commands.add_parser('audit', help='Read-only maintainer report: policy, labels, instructions, issue quality')
     sub.add_argument('repository', help='owner/repo')

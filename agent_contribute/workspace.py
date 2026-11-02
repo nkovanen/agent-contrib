@@ -4,7 +4,7 @@ from pathlib import Path
 
 from . import core
 
-REVISION = re.compile(r'(?P<name>[^~^:?*\[\\\s]+)(?P<suffix>(?:[~^][0-9]{0,9})*)')
+REVISION = re.compile(r'(?P<name>[0-9a-f]{40}|HEAD|refs/[^~^:?*\[\\\s]+)(?P<suffix>(?:[~^][0-9]{0,9})*)')
 DIFF = ('diff', '--no-ext-diff', '--no-textconv', '--ignore-submodules=none', '--no-renames', '--name-only', '-z')
 
 
@@ -45,48 +45,30 @@ def _base(base):
 
 
 def resolve_base(directory, rev):
-    """Resolve a caller's revision to a full commit with the same hardened, read-only Git environment."""
+    """Resolve an exact base with the hardened Git reader; no short names, so Git's name preferences never apply."""
     if not isinstance(rev, str) or not rev or rev.startswith('-') or len(rev) > 256 or any(
             char.isspace() or not char.isprintable() for char in rev):
-        raise core.ProtocolError('invalid_base', 'Base must be a SHA, branch or tag name; it cannot be blank, '
+        raise core.ProtocolError('invalid_base', 'Base must be a full SHA, HEAD or refs/... name; it cannot be blank, '
                                  'start with "-" or contain spaces or control characters')
-    # Only names with ancestry suffixes: forms such as :/regex, @{...} or ^{type} would change meaning under ^{commit}.
     match = REVISION.fullmatch(rev)
-    if not match or '@{' in match['name'] or '..' in match['name'] or match['name'].startswith('/'):
-        raise core.ProtocolError('invalid_base', 'Base must be a SHA, HEAD, or a branch, tag or full ref name, '
-                                 'optionally followed by ~N or ^N; other revision syntax is not supported')
-    target = _unambiguous(directory, match['name'])
+    if not match:
+        raise core.ProtocolError('invalid_base', 'Base must be a full 40-character SHA, HEAD or a full ref name such as '
+                                 'refs/heads/NAME or refs/tags/NAME, optionally followed by ~N or ^N; convert an '
+                                 'abbreviated SHA with git rev-parse ABBREV')
+    name = match['name']
     try:
-        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet', target + match['suffix'] + '^{commit}'))
+        # Capture the object ID first; the suffix then applies to it, never to a second name lookup.
+        if name == 'HEAD':
+            oid = core.git_read(directory, 'rev-parse', '--verify', '--quiet', 'HEAD')
+        elif name.startswith('refs/'):
+            oid = core.git_read(directory, 'show-ref', '--verify', '--hash', name)  # exact name, no DWIM
+        else:
+            oid = name
+        return _base(core.git_read(directory, 'rev-parse', '--verify', '--quiet',
+                                   _base(oid) + match['suffix'] + '^{commit}'))
     except core.ProtocolError:
-        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a SHA, branch or '
-                                 'tag (resolved locally with git rev-parse --verify REV^{commit})') from None
-
-
-def _unambiguous(directory, name):
-    """Git silently prefers one meaning of a name (gitdir file, tag, branch, remote, object); require exactly one."""
-    rules = ['refs/' + name, 'refs/tags/' + name, 'refs/heads/' + name, 'refs/remotes/' + name, 'refs/remotes/' + name + '/HEAD']
-    if name.startswith('refs/'):
-        rules.insert(0, name)
-        gitdir_file = False
-    else:
-        gitdir_file = _ref_file(Path(directory) / core.git_read(directory, 'rev-parse', '--git-path', name))
-    listed = set(core.git_read(directory, 'for-each-ref', '--format=%(refname)', *rules).splitlines())
-    refs = [rule for rule in dict.fromkeys(rules) if rule in listed]
-    meanings = len(refs) + gitdir_file
-    if meanings > 1 or (meanings and re.fullmatch('[0-9a-fA-F]{4,40}', name)):
-        raise core.ProtocolError('invalid_base', 'Base name is ambiguous in this checkout (for example a branch and a '
-                                 'tag); use a full ref name such as refs/heads/NAME or a full SHA')
-    return refs[0] if refs else name
-
-
-def _ref_file(path):
-    # Git uses a file under the Git directory as a ref only if it holds an object ID or a symbolic ref.
-    try:
-        with path.open('rb') as handle:
-            return bool(re.fullmatch(rb'(?:[0-9a-f]{40}|[0-9a-f]{64}|ref: [^\s]+)\n?', handle.read(4097)))
-    except OSError:
-        return False
+        raise core.ProtocolError('invalid_base', 'Base does not name a commit in this checkout; give a full SHA, HEAD '
+                                 'or an existing refs/... name') from None
 
 
 def evidence_skeleton(task, directory, base):
