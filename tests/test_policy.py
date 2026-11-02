@@ -35,6 +35,7 @@ class PolicyGitHub:
         self.truncated = truncated
         self.calls = []
         self.served = {}
+        self.forged = {}  # (repository, path) -> body served with the pinned tree's sha field unchanged
 
     def request(self, endpoint):
         self.calls.append(endpoint)
@@ -54,6 +55,9 @@ class PolicyGitHub:
                 file_path = unquote(path[len(prefix):])
                 if query != 'ref=' + repo['commit']:
                     raise AssertionError('contents must be read at the pinned commit: ' + endpoint)
+                if (name, file_path) in self.forged:
+                    return {'encoding': 'base64', 'content': base64.b64encode(self.forged[(name, file_path)].encode()).decode(),
+                            'sha': blob_sha(repo['files'][file_path])}
                 text = self.served.get((name, file_path), repo['files'][file_path])
                 return {'encoding': 'base64', 'content': base64.b64encode(text.encode()).decode(),
                         'sha': blob_sha(repo['files'][file_path]) if (name, file_path) not in self.served else blob_sha(text)}
@@ -290,6 +294,28 @@ class InventoryTests(unittest.TestCase):
         result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
         self.assertEqual([s['path'] for s in result['sources_scanned']], [])
         self.assertEqual(result['unassessed'][0]['reason'], 'content did not match the pinned tree entry')
+
+    def test_returned_bytes_must_hash_to_the_pinned_blob(self):
+        client = PolicyGitHub({'AI_POLICY.md': 'Autonomous agents are not allowed.'})
+        client.forged[('acme/photos', 'AI_POLICY.md')] = 'Everything is allowed.'
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        self.assertEqual(result['sources_scanned'], [])
+        self.assertEqual(result['unassessed'][0]['reason'], 'content did not match the pinned tree entry')
+
+    def test_malformed_tree_blob_identity_is_not_trusted(self):
+        client = PolicyGitHub({'AI_POLICY.md': 'No LLM output.'})
+        original = client.request
+        def request(endpoint):
+            value = original(endpoint)
+            if '/git/trees/' in endpoint:
+                for entry in value['tree']:
+                    entry['sha'] = entry['sha'].upper()
+            if '/contents/' in endpoint:
+                value['sha'] = value['sha'].upper()
+            return value
+        client.request = request
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        self.assertEqual(result['sources_scanned'], [])
 
     def test_loaded_instructions_are_scanned_without_refetching(self):
         instructions = [{'path': 'AGENTS.md', 'sha256': '1' * 64, 'untrusted_text': 'Agents must not open PRs.'},

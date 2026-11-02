@@ -276,7 +276,7 @@ class _Report:
         label = shown if origin == 'repository' else f'{repository}:{shown}'
         if len(data) > MAX_FILE_BYTES:
             self.note(label, 'exceeds 200 kB')
-        elif not isinstance(blob, str) or value.get('sha') != blob:
+        elif not _pinned(blob, value.get('sha'), data):
             self.note(label, 'content did not match the pinned tree entry')
         else:
             try:
@@ -302,6 +302,13 @@ class _Report:
             self.fetch(origin, repository, commit, path, blob, kind)
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
+
+
+def _pinned(blob, reported, data):
+    """The returned bytes are the tree's blob: both SHA fields agree and the Git blob SHA-1 of the bytes matches."""
+    if not isinstance(blob, str) or not re.fullmatch('[0-9a-f]{40}', blob) or reported != blob:
+        return False
+    return hashlib.sha1(b'blob %d\x00' % len(data) + data).hexdigest() == blob
 
 
 class _Limit(Exception):
