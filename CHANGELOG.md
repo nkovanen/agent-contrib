@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- Text `discover` shows each issue's overlapping-PR count, excluded flag and
+  (with `--signals`) score, plus overlapping and excluded totals that include
+  issues beyond the 20-line cap (F8). JSON is unchanged.
 - `scope-check` warns when the default base is more than one commit behind
   HEAD and out-of-scope paths changed, naming the base and suggesting `--base`
   for stacked work (F36). Report only; violations and exit status are unchanged.

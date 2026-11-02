@@ -489,7 +489,9 @@ agent-contrib --format json inspect 'owner/repo#123'
 ```
 
 Text changes presentation only, never scan depth, authorization or exit status.
-It is a summary: discovery shows at most 20 issues per repository, lists show at
+It is a summary: discovery shows at most 20 issues per repository, each with its
+overlapping-PR count, whether it is excluded and (with `--signals`) its score,
+followed by overlapping and excluded counts over all issues; lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
 counted. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit

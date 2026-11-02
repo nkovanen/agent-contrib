@@ -66,15 +66,22 @@ def _discover(result):
         out.append('Issue source: ' + line(result['issue_source_repository']))
     if result.get('proposed_target_repository'):
         out.append('Proposed target (not authority): ' + line(result['proposed_target_repository']))
-    for issue in result.get('issues', [])[:20]:
+    issues = result.get('issues', [])
+    for issue in issues[:20]:
         notes = [line(item, 40) for item in issue.get('exclusions', [])]
-        if issue.get('duplicates'):
-            notes.append(f'{len(issue["duplicates"])} overlapping PR(s)')
+        signals = issue.get('signals')
+        score = f', score {line(signals.get("score"), 10)}' if isinstance(signals, dict) and 'score' in signals else ''
         reference = issue.get('reference', f'#{issue["number"]}')
         out.append(f'  {line(reference, 200)} [{line(issue.get("approval", {}).get("status", "unknown"), 20)}] '
-                   f'{line(issue.get("untrusted_title", ""), 120)}' + (' -- ' + '; '.join(notes) if notes else ''))
-    if len(result.get('issues', [])) > 20:
-        out.append(f'  ... {len(result["issues"]) - 20} more issues in JSON output')
+                   f'overlaps {len(issue.get("duplicates") or [])}, excluded {_flag(bool(issue.get("exclusions")))}'
+                   f'{score}: {line(issue.get("untrusted_title", ""), 120)}' + (' -- ' + '; '.join(notes) if notes else ''))
+    if len(issues) > 20:
+        out.append(f'  ... {len(issues) - 20} more issues in JSON output')
+    if issues:
+        # Overlapping and excluded issues sort last, so the 20-line cap would otherwise hide them.
+        out.append(f'Overlapping issues: {sum(bool(issue.get("duplicates")) for issue in issues)} of {len(issues)}; '
+                   f'excluded issues: {sum(bool(issue.get("exclusions")) for issue in issues)} of {len(issues)} '
+                   '(all issues, including omitted)')
     return out + _list('Errors', result.get('errors', []))
 
 
