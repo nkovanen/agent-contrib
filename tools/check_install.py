@@ -225,6 +225,7 @@ def main():
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
                     "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py", "tools/release_check.py",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
+                    "docs/examples/release-pypi.yml",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
                         if file.is_file() and file.suffix in (".py", ".json") and "__pycache__" not in file.parts)
