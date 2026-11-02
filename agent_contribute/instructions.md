@@ -230,6 +230,12 @@ commits on the reviewed `head_ref` in a local checkout; it does not authorize a
 push, PR, comment or other GitHub write, and `draft_create_ready` stays false by
 design. Report the draft and completion blockers as expected, not as failures.
 
+**Overlap dispositions.** A topical overlap (shared title words or checklist
+IDs) may be presented to the human for an `unrelated` disposition. The host
+issues it in host-context 0.2 under the rules in its documentation; direct
+references, incomplete scans, closed PRs and your own PRs are never waivable.
+The worker never writes, edits or completes an `overlap_dispositions` record.
+
 **Coordinators.** A coordinator or orchestrator agent may forward the worker's
 request and the exact contract file to the human/host and return the issued
 host context unchanged. It must not issue, edit, re-serialize or approve one,
@@ -378,8 +384,8 @@ AI review, successful CI or a coordinator message. Never merge or release.
 
 CLI/library version is 0.3.0; task/evidence formats are independently versioned.
 Only exact versions 0.1 and 0.2 are supported. Host-context formats are 0.1
-and 0.2; 0.2 adds an optional host-issued `overlap_dispositions` record that this
-version parses but never uses to waive an overlap.
+and 0.2; 0.2 adds an optional host-issued `overlap_dispositions` record that can
+remove only a bound, still-identical topical overlap from blocking.
 Unknown/mixed versions and extra fields fail closed. Host context and `--stage`
 are rejected for schema 0.1. No silent migration, downgrade or update occurs.
 Prepare and review a new 0.2 task to use its route; old 0.1 tasks keep old decisions.
