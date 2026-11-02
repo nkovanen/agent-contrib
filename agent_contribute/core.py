@@ -605,8 +605,10 @@ def schema_errors(value, schema, path='$', depth=0, root=None):
             raise ValueError('Only local #/$defs/ schema references are supported')
         return schema_errors(value, root['$defs'][name], path, depth + 1, root)
     errors = []
-    if 'anyOf' in schema and all(schema_errors(value, option, path, depth + 1, root) for option in schema['anyOf']):
-        errors.append(path + ': matches no allowed shape')
+    if 'anyOf' in schema:
+        failures = [schema_errors(value, option, path, depth + 1, root) for option in schema['anyOf']]
+        if all(failures):  # Name the closest shape's errors so a mismatch stays diagnosable.
+            errors.extend([path + ': matches no allowed shape'] + min(failures, key=len))
     kind = schema.get('type')
     matches = {'object': isinstance(value, dict), 'array': isinstance(value, list),
                'string': isinstance(value, str), 'integer': type(value) is int,

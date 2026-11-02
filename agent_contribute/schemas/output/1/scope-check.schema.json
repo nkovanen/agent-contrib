@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:1:scope-check",
+  "title": "scope-check result",
+  "description": "Offline comparison of local changes with the contract scope; never evidence.",
+  "type": "object",
+  "properties": {
+    "within_scope": {
+      "type": "boolean",
+      "description": "True only with no errors and no violations; sets the exit status"
+    },
+    "base_commit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "[0-9a-f]{40}",
+      "description": "Resolved base commit; null when the contract or base is invalid"
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 1000000,
+      "description": "Committed, staged, unstaged and untracked paths since the base"
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "string",
+            "description": "\"not in allowed_paths\" or \"prohibited_paths: PATTERN\""
+          }
+        },
+        "required": [
+          "path",
+          "rule"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1000000
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "within_scope",
+    "base_commit",
+    "changed_paths",
+    "violations",
+    "errors",
+    "warnings",
+    "evidence"
+  ],
+  "additionalProperties": false
+}

@@ -19,7 +19,7 @@ class Clock(dt.datetime):
 
 def absent_publication(*_):
     return {'status': 'absent', 'verified': False, 'creation_clear': True, 'own_pr': None,
-            'errors': [], 'provenance': {'fixture': True}}
+            'errors': [], 'provenance': {'publication_claim_trust': 'untrusted', 'authority_evaluated': False}}
 
 
 def own_publication(task, context, evidence):
@@ -31,7 +31,7 @@ def own_publication(task, context, evidence):
                               'head_sha': evidence['git_head'], 'contract_sha256': core.canonical_hash(task),
                               'mandate_sha256': core.canonical_hash(context['mandate'])}
     return {'status': 'own_draft', 'verified': True, 'creation_clear': False,
-            'own_pr': own, 'errors': [], 'provenance': {'fixture': True}}
+            'own_pr': own, 'errors': [], 'provenance': {'publication_claim_trust': 'untrusted', 'authority_evaluated': False}}
 
 
 def signoff(task, context, evidence):

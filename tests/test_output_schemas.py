@@ -1,7 +1,18 @@
 """Output schemas: the bundled validator's output keywords and the packaged command schemas."""
+import argparse
+import contextlib
+import io
+import copy
+import json
+import pathlib
 import unittest
+from unittest.mock import patch
 
-from agent_contribute import core
+from agent_contribute import cli, core, outputs, ownership
+from tests import output_contract
+from tests.test_cli_help import built_parser
+from tests.test_discover_golden import GOLDEN
+from tests.test_protocol import FakeGitHub
 
 
 def obj(properties, required=(), **extra):
@@ -33,8 +44,11 @@ class ValidatorKeywordTests(unittest.TestCase):
         schema = {'anyOf': [obj({'a': {'type': 'string'}}, ['a']), obj({'b': {'type': 'integer'}}, ['b'])]}
         self.assertEqual(core.schema_errors({'a': 'x'}, schema), [])
         self.assertEqual(core.schema_errors({'b': 1}, schema), [])
-        self.assertEqual(core.schema_errors({'a': 1}, schema), ['$: matches no allowed shape'])
-        self.assertEqual(core.schema_errors({'a': 'x', 'b': 1}, schema), ['$: matches no allowed shape'])
+        self.assertEqual(core.schema_errors({'a': 1}, schema),
+                         ['$: matches no allowed shape', '$.a: expected string'])
+        self.assertEqual(core.schema_errors({'a': 'x', 'b': 1}, schema),
+                         ['$: matches no allowed shape', '$: unknown properties'])
+        self.assertEqual(core.schema_errors({'b': 'x'}, schema), ['$: matches no allowed shape', '$.b: expected integer'])
 
     def test_local_references_resolve_against_the_root(self):
         schema = {'$defs': {'item': obj({'n': {'type': 'integer'}}, ['n'])},
@@ -62,6 +76,146 @@ class ValidatorKeywordTests(unittest.TestCase):
         self.assertEqual(core.schema_errors([], {'type': 'object'}), ['$: expected object'])
         self.assertEqual(core.schema_errors(1, {'type': 'unknown'}), ['$: expected unknown'])
         self.assertEqual(core.schema_errors(True, {'type': 'integer'}), ['$: expected integer'])
+
+
+def invoke(*argv):
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        code = cli.main(list(argv))
+    return code, json.loads(output.getvalue())
+
+
+class SchemaCommandTests(unittest.TestCase):
+    def test_schema_command_prints_each_packaged_schema(self):
+        for name in outputs.SCHEMAS:
+            with self.subTest(name=name):
+                self.assertEqual(invoke('schema', name), (0, outputs.output_schema(name)))
+
+    def test_unknown_schema_is_a_usage_error(self):
+        code, result = invoke('schema', 'nope')
+        self.assertEqual((code, result['error']['code']), (2, 'usage'))
+        with self.assertRaises(core.ProtocolError):
+            outputs.output_schema('../task')
+        code, result = invoke('--report-budget', 'schema', 'verify')
+        self.assertEqual((code, result['error']['code']), (2, 'usage'))
+
+    def test_instructions_name_the_output_schemas(self):
+        code, result = invoke('instructions')
+        self.assertEqual(code, 0)
+        self.assertEqual(result['output_schema_version'], outputs.VERSION)
+        self.assertEqual(result['resources']['output_schemas'], 'agent_contribute/schemas/output/1')
+        self.assertIn('agent-contrib schema', result['workflow_markdown'])
+
+    def test_every_command_has_a_schema(self):
+        commands = set()
+        subparsers = next(a for a in built_parser()._actions if isinstance(a, argparse._SubParsersAction))
+        for name, sub in subparsers.choices.items():
+            nested = [a for a in sub._actions if isinstance(a, argparse._SubParsersAction)]
+            commands.update([f'{name}-{child}' for a in nested for child in a.choices] or [name])
+        self.assertEqual(commands - {'schema'}, set(outputs.SCHEMAS) - {'error'})
+
+
+KEYWORDS = {'$schema', '$id', '$defs', '$ref', 'title', 'description', 'type', 'properties', 'required',
+            'additionalProperties', 'items', 'anyOf', 'enum', 'const', 'pattern', 'minimum', 'minItems',
+            'maxItems', 'minLength', 'maxLength'}
+
+
+def subschemas(schema, path='$'):
+    yield path, schema
+    for key, value in schema.get('properties', {}).items():
+        yield from subschemas(value, f'{path}.{key}')
+    for key, value in schema.get('$defs', {}).items():
+        yield from subschemas(value, f'{path}.$defs.{key}')
+    for i, value in enumerate(schema.get('anyOf', [])):
+        yield from subschemas(value, f'{path}.anyOf[{i}]')
+    for key in ('items', 'additionalProperties'):
+        if isinstance(schema.get(key), dict):
+            yield from subschemas(schema[key], f'{path}.{key}')
+
+
+class SchemaFileTests(unittest.TestCase):
+    def test_schema_files_use_only_validated_keywords_and_explicit_objects(self):
+        for name in outputs.SCHEMAS:
+            schema = outputs.output_schema(name)
+            self.assertEqual(schema['$id'], f'urn:agent-contrib:output:{outputs.VERSION}:{name}')
+            self.assertEqual(schema['$schema'], 'https://json-schema.org/draft/2020-12/schema')
+            for path, item in subschemas(schema):
+                with self.subTest(name=name, path=path):
+                    self.assertLessEqual(set(item) - KEYWORDS, set())
+                    kinds = item.get('type') if isinstance(item.get('type'), list) else [item.get('type')]
+                    if 'object' in kinds:
+                        self.assertIn('additionalProperties', item)
+                        self.assertLessEqual(set(item['required']), set(item['properties']))
+                    if 'array' in kinds:
+                        self.assertIn('items', item)
+                    if '$ref' in item:
+                        self.assertEqual(set(item) - {'description'}, {'$ref'})
+                        self.assertIn(item['$ref'].removeprefix('#/$defs/'), schema['$defs'])
+
+    def test_every_schema_file_is_packaged_and_install_checked(self):
+        root = pathlib.Path(outputs.__file__).parent
+        files = {path.name for path in (root / outputs.DIRECTORY).iterdir()}
+        self.assertEqual(files, {name + '.schema.json' for name in outputs.SCHEMAS})
+        self.assertIn(f'"{outputs.DIRECTORY}/*.schema.json"', (root.parent / 'pyproject.toml').read_text('utf-8'))
+        install = (root.parent / 'tools' / 'check_install.py').read_text('utf-8')
+        for name in outputs.SCHEMAS:
+            self.assertIn(f'    "{outputs.DIRECTORY}/{name}.schema.json",\n', install)
+
+    def test_skill_points_to_the_schema_command(self):
+        skill = (pathlib.Path(outputs.__file__).parent / 'adapters' / 'agent-contribute' / 'SKILL.md').read_text('utf-8')
+        self.assertIn('`agent-contrib schema COMMAND`', skill)
+
+    def test_shared_definitions_are_identical_across_files(self):
+        seen = {}
+        for name in outputs.SCHEMAS:
+            for key, value in outputs.output_schema(name).get('$defs', {}).items():
+                first = seen.setdefault(key, (name, value))
+                self.assertEqual(value, first[1], f'$defs.{key} differs between {first[0]} and {name}')
+
+
+class ContractHookTests(unittest.TestCase):
+    def golden(self, name):
+        return json.loads((GOLDEN / (name + '.json')).read_text('utf-8'))['result']
+
+    def test_frozen_discover_goldens_match_the_schema(self):
+        for path in sorted(GOLDEN.glob('*.json')):
+            with self.subTest(golden=path.name):
+                output_contract.check(json.loads(path.read_text('utf-8'))['result'], 'discover')
+
+    def test_renamed_or_removed_fields_fail_through_the_cli(self):
+        result = self.golden('policy_overlap')
+        renamed = copy.deepcopy(result)
+        renamed['issues'][0]['overlaps'] = renamed['issues'][0].pop('duplicates')
+        removed = copy.deepcopy(result)
+        del removed['issues'][0]['approval']['matched_labels']
+        retyped = copy.deepcopy(result)
+        retyped['complete'] = 'true'
+        for mutant in (renamed, removed, retyped):
+            with self.subTest(mutant=mutant['issues'][0].keys() ^ result['issues'][0].keys() or mutant['complete']), \
+                    patch.object(core, 'discover', return_value=mutant), self.assertRaises(output_contract.OutputSchemaViolation):
+                invoke('discover', 'acme/photos')
+        with patch.object(core, 'discover', return_value=result):
+            self.assertEqual(invoke('discover', 'acme/photos')[1], result)
+
+    def test_library_results_and_error_envelopes_are_checked(self):
+        with self.assertRaises(output_contract.OutputSchemaViolation):
+            output_contract.check({'error': {'code': 'usage'}}, 'error')
+        with self.assertRaises(output_contract.OutputSchemaViolation):
+            output_contract.check({'error': {'code': 'usage', 'message': 'x'}, 'extra': 1}, 'error')
+        with self.assertRaises(output_contract.OutputSchemaViolation), \
+                patch.object(ownership, 'ownership_signals', return_value={'complete': True}):
+            ownership.ownership('acme/photos#12', FakeGitHub())
+
+    def test_unresolved_variants_are_exercised(self):
+        client = FakeGitHub()
+        client.failed.add('repos/acme/photos')
+        result = ownership.ownership('acme/photos#12', client)
+        self.assertEqual(result['complete'], False)
+        self.assertEqual(core.schema_errors(result, {'$ref': '#/$defs/issue_unresolved'}, root=outputs.output_schema('ownership')), [])
+        result = core.verify({'schema_version': '0.2'})
+        verify = outputs.output_schema('verify')
+        self.assertEqual(core.schema_errors(result, {'$ref': '#/$defs/verify_0_2_rejected'}, root=verify), [])
+        self.assertTrue(core.schema_errors(result, {'$ref': '#/$defs/verify_0_2'}, root=verify))
 
 
 if __name__ == '__main__':
