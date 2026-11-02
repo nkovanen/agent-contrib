@@ -101,6 +101,8 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- The workflow's Quick path step 3 runs `inspect --ownership --ai-policy` and
+  names the repository policy step's sections (F43, F44).
 - Evidence-base and reviewed-source history errors name the base SHA, the
   repository, its default branch and the tip commit it was compared with, plus
   the comparison status or read error (F19). Conditions are unchanged.

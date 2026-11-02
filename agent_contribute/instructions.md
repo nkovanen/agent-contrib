@@ -19,8 +19,10 @@ A summary of the sections below; it never overrides them. Global options such as
 2. `agent-contrib --report-budget discover owner/repo --signals` ranks issues
    (`--signals` re-ranks heuristically, never approves); add `--responsiveness`
    to see whether outside PRs get merged. Drop excluded or overlapping issues.
-3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
-   (claims, linked PRs, prior fixes) and complete the repository policy step below.
+3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership
+   --ai-policy` (claims, linked PRs, prior fixes, AI-policy excerpts) and complete
+   the repository policy step: the `ai-policy-review` prerequisite in "Start with
+   discovery" item 3 and the inventory in "Repository requirements".
 4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add
    `--schema-version 0.2` for the owner/maintainer same-repository route). Fill
    the contract and the requirements ledger as described below.
