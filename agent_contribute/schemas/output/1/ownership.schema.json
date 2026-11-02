@@ -291,6 +291,14 @@
               "exact_reference": {
                 "type": "boolean",
                 "description": "The PR text references this issue exactly"
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "base_ref": {
+                "type": "string",
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -303,7 +311,9 @@
               "merged",
               "merged_at",
               "closed_at",
-              "exact_reference"
+              "exact_reference",
+              "title",
+              "base_ref"
             ],
             "additionalProperties": false
           },
@@ -511,6 +521,14 @@
                   "exact_reference": {
                     "type": "boolean",
                     "description": "The PR text references this issue exactly"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "base_ref": {
+                    "type": "string",
+                    "maxLength": 2147483647
                   }
                 },
                 "required": [
@@ -523,7 +541,9 @@
                   "merged",
                   "merged_at",
                   "closed_at",
-                  "exact_reference"
+                  "exact_reference",
+                  "title",
+                  "base_ref"
                 ],
                 "additionalProperties": false
               },
@@ -580,6 +600,14 @@
                   "exact_reference": {
                     "type": "boolean",
                     "description": "The PR text references this issue exactly"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "base_ref": {
+                    "type": "string",
+                    "maxLength": 2147483647
                   }
                 },
                 "required": [
@@ -592,7 +620,9 @@
                   "merged",
                   "merged_at",
                   "closed_at",
-                  "exact_reference"
+                  "exact_reference",
+                  "title",
+                  "base_ref"
                 ],
                 "additionalProperties": false
               },
@@ -605,12 +635,92 @@
                 "complete",
                 "unknown"
               ]
+            },
+            "downstream_references": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "repository": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "repository_id": {
+                    "type": "integer"
+                  },
+                  "number": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  },
+                  "draft": {
+                    "type": "boolean"
+                  },
+                  "merged": {
+                    "type": "boolean"
+                  },
+                  "merged_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2147483647
+                  },
+                  "closed_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2147483647
+                  },
+                  "exact_reference": {
+                    "type": "boolean",
+                    "description": "The PR text references this issue exactly"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "base_ref": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  }
+                },
+                "required": [
+                  "repository",
+                  "repository_id",
+                  "number",
+                  "url",
+                  "state",
+                  "draft",
+                  "merged",
+                  "merged_at",
+                  "closed_at",
+                  "exact_reference",
+                  "title",
+                  "base_ref"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 50,
+              "description": "Merged PRs with an exact reference in other repositories; never a fix"
             }
           },
           "required": [
             "possibly_already_fixed",
             "rejected_approaches",
-            "status"
+            "status",
+            "downstream_references"
           ],
           "additionalProperties": false
         },

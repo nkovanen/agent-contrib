@@ -9,8 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import (aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote,
-               signatures, textfmt, workspace, __version__)
+from . import (audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody,
+               remote, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -135,7 +135,7 @@ def main(argv=None):
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
             sub.add_argument('--ai-policy', action='store_true',
-                             help='Add located AI-contribution policy excerpts from the loaded instructions')
+                             help='Syntax-compatible only: accepted and ignored; inspect always adds repository_policy')
         if command == 'prepare':
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
@@ -262,16 +262,6 @@ def main(argv=None):
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
-        elif args.command == 'inspect' and (args.ownership or args.ai_policy):
-            client = core.GitHub()
-            result = core.inspect_issue(args.reference, client)
-            code = 0 if result['complete'] and 'source' in result else 1
-            if 'source' in result and args.ownership:
-                result['ownership_signals'] = ownership.ownership_signals(
-                    result['issue_source_repository'], result['source']['issue'], client)
-                code = code or (0 if result['ownership_signals']['complete'] else 1)
-            if 'source' in result and args.ai_policy:
-                result['ai_policy'] = aipolicy.ai_policy_excerpts(result)
         elif args.command == 'ownership':
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
@@ -283,22 +273,36 @@ def main(argv=None):
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
-            names = args.names
-            result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
+            names, client = args.names, core.GitHub()
+            result = (core.discover(names[0], client, **options) if len(names) == 1 else
+                      multi.discover_many(names, client, **options))
             code = 0 if result['complete'] else 1
+            for single in result.get('repositories', [result]):
+                if 'commit' in single:  # report only: never part of completeness or the exit code
+                    single['repository_policy'] = policy.report(single['repository'], single['commit'],
+                                                                single['instructions'], client)
             if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
                 reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
                 code = code or (0 if all(r and r['complete'] for r in reports) else 1)
         elif args.command in ('inspect', 'prepare'):
-            result = core.inspect_issue(args.reference)
+            client = core.GitHub()
+            result = core.inspect_issue(args.reference, client)
             code = 0 if result['complete'] else 1
+            # Default-on, report only: the policy report never changes the result, the contract or the exit code.
+            report = policy.for_inspected(result, client) if 'source' in result else None
+            if args.command == 'inspect' and 'source' in result:
+                if args.ownership:
+                    result['ownership_signals'] = ownership.ownership_signals(
+                        result['issue_source_repository'], result['source']['issue'], client)
+                    code = code or (0 if result['ownership_signals']['complete'] else 1)
+                result['repository_policy'] = report
             if args.command == 'prepare' and 'source' in result:
                 task = core.prepare(result) if args.schema_version == '0.1' else core.prepare(result, schema_version=args.schema_version)
                 write_new_json(args.output, task)
                 context = {k: result[k] for k in ('requested_repository', 'issue_source_repository',
                                                   'proposed_target_repository', 'resolution_provenance', 'reference')}
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
-                          'warning': 'Draft saved; inspect and review before execution'}
+                          'warning': 'Draft saved; inspect and review before execution', 'repository_policy': report}
         else:
             task, evidence = args.task, args.evidence_data
             version = task.get('schema_version') if isinstance(task, dict) else None

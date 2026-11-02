@@ -32,6 +32,23 @@ channel or runtime model provider is added.
   `overlap_dispositions` and `waived_duplicates`, and are named in text output.
   Host issuer requirements are documented. A 0.1 document carrying the section
   and any other version fail closed.
+- A default-on, report-only `repository_policy` in `discover`, `inspect` and
+  `prepare` output (#8, part; dogfood E-01 to E-05). The earlier scanner found
+  nothing on pallets/click, BurntSushi/ripgrep and honojs/hono, although each
+  project refuses such work: in an owner `.github` file, in `AI_POLICY.md`, or
+  with "Pull requests are limited to maintainers". The report covers
+  policy-named files (suffixed and translated names included) and the owner
+  `.github` repository at pinned commits, with Git blob identity checked. It
+  lists hints, unassessed references and formats, and candidates omitted by
+  limits; it has no coverage verdict. The installed workflow gains a mandatory
+  policy review with five dispositions and an `unresolved` state, recorded as
+  the `ai-policy-review` prerequisite. Source-hiding limits count as
+  unresolved, and local authorization never overrides the source project's
+  policy. `--ai-policy` is syntax-compatible only (accepted, ignored); the
+  candidate-only `ai_policy` excerpts and `agent_contribute.aipolicy` module are
+  removed. Existing contracts, `instructions_sha256` and verifier decisions
+  are unchanged; newly prepared contracts gain a pending `ai-policy-review`
+  prerequisite (see Compatibility notes).
 - Explicit task and evidence schema **0.2** (`prepare --schema-version 0.2`) for
   one same-repository candidate issue (#3). A human/host-issued mandate in
   host-context schema 0.1 (`verify --host-context-stdin`, at most 8 MiB, 5 s) is
@@ -87,8 +104,7 @@ channel or runtime model provider is added.
   incomplete snapshot; malformed, repeated or out-of-interval PR entries make it
   `unknown`), `inspect
   --ownership` and `ownership` (#5, #6; a conflicting repository ID for one
-  cross-referenced PR leaves the report incomplete), `inspect --ai-policy` (#8,
-  part), `verify --observe-ci` (#17, part), `verify --observe-signatures` (#18,
+  cross-referenced PR leaves the report incomplete), `verify --observe-ci` (#17, part), `verify --observe-signatures` (#18,
   part; GitHub's verification of the evidence head, labelled as not approval;
   active `required_signatures` rulesets on the base branch; and, with
   `--repo-dir`, signature-header presence for at most 1000 commits in
@@ -121,6 +137,10 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
+  repository; merged PRs elsewhere move to `downstream_references` (E-11: a
+  downstream workaround was reported as a possible fix). Cross-referenced PRs
+  also report a sanitized `title` and `base_ref`.
 - The prerequisite blocker names each failing prerequisite, for example
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.
@@ -244,6 +264,11 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- `prepare` (task schemas 0.1 and 0.2) now writes the prerequisite
+  `ai-policy-review` with status `pending` into every new contract, so a policy
+  review must be recorded (`satisfied` with evidence, or `blocked`) or visibly
+  removed before verification can pass. Previously prepared contracts and their
+  verification decisions are unchanged; the draft output of `prepare` differs.
 - CLI/library versions follow semantic versioning; task, evidence and
   host-context schema versions are independent. Supported sets: task/evidence
   0.1 and 0.2, host-context 0.1 and 0.2. Unknown versions fail closed; nothing is
