@@ -301,7 +301,8 @@ CHECK_PAGES = 1
 CHECK_PR_DETAILS = 4
 CHECK_READ_CAP = 30
 CHECK_TOP_NOTICE = ('Report only. Only the top N candidates were read (first timeline and comment page, at most '
-                    f'{CHECK_PR_DETAILS} cross-referenced PR details each); a demoted one moves below every other '
+                    f'{CHECK_PR_DETAILS} cross-referenced PR details each, one GitHub GET per read without retries, '
+                    f'{CHECK_READ_CAP} in all); a demoted one moves below every other '
                     'candidate that is not excluded or overlapping. An '
                     'incomplete or clean check is unknown, never proof that an issue is free or unfixed.')
 
@@ -329,7 +330,8 @@ class _ReadCap:
         if self.reads >= self.cap:
             raise core.ProtocolError('read_cap', f'Total --check-top read cap of {self.cap} reached')
         self.reads += 1
-        return self.client.request(endpoint)
+        # One transport attempt per counted read: GitHub.request would retry transient errors up to three times.
+        return getattr(self.client, 'request_once', self.client.request)(endpoint)
 
 
 def check_top(result, client, n, now):

@@ -4,6 +4,7 @@ import copy
 import datetime as dt
 import io
 import json
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -154,6 +155,30 @@ class CheckTopTests(unittest.TestCase):
             self.assertIn('Total --check-top read cap of 5 reached', checks[number]['errors'])
         self.assertEqual(checks[3]['demotions'], ['assigned to alice'])  # the listing already showed the assignee
         self.assertEqual(code, 1)
+
+    def test_cap_counts_transport_attempts_because_retries_are_off(self):
+        # Review R8-04: GitHub.request retries transient errors up to three times; check reads must not.
+        def failure(argv, **kwargs):
+            kwargs['stderr'].write(b'gh: Server Error (HTTP 500)')
+            return subprocess.CompletedProcess(argv, 1)
+        with patch('subprocess.run', side_effect=failure) as run_gh, patch('time.sleep'):
+            with self.assertRaises(core.ProtocolError):
+                core.GitHub().request_once('repos/acme/photos/issues/1/timeline')
+            self.assertEqual(run_gh.call_count, 1)
+            with self.assertRaises(core.ProtocolError) as raised:
+                core.GitHub().request('repos/acme/photos/issues/1/timeline')
+            self.assertEqual(run_gh.call_count, 4)
+            self.assertEqual(str(raised.exception), 'GitHub GET failed; check gh auth, access and rate limits')
+
+        class OnceGitHub(CheckGitHub):
+            def request_once(self, endpoint):
+                self.once = getattr(self, 'once', 0) + 1
+                return self.request(endpoint)
+        client = OnceGitHub()
+        code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '5')
+        self.assertEqual(client.once, result['top_check']['reads'])
+        self.assertEqual(client.once, len(ownership_reads(client)))
+        self.assertIn('without retries', result['top_check']['notice'])
 
     def test_pr_detail_cap(self):
         client = CheckGitHub()

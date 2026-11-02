@@ -345,6 +345,8 @@ without extra API calls. Without the flag, output and ordering are unchanged.
 existing ownership signals (as `inspect --ownership`) for only the top N
 candidates. Each check reads the first timeline and comment page and at most 4
 cross-referenced PR details, and all checks together make at most 30 reads.
+Each read is one GitHub GET with no retry, so a transient failure marks the
+check incomplete instead of making extra requests.
 Reaching a cap, or a failed read, marks that check `complete: false`, and an
 incomplete `top_check` exits 1. A checked issue is demoted when it has a
 merged same-repository PR that references it exactly ("possibly already

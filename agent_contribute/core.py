@@ -112,8 +112,12 @@ def safe_text(value, limit=100000):
 
 class GitHub:
     """Only fixed GET endpoints; no gh aliases, shell, writes, or remote argv."""
-    def request(self, endpoint):
-        for attempt in range(3):
+    def request_once(self, endpoint):
+        """One transport attempt, no retry: for callers that bound and report their own GitHub reads."""
+        return self.request(endpoint, attempts=1)
+
+    def request(self, endpoint, attempts=3):
+        for attempt in range(attempts):
             try:
                 env = dict(os.environ, GH_PROMPT_DISABLED='1', GH_NO_UPDATE_NOTIFIER='1')
                 env.pop('GH_DEBUG', None)
@@ -133,7 +137,7 @@ class GitHub:
                     except UnicodeError as exc:
                         raise ProtocolError('api_error', 'GitHub returned invalid UTF-8') from exc
                 transient = bool(re.search(r'(?i)\b(429|500|502|503|504)\b|rate.limit|secondary.limit', error))
-                if transient and attempt < 2:
+                if transient and attempt < attempts - 1:
                     time.sleep(attempt + 1)
                     continue
                 # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
