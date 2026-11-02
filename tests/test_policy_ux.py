@@ -49,6 +49,23 @@ class HintNoiseTests(unittest.TestCase):
         self.assertFalse([h for h in result['hints'] if set(h) - {'id', 'kind', 'line', 'heading', 'untrusted_excerpt',
                                                                   'source'}])
 
+    def test_pr_hints_in_policy_files_outrank_earlier_non_policy_sources(self):
+        instructions = [{'path': 'README.md', 'sha256': '1' * 64, 'untrusted_text': 'Pull requests are only merged weekly.'}]
+        result, _ = report({'README.md': 'x', 'CONTRIBUTING.md': 'Contributions must include tests.'}, {},
+                           instructions=instructions)
+        pr = [result['sources_scanned'][h['source']]['path'] for h in result['hints']
+              if h['kind'] == 'possible_pr_restriction']
+        self.assertEqual(pr, ['CONTRIBUTING.md', 'README.md'], 'source order alone would list README first')
+
+    def test_report_size_names_dropped_restriction_hints(self):
+        text = '\n\n'.join(('No AI number %d. ' % n) + 'pad ' * 60 for n in range(12))
+        with patch.object(policy, 'MAX_REPORT_BYTES', 5000):
+            result, _ = report({'CONTRIBUTING.md': text}, {})
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertTrue(limits['report size: restriction hints']['hides_sources'])
+        self.assertFalse(limits['report size: hints']['hides_sources'])
+        self.assertTrue(result['limits_hide_sources'])
+
     def test_stop_class_hints_are_kept_before_mentions(self):
         text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(40))
         result, _ = report({'CONTRIBUTING.md': text}, {})
@@ -104,6 +121,17 @@ class TextHintTests(unittest.TestCase):
         text = textfmt.render('inspect', {'repository_policy': self.policy_report(files)})
         self.assertEqual(sum(line.startswith('  ! ') for line in text.splitlines()), textfmt.POLICY_HINT_LINES)
         self.assertIn(f'(+{18 - textfmt.POLICY_HINT_LINES} more restriction hints in JSON repository_policy.hints)', text)
+
+    def test_exactly_one_more_hint_is_counted(self):
+        files = {'CONTRIBUTING.md': '\n\n'.join('Autonomous agents are not allowed, case %d.' % n for n in range(6))}
+        text = textfmt.render('inspect', {'repository_policy': self.policy_report(files)})
+        self.assertEqual(sum(line.startswith('  ! ') for line in text.splitlines()), 5)
+        self.assertIn('(+1 more restriction hints in JSON repository_policy.hints)', text)
+
+    def test_the_documented_bound_is_five(self):
+        self.assertEqual(textfmt.POLICY_HINT_LINES, 5)
+        reference = (__import__('pathlib').Path(__file__).parents[1] / 'docs' / 'cli.md').read_text('utf-8')
+        self.assertIn('up to five restriction', ' '.join(reference.split()))
 
     def test_no_restriction_hints_says_so_without_implying_permission(self):
         text = textfmt.render('inspect', {'repository_policy': self.policy_report({'README.md': 'A library.'})})
@@ -170,6 +198,15 @@ class FreshDraftMessageTests(unittest.TestCase):
         task, client = ready_contract()
         task['execution']['target_repository'] = 'not a repository'
         self.assertIn('Execution target repository is invalid', core.verify(task, client=client)['errors'])
+
+    def test_a_malformed_pending_target_is_still_invalid(self):
+        from tests.test_protocol import FakeGitHub
+        client = FakeGitHub()
+        task = core.prepare(core.inspect_issue('acme/photos#12', client))
+        task['execution']['target_repository'] = 'not a repository'
+        errors = core.verify(task, client=client)['errors']
+        self.assertIn('Execution target repository is invalid', errors)
+        self.assertNotIn('Execution target not yet chosen (execution mode is pending)', errors)
 
     def test_requirements_ledger_names_cla_and_dco(self):
         text = ' '.join(installed_workflow().split())
