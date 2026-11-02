@@ -830,6 +830,15 @@ def scope_violations(scope, paths):
     return violations
 
 
+def base_relation(task, base, tip, status=None):
+    """Names the offending base and what it was compared with; the SHAs are schema/API-validated, the rest sanitized."""
+    where = f'{safe_text(task["source"]["repository"], 200)} default branch {safe_text(task["source"]["default_branch"], 200)} at {tip}'
+    if status is None:
+        return f'base {base} compared with {where}'
+    phrase = {'ahead': 'is ahead of', 'diverged': 'is diverged from'}.get(status) if isinstance(status, str) else None
+    return f'base {base} {phrase or "has comparison status " + safe_text(str(status), 40) + " against"} {where}'
+
+
 def check_evidence(task, evidence, directory, digest, *, current_commit=None, client=None,
                    schema_version='0.1', attestations=('independent_review', 'human_signoff')):
     errors = schema_errors(evidence, bundled_schema('evidence', schema_version))
@@ -846,9 +855,11 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
             # GitHub compares HEAD (evidence base) against BASE (observed upstream tip).
             # Only behind/identical proves the evidence base belongs to upstream history.
             if comparison.get('status') not in ('behind', 'identical'):
-                errors.append('Evidence base is not in current source default-branch history')
-        except ProtocolError:
-            errors.append('Could not authenticate evidence base against source default-branch history')
+                errors.append('Evidence base is not in current source default-branch history: ' +
+                              base_relation(task, evidence['base_commit'], current_commit, comparison.get('status')))
+        except ProtocolError as exc:
+            errors.append('Could not authenticate evidence base against source default-branch history: ' +
+                          base_relation(task, evidence['base_commit'], current_commit) + ': ' + str(exc))
     if evidence['contract_sha256'] != digest:
         errors.append('Evidence contract hash is stale')
     if not evidence['worktree_clean']:

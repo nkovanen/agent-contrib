@@ -163,7 +163,8 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         comparison = core.require(client.request('repos/' + source['repository'] + '/compare/' +
                                   current['source']['commit'] + '...' + source['commit']), dict, 'reviewed base comparison')
         if comparison.get('status') not in ('behind', 'identical'):
-            errors.append('Reviewed source commit is not in current source default-branch history')
+            errors.append('Reviewed source commit is not in current source default-branch history: ' +
+                          core.base_relation(task, source['commit'], current['source']['commit'], comparison.get('status')))
         live_duplicates = [dict(item, repository=source['repository']) for item in current['duplicates']]
     except core.ProtocolError as exc:
         errors.append('Live GitHub refresh failed: ' + str(exc))

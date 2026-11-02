@@ -96,6 +96,9 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Evidence-base and reviewed-source history errors name the base SHA, the
+  repository, its default branch and the tip commit it was compared with, plus
+  the comparison status or read error (F19). Conditions are unchanged.
 - The prerequisite blocker names each failing prerequisite, for example
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.

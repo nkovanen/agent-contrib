@@ -150,7 +150,8 @@ class LocalOnlyPins(LifecycleFixture):
         self.evidence['base_commit'] = stacked
         result = self.verify()
         self.assertFalse(result['technical_evidence_valid'])
-        self.assertIn('Could not authenticate evidence base against source default-branch history',
+        self.assertIn('Could not authenticate evidence base against source default-branch history: base ' + stacked +
+                      ' compared with acme/photos default branch main at ' + self.client.commit + ': GitHub read failed',
                       result['evidence_errors'])
         self.evidence['base_commit'] = self.task['source']['commit']
         result = self.verify()
