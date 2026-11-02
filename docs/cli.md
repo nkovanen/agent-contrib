@@ -529,8 +529,7 @@ the subcommand is still a usage error (exit 2); its message says to move the
 option before the subcommand.
 
 The text option uses the same stdout handling as JSON. Closed output returns 1
-quietly; writable output retains the command's normal exit status. Output JSON
-Schemas and an output-schema version are not implemented yet.
+quietly; writable output retains the command's normal exit status.
 
 ## Output schemas
 
