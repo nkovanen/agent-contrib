@@ -19,6 +19,12 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `tools/benchmark/` (#28, development only; not in the wheel): a read-only,
+  bounded collector of issues open at a past cutoff with post-cutoff outcome
+  labels, an offline replay of `discover` and `--signals` ranking, and
+  precision/recall@k with seeded bootstrap intervals. Four body-free snapshots
+  and the [baseline](docs/benchmark.md) are committed.
+
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
   sections are unchanged, plus an optional host-issued `overlap_dispositions`
   record. It is bound to the contract, mandate and credential, and pins each

@@ -74,6 +74,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [3] C2 Approval-label authority ([#9](https://github.com/nkovanen/agent-contrib/issues/9)): documented limitation; labeling-actor authority cannot be verified from public REST data (events name an actor, not its role). A maintainer-side label-actor report is deferred (R9-05, R9-06)
 
 ### Partly implemented
+- [~] H1 Offline task-selection benchmark: snapshot collector, offline replay of discover and precision/recall@k with bootstrap intervals; [baseline](benchmark.md) ([#28](https://github.com/nkovanen/agent-contrib/issues/28)). Missing: the blind fresh-agent trial protocol and overlap/exclusion correctness metrics
 - [~] B3 Reviewed overlap dispositions bound to live PR state, host-context 0.2 ([#7](https://github.com/nkovanen/agent-contrib/issues/7)). Missing: a native host issuer that can produce the records
 - [~] B1 Ownership claims and cross-repository linked PRs, report only ([#5](https://github.com/nkovanen/agent-contrib/issues/5)). Missing: adoption into readiness gates
 - [~] B2 Possible prior fixes and rejected approaches, report only ([#6](https://github.com/nkovanen/agent-contrib/issues/6)). Missing: adoption into readiness gates
@@ -93,7 +94,6 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [ ] F3 Fast-forward draft updates with fresh evidence ([#21](https://github.com/nkovanen/agent-contrib/issues/21))
 - [ ] F4 Fork-to-upstream route in schema 0.2 ([#22](https://github.com/nkovanen/agent-contrib/issues/22)) (after C1)
 - [ ] G3 PyPI trusted publishing with build provenance ([#26](https://github.com/nkovanen/agent-contrib/issues/26)) (needs maintainer decision)
-- [ ] H1 Blind task-selection benchmark from historical issues ([#28](https://github.com/nkovanen/agent-contrib/issues/28))
 
 Each planned item and each "Missing" part needs its own trust-boundary design.
 Fork ownership is not permission to publish upstream, and a local interactive

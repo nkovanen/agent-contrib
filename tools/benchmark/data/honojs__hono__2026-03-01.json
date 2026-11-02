@@ -1,0 +1,5144 @@
+{
+ "collected_at": "2026-11-02T23:33:13+00:00",
+ "commit_at_cutoff": "790c57baa24b628a37b95025a8d41b1911b99d5d",
+ "cutoff": "2026-03-01T00:00:00Z",
+ "default_branch": "main",
+ "format": "agent-contrib-benchmark/1",
+ "horizon_days": 90,
+ "issues": [
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2022-07-18T07:02:06Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/408",
+   "labels": [],
+   "number": 408,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono Future Plans",
+   "updated_at": "2025-08-21T01:44:58Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 29,
+   "created_at": "2022-07-30T12:05:13Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/434",
+   "labels": [
+    "enhancement",
+    "middleware"
+   ],
+   "number": 434,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Apollo Server Middleware",
+   "updated_at": "2026-01-28T16:16:07Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2022-08-23T05:47:54Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/477",
+   "labels": [],
+   "number": 477,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Proposal] Middleware hosting and CI/CD automation",
+   "updated_at": "2022-10-15T23:49:52Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 45,
+   "created_at": "2022-08-25T00:23:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/482",
+   "labels": [],
+   "number": 482,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Discussion] What middleware do you want?",
+   "updated_at": "2025-08-21T01:42:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2022-10-30T16:38:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/638",
+   "labels": [],
+   "number": 638,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Serve-dynamic Modules Middleware",
+   "updated_at": "2023-09-08T08:03:33Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 36,
+   "created_at": "2022-11-16T11:21:06Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/664",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 664,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Feature request: support for file upload",
+   "updated_at": "2025-02-21T13:25:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 23,
+   "created_at": "2022-11-19T12:36:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/667",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 667,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Let app.onError handle non-Error instance",
+   "updated_at": "2026-02-18T01:49:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 13,
+   "created_at": "2022-11-21T13:47:46Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/672",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 672,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for asymmetric JWT validation (e.g. Auth0 or Clerk)",
+   "updated_at": "2025-11-27T08:34:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2022-11-26T02:45:39Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/678",
+   "labels": [],
+   "number": 678,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Can't seem to mock fetch requests with hono and miniflare",
+   "updated_at": "2023-05-27T17:14:57Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 6,
+   "created_at": "2022-12-14T23:22:12Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/728",
+   "labels": [],
+   "number": 728,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Discord for open source projects",
+   "updated_at": "2023-04-18T21:01:23Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2022-12-15T15:58:23Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/729",
+   "labels": [],
+   "number": 729,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add API to allow Request/Response override in Middleware",
+   "updated_at": "2023-09-02T10:55:30Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2022-12-19T18:21:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/735",
+   "labels": [],
+   "number": 735,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Please actually document the middleware API",
+   "updated_at": "2023-09-08T08:03:23Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 23,
+   "created_at": "2022-12-29T14:45:41Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/751",
+   "labels": [],
+   "number": 751,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "How about using GitHub \"Discussions\"",
+   "updated_at": "2024-11-01T02:11:30Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2022-12-30T08:30:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/763",
+   "labels": [],
+   "number": 763,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "How can I listen to chunk \"on\" events with Hono ?",
+   "updated_at": "2023-01-02T07:42:04Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 9,
+   "created_at": "2023-01-26T12:25:46Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/838",
+   "labels": [],
+   "number": 838,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Renew \"Pages Framework guide\" on Cloudflare Docs",
+   "updated_at": "2024-07-24T20:15:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-01-28T14:26:37Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/846",
+   "labels": [],
+   "number": 846,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Conflict with Cloudfare D1 beta and durable objects",
+   "updated_at": "2024-04-09T18:07:35Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2023-01-28T20:10:32Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/848",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 848,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Feature request] Uploads support",
+   "updated_at": "2025-04-22T00:30:07Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-02-15T21:07:18Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/897",
+   "labels": [],
+   "number": 897,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Compression middleware only reads first header value for Accept-Encoding (Miniflare)",
+   "updated_at": "2023-02-20T14:21:21Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 4,
+   "created_at": "2023-02-25T07:01:43Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/928",
+   "labels": [],
+   "number": 928,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Feature suggestion] \"after\" hook for Hono Client",
+   "updated_at": "2026-02-07T16:39:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-02-26T10:09:56Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/934",
+   "labels": [],
+   "number": 934,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Abstracting the filesystem",
+   "updated_at": "2024-11-05T03:57:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-03-15T21:59:12Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/985",
+   "labels": [],
+   "number": 985,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Feature Req: Use zod-validation-error to parse zod errors",
+   "updated_at": "2025-07-18T14:27:30Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 15,
+   "created_at": "2023-03-30T03:09:28Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1018",
+   "labels": [],
+   "number": 1018,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "req.parseBody should allow multiple keys (and converted to array)",
+   "updated_at": "2024-06-07T05:41:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2023-04-13T03:55:01Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1031",
+   "labels": [],
+   "number": 1031,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Export multiple route's type",
+   "updated_at": "2025-03-07T15:58:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2023-05-07T11:28:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1077",
+   "labels": [],
+   "number": 1077,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "mTls binding is undefined with Cloudflare worker",
+   "updated_at": "2024-08-31T17:01:37Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2023-06-13T14:26:11Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1176",
+   "labels": [
+    "middleware"
+   ],
+   "number": 1176,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Feature Req: Otel middleware",
+   "updated_at": "2025-09-19T17:29:59Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2023-06-17T05:51:23Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1184",
+   "labels": [],
+   "number": 1184,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Is there a bodyParser.urlencoded({ extended: true } equivalent in Hono?",
+   "updated_at": "2025-02-16T16:16:51Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-06-18T00:19:37Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1186",
+   "labels": [],
+   "number": 1186,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": " React hooks not working inside TSX/JSX file.",
+   "updated_at": "2023-06-18T16:01:11Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2023-06-21T19:24:01Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1193",
+   "labels": [],
+   "number": 1193,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Comments in JSX Causing \"Type 'undefined' is not assignable to type 'Child'.\" Error",
+   "updated_at": "2024-03-20T11:23:11Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2023-06-26T14:09:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1202",
+   "labels": [
+    "enhancement",
+    "middleware"
+   ],
+   "number": 1202,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "If only Max-Age or Expires specified in SetCookie, calculate the other",
+   "updated_at": "2023-09-09T00:36:29Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-06-29T16:15:48Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1211",
+   "labels": [],
+   "number": 1211,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "feature request: minify (at runtime ?) template literals?",
+   "updated_at": "2025-06-15T09:06:26Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-06-30T03:10:38Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1212",
+   "labels": [
+    "document"
+   ],
+   "number": 1212,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add docs for manual setup",
+   "updated_at": "2023-09-09T00:34:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 17,
+   "created_at": "2023-07-22T21:46:12Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1256",
+   "labels": [],
+   "number": 1256,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Deploying to Vercel Serverless Functions",
+   "updated_at": "2026-02-15T17:02:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2023-07-25T16:08:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1267",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1267,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Allow non errors into onError handler",
+   "updated_at": "2025-08-25T21:19:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-08-14T10:46:11Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1327",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1327,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Feature Request: Components for html middleware",
+   "updated_at": "2023-10-28T17:18:26Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-08-20T08:20:49Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1356",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1356,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add DigitalOcean Function",
+   "updated_at": "2023-08-20T08:20:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2023-08-22T15:09:52Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1364",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1364,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add gitignore to all examples and generated from cli",
+   "updated_at": "2023-08-22T15:43:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-09-02T18:27:13Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1396",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1396,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "LiveviewJS integration",
+   "updated_at": "2023-09-02T18:27:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 12,
+   "created_at": "2023-09-05T19:49:43Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1414",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1414,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Modify Req for Proxy scenario",
+   "updated_at": "2024-04-17T07:18:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2023-09-15T10:46:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1463",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1463,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add support for Stormkit",
+   "updated_at": "2023-09-29T02:06:09Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 6,
+   "created_at": "2023-09-15T18:28:04Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1464",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1464,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Shortcomings with client `$url` method",
+   "updated_at": "2023-09-28T22:48:51Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2023-09-16T09:49:00Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1467",
+   "labels": [
+    "enhancement",
+    "on hold"
+   ],
+   "number": 1467,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Commitlint CI",
+   "updated_at": "2023-10-02T16:57:51Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-09-23T01:55:36Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1499",
+   "labels": [
+    "enhancement",
+    "on hold"
+   ],
+   "number": 1499,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "c.req.json() throws an error if c.req.text() has been called before",
+   "updated_at": "2024-03-25T19:09:40Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2023-09-25T19:42:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1506",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1506,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Fix for \"Web Framework Benchmark\"",
+   "updated_at": "2026-01-20T13:44:09Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-10-10T01:17:30Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1559",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1559,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Custom transformers to serialize/deserialize more complex types",
+   "updated_at": "2025-03-26T17:07:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2023-10-10T06:58:52Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1561",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1561,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Stripe webhooks express middleware implementation in hono ",
+   "updated_at": "2024-02-21T07:56:15Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-10-29T21:55:02Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1629",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1629,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Define routes as an object literal",
+   "updated_at": "2023-10-31T01:09:51Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2023-10-31T05:16:06Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1632",
+   "labels": [
+    "enhancement",
+    "on hold"
+   ],
+   "number": 1632,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`c.req.query` should support generics",
+   "updated_at": "2025-07-08T04:07:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-11-05T14:06:51Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1647",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1647,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "feat: publish `hono` jsx support and parsing as separate package",
+   "updated_at": "2023-11-17T09:03:20Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 14,
+   "created_at": "2023-11-09T20:42:39Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1674",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1674,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add a `group` method for applying middleware to a group of routes",
+   "updated_at": "2025-10-11T11:27:27Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 12,
+   "created_at": "2023-11-09T22:33:19Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1677",
+   "labels": [],
+   "number": 1677,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Context method to send request to self",
+   "updated_at": "2025-12-14T08:44:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2023-11-16T02:50:28Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1706",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1706,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Feature] Override the serializer for json",
+   "updated_at": "2024-09-04T08:43:36Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-11-16T13:11:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1712",
+   "labels": [
+    "enhancement",
+    "on hold"
+   ],
+   "number": 1712,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Do you consider adding a source map feature",
+   "updated_at": "2023-12-14T12:54:55Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 45,
+   "created_at": "2023-12-03T12:39:34Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1770",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1770,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Event Listener on Client Disconnect",
+   "updated_at": "2026-02-20T19:13:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-12-20T17:04:24Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1837",
+   "labels": [],
+   "number": 1837,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Capture Group Tests Appear to use non-capture group and are duplicate of non-capture group tests.",
+   "updated_at": "2023-12-20T17:04:24Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-12-20T17:12:39Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1838",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1838,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Feature Request: Allow Path Capture Groups to trim the Value, or support lookahead/lookbehind",
+   "updated_at": "2023-12-22T03:06:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 9,
+   "created_at": "2023-12-26T06:26:09Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1859",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1859,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Addition of SPA flag in all static middleware ",
+   "updated_at": "2025-08-25T10:00:42Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2024-01-01T04:52:22Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1874",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1874,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Just an idea : Replacing simple computational processes with WebAssembly",
+   "updated_at": "2024-01-01T14:15:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-01-05T05:06:21Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1901",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1901,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Arrayed routes (multiple routes in single function)",
+   "updated_at": "2025-05-29T07:24:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-01-05T18:28:35Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1903",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1903,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Media Queries for css helper",
+   "updated_at": "2024-01-09T07:22:28Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 1,
+   "created_at": "2024-01-12T08:50:35Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1954",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1954,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`cache` option for `Suspense`",
+   "updated_at": "2024-07-27T10:49:36Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 3,
+   "created_at": "2024-01-12T22:30:41Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/1959",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1959,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`Suspense` supports SPA",
+   "updated_at": "2024-02-21T12:15:18Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 11,
+   "created_at": "2024-01-14T16:20:45Z",
+   "evidence": {
+    "closed_at": "2026-03-30T02:08:30Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/1977",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 1977,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "SSG/JSX: SSG supports `Suspense`",
+   "updated_at": "2026-02-18T00:02:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-01-17T17:14:41Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2010",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2010,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add build/deploy section for node and bun in docs",
+   "updated_at": "2024-01-23T13:19:19Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-01-24T04:19:18Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2075",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2075,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Proposal for SSGResultDetails",
+   "updated_at": "2024-01-25T21:11:27Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 10,
+   "created_at": "2024-02-09T10:06:17Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2180",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2180,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "SSG: If the status code is anything other than 200, we should raise an error by default",
+   "updated_at": "2025-12-29T19:36:40Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-02-13T03:34:25Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2202",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2202,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "JSX Renderer Middleware with name",
+   "updated_at": "2024-02-16T07:13:06Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-02-13T15:31:48Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2205",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2205,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`hono/cache` expansion",
+   "updated_at": "2024-05-04T08:38:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-02-21T10:05:55Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2249",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2249,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Discourage usage of ContextVariableMap and provide helper ExtractEnv",
+   "updated_at": "2026-02-10T23:06:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-03-05T16:58:44Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2313",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2313,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`ContextVariableMap` Counterpart for env `type Bindings` for Global Context Types",
+   "updated_at": "2024-04-30T10:19:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-03-09T21:31:04Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2334",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2334,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Redirect respecting sub-routes",
+   "updated_at": "2024-03-22T15:54:26Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2024-03-12T03:53:44Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2340",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2340,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Increase JWS's ability to validate",
+   "updated_at": "2024-03-13T11:12:28Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 11,
+   "created_at": "2024-03-12T21:31:36Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2343",
+   "labels": [
+    "bug",
+    "enhancement"
+   ],
+   "number": 2343,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "c.json returning empty string for undefined values",
+   "updated_at": "2026-02-23T03:49:15Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-03-16T03:49:32Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2358",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2358,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Discussion] A 'listen' function for Hono seems a good pattern?",
+   "updated_at": "2024-03-17T12:21:29Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 5,
+   "created_at": "2024-03-21T20:14:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2398",
+   "labels": [
+    "bug"
+   ],
+   "number": 2398,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Use Signed Cookies in jwt Middleware",
+   "updated_at": "2025-07-27T20:52:53Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 19,
+   "created_at": "2024-03-22T07:38:38Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2399",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2399,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Perf] Type instantiation is excessively deep and possibly infinite.",
+   "updated_at": "2026-01-09T21:40:23Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-03-22T20:38:17Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2404",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2404,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Provide a way to skip `.route()` group prefixing for certain routes / methods",
+   "updated_at": "2024-03-28T08:55:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-03-26T14:22:16Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2421",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2421,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "middleware next() return type is inaccurate",
+   "updated_at": "2025-05-20T22:18:30Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2024-03-30T01:57:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2438",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2438,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Long Polling middleware and client?",
+   "updated_at": "2024-04-13T11:07:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 13,
+   "created_at": "2024-03-30T04:15:25Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2439",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2439,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Response serialization and validation",
+   "updated_at": "2025-12-26T10:00:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2024-04-04T11:30:36Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2466",
+   "labels": [
+    "bug"
+   ],
+   "number": 2466,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "nextjs app router + nodejs not working",
+   "updated_at": "2025-08-28T11:44:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-04-10T19:45:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2491",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2491,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Types for values on events",
+   "updated_at": "2025-03-31T13:32:45Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2024-04-10T21:30:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2492",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2492,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Allow Users to Specify Types for JWT Middleware Payload",
+   "updated_at": "2025-07-10T18:22:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-04-19T04:43:51Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2531",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2531,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "throw errors when there is no return",
+   "updated_at": "2024-04-20T07:53:56Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-04-22T15:41:25Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2539",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2539,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "open-runtimes support",
+   "updated_at": "2024-05-06T15:19:21Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-04-22T17:16:38Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2540",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2540,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "default referrer-policy for secure-headers middleware",
+   "updated_at": "2024-04-23T08:59:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-04-25T23:26:53Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2561",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2561,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Look into adding type safe routes instead of stringly types params.",
+   "updated_at": "2024-04-29T03:48:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 19,
+   "created_at": "2024-04-29T15:41:17Z",
+   "evidence": {
+    "closed_at": "2026-03-05T11:04:06Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/2571",
+   "labels": [
+    "bug"
+   ],
+   "number": 2571,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "DOMException while using hono/jwt module's sign ",
+   "updated_at": "2026-02-06T18:43:39Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-05-02T08:11:39Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2589",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2589,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for JWT with JWKS",
+   "updated_at": "2025-01-13T17:15:47Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-05-04T06:02:39Z",
+   "evidence": {
+    "closed_at": "2026-03-19T10:32:58Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/2603",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2603,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Make a complete example of onError handling in the docs",
+   "updated_at": "2024-05-06T20:26:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2024-05-09T08:08:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2649",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2649,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "executionCtx getter throws on Bun",
+   "updated_at": "2025-12-25T14:05:00Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-05-10T09:51:04Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2654",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2654,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "natively support Structured Field Values",
+   "updated_at": "2025-12-23T02:59:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 15,
+   "created_at": "2024-05-19T18:11:56Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2723",
+   "labels": [
+    "bug"
+   ],
+   "number": 2723,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "hono/aws-lambda + @hono/graphql-server GET not working!",
+   "updated_at": "2024-06-17T04:20:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2024-05-21T14:48:01Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2757",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2757,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "attachReactJsxNode convenience feature to help injecting React components in the \"faked/compatibility\" react JSX",
+   "updated_at": "2024-06-01T22:36:44Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 15,
+   "created_at": "2024-05-22T03:01:20Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2762",
+   "labels": [],
+   "number": 2762,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Setting cookie with Max-Age > 400 days throws",
+   "updated_at": "2024-09-11T16:52:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 15,
+   "created_at": "2024-05-25T22:24:06Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2794",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2794,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "route/mount should also accept middlewares",
+   "updated_at": "2024-06-18T14:35:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 27,
+   "created_at": "2024-05-27T16:38:08Z",
+   "evidence": {
+    "closed_at": "2026-04-20T06:30:52Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/2817",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2817,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Add NestJS Hono Adapter",
+   "updated_at": "2026-02-08T19:23:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-05-27T19:46:55Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2818",
+   "labels": [],
+   "number": 2818,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "documentation at https://hono.dev/guides/jsx seems out of date",
+   "updated_at": "2024-07-24T21:42:20Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-05-29T20:48:58Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2860",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2860,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "OData Middleware",
+   "updated_at": "2024-05-30T04:11:55Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 8,
+   "created_at": "2024-05-29T23:49:27Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2861",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2861,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Improve score of JSR symbol",
+   "updated_at": "2024-10-31T02:07:54Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2024-06-06T19:39:49Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2928",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2928,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add class based Component and PureComponent to improve compatibility with React ",
+   "updated_at": "2025-12-19T17:18:15Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-06-09T07:08:18Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2942",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2942,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Make argument order for getSignedCookie the same as setSignedCookie in cookie helper",
+   "updated_at": "2024-08-29T06:37:43Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 25,
+   "created_at": "2024-06-13T20:24:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2970",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2970,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Automatic Swagger Docs generation like Elysia or NestJS",
+   "updated_at": "2026-01-07T14:06:50Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 13,
+   "created_at": "2024-06-18T06:33:45Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2988",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2988,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "app.route includes middleware from previous groups",
+   "updated_at": "2025-12-15T18:32:43Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 17,
+   "created_at": "2024-06-19T06:03:04Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/2994",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 2994,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "How to get request's remote client IP in Node.js?",
+   "updated_at": "2026-02-17T14:11:25Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-06-23T08:04:11Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3023",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3023,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`outputFormat` supports Response",
+   "updated_at": "2024-06-23T15:43:33Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2024-07-20T21:55:41Z",
+   "evidence": {
+    "closed_at": "2026-03-04T07:56:05Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/3170",
+   "labels": [
+    "bug"
+   ],
+   "number": 3170,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Hono doesn't consider status codes from middlewares with `testClient`",
+   "updated_at": "2026-02-25T13:04:50Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-07-23T05:31:46Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3180",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3180,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Triggers support for AWS Lambda adapter",
+   "updated_at": "2024-07-23T07:09:10Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2024-07-24T06:00:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3182",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3182,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "WorkerEntrypoint ergonomic handler support",
+   "updated_at": "2025-07-06T21:42:11Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2024-07-24T11:46:25Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3185",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3185,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Utilities for testing WebSocket",
+   "updated_at": "2024-08-09T03:03:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 9,
+   "created_at": "2024-07-25T16:07:51Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3189",
+   "labels": [
+    "triage"
+   ],
+   "number": 3189,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Cookie not properly parsed. `validCookieNameRegEx` seems too strict.",
+   "updated_at": "2024-12-10T04:45:39Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 13,
+   "created_at": "2024-07-27T04:07:58Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3192",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3192,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Renaming testClient",
+   "updated_at": "2025-03-17T00:39:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-07-28T04:55:13Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3197",
+   "labels": [
+    "triage"
+   ],
+   "number": 3197,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "JSX conflict with React email components",
+   "updated_at": "2025-10-24T05:32:19Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-07-28T05:14:58Z",
+   "evidence": {
+    "closed_at": "2026-03-04T07:26:56Z",
+    "merged_at": "2026-03-04T07:26:53Z",
+    "pr": 4723,
+    "pr_author_association": "CONTRIBUTOR",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/3198",
+   "labels": [
+    "bug"
+   ],
+   "number": 3198,
+   "outcome": "positive",
+   "outcome_reason": "closed by an external merged PR",
+   "title": "With `UpgradeWebSocket`, any path parameters become non-optional in TS type system",
+   "updated_at": "2026-02-16T11:54:52Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 23,
+   "created_at": "2024-07-28T09:13:05Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3202",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3202,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Infer correct types when creating `MiddlewareHandler` dynamically",
+   "updated_at": "2026-02-19T11:21:32Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-07-29T06:09:37Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3207",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3207,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support JSON5",
+   "updated_at": "2026-02-19T17:29:26Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-07-29T14:45:57Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3210",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3210,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Utilities for `getPath`",
+   "updated_at": "2025-04-16T04:57:06Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-08-04T01:16:00Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3230",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3230,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for subscribe and publish Websocket API in Bun Adapter",
+   "updated_at": "2025-11-04T10:57:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-08-16T15:41:34Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3281",
+   "labels": [
+    "triage"
+   ],
+   "number": 3281,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Types: LambdaEvent type is missing authorizer context for lambda auth",
+   "updated_at": "2024-08-20T02:26:01Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 6,
+   "created_at": "2024-08-17T03:25:19Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3284",
+   "labels": [
+    "enhancement",
+    "v5"
+   ],
+   "number": 3284,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Types exports are incorrect in package.json",
+   "updated_at": "2025-12-06T16:48:08Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 20,
+   "created_at": "2024-08-18T02:33:22Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3293",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3293,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for Express.js Compatible Middleware",
+   "updated_at": "2026-02-08T09:30:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 20,
+   "created_at": "2024-08-22T04:27:13Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3309",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3309,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "RPC support for SSE",
+   "updated_at": "2025-12-15T23:20:58Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2024-08-24T16:17:30Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3319",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3319,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Non-streaming ErrorBoundary in streaming context",
+   "updated_at": "2025-08-02T12:32:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-08-27T00:51:49Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3324",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3324,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support returning 206 Partial Content with ``serveStatic``",
+   "updated_at": "2024-10-17T03:51:49Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-08-31T02:33:55Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3340",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3340,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add cache expiration time",
+   "updated_at": "2024-09-12T15:06:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-08-31T15:40:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3349",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3349,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hash Vulnerability in crypto",
+   "updated_at": "2024-08-31T15:40:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-08-31T15:40:54Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3350",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3350,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Addition of Hashing lib",
+   "updated_at": "2024-09-01T17:00:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-09-02T09:13:01Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3360",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3360,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "JSON.stringify replacer option",
+   "updated_at": "2025-09-28T01:18:06Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-09-02T10:56:01Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3361",
+   "labels": [
+    "triage"
+   ],
+   "number": 3361,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono middleware matches all routes instead of the routes declared after the middleware",
+   "updated_at": "2024-09-03T03:10:24Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-09-04T16:48:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3382",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3382,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support AWS SigV4 signatures for Lambdalith's running Hono with IAM Authorization - RPC Client-side",
+   "updated_at": "2025-03-04T01:59:55Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-09-10T08:02:28Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3402",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3402,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "feat: Improve the extensibility of Hono's Context",
+   "updated_at": "2026-02-13T17:42:33Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2024-09-11T17:24:43Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3407",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3407,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`trimTrailingSlash` doesn't work on paths with `*`",
+   "updated_at": "2026-02-02T01:26:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-09-20T01:12:34Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3426",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3426,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`ctx.req.query()` should return `Record<string, string | undefined>`",
+   "updated_at": "2024-09-22T01:53:54Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-09-20T14:51:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3429",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3429,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Dynamic Subdomain Not Detected in the Requests",
+   "updated_at": "2024-09-21T08:43:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-10-02T14:58:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3482",
+   "labels": [
+    "triage"
+   ],
+   "number": 3482,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Multivalue query param support on AWS lambda behind apigateway",
+   "updated_at": "2025-12-15T07:58:52Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 5,
+   "created_at": "2024-10-03T07:50:22Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3483",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3483,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Move Node.js serveStatic to this repo",
+   "updated_at": "2026-02-09T07:26:43Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2024-10-07T14:47:12Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3495",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3495,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Extend type safe RPC with zod validator (to numbers at least)",
+   "updated_at": "2025-11-11T21:06:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-10-17T06:56:44Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3524",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3524,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "http2 support",
+   "updated_at": "2025-01-26T21:00:56Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-10-18T19:04:37Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3527",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3527,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add writeSSE / stream at the Context level for increased DX with SSEs",
+   "updated_at": "2025-07-11T06:54:17Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2024-10-21T22:06:21Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3543",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3543,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for brotli (`br`) compression in compress middleware",
+   "updated_at": "2026-02-25T11:27:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-10-27T14:33:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3571",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3571,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Import / Export router state",
+   "updated_at": "2024-10-27T21:03:59Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-11-04T15:39:06Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3624",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3624,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "feat(jwt): Support JSON Web Encyption (JWE)",
+   "updated_at": "2025-10-23T11:08:15Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2024-11-05T12:15:09Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3629",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3629,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Publish JSR from built code",
+   "updated_at": "2024-11-06T12:32:38Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 5,
+   "created_at": "2024-11-08T14:19:04Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3648",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3648,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add support for CBOR",
+   "updated_at": "2024-11-15T13:13:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-11-10T13:13:02Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3651",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3651,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Cache `Router.match()` ?",
+   "updated_at": "2024-11-10T13:13:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-11-10T19:47:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3652",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3652,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "File base routing option",
+   "updated_at": "2024-11-21T00:11:20Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-11-11T05:31:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3653",
+   "labels": [
+    "v5"
+   ],
+   "number": 3653,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "v5: Do not include stash in matchResult",
+   "updated_at": "2025-10-27T11:51:44Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-11-11T14:01:23Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3655",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3655,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support Cloudflare Workflows",
+   "updated_at": "2026-01-30T23:01:32Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 30,
+   "created_at": "2024-11-12T03:50:20Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3659",
+   "labels": [
+    "enhancement",
+    "v5"
+   ],
+   "number": 3659,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "v5: `hono/build`",
+   "updated_at": "2025-10-27T11:51:43Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-11-12T05:35:30Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3662",
+   "labels": [],
+   "number": 3662,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "ci: cache the results of `bun run build`",
+   "updated_at": "2024-11-12T19:26:17Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2024-11-14T14:04:05Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3667",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3667,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Custom query parser",
+   "updated_at": "2025-04-12T00:44:13Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2024-11-15T09:14:23Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3676",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3676,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "CI: show the size of `hono/tiny` in Bundle Check",
+   "updated_at": "2024-11-15T09:20:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-11-15T11:16:30Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3677",
+   "labels": [
+    "triage"
+   ],
+   "number": 3677,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Types not inferred correctly for Arrays with additional properties anymore",
+   "updated_at": "2024-11-15T21:44:30Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2024-11-18T05:55:01Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3681",
+   "labels": [],
+   "number": 3681,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "ci: measure benchmark on ci",
+   "updated_at": "2024-11-18T05:55:01Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2024-11-22T20:06:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3699",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3699,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "How to use `hono/client` with a different fetch client",
+   "updated_at": "2025-04-29T16:50:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-11-29T06:40:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3710",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3710,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "validator doesnt parse nested objects in formdata",
+   "updated_at": "2025-03-06T14:44:23Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-12-04T11:08:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3721",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3721,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add support for waitUntil in Supabase context",
+   "updated_at": "2024-12-06T08:05:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2024-12-12T20:26:19Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3746",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3746,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "MiddlewareHandler response type inference",
+   "updated_at": "2026-02-14T12:48:09Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2024-12-15T21:40:04Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3751",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3751,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono Logger (\"hono/logger\") Disable Coloring",
+   "updated_at": "2025-07-24T11:36:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-12-19T12:44:31Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3757",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3757,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Allow custom exception handling in built-in middlewares",
+   "updated_at": "2024-12-20T15:34:49Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-12-24T02:03:58Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3765",
+   "labels": [
+    "triage"
+   ],
+   "number": 3765,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "SSE does not work again... ",
+   "updated_at": "2025-08-07T21:46:44Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2024-12-24T08:57:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3766",
+   "labels": [],
+   "number": 3766,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Execution order changes benchmark results",
+   "updated_at": "2026-01-11T19:39:19Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-12-27T17:19:05Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3781",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3781,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support Zstandard (zstd) compression algorithm",
+   "updated_at": "2026-01-06T01:03:09Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2025-01-01T14:13:49Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3793",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3793,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Zero Runtime Factory",
+   "updated_at": "2025-01-11T13:54:59Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 9,
+   "created_at": "2025-01-07T21:20:02Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3809",
+   "labels": [
+    "triage"
+   ],
+   "number": 3809,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Default logger middleware doesn't check that stdout is a TTY",
+   "updated_at": "2025-11-05T06:56:16Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-01-08T19:22:37Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3812",
+   "labels": [
+    "triage"
+   ],
+   "number": 3812,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono jsx context is not set if await happens before useContext call",
+   "updated_at": "2025-11-24T21:43:48Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 12,
+   "created_at": "2025-01-09T18:18:12Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3817",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3817,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "HMR for server routes",
+   "updated_at": "2025-12-19T15:51:57Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-01-14T22:03:22Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3829",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3829,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Allow for custom hashing methods to be used to etag",
+   "updated_at": "2025-01-15T09:25:30Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-01-21T10:31:30Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3845",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3845,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Per-route context Variables with upgradeWebSocket",
+   "updated_at": "2026-02-05T05:03:38Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 15,
+   "created_at": "2025-01-26T14:22:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3857",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3857,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Universal Cache Middleware with Storage Adapter Support",
+   "updated_at": "2026-02-24T12:23:27Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2025-01-27T15:10:00Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3862",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3862,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support CONNECT method",
+   "updated_at": "2025-10-22T10:14:23Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 34,
+   "created_at": "2025-01-30T05:07:11Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3869",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3869,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono Type Inference is taking too long during builds",
+   "updated_at": "2026-01-11T08:55:15Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2025-02-09T09:37:18Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3908",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3908,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`Content-Type` header only works with `ctx.body()`",
+   "updated_at": "2025-05-20T22:14:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 9,
+   "created_at": "2025-02-16T21:52:09Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3923",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3923,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Utility For Merging Directory of Honos",
+   "updated_at": "2025-02-18T05:43:32Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-02-20T10:19:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3940",
+   "labels": [],
+   "number": 3940,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "I tested with k6 and found 30 concurrent sse and a memory leak",
+   "updated_at": "2025-02-20T10:23:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2025-02-23T13:33:29Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3945",
+   "labels": [],
+   "number": 3945,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Very slow tsserver",
+   "updated_at": "2025-10-02T17:49:09Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-02-27T20:44:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3963",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3963,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Request: better logger middleware",
+   "updated_at": "2026-02-24T01:08:51Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-02-28T10:46:45Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3965",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3965,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for defining custom context helper methods",
+   "updated_at": "2025-03-09T08:56:47Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-03-01T23:43:54Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3968",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3968,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "feat(hono/client): Simplified Path Parameters Syntax for hc()",
+   "updated_at": "2025-06-27T13:56:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-03-02T16:25:49Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3969",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3969,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "hope to support sending ping and receiving pong when using websockt",
+   "updated_at": "2025-03-02T16:25:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-03-06T13:49:54Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3979",
+   "labels": [],
+   "number": 3979,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "CORS middleware: Possible to make OPTIONS handling optional?",
+   "updated_at": "2025-03-21T05:17:37Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-03-13T16:22:57Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/3995",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 3995,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "JWT Middleware doesn't inform of JWT expiry",
+   "updated_at": "2025-11-08T16:17:35Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-03-21T13:33:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4015",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4015,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono immediately need a good Validator built in Rust to compete with Encore",
+   "updated_at": "2025-04-17T02:19:26Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-03-28T10:08:05Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4024",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4024,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add support for cloudfront request context",
+   "updated_at": "2025-11-07T06:00:22Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 24,
+   "created_at": "2025-03-30T23:07:05Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4031",
+   "labels": [
+    "triage"
+   ],
+   "number": 4031,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "ERROR: Body is unusable: Body has already been read",
+   "updated_at": "2025-09-13T09:06:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-04-02T03:59:21Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4041",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4041,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support streaming with http2 adapter",
+   "updated_at": "2026-02-18T13:52:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-04-02T07:33:16Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4043",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4043,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for React Native Expo API Routes",
+   "updated_at": "2025-04-17T02:21:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-04T14:33:21Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4051",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4051,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono app delegate utility",
+   "updated_at": "2025-04-04T14:35:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2025-04-05T12:21:49Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4052",
+   "labels": [
+    "triage"
+   ],
+   "number": 4052,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Solution : Hono CSRF middleware blocking valid formData requests.",
+   "updated_at": "2025-04-07T20:17:16Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-07T08:40:41Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4056",
+   "labels": [
+    "triage"
+   ],
+   "number": 4056,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Event format of AWS API Gateway Websocket causes Error",
+   "updated_at": "2025-04-12T19:52:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-09T13:46:05Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4062",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4062,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support `body` validation target to handle form OR json content type use-case",
+   "updated_at": "2025-04-18T00:10:12Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-11T11:49:43Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4063",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4063,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support custom query params parsing logic, instead of URLSearchParams",
+   "updated_at": "2025-04-12T00:44:12Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2025-04-14T16:49:13Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4071",
+   "labels": [
+    "triage"
+   ],
+   "number": 4071,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "ETag changes every time when combine `etag` and `cache` middlewares",
+   "updated_at": "2025-05-15T11:47:20Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2025-04-22T06:43:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4103",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4103,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Validator for queries inconsistent",
+   "updated_at": "2026-01-07T13:28:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-23T03:41:22Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4106",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4106,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Proposal: serveStatic should support extensionless file requests",
+   "updated_at": "2025-04-25T08:32:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2025-04-28T22:15:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4116",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4116,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Better unit testing for Hono handlers",
+   "updated_at": "2025-07-12T21:56:40Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2025-05-01T14:14:19Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4121",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4121,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Request for Guidance: Application Structure & Best Practices for Enterprise Applications",
+   "updated_at": "2026-02-08T10:02:56Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2025-05-06T11:30:27Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4127",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4127,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for Bun + Socket.io + Hono Integration (Works on Node.js, not Bun)",
+   "updated_at": "2026-01-19T22:30:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2025-05-07T10:43:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4129",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4129,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono serving Bun's HTML imports",
+   "updated_at": "2026-01-07T11:02:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-05-11T13:22:21Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4135",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4135,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "the same import for all runtimes",
+   "updated_at": "2025-06-13T07:23:55Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2025-05-18T05:55:57Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4147",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4147,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Routes Update (HMR)",
+   "updated_at": "2025-08-21T01:42:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-05-28T07:12:17Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4172",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4172,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "jwt none algorithm support",
+   "updated_at": "2025-08-16T14:15:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-05-28T08:08:35Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4173",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4173,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Have multiple notFound handlers",
+   "updated_at": "2026-01-31T09:54:35Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 7,
+   "created_at": "2025-05-29T10:33:41Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4177",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4177,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "AI-Powered Automatic Issue Triage",
+   "updated_at": "2026-02-03T01:30:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2025-06-02T02:05:51Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4186",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4186,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for Relative Path in Hono Client",
+   "updated_at": "2026-01-15T13:14:12Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-06-02T13:03:51Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4190",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4190,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Data processing middlewares for RPC",
+   "updated_at": "2025-06-02T13:03:52Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-06-03T15:47:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4192",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4192,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Pass username to context from basicAuth",
+   "updated_at": "2026-01-24T07:36:44Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-06-04T12:27:19Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4197",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4197,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support get route config in middleware",
+   "updated_at": "2025-07-22T08:25:51Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2025-06-06T13:30:23Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4199",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4199,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support for passing Standard Schema into `hono/validator`",
+   "updated_at": "2025-07-09T08:25:26Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-06-22T07:12:53Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4243",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4243,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "CSP ReportOnly ReportUri support",
+   "updated_at": "2025-07-04T23:53:52Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-06-29T03:58:48Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4254",
+   "labels": [
+    "enhancement",
+    "triage"
+   ],
+   "number": 4254,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "hono/lambda-edge adapter should treat compressed response body as binary",
+   "updated_at": "2025-06-30T02:02:28Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 7,
+   "created_at": "2025-07-02T11:27:14Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4264",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4264,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "SWR Integration for Hono RPC Client",
+   "updated_at": "2026-01-28T13:02:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2025-07-04T10:15:20Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4270",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4270,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "RFC: Add type helpers for type-safe error handling in RPC Client",
+   "updated_at": "2026-01-25T14:07:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-07-05T00:53:40Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4271",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4271,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Decouple internal `data` usage for Bun websockets",
+   "updated_at": "2025-07-05T00:53:41Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-07-14T05:15:27Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4281",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4281,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add a generateSignedCookie function to the hono/cookie helper for testing",
+   "updated_at": "2025-07-18T01:09:25Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-07-17T00:43:55Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4287",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4287,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Make it possible to reference context changes from previous middlewares in combine",
+   "updated_at": "2025-09-22T00:30:44Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 7,
+   "created_at": "2025-07-22T06:19:00Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4294",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4294,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "LanguageDetector middleware does not parse locale code into language code",
+   "updated_at": "2026-02-11T07:14:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-07-30T10:24:11Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4326",
+   "labels": [
+    "triage"
+   ],
+   "number": 4326,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Context missing if JSXNode between Context and consumer",
+   "updated_at": "2025-10-02T16:42:32Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-08-04T13:12:54Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4334",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4334,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Better integration between HonoClient and hono/zod-openapi",
+   "updated_at": "2025-12-20T13:02:53Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-08-07T07:26:20Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4338",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4338,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Lambda Support for non ApiGateway handlers",
+   "updated_at": "2025-08-07T12:11:33Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-08-08T06:08:21Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4345",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4345,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Type inference: wrong error location when handler return type is invalid \u2014 error points to route path string",
+   "updated_at": "2025-08-11T00:54:39Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-08-10T10:32:43Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4347",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4347,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Proposal: Auto validation and auto data clean during return value",
+   "updated_at": "2025-09-09T01:10:06Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-08-18T14:04:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4357",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4357,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Is there a way to integrate axios with api client?",
+   "updated_at": "2025-08-19T02:00:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-08-28T02:49:38Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4377",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4377,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Output validator",
+   "updated_at": "2025-12-29T01:10:44Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-08-29T22:32:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4379",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4379,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add a way to return Context types for chained routes",
+   "updated_at": "2025-08-29T22:33:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-09-01T05:51:19Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4385",
+   "labels": [
+    "triage"
+   ],
+   "number": 4385,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Routes not executed in expected order",
+   "updated_at": "2025-09-05T00:11:15Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 19,
+   "created_at": "2025-09-01T13:04:02Z",
+   "evidence": {
+    "closed_at": "2026-03-30T12:10:53Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4389",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4389,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "SSG: Support redirects",
+   "updated_at": "2026-01-26T11:49:53Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-09-05T04:39:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4400",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4400,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "The same code runs on all platforms.",
+   "updated_at": "2025-09-12T03:15:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2025-09-16T00:18:46Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4409",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4409,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Make `Context` class officially accessible",
+   "updated_at": "2025-09-19T08:43:29Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-09-16T09:45:42Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4412",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4412,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add `LinearRouter.matchRoute` static method for direct matching",
+   "updated_at": "2025-09-22T07:22:29Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-09-19T00:19:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4417",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4417,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "try catch cloudfront event -> request mapping for lambda@edge handler to avoid undefined access errors",
+   "updated_at": "2025-09-25T14:41:29Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-09-27T10:02:55Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4431",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4431,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add support for bun router",
+   "updated_at": "2025-09-29T08:03:24Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-09-30T03:28:46Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4434",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4434,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "`serveStatic`'s `getContent` should return metadata",
+   "updated_at": "2026-02-19T16:42:16Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-10-03T20:53:31Z",
+   "evidence": {
+    "closed_at": "2026-05-22T09:09:54Z",
+    "merged_at": "2026-05-22T09:09:52Z",
+    "pr": 4955,
+    "pr_author_association": "CONTRIBUTOR",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4439",
+   "labels": [
+    "triage"
+   ],
+   "number": 4439,
+   "outcome": "positive",
+   "outcome_reason": "closed by an external merged PR",
+   "title": "Deno `upgradeWebSocket` missing `Sec-WebSocket-Protocol` header in response",
+   "updated_at": "2025-10-08T07:37:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2025-10-05T12:15:21Z",
+   "evidence": {
+    "closed_at": "2026-03-19T10:38:21Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4442",
+   "labels": [
+    "triage"
+   ],
+   "number": 4442,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "serveStatic example does not work",
+   "updated_at": "2025-12-03T01:31:19Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2025-10-05T14:42:46Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4443",
+   "labels": [
+    "triage"
+   ],
+   "number": 4443,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono breaks when uploading \"large\" (>500KB) files through Multipart/Form-Data and using a middleware",
+   "updated_at": "2025-10-08T08:03:27Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 5,
+   "created_at": "2025-10-05T14:56:40Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4444",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4444,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Calling `getCookie(c, 'key')` after `setCookie(c, 'key')` results in old data",
+   "updated_at": "2026-02-18T15:41:30Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 5,
+   "created_at": "2025-10-05T15:01:39Z",
+   "evidence": {
+    "closed_at": "2026-03-09T10:03:40Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4445",
+   "labels": [
+    "triage"
+   ],
+   "number": 4445,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "`setCookie` on the same key multiple times is not deduped",
+   "updated_at": "2025-12-13T16:18:06Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-10-05T18:25:33Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4447",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4447,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Chunked cookie utils",
+   "updated_at": "2025-10-23T08:48:10Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-10-09T12:35:18Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4454",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4454,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Ensure mutable headers with `hono/timing` middleware",
+   "updated_at": "2025-10-22T00:25:52Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-10-09T13:29:06Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4455",
+   "labels": [],
+   "number": 4455,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Hono ReactNode export takes precedence in editor suggestions",
+   "updated_at": "2025-10-09T13:29:06Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-10-16T04:25:23Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4460",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4460,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "OpenAPI",
+   "updated_at": "2026-01-07T14:06:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-10-17T12:11:24Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4466",
+   "labels": [],
+   "number": 4466,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Invite to assess results of automated perf coding on Hono ",
+   "updated_at": "2025-10-17T14:42:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-10-24T21:34:40Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4482",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4482,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Configure base path from context header",
+   "updated_at": "2025-10-25T16:22:52Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-10-25T18:30:36Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4483",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4483,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Trusted Types for Secure Headers Middleware",
+   "updated_at": "2025-10-31T15:28:37Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-10-28T19:12:07Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4493",
+   "labels": [
+    "triage"
+   ],
+   "number": 4493,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "ExecutionContext is missing exports filed available in Cloudflare Workers",
+   "updated_at": "2026-02-25T09:39:01Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-11-06T14:33:15Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4506",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4506,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add support for Cloudflare's Websocket Hibernation API",
+   "updated_at": "2026-02-22T09:57:41Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2025-11-08T07:23:00Z",
+   "evidence": {
+    "closed_at": "2026-05-22T09:01:12Z",
+    "merged_at": "2026-05-22T09:01:10Z",
+    "pr": 4912,
+    "pr_author_association": "CONTRIBUTOR",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4510",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4510,
+   "outcome": "positive",
+   "outcome_reason": "closed by an external merged PR",
+   "title": "Proposal to change to specifying `charset` parameter individually for each MIME type",
+   "updated_at": "2025-11-08T07:23:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-11-11T07:50:09Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4514",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4514,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "SSG: More extensible plugin system",
+   "updated_at": "2025-11-11T07:50:10Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-11-17T13:11:16Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4522",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4522,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Feature Request: Official minimal BaseHandler class for clean, decorator-free route handlers",
+   "updated_at": "2025-12-23T21:17:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-11-25T06:23:44Z",
+   "evidence": {
+    "closed_at": "2026-03-09T10:28:54Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4542",
+   "labels": [],
+   "number": 4542,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Documentation on what JWK middleware validates",
+   "updated_at": "2025-11-26T05:43:06Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-11-26T12:00:03Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4549",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4549,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Setup example for web sockets in AWS Lambda",
+   "updated_at": "2025-11-26T12:34:56Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-12-03T15:11:59Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4560",
+   "labels": [],
+   "number": 4560,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "RPC Client types are too tightly coupled to native fetch API, making custom fetch clients impractical",
+   "updated_at": "2026-02-07T16:39:32Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-12-04T05:08:14Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4562",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4562,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Support Escaping Colons in Routes to Allow Google-Style Custom Methods",
+   "updated_at": "2025-12-05T07:59:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-12-13T19:04:25Z",
+   "evidence": {
+    "closed_at": "2026-04-04T12:37:43Z",
+    "merged_at": "2026-04-04T12:37:41Z",
+    "pr": 4834,
+    "pr_author_association": "CONTRIBUTOR",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4577",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4577,
+   "outcome": "positive",
+   "outcome_reason": "closed by an external merged PR",
+   "title": "Customization of generated CSS classname",
+   "updated_at": "2025-12-18T08:40:29Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2025-12-23T23:03:47Z",
+   "evidence": {
+    "closed_at": "2026-03-23T09:22:08Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4590",
+   "labels": [],
+   "number": 4590,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Since PR #4393, success response types can no longer be resolved without explicit status/ok checks",
+   "updated_at": "2026-01-29T23:23:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-12-26T22:44:17Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4603",
+   "labels": [
+    "triage"
+   ],
+   "number": 4603,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "[Workers] [WebSocket Helper] Error after disconnecting when client sent a message",
+   "updated_at": "2026-02-28T02:35:58Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-12-27T10:23:29Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4604",
+   "labels": [
+    "triage"
+   ],
+   "number": 4604,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Suspected memory leak issue",
+   "updated_at": "2026-01-06T09:59:52Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 10,
+   "created_at": "2026-01-01T15:03:02Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4609",
+   "labels": [
+    "triage"
+   ],
+   "number": 4609,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Register middleware after routing, routePath(c, -1) are error",
+   "updated_at": "2026-01-06T10:18:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2026-01-11T18:46:51Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4623",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4623,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Inconsistent behavior of /** syntax in TrieRouter vs other routers",
+   "updated_at": "2026-01-12T02:53:48Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2026-01-14T06:52:59Z",
+   "evidence": {
+    "closed_at": "2026-03-23T10:07:52Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4632",
+   "labels": [
+    "triage"
+   ],
+   "number": 4632,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "The default behavior on 404 in handle() and fire() seems inconsistent and not documented",
+   "updated_at": "2026-02-24T16:17:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 13,
+   "created_at": "2026-01-14T16:51:56Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4633",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4633,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Return `405 Method Not Allowed` when a path exists but the HTTP method is unsupported",
+   "updated_at": "2026-02-22T13:19:12Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2026-02-09T08:32:08Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4701",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4701,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "Add configurable route existence check before authentication middleware execution",
+   "updated_at": "2026-02-26T15:46:23Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2026-02-10T23:19:19Z",
+   "evidence": {
+    "closed_at": "2026-03-05T09:56:46Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4713",
+   "labels": [],
+   "number": 4713,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Bug: JSON.parse without error handling in JWT decoding",
+   "updated_at": "2026-02-17T15:10:40Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2026-02-21T02:31:57Z",
+   "evidence": {
+    "closed_at": "2026-03-03T11:30:15Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4737",
+   "labels": [],
+   "number": 4737,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Fix type issue in aws-lambda handler",
+   "updated_at": "2026-02-21T02:36:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2026-02-21T02:55:48Z",
+   "evidence": {
+    "closed_at": "2026-03-03T11:26:12Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4740",
+   "labels": [],
+   "number": 4740,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Improve cookie compatibility",
+   "updated_at": "2026-02-21T02:56:40Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2026-02-21T03:05:47Z",
+   "evidence": {
+    "closed_at": "2026-03-03T11:28:39Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4742",
+   "labels": [],
+   "number": 4742,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Improve readability and maintainability of http-status",
+   "updated_at": "2026-02-21T03:06:45Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2026-02-24T11:57:45Z",
+   "evidence": {},
+   "html_url": "https://github.com/honojs/hono/issues/4765",
+   "labels": [
+    "triage"
+   ],
+   "number": 4765,
+   "outcome": "negative",
+   "outcome_reason": "open at the horizon",
+   "title": "BUG: RPC types broken when using arrow function with a Promise",
+   "updated_at": "2026-02-24T15:22:56Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2026-02-25T11:25:26Z",
+   "evidence": {
+    "closed_at": "2026-03-04T09:30:51Z",
+    "merged_at": "2026-03-04T09:30:45Z",
+    "pr": 4770,
+    "pr_author_association": "CONTRIBUTOR",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4769",
+   "labels": [
+    "triage"
+   ],
+   "number": 4769,
+   "outcome": "positive",
+   "outcome_reason": "closed by an external merged PR",
+   "title": "ERR_INVALID_STATE when canceling during nested Suspense",
+   "updated_at": "2026-02-25T11:26:30Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2026-02-25T16:56:26Z",
+   "evidence": {
+    "closed_at": "2026-03-10T03:03:48Z",
+    "merged_at": "2026-03-10T03:03:47Z",
+    "pr": 4782,
+    "pr_author_association": "CONTRIBUTOR",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4772",
+   "labels": [
+    "triage"
+   ],
+   "number": 4772,
+   "outcome": "positive",
+   "outcome_reason": "closed by an external merged PR",
+   "title": "handler() from hono/lambda-edge triggers Runtime.CallbackHandlerDeprecated on NODEJS_24_X",
+   "updated_at": "2026-02-25T16:56:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2026-02-27T18:30:44Z",
+   "evidence": {
+    "closed_at": "2026-03-04T01:17:04Z",
+    "state_reason": "completed"
+   },
+   "html_url": "https://github.com/honojs/hono/issues/4776",
+   "labels": [
+    "enhancement"
+   ],
+   "number": 4776,
+   "outcome": "excluded",
+   "outcome_reason": "closed as completed without an external merged PR",
+   "title": "Disable colors on Logger Middleware in Production",
+   "updated_at": "2026-02-27T18:32:04Z"
+  }
+ ],
+ "licence": "Public GitHub metadata (issue and PR titles, label names, timestamps, file paths) with source URLs for attribution; no issue or PR bodies are stored.",
+ "notes": [],
+ "open_prs_at_cutoff": [
+  {
+   "created_at": "2023-08-30T12:04:43Z",
+   "html_url": "https://github.com/honojs/hono/pull/1389",
+   "number": 1389,
+   "title": "feat: body parser helper"
+  },
+  {
+   "created_at": "2023-09-28T02:49:10Z",
+   "html_url": "https://github.com/honojs/hono/pull/1514",
+   "number": 1514,
+   "title": "add a  method that returns the Request for a given route to hono client"
+  },
+  {
+   "created_at": "2023-10-31T13:46:30Z",
+   "html_url": "https://github.com/honojs/hono/pull/1634",
+   "number": 1634,
+   "title": "feat(req): support generics for query/queries/header"
+  },
+  {
+   "created_at": "2023-11-12T09:16:42Z",
+   "html_url": "https://github.com/honojs/hono/pull/1685",
+   "number": 1685,
+   "title": "feat: `next()` without `await`"
+  },
+  {
+   "created_at": "2023-11-20T08:04:23Z",
+   "html_url": "https://github.com/honojs/hono/pull/1726",
+   "number": 1726,
+   "title": "chore: use biome as formatter and linter"
+  },
+  {
+   "created_at": "2023-12-05T09:17:24Z",
+   "html_url": "https://github.com/honojs/hono/pull/1780",
+   "number": 1780,
+   "title": "PoC: feat(jsx): Introduce event handler for IntrinsicElements."
+  },
+  {
+   "created_at": "2023-12-11T09:35:43Z",
+   "html_url": "https://github.com/honojs/hono/pull/1805",
+   "number": 1805,
+   "title": "PoC: Introduce FilePatternRouter"
+  },
+  {
+   "created_at": "2024-01-11T15:37:40Z",
+   "html_url": "https://github.com/honojs/hono/pull/1946",
+   "number": 1946,
+   "title": "[PoC]: SPA option for JSX Renderer"
+  },
+  {
+   "created_at": "2024-04-23T08:06:57Z",
+   "html_url": "https://github.com/honojs/hono/pull/2543",
+   "number": 2543,
+   "title": "[WIP] Update secure-headers align with best current practice"
+  },
+  {
+   "created_at": "2024-05-20T08:29:58Z",
+   "html_url": "https://github.com/honojs/hono/pull/2726",
+   "number": 2726,
+   "title": "RFC(adapter/aws-lambda): generalize `LambdaEvent`, `EventProcessor`"
+  },
+  {
+   "created_at": "2024-05-27T08:19:21Z",
+   "html_url": "https://github.com/honojs/hono/pull/2810",
+   "number": 2810,
+   "title": "fix(utils): remove limit of max-age"
+  },
+  {
+   "created_at": "2024-06-07T12:49:54Z",
+   "html_url": "https://github.com/honojs/hono/pull/2933",
+   "number": 2933,
+   "title": "POC: feat: introduce Component class for JSX"
+  },
+  {
+   "created_at": "2024-06-08T13:09:28Z",
+   "html_url": "https://github.com/honojs/hono/pull/2940",
+   "number": 2940,
+   "title": "chore(utils/http-status): remove deprecated export types and fix format of jsdoc"
+  },
+  {
+   "created_at": "2024-06-15T00:48:56Z",
+   "html_url": "https://github.com/honojs/hono/pull/2975",
+   "number": 2975,
+   "title": "test: introduce build tests"
+  },
+  {
+   "created_at": "2024-06-21T14:26:17Z",
+   "html_url": "https://github.com/honojs/hono/pull/3017",
+   "number": 3017,
+   "title": "feat(logger): improve automatic color support detection"
+  },
+  {
+   "created_at": "2024-06-23T12:50:19Z",
+   "html_url": "https://github.com/honojs/hono/pull/3025",
+   "number": 3025,
+   "title": "PoC: feat(middleware/hook): introduce hook middleware"
+  },
+  {
+   "created_at": "2024-07-04T14:59:22Z",
+   "html_url": "https://github.com/honojs/hono/pull/3090",
+   "number": 3090,
+   "title": "test(hono): not found handled by sub"
+  },
+  {
+   "created_at": "2024-08-04T02:22:47Z",
+   "html_url": "https://github.com/honojs/hono/pull/3231",
+   "number": 3231,
+   "title": "refactor(src/utils): refactor some function signatures in src/utils"
+  },
+  {
+   "created_at": "2024-08-18T06:19:44Z",
+   "html_url": "https://github.com/honojs/hono/pull/3289",
+   "number": 3289,
+   "title": "feat(context): Custom header name for c.header"
+  },
+  {
+   "created_at": "2024-08-18T10:02:35Z",
+   "html_url": "https://github.com/honojs/hono/pull/3292",
+   "number": 3292,
+   "title": "feat(client): improve handling status code types"
+  },
+  {
+   "created_at": "2024-08-19T03:32:32Z",
+   "html_url": "https://github.com/honojs/hono/pull/3295",
+   "number": 3295,
+   "title": "PoC: feat(jsx/dom): introduce jsx/dom/tiny. Some features are omit in this runtime, but the size is very small."
+  },
+  {
+   "created_at": "2024-08-21T14:22:55Z",
+   "html_url": "https://github.com/honojs/hono/pull/3307",
+   "number": 3307,
+   "title": "PoC: Introduce File System Access API Helper / Adapter"
+  },
+  {
+   "created_at": "2024-09-29T14:03:46Z",
+   "html_url": "https://github.com/honojs/hono/pull/3466",
+   "number": 3466,
+   "title": "feat(WebSocket): Add Pub/Sub feature"
+  },
+  {
+   "created_at": "2024-10-14T10:01:50Z",
+   "html_url": "https://github.com/honojs/hono/pull/3516",
+   "number": 3516,
+   "title": "[PoC] feat: introduce Partial Content Middleware"
+  },
+  {
+   "created_at": "2024-10-17T03:51:48Z",
+   "html_url": "https://github.com/honojs/hono/pull/3523",
+   "number": 3523,
+   "title": "[PoC] refactor: implement serve-static middleware with Node.js API"
+  },
+  {
+   "created_at": "2024-10-27T07:58:55Z",
+   "html_url": "https://github.com/honojs/hono/pull/3565",
+   "number": 3565,
+   "title": "perf(req): use `URLSearchParams` for parsing query params"
+  },
+  {
+   "created_at": "2024-11-11T10:12:44Z",
+   "html_url": "https://github.com/honojs/hono/pull/3654",
+   "number": 3654,
+   "title": "ci: improve build step"
+  },
+  {
+   "created_at": "2024-11-13T20:04:24Z",
+   "html_url": "https://github.com/honojs/hono/pull/3666",
+   "number": 3666,
+   "title": "WIP refactor: make constructors as functions to reduce bundle size"
+  },
+  {
+   "created_at": "2024-11-28T02:45:11Z",
+   "html_url": "https://github.com/honojs/hono/pull/3707",
+   "number": 3707,
+   "title": "feat: warn when json validator does not find a content type in the request"
+  },
+  {
+   "created_at": "2024-11-28T03:28:21Z",
+   "html_url": "https://github.com/honojs/hono/pull/3708",
+   "number": 3708,
+   "title": "refactor: use `!!v` insetead of `Boolean(v)` to reduce bundle size"
+  },
+  {
+   "created_at": "2024-11-29T10:41:36Z",
+   "html_url": "https://github.com/honojs/hono/pull/3711",
+   "number": 3711,
+   "title": "refactor: clean up and reduced code size"
+  },
+  {
+   "created_at": "2024-12-05T04:45:11Z",
+   "html_url": "https://github.com/honojs/hono/pull/3726",
+   "number": 3726,
+   "title": "feat(router): Introduce `OptimizeRouter`"
+  },
+  {
+   "created_at": "2024-12-26T13:22:22Z",
+   "html_url": "https://github.com/honojs/hono/pull/3777",
+   "number": 3777,
+   "title": "chore: benchmark to mitata"
+  },
+  {
+   "created_at": "2024-12-27T12:55:01Z",
+   "html_url": "https://github.com/honojs/hono/pull/3779",
+   "number": 3779,
+   "title": "fix: :fire: Fix closed event source"
+  },
+  {
+   "created_at": "2025-01-21T02:08:28Z",
+   "html_url": "https://github.com/honojs/hono/pull/3843",
+   "number": 3843,
+   "title": "feat(validator): Introduce `responseValidator`"
+  },
+  {
+   "created_at": "2025-01-21T06:01:59Z",
+   "html_url": "https://github.com/honojs/hono/pull/3844",
+   "number": 3844,
+   "title": "chore: delete misleading comments"
+  },
+  {
+   "created_at": "2025-02-03T11:54:42Z",
+   "html_url": "https://github.com/honojs/hono/pull/3886",
+   "number": 3886,
+   "title": "wip: perf(types): replace to interface"
+  },
+  {
+   "created_at": "2025-02-25T23:04:49Z",
+   "html_url": "https://github.com/honojs/hono/pull/3957",
+   "number": 3957,
+   "title": "feat(client/POC): RPC support for SSE"
+  },
+  {
+   "created_at": "2025-03-04T06:39:22Z",
+   "html_url": "https://github.com/honojs/hono/pull/3973",
+   "number": 3973,
+   "title": "[POC] feat: Hono Action"
+  },
+  {
+   "created_at": "2025-03-17T09:27:20Z",
+   "html_url": "https://github.com/honojs/hono/pull/4006",
+   "number": 4006,
+   "title": "perf(logger): cache ColorEnabled value"
+  },
+  {
+   "created_at": "2025-03-18T20:56:40Z",
+   "html_url": "https://github.com/honojs/hono/pull/4012",
+   "number": 4012,
+   "title": "PoC: feat: Allow handlers and middleware to return functions of the same type as themselves"
+  },
+  {
+   "created_at": "2025-04-25T03:41:23Z",
+   "html_url": "https://github.com/honojs/hono/pull/4109",
+   "number": 4109,
+   "title": "feat(validator)!: warn when validator does not find a valid content type in the request "
+  },
+  {
+   "created_at": "2025-04-25T09:28:21Z",
+   "html_url": "https://github.com/honojs/hono/pull/4111",
+   "number": 4111,
+   "title": "perf: make functions common for reduce code size"
+  },
+  {
+   "created_at": "2025-05-26T02:06:59Z",
+   "html_url": "https://github.com/honojs/hono/pull/4166",
+   "number": 4166,
+   "title": "fix(lambda): resolve ETag issue causing \"Body has already been read\""
+  },
+  {
+   "created_at": "2025-06-07T02:13:29Z",
+   "html_url": "https://github.com/honojs/hono/pull/4201",
+   "number": 4201,
+   "title": "feat(etag): add `getBody` option"
+  },
+  {
+   "created_at": "2025-06-28T02:13:16Z",
+   "html_url": "https://github.com/honojs/hono/pull/4252",
+   "number": 4252,
+   "title": "[WIP] feat(rpc): supports middleware responses"
+  },
+  {
+   "created_at": "2025-07-15T08:06:54Z",
+   "html_url": "https://github.com/honojs/hono/pull/4284",
+   "number": 4284,
+   "title": "[PoC] feat: introduce Moddable adapter"
+  },
+  {
+   "created_at": "2025-07-19T23:13:48Z",
+   "html_url": "https://github.com/honojs/hono/pull/4290",
+   "number": 4290,
+   "title": "docs: add LLM-friendly documentation for AI-assisted development"
+  },
+  {
+   "created_at": "2025-09-16T01:23:40Z",
+   "html_url": "https://github.com/honojs/hono/pull/4410",
+   "number": 4410,
+   "title": "feat(core,router): expose Context and add LinearRouter.matchRoute utility"
+  },
+  {
+   "created_at": "2025-09-16T08:58:25Z",
+   "html_url": "https://github.com/honojs/hono/pull/4411",
+   "number": 4411,
+   "title": "feat(hono-base): introduce `onUnknownError`"
+  },
+  {
+   "created_at": "2025-09-23T04:31:52Z",
+   "html_url": "https://github.com/honojs/hono/pull/4424",
+   "number": 4424,
+   "title": "fix(compose): preserve `c.req.routeIndex`  across `next()`"
+  },
+  {
+   "created_at": "2025-09-23T08:09:29Z",
+   "html_url": "https://github.com/honojs/hono/pull/4425",
+   "number": 4425,
+   "title": "feat(request): return new Request with cached body in raw getter"
+  },
+  {
+   "created_at": "2025-09-27T03:22:08Z",
+   "html_url": "https://github.com/honojs/hono/pull/4430",
+   "number": 4430,
+   "title": "feat: adds support for hmr"
+  },
+  {
+   "created_at": "2025-10-03T07:06:57Z",
+   "html_url": "https://github.com/honojs/hono/pull/4438",
+   "number": 4438,
+   "title": "feat(compose): `app.onError` handles a non-Error object"
+  },
+  {
+   "created_at": "2025-10-07T18:15:26Z",
+   "html_url": "https://github.com/honojs/hono/pull/4449",
+   "number": 4449,
+   "title": "Refactor(middleware-jwt): make function styles consistent"
+  },
+  {
+   "created_at": "2025-11-18T11:14:06Z",
+   "html_url": "https://github.com/honojs/hono/pull/4523",
+   "number": 4523,
+   "title": "chore: enable bun isolated install"
+  },
+  {
+   "created_at": "2025-11-19T05:40:02Z",
+   "html_url": "https://github.com/honojs/hono/pull/4524",
+   "number": 4524,
+   "title": "feat: updated jwt and jwk to match bearerAuth middleware"
+  },
+  {
+   "created_at": "2025-11-24T18:58:41Z",
+   "html_url": "https://github.com/honojs/hono/pull/4540",
+   "number": 4540,
+   "title": "Allow middleware to redirect after downstream errors"
+  },
+  {
+   "created_at": "2025-11-25T11:23:39Z",
+   "html_url": "https://github.com/honojs/hono/pull/4543",
+   "number": 4543,
+   "title": "feat(context): export the Context class publicly"
+  },
+  {
+   "created_at": "2025-11-26T05:43:05Z",
+   "html_url": "https://github.com/honojs/hono/pull/4545",
+   "number": 4545,
+   "title": "docs(jwk): clarify what the JWK middleware validates"
+  },
+  {
+   "created_at": "2025-11-26T06:00:05Z",
+   "html_url": "https://github.com/honojs/hono/pull/4546",
+   "number": 4546,
+   "title": "fix: allow middleware to override error responses with redirects"
+  },
+  {
+   "created_at": "2025-11-27T02:19:17Z",
+   "html_url": "https://github.com/honojs/hono/pull/4553",
+   "number": 4553,
+   "title": "fix(validator): no return in middleware"
+  },
+  {
+   "created_at": "2025-11-27T10:25:38Z",
+   "html_url": "https://github.com/honojs/hono/pull/4554",
+   "number": 4554,
+   "title": "feat(validator): infer the context type in validation func"
+  },
+  {
+   "created_at": "2025-12-13T16:18:05Z",
+   "html_url": "https://github.com/honojs/hono/pull/4576",
+   "number": 4576,
+   "title": "feat(cookie): add RFC 6265 compliant cookie deduplication"
+  },
+  {
+   "created_at": "2025-12-25T03:08:12Z",
+   "html_url": "https://github.com/honojs/hono/pull/4593",
+   "number": 4593,
+   "title": "refactor(types): don't use recursion in `IntersectNonAnyTypes`"
+  },
+  {
+   "created_at": "2025-12-25T08:32:42Z",
+   "html_url": "https://github.com/honojs/hono/pull/4594",
+   "number": 4594,
+   "title": "refactor(client): introduce `StripLeadingSlash` type"
+  },
+  {
+   "created_at": "2025-12-25T08:41:55Z",
+   "html_url": "https://github.com/honojs/hono/pull/4595",
+   "number": 4595,
+   "title": "refactor(types): optimize `MergePath`"
+  },
+  {
+   "created_at": "2025-12-25T09:46:21Z",
+   "html_url": "https://github.com/honojs/hono/pull/4596",
+   "number": 4596,
+   "title": "perf(types): check `JSONPrimitive` first in `JSONParsed`"
+  },
+  {
+   "created_at": "2026-01-07T13:28:29Z",
+   "html_url": "https://github.com/honojs/hono/pull/4615",
+   "number": 4615,
+   "title": "fix(validator): make query params always return string[] for consistency"
+  },
+  {
+   "created_at": "2026-01-14T04:12:01Z",
+   "html_url": "https://github.com/honojs/hono/pull/4631",
+   "number": 4631,
+   "title": "refactor(middleware/logger): add return type annotations"
+  },
+  {
+   "created_at": "2026-01-15T23:53:50Z",
+   "html_url": "https://github.com/honojs/hono/pull/4637",
+   "number": 4637,
+   "title": "feat: add 'methodNotAllowed' handler for '405 Method Not Allowed' responses"
+  },
+  {
+   "created_at": "2026-01-24T14:32:49Z",
+   "html_url": "https://github.com/honojs/hono/pull/4647",
+   "number": 4647,
+   "title": "test(netlify): add handler tests"
+  },
+  {
+   "created_at": "2026-01-30T02:46:30Z",
+   "html_url": "https://github.com/honojs/hono/pull/4656",
+   "number": 4656,
+   "title": "refactor(lambda): simplify streaming handler and remove type workaround"
+  },
+  {
+   "created_at": "2026-02-10T11:20:40Z",
+   "html_url": "https://github.com/honojs/hono/pull/4703",
+   "number": 4703,
+   "title": "[WIP] feat: introduce Route Check Middleware"
+  },
+  {
+   "created_at": "2026-02-10T21:19:46Z",
+   "html_url": "https://github.com/honojs/hono/pull/4704",
+   "number": 4704,
+   "title": "fix(jwt): validate Bearer scheme to prevent auth bypass"
+  },
+  {
+   "created_at": "2026-02-10T21:37:12Z",
+   "html_url": "https://github.com/honojs/hono/pull/4705",
+   "number": 4705,
+   "title": "fix(jwt): throw verification errors immediately instead of swallowing"
+  },
+  {
+   "created_at": "2026-02-10T21:38:13Z",
+   "html_url": "https://github.com/honojs/hono/pull/4706",
+   "number": 4706,
+   "title": "fix(validator): prevent null pointer dereference in query validation"
+  },
+  {
+   "created_at": "2026-02-11T02:17:38Z",
+   "html_url": "https://github.com/honojs/hono/pull/4714",
+   "number": 4714,
+   "title": "perf(middleware): optimize route-check with WeakMap cache"
+  },
+  {
+   "created_at": "2026-02-16T11:54:51Z",
+   "html_url": "https://github.com/honojs/hono/pull/4723",
+   "number": 4723,
+   "title": "fix(request): return `string | undefined` from param() when path type is any"
+  },
+  {
+   "created_at": "2026-02-21T02:32:00Z",
+   "html_url": "https://github.com/honojs/hono/pull/4738",
+   "number": 4738,
+   "title": "Fix type issue in aws-lambda handler"
+  },
+  {
+   "created_at": "2026-02-21T02:53:10Z",
+   "html_url": "https://github.com/honojs/hono/pull/4739",
+   "number": 4739,
+   "title": "fix: improve cookie compatibility by adding expires to deleteCookie"
+  },
+  {
+   "created_at": "2026-02-21T03:04:48Z",
+   "html_url": "https://github.com/honojs/hono/pull/4741",
+   "number": 4741,
+   "title": "improve: enhance readability and maintainability of http-status"
+  },
+  {
+   "created_at": "2026-02-21T10:31:18Z",
+   "html_url": "https://github.com/honojs/hono/pull/4744",
+   "number": 4744,
+   "title": "test(aws-lambda): expand handler unit tests for processors and createResult"
+  },
+  {
+   "created_at": "2026-02-21T19:01:23Z",
+   "html_url": "https://github.com/honojs/hono/pull/4747",
+   "number": 4747,
+   "title": "test(lambda-edge): expand handler unit tests for createRequest, createResult, and env bindings"
+  },
+  {
+   "created_at": "2026-02-22T01:10:53Z",
+   "html_url": "https://github.com/honojs/hono/pull/4748",
+   "number": 4748,
+   "title": "test(cloudflare-workers): add comprehensive tests for websocket and conninfo adapters"
+  },
+  {
+   "created_at": "2026-02-22T12:30:01Z",
+   "html_url": "https://github.com/honojs/hono/pull/4750",
+   "number": 4750,
+   "title": "fix(bearer-auth): escape regex metacharacters in bearer auth prefix option"
+  },
+  {
+   "created_at": "2026-02-22T13:19:11Z",
+   "html_url": "https://github.com/honojs/hono/pull/4751",
+   "number": 4751,
+   "title": "feat(middleware): add Method Not Allowed middleware"
+  },
+  {
+   "created_at": "2026-02-22T14:10:07Z",
+   "html_url": "https://github.com/honojs/hono/pull/4752",
+   "number": 4752,
+   "title": "fix(jwt): validate token format in decode and decodeHeader functions"
+  },
+  {
+   "created_at": "2026-02-22T23:50:37Z",
+   "html_url": "https://github.com/honojs/hono/pull/4755",
+   "number": 4755,
+   "title": "perf(context): defer method binding in Context to reduce init cost"
+  },
+  {
+   "created_at": "2026-02-23T10:02:46Z",
+   "html_url": "https://github.com/honojs/hono/pull/4758",
+   "number": 4758,
+   "title": "fix(accept): replace regex split to mitigate ReDoS"
+  },
+  {
+   "created_at": "2026-02-23T11:24:09Z",
+   "html_url": "https://github.com/honojs/hono/pull/4760",
+   "number": 4760,
+   "title": "refactor(types): add internal symbol for schema inference"
+  },
+  {
+   "created_at": "2026-02-23T23:44:21Z",
+   "html_url": "https://github.com/honojs/hono/pull/4762",
+   "number": 4762,
+   "title": "perf(aws-lambda): optimize header parsing to reduce micro-allocations"
+  },
+  {
+   "created_at": "2026-02-24T15:22:55Z",
+   "html_url": "https://github.com/honojs/hono/pull/4767",
+   "number": 4767,
+   "title": "fix(types): preserve response inference for Promise.then handlers"
+  },
+  {
+   "created_at": "2026-02-25T11:26:29Z",
+   "html_url": "https://github.com/honojs/hono/pull/4770",
+   "number": 4770,
+   "title": "fix(jsx): Fix \"Invalid state: Controller is already closed\""
+  },
+  {
+   "created_at": "2026-02-25T13:04:49Z",
+   "html_url": "https://github.com/honojs/hono/pull/4771",
+   "number": 4771,
+   "title": "test: add test case for middleware status codes (Issue #3170)"
+  },
+  {
+   "created_at": "2026-02-28T05:29:06Z",
+   "html_url": "https://github.com/honojs/hono/pull/4777",
+   "number": 4777,
+   "title": "fix(client): preserve route schema in ApplyGlobalResponse"
+  }
+ ],
+ "reads": 280,
+ "repository": "honojs/hono",
+ "source": {
+  "api": "https://api.github.com",
+  "repository_url": "https://github.com/honojs/hono"
+ },
+ "tree_paths": [
+  ".devcontainer/Dockerfile",
+  ".devcontainer/devcontainer.json",
+  ".devcontainer/docker-compose.yml",
+  ".editorconfig",
+  ".github/FUNDING.yml",
+  ".github/ISSUE_TEMPLATE/1-bug-report.yml",
+  ".github/ISSUE_TEMPLATE/2-feature-request.yml",
+  ".github/ISSUE_TEMPLATE/config.yml",
+  ".github/actions/perf-measures/action.yml",
+  ".github/pull_request_template.md",
+  ".github/workflows/autofix.yml",
+  ".github/workflows/ci.yml",
+  ".github/workflows/cr.yml",
+  ".github/workflows/no-response.yml",
+  ".github/workflows/release.yml",
+  ".gitignore",
+  ".gitpod.yml",
+  ".prettierrc",
+  ".tool-versions",
+  ".vitest.config/setup-vitest.ts",
+  ".vscode/extensions.json",
+  ".vscode/settings.json",
+  "LICENSE",
+  "README.md",
+  "benchmarks/deno/.gitignore",
+  "benchmarks/deno/.vscode/settings.json",
+  "benchmarks/deno/fast.ts",
+  "benchmarks/deno/faster.ts",
+  "benchmarks/deno/hono.ts",
+  "benchmarks/deno/magalo.ts",
+  "benchmarks/deno/oak.ts",
+  "benchmarks/deno/opine.ts",
+  "benchmarks/handle-event/index.js",
+  "benchmarks/handle-event/package.json",
+  "benchmarks/handle-event/yarn.lock",
+  "benchmarks/http-server/.gitignore",
+  "benchmarks/http-server/README.md",
+  "benchmarks/http-server/benchmark.ts",
+  "benchmarks/jsx/package.json",
+  "benchmarks/jsx/src/benchmark.ts",
+  "benchmarks/jsx/src/hono.ts",
+  "benchmarks/jsx/src/nano.ts",
+  "benchmarks/jsx/src/page-react.tsx",
+  "benchmarks/jsx/src/page.tsx",
+  "benchmarks/jsx/src/preact.ts",
+  "benchmarks/jsx/src/react-jsx/benchmark.ts",
+  "benchmarks/jsx/src/react-jsx/hono.ts",
+  "benchmarks/jsx/src/react-jsx/nano.ts",
+  "benchmarks/jsx/src/react-jsx/page-hono.tsx",
+  "benchmarks/jsx/src/react-jsx/page-nano.tsx",
+  "benchmarks/jsx/src/react-jsx/page-preact.tsx",
+  "benchmarks/jsx/src/react-jsx/page-react.tsx",
+  "benchmarks/jsx/src/react-jsx/preact.ts",
+  "benchmarks/jsx/src/react-jsx/react.ts",
+  "benchmarks/jsx/src/react-jsx/tsconfig.json",
+  "benchmarks/jsx/src/react.ts",
+  "benchmarks/jsx/tsconfig.json",
+  "benchmarks/jsx/yarn.lock",
+  "benchmarks/query-param/bun.lockb",
+  "benchmarks/query-param/package-lock.json",
+  "benchmarks/query-param/package.json",
+  "benchmarks/query-param/src/bench.mts",
+  "benchmarks/query-param/src/fast-querystring.mts",
+  "benchmarks/query-param/src/hono.mts",
+  "benchmarks/query-param/src/qs.mts",
+  "benchmarks/routers-deno/.vscode/settings.json",
+  "benchmarks/routers-deno/README.md",
+  "benchmarks/routers-deno/deno.json",
+  "benchmarks/routers-deno/deno.lock",
+  "benchmarks/routers-deno/src/bench.mts",
+  "benchmarks/routers-deno/src/find-my-way.mts",
+  "benchmarks/routers-deno/src/hono.mts",
+  "benchmarks/routers-deno/src/koa-router.mts",
+  "benchmarks/routers-deno/src/koa-tree-router.mts",
+  "benchmarks/routers-deno/src/medley-router.mts",
+  "benchmarks/routers-deno/src/tool.mts",
+  "benchmarks/routers-deno/src/trek-router.mts",
+  "benchmarks/routers/README.md",
+  "benchmarks/routers/bun.lock",
+  "benchmarks/routers/package.json",
+  "benchmarks/routers/src/bench-includes-init.mts",
+  "benchmarks/routers/src/bench.mts",
+  "benchmarks/routers/src/express.mts",
+  "benchmarks/routers/src/find-my-way.mts",
+  "benchmarks/routers/src/hono.mts",
+  "benchmarks/routers/src/koa-router.mts",
+  "benchmarks/routers/src/koa-tree-router.mts",
+  "benchmarks/routers/src/medley-router.mts",
+  "benchmarks/routers/src/memoirist.mts",
+  "benchmarks/routers/src/radix3.mts",
+  "benchmarks/routers/src/rou3.mts",
+  "benchmarks/routers/src/tool.mts",
+  "benchmarks/routers/src/trek-router.mts",
+  "benchmarks/routers/tsconfig.json",
+  "benchmarks/utils/.gitignore",
+  "benchmarks/utils/package.json",
+  "benchmarks/utils/src/get-path.ts",
+  "benchmarks/utils/src/loop.js",
+  "benchmarks/webapp/.gitignore",
+  "benchmarks/webapp/hono.js",
+  "benchmarks/webapp/itty-router.js",
+  "benchmarks/webapp/package.json",
+  "benchmarks/webapp/sunder.js",
+  "build/build.ts",
+  "build/remove-private-fields.test.ts",
+  "build/remove-private-fields.ts",
+  "build/validate-exports.test.ts",
+  "build/validate-exports.ts",
+  "bun.lock",
+  "bunfig.toml",
+  "codecov.yml",
+  "docs/CODE_OF_CONDUCT.md",
+  "docs/CONTRIBUTING.md",
+  "docs/MIGRATION.md",
+  "docs/images/hono-logo-monochrome.svg",
+  "docs/images/hono-logo.png",
+  "docs/images/hono-logo.pxm",
+  "docs/images/hono-logo.svg",
+  "docs/images/hono-title.png",
+  "docs/images/hono-title.pxm",
+  "eslint.config.mjs",
+  "jsr.json",
+  "package.cjs.json",
+  "package.json",
+  "perf-measures/.octocov.consolidated.perf-measures.main.yml",
+  "perf-measures/.octocov.consolidated.perf-measures.yml",
+  "perf-measures/bundle-check/.gitignore",
+  "perf-measures/bundle-check/generated/.gitkeep",
+  "perf-measures/bundle-check/scripts/check-bundle-size.ts",
+  "perf-measures/tsconfig.json",
+  "perf-measures/type-check/.gitignore",
+  "perf-measures/type-check/client.ts",
+  "perf-measures/type-check/generated/.gitkeep",
+  "perf-measures/type-check/scripts/generate-app.ts",
+  "perf-measures/type-check/scripts/process-results.ts",
+  "perf-measures/type-check/tsconfig.build.json",
+  "runtime-tests/bun/.static/plain.txt",
+  "runtime-tests/bun/color.test.ts",
+  "runtime-tests/bun/favicon.ico",
+  "runtime-tests/bun/index.test.tsx",
+  "runtime-tests/bun/static-absolute-root/plain.txt",
+  "runtime-tests/bun/static/download",
+  "runtime-tests/bun/static/hello.world/index.html",
+  "runtime-tests/bun/static/helloworld/index.html",
+  "runtime-tests/bun/static/plain.txt",
+  "runtime-tests/deno-jsx/deno.precompile.json",
+  "runtime-tests/deno-jsx/deno.react-jsx.json",
+  "runtime-tests/deno-jsx/jsx.test.tsx",
+  "runtime-tests/deno/.static/plain.txt",
+  "runtime-tests/deno/.vscode/settings.json",
+  "runtime-tests/deno/deno.json",
+  "runtime-tests/deno/deno.lock",
+  "runtime-tests/deno/favicon.ico",
+  "runtime-tests/deno/hono.test.ts",
+  "runtime-tests/deno/middleware.test.tsx",
+  "runtime-tests/deno/ssg.test.tsx",
+  "runtime-tests/deno/static-absolute-root/plain.txt",
+  "runtime-tests/deno/static/download",
+  "runtime-tests/deno/static/hello.world/index.html",
+  "runtime-tests/deno/static/helloworld/index.html",
+  "runtime-tests/deno/static/plain.txt",
+  "runtime-tests/deno/stream.test.ts",
+  "runtime-tests/fastly/index.test.ts",
+  "runtime-tests/fastly/vitest.config.ts",
+  "runtime-tests/lambda-edge/index.test.ts",
+  "runtime-tests/lambda-edge/vitest.config.ts",
+  "runtime-tests/lambda/index.test.ts",
+  "runtime-tests/lambda/mock.ts",
+  "runtime-tests/lambda/stream-mock.ts",
+  "runtime-tests/lambda/stream.test.ts",
+  "runtime-tests/lambda/vitest.config.ts",
+  "runtime-tests/node/index.test.ts",
+  "runtime-tests/node/vitest.config.ts",
+  "runtime-tests/tsconfig.json",
+  "runtime-tests/workerd/index.test.ts",
+  "runtime-tests/workerd/index.ts",
+  "runtime-tests/workerd/vitest.config.ts",
+  "src/adapter/aws-lambda/conninfo.test.ts",
+  "src/adapter/aws-lambda/conninfo.ts",
+  "src/adapter/aws-lambda/handler.test.ts",
+  "src/adapter/aws-lambda/handler.ts",
+  "src/adapter/aws-lambda/index.ts",
+  "src/adapter/aws-lambda/types.ts",
+  "src/adapter/bun/conninfo.test.ts",
+  "src/adapter/bun/conninfo.ts",
+  "src/adapter/bun/index.ts",
+  "src/adapter/bun/serve-static.ts",
+  "src/adapter/bun/server.test.ts",
+  "src/adapter/bun/server.ts",
+  "src/adapter/bun/ssg.ts",
+  "src/adapter/bun/websocket.test.ts",
+  "src/adapter/bun/websocket.ts",
+  "src/adapter/cloudflare-pages/conninfo.test.ts",
+  "src/adapter/cloudflare-pages/conninfo.ts",
+  "src/adapter/cloudflare-pages/handler.test.ts",
+  "src/adapter/cloudflare-pages/handler.ts",
+  "src/adapter/cloudflare-pages/index.ts",
+  "src/adapter/cloudflare-workers/conninfo.test.ts",
+  "src/adapter/cloudflare-workers/conninfo.ts",
+  "src/adapter/cloudflare-workers/index.ts",
+  "src/adapter/cloudflare-workers/serve-static-module.ts",
+  "src/adapter/cloudflare-workers/serve-static.test.ts",
+  "src/adapter/cloudflare-workers/serve-static.ts",
+  "src/adapter/cloudflare-workers/utils.test.ts",
+  "src/adapter/cloudflare-workers/utils.ts",
+  "src/adapter/cloudflare-workers/websocket.test.ts",
+  "src/adapter/cloudflare-workers/websocket.ts",
+  "src/adapter/deno/conninfo.test.ts",
+  "src/adapter/deno/conninfo.ts",
+  "src/adapter/deno/deno.d.ts",
+  "src/adapter/deno/index.ts",
+  "src/adapter/deno/serve-static.ts",
+  "src/adapter/deno/ssg.ts",
+  "src/adapter/deno/websocket.test.ts",
+  "src/adapter/deno/websocket.ts",
+  "src/adapter/lambda-edge/conninfo.test.ts",
+  "src/adapter/lambda-edge/conninfo.ts",
+  "src/adapter/lambda-edge/handler.test.ts",
+  "src/adapter/lambda-edge/handler.ts",
+  "src/adapter/lambda-edge/index.ts",
+  "src/adapter/netlify/conninfo.test.ts",
+  "src/adapter/netlify/conninfo.ts",
+  "src/adapter/netlify/handler.ts",
+  "src/adapter/netlify/index.ts",
+  "src/adapter/netlify/mod.ts",
+  "src/adapter/service-worker/handler.test.ts",
+  "src/adapter/service-worker/handler.ts",
+  "src/adapter/service-worker/index.ts",
+  "src/adapter/service-worker/types.ts",
+  "src/adapter/vercel/conninfo.test.ts",
+  "src/adapter/vercel/conninfo.ts",
+  "src/adapter/vercel/handler.test.ts",
+  "src/adapter/vercel/handler.ts",
+  "src/adapter/vercel/index.ts",
+  "src/client/client.test.ts",
+  "src/client/client.ts",
+  "src/client/fetch-result-please.ts",
+  "src/client/index.ts",
+  "src/client/types.test.ts",
+  "src/client/types.ts",
+  "src/client/utils.test.ts",
+  "src/client/utils.ts",
+  "src/compose.test.ts",
+  "src/compose.ts",
+  "src/context.test.ts",
+  "src/context.ts",
+  "src/helper/accepts/accepts.test.ts",
+  "src/helper/accepts/accepts.ts",
+  "src/helper/accepts/index.ts",
+  "src/helper/adapter/index.test.ts",
+  "src/helper/adapter/index.ts",
+  "src/helper/conninfo/index.ts",
+  "src/helper/conninfo/types.ts",
+  "src/helper/cookie/index.test.ts",
+  "src/helper/cookie/index.ts",
+  "src/helper/css/common.case.test.tsx",
+  "src/helper/css/common.ts",
+  "src/helper/css/index.test.tsx",
+  "src/helper/css/index.ts",
+  "src/helper/dev/index.test.ts",
+  "src/helper/dev/index.ts",
+  "src/helper/factory/index.test.ts",
+  "src/helper/factory/index.ts",
+  "src/helper/html/index.test.ts",
+  "src/helper/html/index.ts",
+  "src/helper/proxy/index.test.ts",
+  "src/helper/proxy/index.ts",
+  "src/helper/route/index.test.ts",
+  "src/helper/route/index.ts",
+  "src/helper/ssg/index.ts",
+  "src/helper/ssg/middleware.ts",
+  "src/helper/ssg/plugins.test.tsx",
+  "src/helper/ssg/plugins.ts",
+  "src/helper/ssg/ssg.test.tsx",
+  "src/helper/ssg/ssg.ts",
+  "src/helper/ssg/utils.test.ts",
+  "src/helper/ssg/utils.ts",
+  "src/helper/streaming/index.ts",
+  "src/helper/streaming/sse.test.tsx",
+  "src/helper/streaming/sse.ts",
+  "src/helper/streaming/stream.test.ts",
+  "src/helper/streaming/stream.ts",
+  "src/helper/streaming/text.test.ts",
+  "src/helper/streaming/text.ts",
+  "src/helper/streaming/utils.ts",
+  "src/helper/testing/index.test.ts",
+  "src/helper/testing/index.ts",
+  "src/helper/websocket/index.test.ts",
+  "src/helper/websocket/index.ts",
+  "src/hono-base.ts",
+  "src/hono.test.ts",
+  "src/hono.ts",
+  "src/http-exception.test.ts",
+  "src/http-exception.ts",
+  "src/index.ts",
+  "src/jsx/base.test.tsx",
+  "src/jsx/base.ts",
+  "src/jsx/children.test.ts",
+  "src/jsx/children.ts",
+  "src/jsx/components.test.tsx",
+  "src/jsx/components.ts",
+  "src/jsx/constants.ts",
+  "src/jsx/context.ts",
+  "src/jsx/dom/client.test.tsx",
+  "src/jsx/dom/client.ts",
+  "src/jsx/dom/components.test.tsx",
+  "src/jsx/dom/components.ts",
+  "src/jsx/dom/context.test.tsx",
+  "src/jsx/dom/context.ts",
+  "src/jsx/dom/css.test.tsx",
+  "src/jsx/dom/css.ts",
+  "src/jsx/dom/hooks/index.test.tsx",
+  "src/jsx/dom/hooks/index.ts",
+  "src/jsx/dom/index.test.tsx",
+  "src/jsx/dom/index.ts",
+  "src/jsx/dom/intrinsic-element/components.test.tsx",
+  "src/jsx/dom/intrinsic-element/components.ts",
+  "src/jsx/dom/jsx-dev-runtime.ts",
+  "src/jsx/dom/jsx-runtime.ts",
+  "src/jsx/dom/render.ts",
+  "src/jsx/dom/server.test.tsx",
+  "src/jsx/dom/server.ts",
+  "src/jsx/dom/utils.ts",
+  "src/jsx/hooks/dom.test.tsx",
+  "src/jsx/hooks/index.ts",
+  "src/jsx/hooks/string.test.tsx",
+  "src/jsx/index.test.tsx",
+  "src/jsx/index.ts",
+  "src/jsx/intrinsic-element/common.ts",
+  "src/jsx/intrinsic-element/components.test.tsx",
+  "src/jsx/intrinsic-element/components.ts",
+  "src/jsx/intrinsic-elements.ts",
+  "src/jsx/jsx-dev-runtime.ts",
+  "src/jsx/jsx-runtime.test.tsx",
+  "src/jsx/jsx-runtime.ts",
+  "src/jsx/streaming.test.tsx",
+  "src/jsx/streaming.ts",
+  "src/jsx/types.ts",
+  "src/jsx/utils.test.ts",
+  "src/jsx/utils.ts",
+  "src/middleware/basic-auth/index.test.ts",
+  "src/middleware/basic-auth/index.ts",
+  "src/middleware/bearer-auth/index.test.ts",
+  "src/middleware/bearer-auth/index.ts",
+  "src/middleware/body-limit/index.test.ts",
+  "src/middleware/body-limit/index.ts",
+  "src/middleware/cache/index.test.ts",
+  "src/middleware/cache/index.ts",
+  "src/middleware/combine/index.test.ts",
+  "src/middleware/combine/index.ts",
+  "src/middleware/compress/index.test.ts",
+  "src/middleware/compress/index.ts",
+  "src/middleware/context-storage/index.test.ts",
+  "src/middleware/context-storage/index.ts",
+  "src/middleware/cors/index.test.ts",
+  "src/middleware/cors/index.ts",
+  "src/middleware/csrf/index.test.ts",
+  "src/middleware/csrf/index.ts",
+  "src/middleware/etag/digest.ts",
+  "src/middleware/etag/index.test.ts",
+  "src/middleware/etag/index.ts",
+  "src/middleware/ip-restriction/index.test.ts",
+  "src/middleware/ip-restriction/index.ts",
+  "src/middleware/jsx-renderer/index.test.tsx",
+  "src/middleware/jsx-renderer/index.ts",
+  "src/middleware/jwk/index.test.ts",
+  "src/middleware/jwk/index.ts",
+  "src/middleware/jwk/jwk.ts",
+  "src/middleware/jwk/keys.test.json",
+  "src/middleware/jwt/index.test.ts",
+  "src/middleware/jwt/index.ts",
+  "src/middleware/jwt/jwt.ts",
+  "src/middleware/language/index.test.ts",
+  "src/middleware/language/index.ts",
+  "src/middleware/language/language.ts",
+  "src/middleware/logger/index.test.ts",
+  "src/middleware/logger/index.ts",
+  "src/middleware/method-override/index.test.ts",
+  "src/middleware/method-override/index.ts",
+  "src/middleware/powered-by/index.test.ts",
+  "src/middleware/powered-by/index.ts",
+  "src/middleware/pretty-json/index.test.ts",
+  "src/middleware/pretty-json/index.ts",
+  "src/middleware/request-id/index.test.ts",
+  "src/middleware/request-id/index.ts",
+  "src/middleware/request-id/request-id.ts",
+  "src/middleware/secure-headers/index.test.ts",
+  "src/middleware/secure-headers/index.ts",
+  "src/middleware/secure-headers/permissions-policy.ts",
+  "src/middleware/secure-headers/secure-headers.ts",
+  "src/middleware/serve-static/index.test.ts",
+  "src/middleware/serve-static/index.ts",
+  "src/middleware/serve-static/path.test.ts",
+  "src/middleware/serve-static/path.ts",
+  "src/middleware/timeout/index.test.ts",
+  "src/middleware/timeout/index.ts",
+  "src/middleware/timing/index.test.ts",
+  "src/middleware/timing/index.ts",
+  "src/middleware/timing/timing.ts",
+  "src/middleware/trailing-slash/index.test.ts",
+  "src/middleware/trailing-slash/index.ts",
+  "src/preset/quick.test.ts",
+  "src/preset/quick.ts",
+  "src/preset/tiny.test.ts",
+  "src/preset/tiny.ts",
+  "src/request.test.ts",
+  "src/request.ts",
+  "src/request/constants.ts",
+  "src/router.ts",
+  "src/router/common.case.test.ts",
+  "src/router/linear-router/index.ts",
+  "src/router/linear-router/router.test.ts",
+  "src/router/linear-router/router.ts",
+  "src/router/pattern-router/index.ts",
+  "src/router/pattern-router/router.test.ts",
+  "src/router/pattern-router/router.ts",
+  "src/router/reg-exp-router/index.ts",
+  "src/router/reg-exp-router/matcher.ts",
+  "src/router/reg-exp-router/node.ts",
+  "src/router/reg-exp-router/prepared-router.test.ts",
+  "src/router/reg-exp-router/prepared-router.ts",
+  "src/router/reg-exp-router/router.test.ts",
+  "src/router/reg-exp-router/router.ts",
+  "src/router/reg-exp-router/trie.ts",
+  "src/router/smart-router/index.ts",
+  "src/router/smart-router/router.test.ts",
+  "src/router/smart-router/router.ts",
+  "src/router/trie-router/index.ts",
+  "src/router/trie-router/node.test.ts",
+  "src/router/trie-router/node.ts",
+  "src/router/trie-router/router.test.ts",
+  "src/router/trie-router/router.ts",
+  "src/types.test.ts",
+  "src/types.ts",
+  "src/utils/accept.test.ts",
+  "src/utils/accept.ts",
+  "src/utils/basic-auth.test.ts",
+  "src/utils/basic-auth.ts",
+  "src/utils/body.test.ts",
+  "src/utils/body.ts",
+  "src/utils/buffer.test.ts",
+  "src/utils/buffer.ts",
+  "src/utils/color.test.ts",
+  "src/utils/color.ts",
+  "src/utils/compress.ts",
+  "src/utils/concurrent.test.ts",
+  "src/utils/concurrent.ts",
+  "src/utils/constants.ts",
+  "src/utils/cookie.test.ts",
+  "src/utils/cookie.ts",
+  "src/utils/crypto.test.ts",
+  "src/utils/crypto.ts",
+  "src/utils/encode.test.ts",
+  "src/utils/encode.ts",
+  "src/utils/filepath.test.ts",
+  "src/utils/filepath.ts",
+  "src/utils/handler.ts",
+  "src/utils/headers.ts",
+  "src/utils/html.test.ts",
+  "src/utils/html.ts",
+  "src/utils/http-status.ts",
+  "src/utils/ipaddr.test.ts",
+  "src/utils/ipaddr.ts",
+  "src/utils/jwt/index.ts",
+  "src/utils/jwt/jwa.test.ts",
+  "src/utils/jwt/jwa.ts",
+  "src/utils/jwt/jws.ts",
+  "src/utils/jwt/jwt.test.ts",
+  "src/utils/jwt/jwt.ts",
+  "src/utils/jwt/types.ts",
+  "src/utils/jwt/utf8.ts",
+  "src/utils/mime.test.ts",
+  "src/utils/mime.ts",
+  "src/utils/stream.test.ts",
+  "src/utils/stream.ts",
+  "src/utils/types.test.ts",
+  "src/utils/types.ts",
+  "src/utils/url.test.ts",
+  "src/utils/url.ts",
+  "src/validator/index.ts",
+  "src/validator/utils.test.ts",
+  "src/validator/utils.ts",
+  "src/validator/validator.test.ts",
+  "src/validator/validator.ts",
+  "tsconfig.build.json",
+  "tsconfig.json",
+  "vitest.config.ts"
+ ],
+ "tree_truncated": false
+}
