@@ -2,6 +2,11 @@
 
 ## 0.3.0 — unreleased
 
+- `--observe-ci` and `--observe-signatures` share one target/head prelude.
+  With an evidence head but an invalid target repository,
+  `ci_observation.head_sha` is now `null`, like `signature_observation`, since
+  nothing was observed at that head. A missing `execution` object no longer
+  raises in the CI observer. Readiness and exit codes are unchanged (A2-05).
 - The installed workflow runs `drift` before any authorization request and
   before publication, and names `--observe-ci`/`--observe-signatures` as
   report-only (A2-10).

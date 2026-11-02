@@ -861,6 +861,22 @@ def current_head(directory):
     return head
 
 
+def observation_target(task, evidence):
+    """Shared prelude of the report-only verify observers: (execution, target, head, error).
+
+    head is None whenever error is set, so an observer never names a head it did not observe."""
+    execution = task.get('execution') or {}
+    target = execution.get('target_repository') or task['source']['repository']
+    head = evidence.get('git_head') if isinstance(evidence, dict) else None
+    if not isinstance(head, str) or not SHA.fullmatch(head):
+        return execution, target, None, 'No valid evidence git_head to observe'
+    try:
+        parse_repository(target)
+    except ProtocolError as exc:
+        return execution, target, None, str(exc)
+    return execution, target, head, None
+
+
 def open_checkout(directory):
     """The hardened entry every evidence checkout reader uses, in this order; returns the captured HEAD."""
     require_worktree_root(directory)
