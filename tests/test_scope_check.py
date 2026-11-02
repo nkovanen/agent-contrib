@@ -239,6 +239,40 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertFalse(result['within_scope'])
             self.assertEqual(result['warnings'], [])
 
+    def test_default_base_behind_stacked_commits_warns_without_changing_the_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, evidence, git = self.checkout(tmp)
+            base = evidence['base_commit']
+            self.assertEqual(workspace.scope_check(task, tmp)['warnings'], [])
+            pathlib.Path(tmp, 'outside.txt').write_text('unrelated stacked work')
+            self.assertEqual(workspace.scope_check(task, tmp)['warnings'], [], 'one commit is not a stack')
+            git('add', 'outside.txt')
+            git('commit', '-q', '-m', 'stacked unpublished work')
+            # Boundary: two commits behind is already a stack.
+            self.assertEqual(workspace.scope_check(task, tmp)['warnings'], [
+                f'Default base source.commit {base} is 2 commits behind HEAD and paths outside the scope changed; '
+                'if your change is stacked on other unpublished commits, pass --base naming the commit it '
+                'starts from (for example HEAD~1)'])
+            pathlib.Path(tmp, 'src/more.rs').write_text('in scope')
+            git('add', 'src/more.rs')
+            git('commit', '-q', '-m', 'the actual change')
+            result = workspace.scope_check(task, tmp)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['violations'], [{'path': 'outside.txt', 'rule': 'not in allowed_paths'}])
+            self.assertEqual(result['warnings'], [
+                f'Default base source.commit {base} is 3 commits behind HEAD and paths outside the scope changed; '
+                'if your change is stacked on other unpublished commits, pass --base naming the commit it '
+                'starts from (for example HEAD~1)'])
+            self.assertEqual(result['errors'], [])
+            explicit = workspace.scope_check(task, tmp, 'HEAD~1')
+            self.assertEqual((explicit['within_scope'], explicit['warnings']), (True, []))
+            explicit = workspace.scope_check(task, tmp, 'HEAD~2')
+            self.assertEqual((explicit['within_scope'], explicit['warnings']), (False, []), 'an explicit base is trusted')
+            git('rm', '-q', 'outside.txt')
+            git('commit', '-q', '-m', 'drop stacked file')
+            result = workspace.scope_check(task, tmp)
+            self.assertEqual((result['within_scope'], result['warnings']), (True, []))
+
     def test_staged_then_deleted_file_is_still_checked(self):
         # Only `git diff --cached` lists it: absent from base and worktree, but the next commit contains it.
         with tempfile.TemporaryDirectory() as tmp:

@@ -57,6 +57,27 @@ class LegacyIndexFlagTests(unittest.TestCase):
         self.assertIn(HIDDEN, core.verify(self.task, self.evidence, self.root, self.client)['evidence_errors'])
         self.assertEqual(workspace.scope_check(self.task, self.root)['errors'], [HIDDEN])
 
+    def test_ignore_stat_and_sparse_expectations_cannot_hide_edits(self):
+        # G-05: these settings set the same index bits as the explicit flags; the bits are refused on any origin.
+        self.git('config', 'core.ignoreStat', 'true')
+        self.git('update-index', '--really-refresh')
+        pathlib.Path(self.root, 'AGENTS.md').write_text('edited under ignoreStat')
+        self.assertTrue(self.git('ls-files', '-v', 'AGENTS.md').startswith('h '), 'precondition: ignoreStat set h')
+        self.assertIn(HIDDEN, core.verify(self.task, self.evidence, self.root, self.client)['evidence_errors'])
+        self.assertEqual(workspace.scope_check(self.task, self.root)['errors'], [HIDDEN])
+        self.git('config', '--unset', 'core.ignoreStat')
+        self.git('update-index', '--no-assume-unchanged', 'AGENTS.md')
+        self.git('checkout', '--', 'AGENTS.md')
+        self.git('config', 'sparse.expectFilesOutsideOfPatterns', 'true')
+        self.git('sparse-checkout', 'set', '--no-cone', '/src/')
+        pathlib.Path(self.root, 'AGENTS.md').write_text('EVIL outside the sparse patterns')
+        self.assertTrue(self.git('ls-files', '-v', 'AGENTS.md').startswith('S '), 'precondition: skip-worktree kept')
+        self.assertIn(HIDDEN, core.verify(self.task, self.evidence, self.root, self.client)['evidence_errors'])
+        self.assertEqual(workspace.scope_check(self.task, self.root)['errors'], [HIDDEN])
+        with self.assertRaises(core.ProtocolError) as caught:
+            workspace.evidence_skeleton(self.task, self.root, self.evidence['base_commit'])
+        self.assertEqual(caught.exception.code, 'index_flags')
+
     def test_plain_index_still_passes(self):
         self.assertTrue(core.verify(self.task, self.evidence, self.root, self.client)['evidence_valid'])
         self.assertTrue(workspace.scope_check(self.task, self.root)['within_scope'])
