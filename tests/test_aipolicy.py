@@ -3,11 +3,11 @@ import base64
 import contextlib
 import io
 import json
-import time
 import unittest
 from unittest.mock import patch
 
 from agent_contribute import aipolicy, cli, core
+from tests.regex_shape import nested_repeats
 from tests.test_protocol import FakeGitHub
 
 CONTRIBUTING = ('# Contributing\n\nThanks!\nWe do not accept AI-generated pull requests.\n'
@@ -50,11 +50,25 @@ class AIPolicyTests(unittest.TestCase):
         self.assertEqual(result['coverage'], 'incomplete')
 
     def test_bounded_and_linear(self):
-        started = time.monotonic()
+        # Deterministic, not wall-clock: no nested quantifiers (a nesting check, not a linearity proof), and each
+        # search sees at most LINE_LIMIT characters.
+        for _, pattern in aipolicy.COMPILED:
+            self.assertFalse(nested_repeats(pattern), pattern.pattern)
+        longest = []
+
+        class Recording:
+            def __init__(self, pattern):
+                self.pattern = pattern
+
+            def search(self, line):
+                longest.append(len(line))
+                return self.pattern.search(line)
+
         text = ('LLM ' * 1000 + '\n') * 500 + 'a' * 150000
-        result = aipolicy.ai_policy_excerpts({'complete': True, 'instructions': [
-            {'path': 'x', 'sha256': '0' * 64, 'untrusted_text': text}]})
-        self.assertLess(time.monotonic() - started, 2.0)
+        with patch.object(aipolicy, 'COMPILED', [(label, Recording(p)) for label, p in aipolicy.COMPILED]):
+            result = aipolicy.ai_policy_excerpts({'complete': True, 'instructions': [
+                {'path': 'x', 'sha256': '0' * 64, 'untrusted_text': text}]})
+        self.assertEqual(max(longest), aipolicy.LINE_LIMIT)
         self.assertEqual(len(result['excerpts']), aipolicy.MAX_EXCERPTS)
         self.assertTrue(result['excerpts_capped'])
         self.assertEqual(result['coverage'], 'incomplete')

@@ -247,9 +247,15 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   `index.*`, must end with the segments. A leading Rust `crate`, `self` or
   `super` is ignored. Trailing segments are treated as members, so the longest
   prefix that names any module decides; an ambiguous match gives no hint and
-  never falls back to a shorter prefix. Single names (`signals`) and names
-  inside paths are not resolved. Path and file-name matches come first and the
-  same limit of 20 applies.
+  never falls back to a shorter prefix. Single names (`signals`), names inside
+  paths, names of more than 16 segments or longer than 300 characters (as a
+  slash path), and a name cut off by the 64 KiB scan limit are refused whole;
+  a name is never shortened to fit. Names are matched on regular-expression
+  word characters (letters, digits and `_` in any script), so `äpkg.mod`
+  resolves as a whole and `pkg.mod` inside it is never resolved on its own. A
+  name containing other identifier characters, such as combining marks, `℘` or
+  `·`, is refused; its fragments are never resolved either.
+  Path and file-name matches come first and the same limit of 20 applies.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
   expected/actual sections, reproduction steps and code blocks.
 - `activity`: age and last-update days, comment and reaction counts from the
@@ -280,8 +286,10 @@ a one-page sample of the most recently updated closed PRs, never full history:
   external PRs are present; otherwise `insufficient`, with the rate and median
   `null`.
 - `value: unknown`, `complete: false` and an error when the read fails, a page
-  or entry is malformed, or discovery did not complete its source snapshot (then
-  nothing is read).
+  or entry is malformed (including a missing `merged_at` field, a merge time
+  outside the PR's creation-to-close interval, or a missing or repeated PR
+  number), or discovery did not complete
+  its source snapshot (then nothing is read).
 
 Each report has an `explanation`. No PR text is copied. The report never changes
 approval, exclusions, overlaps, ordering or discovery `complete`. As with
