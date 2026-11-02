@@ -432,6 +432,25 @@ class BindingTests(WaiverFixture):
         record['event']['binding_sha256'] = '1' * 64
         self.assert_blocked(self.verify(evidence=False), 'Overlap disposition event binding hash differs')
 
+    def test_final_signoff_event_identity_cannot_be_reused(self):
+        final = test_lifecycle.signoff(self.task, self.base_context, self.evidence)
+        self.base_context['final_signoff'] = final
+        for field, value in (('id', final['id']), ('nonce', final['nonce'])):
+            with self.subTest(field=field):
+                self.dispose([entry_for(self.pr)], **{field: value})
+                self.assert_blocked(self.verify(evidence=False),
+                                    'Overlap disposition reuses the final sign-off event identity')
+        record = self.dispose([entry_for(self.pr)])
+        record['event']['reference'] = final['event']['reference']
+        record['event']['binding_sha256'] = event_binding(record)
+        self.assert_blocked(self.verify(evidence=False), 'Overlap disposition reuses the final sign-off event identity')
+
+    def test_record_is_expired_exactly_at_expires_at(self):
+        self.dispose([entry_for(self.pr)], expires_at=NOW.isoformat())
+        self.assert_blocked(self.verify(evidence=False), 'Overlap disposition record expired')
+        self.dispose([entry_for(self.pr)], expires_at=(NOW + dt.timedelta(seconds=1)).isoformat())
+        self.assert_waived(self.verify(evidence=False))
+
     def test_record_needs_a_valid_mandate(self):
         self.base_context['mandate']['credential_actor_id'] = 99
         self.base_context['mandate']['event']['binding_sha256'] = event_binding(self.base_context['mandate'])
