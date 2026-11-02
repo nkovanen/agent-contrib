@@ -934,6 +934,42 @@ class IdentityTests(unittest.TestCase):
         self.assertIn('report size: shortened paths', {item['limit'] for item in result['limits_reached']})
         self.assertEqual(len({s['identity_sha256'] for s in result['sources_scanned']}), 60)
 
+    def test_link_to_a_long_scanned_path_is_assessed(self):
+        target = self.LONG + '/AI_POLICY.md'
+        result, _ = report({'CONTRIBUTING.md': f'See [the AI policy]({target}).', target: 'No LLM output.'})
+        self.assertEqual([u for u in result['unassessed'] if u['reason'] == 'referenced, not assessed'], [])
+
+    def test_a_failed_read_and_a_link_to_it_are_one_identity(self):
+        client = PolicyGitHub({'CONTRIBUTING.md': 'See [rules](AI_POLICY.md).', 'AI_POLICY.md': 'x'})
+        original = client.request
+        def request(endpoint):
+            if endpoint.startswith('repos/acme/photos/contents/AI_POLICY.md'):
+                client.calls.append(endpoint)
+                raise core.ProtocolError('api_error', 'GitHub GET failed')
+            return original(endpoint)
+        client.request = request
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        entries = [u for u in result['unassessed'] if u['what'] == 'AI_POLICY.md']
+        self.assertEqual([u['reason'] for u in entries], ['read failed'])
+
+    def test_an_unreadable_text_and_a_link_to_it_are_one_identity(self):
+        data = b'\xff\xfe not text'
+        blob = hashlib.sha1(b'blob %d\x00' % len(data) + data).hexdigest()
+        client = PolicyGitHub({'CONTRIBUTING.md': 'See [rules](AI_POLICY.md).', 'AI_POLICY.md': 'x'})
+        original = client.request
+        def request(endpoint):
+            value = original(endpoint)
+            if '/git/trees/' in endpoint:
+                for entry in value['tree']:
+                    if entry['path'] == 'AI_POLICY.md':
+                        entry['sha'] = blob
+            if endpoint.startswith('repos/acme/photos/contents/AI_POLICY.md'):
+                value = {'encoding': 'base64', 'content': base64.b64encode(data).decode(), 'sha': blob}
+            return value
+        client.request = request
+        result = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        self.assertEqual([u['reason'] for u in result['unassessed'] if u['what'] == 'AI_POLICY.md'], ['not UTF-8 text'])
+
     def test_display_alterations_are_flagged(self):
         result, _ = report({self.LONG + '/AI_POLICY.md': 'x', 'docs/AI_POLICY‮.md': 'y'})
         by = {s['identity_sha256']: s for s in result['sources_scanned']}
