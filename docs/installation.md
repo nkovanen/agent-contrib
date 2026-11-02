@@ -122,19 +122,26 @@ separately if desired. Existing task/evidence files are yours and are not remove
 
 The published v0.2.0 tag is unchanged. To test the new route, create a separate
 virtual environment and install the exact reviewed candidate commit from GitHub.
-Replace `REVIEWED_COMMIT` with the full immutable commit SHA supplied by its review:
+Replace `PUSHED_FULL_COMMIT_SHA` with the full immutable SHA supplied by its
+review; it must already be pushed to GitHub:
 
 ```sh
-python3 -m venv /tmp/agent-contrib-candidate
-/tmp/agent-contrib-candidate/bin/python -m pip install 'git+https://github.com/nkovanen/agent-contrib.git@REVIEWED_COMMIT'
-/tmp/agent-contrib-candidate/bin/agent-contrib --version
+python3 -m venv "$HOME/.local/share/agent-contrib-candidate"
+"$HOME/.local/share/agent-contrib-candidate/bin/python" -m pip install \
+  'git+https://github.com/nkovanen/agent-contrib.git@PUSHED_FULL_COMMIT_SHA'
+export PATH="$HOME/.local/share/agent-contrib-candidate/bin:$PATH"
+agent-contrib --version   # must print 0.3.0, not 0.2.0
 ```
 
 A local integration commit may not be pushed yet. In that case, install a clean
 `git archive` export of that exact commit into the new environment instead; do not
 substitute a different remote commit or a mutable working tree.
 
-Export the Skill using that environment's command into the chosen fresh agent
-workspace. Record the installed commit, CLI version and exported hash. Keep the
+The exported Skill runs the unqualified `agent-contrib instructions`, so the
+agent uses whichever installation comes first on its PATH. Persist the PATH
+entry above in the environment that launches the harness and restart it. Then
+check that the unqualified `agent-contrib --version` prints 0.3.0 inside that
+environment before exporting the Skill. Record the installed commit, CLI version
+and exported hash. To return to the release, remove the PATH entry. Keep the
 published installation separate; do not install a v0.3.0 tag that does not exist.
 Use the [human/host handoff](host-authorization.md) at authorization boundaries.

@@ -10,6 +10,7 @@ import os
 import stat
 import importlib.resources
 import json
+import math
 import re
 import subprocess
 import tempfile
@@ -615,36 +616,55 @@ def prepare(inspected, schema_version='0.1', client=None):
                           'Record explicit execution authorization separately from upstream approval.']}
 
 
-def schema_errors(value, schema, path='$', depth=0):
-    """Validate the subset of JSON Schema used by the bundled, closed schemas."""
+def schema_errors(value, schema, path='$', depth=0, root=None):
+    """Validate the subset of JSON Schema used by the bundled, closed schemas.
+
+    Objects are closed unless additionalProperties is a schema or true. Output
+    schemas also use type lists, null, number, anyOf and local #/$defs/ refs."""
     if depth > 30:
         return [path + ': excessive nesting']
+    root = schema if root is None else root
+    if '$ref' in schema:
+        prefix, marker, name = schema['$ref'].partition('#/$defs/')
+        if prefix or not marker:
+            raise ValueError('Only local #/$defs/ schema references are supported')
+        return schema_errors(value, root['$defs'][name], path, depth + 1, root)
     errors = []
+    if 'anyOf' in schema:
+        failures = [schema_errors(value, option, path, depth + 1, root) for option in schema['anyOf']]
+        if all(failures):  # Name the closest shape's errors so a mismatch stays diagnosable.
+            errors.extend([path + ': matches no allowed shape'] + min(failures, key=len))
     kind = schema.get('type')
     matches = {'object': isinstance(value, dict), 'array': isinstance(value, list),
                'string': isinstance(value, str), 'integer': type(value) is int,
-               'boolean': type(value) is bool}
-    if kind and not matches.get(kind, False):
-        return [path + ': expected ' + kind]
+               'boolean': type(value) is bool, 'null': value is None,
+               'number': type(value) is int or type(value) is float and math.isfinite(value)}
+    kinds = kind if isinstance(kind, list) else [kind] if kind else []
+    if kinds and not any(matches.get(item, False) for item in kinds):
+        return [path + ': expected ' + ' or '.join(kinds)]
+    kind = next((item for item in kinds if matches[item]), None)
     if 'const' in schema and (type(value) is not type(schema['const']) or value != schema['const']):
         errors.append(path + ': wrong constant or version')
     if 'enum' in schema and value not in schema['enum']:
         errors.append(path + ': unsupported value')
     if kind == 'object':
         properties = schema['properties']
+        extra = schema.get('additionalProperties', False)
         for key in schema['required']:
             if key not in value:
                 errors.append(path + '.' + key + ': missing')
-        if set(value) - set(properties):
+        if extra is False and set(value) - set(properties):
             errors.append(path + ': unknown properties')
         for key, item in value.items():
-            if key in properties:
-                errors.extend(schema_errors(item, properties[key], path + '.' + key, depth + 1))
+            subschema = properties.get(key, extra)
+            if isinstance(subschema, dict):
+                errors.extend(schema_errors(item, subschema, path + '.' + key, depth + 1, root))
     elif kind == 'array':
         if not schema.get('minItems', 0) <= len(value) <= schema.get('maxItems', 1000):
             errors.append(path + ': invalid list length')
-        for i, item in enumerate(value[:1000]):
-            errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1))
+            value = value[:1000]  # Already invalid; bound the item checks. An allowed length checks every item.
+        for i, item in enumerate(value):
+            errors.extend(schema_errors(item, schema['items'], f'{path}[{i}]', depth + 1, root))
     elif kind == 'string':
         if schema.get('minLength', 0) > 0 and not value.strip():
             errors.append(path + ': must not be blank')
@@ -652,7 +672,7 @@ def schema_errors(value, schema, path='$', depth=0):
             errors.append(path + ': invalid string length')
         if 'pattern' in schema and not re.fullmatch(schema['pattern'], value):
             errors.append(path + ': invalid format')
-    elif kind == 'integer' and value < schema.get('minimum', value):
+    elif kind in ('integer', 'number') and value < schema.get('minimum', value):
         errors.append(path + ': below minimum')
     return errors
 
@@ -695,15 +715,26 @@ def git_read(directory, *args):
                                 capture_output=True, text=not nul_delimited, timeout=15, shell=False)
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
-        return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.strip()
+        # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
+        return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ProtocolError('git_error', 'Could not inspect evidence checkout') from exc
 
 
 def require_worktree_root(directory):
     """ls-tree, ls-files and untracked reads only cover the working directory, so a subdirectory would hide paths."""
-    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix') != 'true':
+    # Two lines: the work-tree flag and the prefix, which is empty only at the top level.
+    if git_read(directory, 'rev-parse', '--is-inside-work-tree', '--show-prefix').split('\n') != ['true', '']:
         raise ProtocolError('not_worktree_root', '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')
+
+
+def require_plain_index(directory):
+    """Status and diff honor assume-unchanged and skip-worktree, so a flagged tracked file can change unseen.
+    ls-files -v tags such entries lowercase or S/s; anything but H fails closed. The index is never modified."""
+    entries = git_read(directory, 'ls-files', '-v', '-z').split('\0')
+    if any(entry and not entry.startswith('H ') for entry in entries):
+        raise ProtocolError('index_flags', 'Index hides tracked paths (assume-unchanged, skip-worktree or sparse '
+                            'checkout); use a full checkout without these flags')
 
 
 def current_head(directory):
@@ -768,9 +799,11 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence was not recorded from a clean worktree')
     try:
         require_worktree_root(directory)
+        require_plain_index(directory)
         head = current_head(directory)
         tree = git_read(directory, 'rev-parse', head + '^{tree}')
-        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', '--short', 'HEAD') != task['execution']['head_ref']:
+        # The full ref, exactly: --short would accept refs/tags/NAME for a reviewed branch NAME.
+        if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
         if has_gitlink(directory, head, evidence['base_commit']):
             errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')

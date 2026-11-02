@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, ownership, prbody, remote, textfmt, workspace, __version__
+from . import aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote, textfmt, workspace, __version__
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -107,7 +107,8 @@ def main(argv=None):
     parser = Parser(prog='agent-contrib',
                     description='Read-only GitHub agent contribution protocol. Output is JSON unless --format text.',
                     epilog='Exit status: 0 when the command succeeds and its gate passes; 1 when a gate is not passed, '
-                           'a read is incomplete or an error occurs; 2 for usage errors.')
+                           'a read is incomplete or an error occurs; 2 for usage errors. '
+                           'agent-contrib schema COMMAND prints the JSON Schema of that command\'s output.')
     parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument('--format', choices=('json', 'text'), default='json',
                         help='Output format (default json; text is an abridged summary). Give it before the subcommand')
@@ -139,6 +140,10 @@ def main(argv=None):
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
+    sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
+    sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
+                     help="Command whose output schema to print; 'error' is the error envelope, "
+                          "'evidence-init' is evidence init. Choices: " + ', '.join(outputs.SCHEMAS))
     sub = commands.add_parser('skill', help='Export the canonical agent Skill')
     sub.add_argument('--output', required=True, help='New file for SKILL.md; never overwritten')
     sub = commands.add_parser('verify', help='Check a contract and optional evidence against live GitHub state; '
@@ -195,7 +200,7 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'skill', 'scope-check', 'evidence'):
+        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'scope-check', 'evidence'):
             raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
         prevalidate(args)
         if args.report_budget:
@@ -211,8 +216,13 @@ def main(argv=None):
                                     'evidence_schema': 'agent_contribute/evidence.schema.json',
                                     'task_schema_0.2': 'agent_contribute/schemas/0.2/task.schema.json',
                                     'evidence_schema_0.2': 'agent_contribute/schemas/0.2/evidence.schema.json',
-                                    'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json'},
+                                    'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json',
+                                    'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
+                      'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}
+            code = 0
+        elif args.command == 'schema':
+            result = outputs.output_schema(args.name)
             code = 0
         elif args.command == 'skill':
             adapter = importlib.resources.files('agent_contribute').joinpath('adapters/agent-contribute/SKILL.md').read_text('utf-8')
