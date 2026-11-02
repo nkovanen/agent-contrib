@@ -1,8 +1,8 @@
 # Passive verification GitHub Action for maintainers (#11): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, revision 3. Hostile review rounds 1 (MA-01 to MA-06) and 2
-  (MA-07 to MA-10) are resolved in [Review resolution](#review-resolution). Slice 1 is implemented
+- Status: proposal, revision 4. Hostile review rounds 1 to 3 (MA-01 to MA-11)
+  are resolved in [Review resolution](#review-resolution). Slice 1 is implemented
   on `rsi/maintainer-action`; later slices are not.
 - Base: `76632f8` (unreleased v0.3.0 candidate; task/evidence schemas 0.1 and
   0.2, host-context 0.1, output schemas 1).
@@ -480,7 +480,15 @@ schema or library change. Maintainer docs (`docs/maintainers.md`,
    or otherwise unsupported key, or a block scalar, is rejected, so a `'run'`
    key cannot hide. The example workflow's steps must be exactly the pinned
    checkout followed by this action, with no `run` key; `action.yml` has
-   exactly one step. Each rule has a seeded bad variant that the lint must
+   exactly one step. No `env`, `defaults`, `shell`, `container`, `services` or
+   `working-directory` key may appear in the example, and its top-level and job
+   keys are an exact allowlist (MA-11). The action's step is exactly
+   `shell: bash`, which GitHub runs as `bash --noprofile --norc -eo pipefail`.
+   An environment variable such as `BASH_ENV` (sourced by bash before the
+   script) or `LD_PRELOAD` would run code before `python3 -I` starts. An
+   `env -u BASH_ENV` in the run line would come too late, because bash has
+   already sourced the file, so the lint is the control. Each rule has a seeded
+   bad variant that the lint must
    reject. Each rule is also tested on its own, so redundant rules cannot mask
    each other. `actionlint`
    and `zizmor` remain manual release-review tools; the hand-written lint
@@ -515,4 +523,5 @@ excerpts, `pr-body` emitting the blocks, shallow fetches.
 | MA-08 (L) skipped evidence validation was shown as `match` | Reproduced: an invalid contract with 11-error evidence showed `match` | Evidence is validated independently against the contract's supported version. An unsupported version is not evaluated. |
 | MA-09 (L) a failed Git read became an ancestry `mismatch` | Reproduced by fault injection | `rev-list --count` decides. Read failures, unexpected output and shallow history are not evaluated. Fault-injection and depth-2 shallow-clone tests added. |
 | MA-10 (L) quoted keys and extra steps passed the lint | Reproduced: the three surviving mutants | Plain-key grammar, no block scalars, an exact two-step allowlist for the workflow, one step for the action. New seeded variants, isolated-rule tests and grammar unit tests. |
+| MA-11 (L) workflow or job `env: BASH_ENV` passed the lint | Reproduced: bash sourced a startup file before the run line | Exact key allowlists and forbidden `env`/`defaults`/`shell`/`container` keys in the example; exact `shell: bash` in the action; seeded variants for each level. `env -u` rejected as ineffective (bash reads `BASH_ENV` at startup). |
 | Reviewer notes | Accepted | No untrusted log output (removes the `::` and `##[` classes); bullet lists instead of tables; checkout-path confinement; HEAD must equal payload SHA; merge compatibility listed as not evaluated; no-block PRs are skipped with no summary; slice-1 cut as proposed. |

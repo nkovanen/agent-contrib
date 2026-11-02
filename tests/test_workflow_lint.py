@@ -11,6 +11,11 @@ WORKFLOW = ROOT / 'docs' / 'examples' / 'agent-contrib-verify.yml'
 # so a step key such as 'run' cannot hide from the checks below (MA-10).
 KEY_LINE = re.compile(r' *(- )?([A-Za-z0-9_][A-Za-z0-9_-]*):( .*)?')
 SEQUENCE_ITEM = re.compile(r' *- [A-Za-z0-9_][A-Za-z0-9_.-]*')
+# Exact key allowlists for the example (MA-11): no env, defaults, shell or container keys at any level, because
+# bash sources BASH_ENV and the loader honours LD_PRELOAD before the action's python3 -I ever runs.
+WORKFLOW_KEYS = {'top level': ['name', 'on', 'permissions', 'concurrency', 'jobs'],
+                 'the verify job': ['if', 'runs-on', 'timeout-minutes', 'steps']}
+WORKFLOW_FORBIDDEN_KEYS = {'env', 'defaults', 'shell', 'container', 'services', 'working-directory'}
 STEP_ACTIONS = (re.compile(r'actions/checkout@[0-9a-f]{40}'), re.compile(r'nkovanen/agent-contrib/actions/verify@[0-9a-f]{40}'))
 PINNED = re.compile(r'\s*(- )?uses: [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(/[A-Za-z0-9_./-]+)?@[0-9a-f]{40}( +#.*)?')
 RUN_COMMAND = 'python3 -I "$GITHUB_ACTION_PATH/report.py"'
@@ -122,6 +127,16 @@ def lint_workflow(text):
         errors.append('permissions must be exactly contents: read, once, at the top level')
     if 'run' in keys(lines):
         errors.append('the example workflow runs no shell steps')
+    for key in sorted(WORKFLOW_FORBIDDEN_KEYS.intersection(keys(lines))):
+        errors.append(f'forbidden key {key}: the example sets no environment or shell')
+    jobs = block(lines, 'jobs', 0) or []
+    levels = {'top level': [line for line in lines if indent(line) == 0],
+              'the verify job': [line for line in block(jobs, 'verify', 2) or [] if indent(line) == 4]}
+    for level, allowed in WORKFLOW_KEYS.items():
+        if keys(levels[level]) != allowed:
+            errors.append(f'keys at {level} must be exactly ' + ', '.join(allowed))
+    if keys([line for line in jobs if indent(line) == 2]) != ['verify']:
+        errors.append('the example has exactly one job, verify')
     found = steps(lines)
     uses = [re.sub(r' +#.*', '', step[0].split('uses:', 1)[1]).strip() if 'uses:' in step[0] else None
             for step in found or []]
@@ -147,6 +162,11 @@ def lint_action(text):
         errors.append('exactly one run step running the report script')
     if any('uses:' in line for line in lines):
         errors.append('the action must not call other actions')
+    if [line.strip() for line in lines if KEY_LINE.fullmatch(line) and KEY_LINE.fullmatch(line).group(2) == 'shell'] \
+            != ['shell: bash']:
+        errors.append('the run step uses exactly shell: bash (GitHub runs it as bash --noprofile --norc -eo pipefail)')
+    if keys(lines).count('env') != 1 or 'working-directory' in keys(lines):
+        errors.append('the step environment is the only env block')
     env = [line.strip() for line in block(lines, 'env', 6) or []]
     if env != ['AGENT_CONTRIB_CHECKOUT: ${{ inputs.checkout-path }}']:
         errors.append('unexpected step environment: ' + ', '.join(env))
@@ -206,6 +226,15 @@ WORKFLOW_MUTANTS = {
     'quoted key inside a step': ('          lfs: false\n',
                                  '          lfs: false\n          \'run\': echo "${{ github.event.pull_request.title }}"\n'),
     'run key inside a step': ('          lfs: false\n', '          lfs: false\n        run: python3 pr-head/setup.py\n'),
+    # MA-11: bash sources BASH_ENV (and LD_PRELOAD etc. reach every process) before the action's python runs.
+    'workflow env': ('permissions:\n', 'env:\n  BASH_ENV: pr-head/startup.sh\npermissions:\n'),
+    'job env': ('    runs-on: ubuntu-latest\n', '    env:\n      BASH_ENV: pr-head/startup.sh\n    runs-on: ubuntu-latest\n'),
+    'step env': ('          checkout-path: pr-head\n',
+                 '          checkout-path: pr-head\n        env:\n          LD_PRELOAD: pr-head/lib.so\n'),
+    'defaults shell': ('permissions:\n', 'defaults:\n  run:\n    shell: bash --login {0}\npermissions:\n'),
+    'extra job key': ('    timeout-minutes: 10\n', '    timeout-minutes: 10\n    continue-on-error: true\n'),
+    'extra top-level key': ('permissions:\n', 'run-name: x\npermissions:\n'),
+    'second job': ('jobs:\n  verify:\n', 'jobs:\n  other:\n    runs-on: ubuntu-latest\n  verify:\n'),
     'block scalar': ('          checkout-path: pr-head\n', '          checkout-path: pr-head\n      - run: |\n          echo hi\n'),
 }
 ACTION_MUTANTS = {
@@ -216,6 +245,10 @@ ACTION_MUTANTS = {
     'event env': ('        AGENT_CONTRIB_CHECKOUT: ${{ inputs.checkout-path }}\n',
                   '        AGENT_CONTRIB_CHECKOUT: ${{ inputs.checkout-path }}\n        TITLE: ${{ github.event.pull_request.title }}\n'),
     'docker': ('using: composite', 'using: docker'),
+    'action BASH_ENV': ('        AGENT_CONTRIB_CHECKOUT: ${{ inputs.checkout-path }}\n',
+                        '        AGENT_CONTRIB_CHECKOUT: ${{ inputs.checkout-path }}\n        BASH_ENV: pr-head/startup.sh\n'),
+    'login shell': ('      shell: bash\n', '      shell: bash --login {0}\n'),
+    'sh shell': ('      shell: bash\n', '      shell: sh\n'),
     'quoted run key': ('      run: ' + RUN_COMMAND + '\n', '      run: ' + RUN_COMMAND + '\n    - name: x\n      shell: bash\n'
                        '      \'run\': echo "${{ github.event.pull_request.title }}"\n'),
     'second run step': ('      run: ' + RUN_COMMAND + '\n', '      run: ' + RUN_COMMAND + '\n    - name: x\n      shell: bash\n'
