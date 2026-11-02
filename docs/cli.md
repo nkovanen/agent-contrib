@@ -182,9 +182,11 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   `index.*`, must end with the segments. A leading Rust `crate`, `self` or
   `super` is ignored. Trailing segments are treated as members, so the longest
   prefix that names any module decides; an ambiguous match gives no hint and
-  never falls back to a shorter prefix. Single names (`signals`) and names
-  inside paths are not resolved. Path and file-name matches come first and the
-  same limit of 20 applies.
+  never falls back to a shorter prefix. Single names (`signals`), names inside
+  paths, names of more than 16 segments, modules longer than 300 characters and
+  a name cut off by the 64 KiB scan limit are not resolved; a name is never
+  shortened to fit.
+  Path and file-name matches come first and the same limit of 20 applies.
 - `acceptance_clarity`: `high`, `medium` or `low` from checklists,
   expected/actual sections, reproduction steps and code blocks.
 - `activity`: age and last-update days, comment and reaction counts from the

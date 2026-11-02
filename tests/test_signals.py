@@ -169,6 +169,22 @@ class ModuleNameTests(unittest.TestCase):
                  'mod.rs.backup __init__ thumb::')
         self.assertEqual(self.hints(noise), [])
 
+    def test_partial_tokens_are_refused_never_truncated(self):
+        # Review R3-02: a cut-off token must not resolve to the module its prefix happens to name.
+        segments = ['a%d' % i for i in range(17)]
+        sixteen, seventeen = '/'.join(segments[:16]) + '.py', '/'.join(segments) + '.py'
+        self.assertEqual(self.hints('.'.join(segments[:16]), [sixteen, seventeen]), [sixteen])
+        self.assertEqual(self.hints('.'.join(segments), [sixteen, seventeen]), [], 'over 16 segments is refused')
+        self.assertEqual(self.hints('a.b.c.d', ['a/b/c.py', 'a/b/c/d.py']), ['a/b/c/d.py'])
+        self.assertEqual(self.hints('p' * 150 + '.' + 'a' * 150, ['p' * 150 + '/' + 'a' * 149 + '.py']), [],
+                         'a long identifier is read whole, never as its first 300 characters')
+        long_member = 'p' * 150 + '.' + 'a' * 149 + '.member_function'
+        self.assertEqual(self.hints(long_member, ['p' * 150 + '/' + 'a' * 149 + '.py']), ['p' * 150 + '/' + 'a' * 149 + '.py'])
+        # Literal 64 KiB: the documented scan bound, independent of the constant.
+        self.assertEqual(self.hints(' ' * 65533 + 'a.bc', ['a/b.py', 'a/bc.py']), [], 'a token cut by the scan limit is refused')
+        self.assertEqual(self.hints(' ' * 65536 + 'a.b', ['a/b.py']), [], 'text past the scan limit')
+        self.assertEqual(self.hints('pkg.mod-extra', MODULE_PATHS), [])
+
     def test_modules_inside_paths_are_left_to_the_path_matcher(self):
         self.assertEqual(self.hints('docs/pkg.mod and C:\\x\\pkg.mod and pkg.mod/extra and pkg-pkg.mod'), [])
 
