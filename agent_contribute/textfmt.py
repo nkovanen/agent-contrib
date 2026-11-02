@@ -1,5 +1,5 @@
 """Concise text summaries of command results. JSON stays canonical; remote prose is one sanitized line."""
-from . import core
+from . import core, policy
 
 
 def line(value, limit=300):
@@ -162,7 +162,29 @@ def _policy(result):
             "upstream work. This is a host obligation even when every count is zero. 'Complete' above concerns "
             "GitHub reads, not policy."] + (
         [f'  Limits hide policy sources ({len(report.get("omitted_sources", []))} omitted candidates listed): repository '
-         'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else [])
+         'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else []
+    ) + _policy_hints(report)
+
+
+POLICY_HINT_LINES = 5
+
+
+def _policy_hints(report):
+    """The restriction sentences that may justify a stop, in the report's attention order (N-01)."""
+    sources = report.get('sources_scanned', [])
+    stop = [hint for hint in report.get('hints', []) if hint.get('kind') in policy.STOP_HINTS]
+    if not stop:
+        return ['  No restriction hints; this is not permission.']
+    out = []
+    for hint in stop[:POLICY_HINT_LINES]:
+        source = sources[hint['source']] if isinstance(hint.get('source'), int) and hint['source'] < len(sources) else {}
+        path = line(source.get('path', '?'), 500)
+        path = path if len(path) <= 100 else '...' + path[-97:]
+        out.append(f'  ! {line(hint["kind"], 40)} {line(source.get("repository", "?"), 100)}:{path}:'
+                   f'{line(hint.get("line", "?"), 10)} -- {line(hint.get("untrusted_excerpt", ""), 160)}')
+    if len(stop) > POLICY_HINT_LINES:
+        out.append(f'  (+{len(stop) - POLICY_HINT_LINES} more restriction hints in JSON repository_policy.hints)')
+    return out
 
 
 def render(command, result, stage=None):

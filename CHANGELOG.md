@@ -137,6 +137,10 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Text output of `discover`, `inspect` and `prepare` lists up to five policy
+  restriction hints (kind, `repository:path:line`, sanitized excerpt) under the
+  Policy line, plus a count of the rest. Before, only counts were shown, so
+  text-mode agents never saw the sentence that justifies a stop (N-01).
 - Repository policy hints (N-04, external evaluation 2): security, support,
   governance and code-of-conduct files count only in the root, `.github/` or
   `docs/`, so API reference pages such as `doc/source/reference/security.rst` no

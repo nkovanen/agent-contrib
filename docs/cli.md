@@ -534,6 +534,12 @@ the `agent_contribute.aipolicy` module no longer exist.
   pushes do not change it. No verifier checks it; the workflow records it in
   prerequisite `ai-policy-review`.
 
+With `--format text`, the Policy line is followed by up to five restriction
+hints in attention order, for example `! possible_ai_restriction
+pallets/.github:CONTRIBUTING.md:22 -- AI-generated PRs and issues are closed on
+sight...`, and a count of the rest. With none it says "No restriction hints;
+this is not permission."
+
 There is deliberately no `coverage`, `complete` or `clear` field. Hints are
 noisy on purpose. The installed workflow's mandatory policy review decides what
 they mean, and that review is not verifier-enforced.
