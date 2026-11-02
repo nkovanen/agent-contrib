@@ -540,7 +540,8 @@ It is a summary: discovery shows at most 20 issues per repository, each with its
 overlapping-PR count, whether it is excluded and (with `--signals`) its score,
 followed by overlapping and excluded counts over all issues; lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
-counted. Multi-repository discovery includes every repository's completeness and
+counted. Discovery adds one line each for `--responsiveness` and `--repo-dir` local
+work when requested. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that

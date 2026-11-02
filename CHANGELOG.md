@@ -101,6 +101,8 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Text `discover` shows a responsiveness line with `--responsiveness` (F23) and
+  a local-work line with `--repo-dir`.
 - The workflow's Quick path step 3 runs `inspect --ownership --ai-policy` and
   names the repository policy step's sections (F43, F44).
 - Evidence-base and reviewed-source history errors name the base SHA, the

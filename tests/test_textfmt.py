@@ -134,6 +134,22 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('  acme/photos#8 [candidate] overlaps 1, excluded no, score 2: Overlaps\n', plain)
         self.assertNotIn('\nscore 9', plain)
 
+    def test_discovery_text_shows_opt_in_repository_reports(self):
+        # Dogfood 3 F23: --responsiveness printed nothing in text; --repo-dir local work likewise.
+        result = {'complete': True, 'errors': [], 'issues': [],
+                  'repository_signals': {'responsiveness': {'complete': True, 'value': 'measured',
+                                                            'explanation': '26 of 87 external PRs\nwere merged'}},
+                  'local_work': {'complete': False, 'commits_scanned': 500, 'issues': [{'number': 3, 'commits': ['a' * 40]},
+                                                                                      {'number': 4, 'commits': []}],
+                                 'errors': ['More than 500 local commits']}}
+        text = textfmt.render('discover', result)
+        self.assertIn('Responsiveness: measured (complete yes): 26 of 87 external PRs were merged\n', text)
+        self.assertIn('Local work: 2 issue(s) referenced by 500 scanned local commit(s) (complete no): #3, #4\n'
+                      'Local work errors (1):\n  - More than 500 local commits\n', text)
+        plain = textfmt.render('discover', {'complete': True, 'errors': [], 'issues': []})
+        self.assertNotIn('Responsiveness', plain)
+        self.assertNotIn('Local work', plain)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
