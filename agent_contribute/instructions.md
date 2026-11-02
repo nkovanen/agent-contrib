@@ -4,6 +4,12 @@ The CLI/library owns this workflow. The Skill is a thin portable adapter; obtain
 repository requirements dynamically. The CLI runs no model or task commands and
 only reads GitHub. Implementation and any authorized publication use host tools.
 
+`agent-contrib schema COMMAND` prints the JSON Schema of that command's JSON
+output (`error` is the error envelope, `evidence-init` is `evidence init`). Read
+results by the field names it defines instead of guessing: overlapping PRs are
+`duplicates`, issue text is `untrusted_issue`, and per-stage blockers are
+`stage_blockers`.
+
 ## Quick path: "Go help owner/repo"
 
 A summary of the sections below; it never overrides them. Global options such as

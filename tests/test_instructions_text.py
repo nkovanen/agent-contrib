@@ -36,7 +36,8 @@ class TextInstructionsTests(unittest.TestCase):
         result = json.loads(output)
         self.assertEqual(result['workflow_markdown'], resource('instructions.md'))
         self.assertEqual(set(result), {'cli_version', 'supported_schema_versions', 'supported_host_context_versions',
-                                       'host_authorization', 'workflow_markdown', 'resources', 'automatic_updates'})
+                                       'host_authorization', 'workflow_markdown', 'resources', 'automatic_updates',
+                                       'output_schema_version'})
 
 if __name__ == '__main__':
     unittest.main()
