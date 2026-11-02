@@ -150,7 +150,7 @@ v0.2.0 has `discover`, `inspect`, `prepare`, `verify`, `instructions` and
 `skill`; the other commands are new in the v0.3.0 candidate. Optional reports
 never grant approval or authority and never change a readiness gate:
 `discover --signals`, `discover --responsiveness`, `inspect --ownership`,
-the always-on `repository_policy` report, `verify --observe-ci` and
+the always-on `repository_policy` report, `verify --observe-ci`, `verify --observe-signatures` and
 `--report-budget`. `--signals`
 re-ranks candidates by its score after exclusions, overlaps and low likelihood;
 the others leave ordering unchanged.
@@ -190,7 +190,7 @@ The small [skill](agent_contribute/adapters/agent-contribute/SKILL.md) loads the
 workflow with `agent-contrib instructions` and holds no repository-specific
 rules. Both ship in one package with no Python runtime dependencies, hosted
 service or required model provider. CLI 0.3.0 supports task and evidence schemas
-0.1 and 0.2 and host-context 0.1; unknown versions fail closed. Schema 0.1
+0.1 and 0.2 and host-context 0.1 and 0.2; unknown versions fail closed. Schema 0.1
 formats are unchanged and its routes keep their meaning, apart from the
 hardening and message changes in the
 [compatibility notes](CHANGELOG.md#compatibility-notes). [Architecture](docs/architecture.md) has the details.

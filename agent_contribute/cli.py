@@ -9,7 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody, remote, textfmt, workspace, __version__
+from . import (audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody,
+               remote, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -158,6 +159,9 @@ def main(argv=None):
                           'not proof of human consent')
     sub.add_argument('--observe-ci', action='store_true',
                      help='Add report-only CI results for the evidence head; exit status unchanged')
+    sub.add_argument('--observe-signatures', action='store_true',
+                     help='Add report-only commit-signature observations for the evidence range; never verifies '
+                          'locally or changes the exit status')
     sub = commands.add_parser('authorization-request',
                               help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
     sub.add_argument('contract', help='Task contract JSON file')
@@ -209,14 +213,16 @@ def main(argv=None):
                 budget.require_remaining(before, args.min_remaining)
         if args.command == 'instructions':
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
-                      'supported_host_context_versions': ['0.1'],
-                      'host_authorization': 'host-asserted; actual human event must be retained outside worker control',
+                      'supported_host_context_versions': list(core.HOST_CONTEXT_VERSIONS),
+                      'host_authorization': ('host-asserted; actual human event must be retained outside worker control; '
+                                             'host-context 0.2 overlap dispositions are parsed but not evaluated'),
                       'workflow_markdown': importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8'),
                       'resources': {'task_schema': 'agent_contribute/task.schema.json',
                                     'evidence_schema': 'agent_contribute/evidence.schema.json',
                                     'task_schema_0.2': 'agent_contribute/schemas/0.2/task.schema.json',
                                     'evidence_schema_0.2': 'agent_contribute/schemas/0.2/evidence.schema.json',
                                     'host_context_schema': 'agent_contribute/schemas/host-context/0.1.schema.json',
+                                    'host_context_schema_0.2': 'agent_contribute/schemas/host-context/0.2.schema.json',
                                     'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
                       'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}
@@ -316,6 +322,8 @@ def main(argv=None):
                 code = 0 if result['upstream_submission_ready'] or result['fork_completion_ready'] else 1
             if args.observe_ci and result.get('schema_valid') is True:
                 result['ci_observation'] = ci.observe(task, evidence)  # report only; code is already decided
+            if args.observe_signatures and result.get('schema_valid') is True:
+                result['signature_observation'] = signatures.observe(task, evidence, args.repo_dir)  # report only
         if args.report_budget:
             result['api_budget'] = budget.report(before)
     except core.ProtocolError as exc:

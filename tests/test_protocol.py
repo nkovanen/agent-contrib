@@ -566,11 +566,11 @@ class VerificationTests(unittest.TestCase):
 
             patched = []
 
-            def read_git(directory, *args):
+            def read_git(directory, *args, **options):
                 if args == ('show', '-s', '--format=%cI', evidence['git_head']):  # the captured HEAD (R4-05)
                     patched.append(args)
                     return utc_timestamp
-                return original_git_read(directory, *args)
+                return original_git_read(directory, *args, **options)
 
             with patch.object(core, 'git_read', side_effect=read_git):
                 result = core.verify(task, evidence, tmp, client)

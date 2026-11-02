@@ -36,6 +36,7 @@ format and command exit status. Help/version output is unchanged.
 | `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is syntax-compatible only |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
+| `agent-contrib verify task.json --evidence e.json [--repo-dir checkout] --observe-signatures` | Also reports GitHub's signature verification for the evidence head, required-signature rulesets on the base branch and local signature-header presence; never verifies locally or changes gates or exit code |
 | `agent-contrib --report-budget [--min-remaining N] COMMAND ...` | Adds the core REST rate-limit budget before and after a GitHub-reading command; optionally refuses to start below N |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
@@ -58,11 +59,21 @@ and `protocol.*`. Git reads also force `log.showSignature=false` and
 error, never a fetch. Credential, SSH, askpass, pager, editor and merge-driver
 settings are not refused because none of the fixed read commands reaches them.
 Reads also force full stat and mode checks (`core.checkStat=default`,
-`core.trustctime=true`, `core.ignoreStat=false`, `core.fileMode=true`), so
+`core.trustctime=true`, `core.ignoreStat=false`, `core.fileMode=true`, and
+`core.symlinks=true` on POSIX), so
 relaxed checkout settings cannot hide an edit or an executable bit; on a
 filesystem without executable bits every file then looks changed, which fails
 closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where
 it would hide case twins, and accepted where the filesystem really ignores case.
+Worktree content is compared with a commit through a fresh temporary index
+outside the checkout, so the checkout's stat cache is never trusted; every
+tracked file is hashed on each run. That comparison is byte for byte: attributes
+come from the empty tree and `core.autocrlf` is off, so `ident`, `eol`/`text`
+and `working-tree-encoding` conversions never make different bytes equal the
+commit, and a checkout with converted (for example CRLF) working copies reports
+them as changed. It needs Git 2.40 or newer (`git_too_old` otherwise). A
+non-empty `.git/info/attributes` is refused with `unsafe_git_attributes`, and
+`core.attributesFile` is always ignored.
 
 `agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
 and option of the installed version. Exit status is 0 when a command succeeds and
@@ -148,7 +159,11 @@ The prerequisite blocker lists each prerequisite that is not `satisfied` with
 non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 
 `instructions.resources` lists both task/evidence versions and host-context
-schema 0.1. Library callers may pass host context explicitly to `core.verify`;
+schemas 0.1 and 0.2. With a host-context 0.2 document, `verify` adds
+`overlap_dispositions`: `absent`, `not_evaluated` (the record's contract, mandate,
+credential, event, interval and entry bindings check out) or `invalid`, with the
+record hash and errors. It never waives an overlap or changes a gate, exit code or
+overlap list in this version, and makes no extra GitHub reads. Library callers may pass host context explicitly to `core.verify`;
 that is the same host-asserted boundary as the CLI, not a privileged API.
 
 ## Authorization request
@@ -540,6 +555,53 @@ approval-required or missing runs are never success. This is an observation of
 what GitHub reports, not proof that the evidence checks equal the CI checks.
 Required-check gating is a deferred future-schema design.
 
+## Signature observation (opt-in, report only)
+
+`verify ... --evidence evidence.json [--repo-dir checkout] --observe-signatures`
+adds `signature_observation` after the verify decision and exit code are fixed.
+It is added only for a schema-valid contract and never changes any gate,
+`next_action` or the exit status. The repository is the contract's target, or
+the source when the target is blank. It has three parts:
+
+- `github_verification`: one `GET repos/{target}/git/commits/{git_head}`. It
+  reports `verified`, `reason` and `verified_at` from GitHub's verification
+  object. A reason outside GitHub's documented set is `unrecognized` and is not
+  echoed; the signature, payload and message are never copied. `verified` must
+  agree with a `valid` reason. `verified_means` states what it shows: GitHub
+  matched the signature to a key registered to an account. That is not
+  approval, authorship, review or proof that tests ran. A head not yet pushed to
+  the target cannot be observed and is reported as a failed read.
+- `required_signatures`: every page of `GET
+  repos/{target}/rules/branches/{base}`, where `base` is the contract's
+  `execution.base_ref` or else `source.default_branch`. `required` is true when
+  an active ruleset rule of type `required_signatures` applies, and
+  `ruleset_ids` lists those rulesets. `false` means only that no visible active
+  ruleset requires signatures. Each rule type must be one of GitHub's documented
+  lowercase rule types. A malformed type makes the part unknown. So does a
+  well-formed but unrecognized type, unless an exact `required_signatures` rule
+  is also present. `classic_branch_protection` is always
+  `not_observed`, because reading it needs admin access, and ruleset bypass
+  actors are not visible either.
+- `local_commits` (only with `--repo-dir`; otherwise `not_requested`): the
+  commits in evidence `base_commit..git_head`, oldest first, each with
+  `signature_header: present` or `absent`, plus counts. This is header
+  presence, not validity; anyone can write a forged header. First the checkout's
+  effective Git configuration is checked, as for every checkout reader; config
+  a read could run as a program or use to fetch (signature programs, filters,
+  promisor remotes, protocol settings) makes the part incomplete before any other
+  read. Then only `rev-parse --is-shallow-repository`, `merge-base`, `rev-list`
+  and `cat-file` run, through the hardened Git reads, which never lazy-fetch. No signature
+  program runs: no gpg, ssh-keygen, `verify-commit` or `--show-signature`, so
+  repository-configured programs are never executed. The base must be a full SHA
+  and an ancestor of the head. A shallow repository is reported as incomplete,
+  because its boundary can silently cut the range even when the base is
+  reachable through a merge. More than 1000 commits is also reported as
+  incomplete; the list is never truncated.
+
+Any failed, partial or malformed read makes that part, and the observation,
+`complete: false` with fixed error strings. Contract-required verified heads and
+signed evidence attestations (the rest of #18) are not implemented.
+
 ## API budget (opt-in)
 
 `--report-budget` before a GitHub-reading command reads `GET rate_limit` (which
@@ -813,6 +875,7 @@ One of `inspect_result`, `issue_unresolved`.
 | `resources.task_schema_0.2` | string |  |
 | `resources.evidence_schema_0.2` | string |  |
 | `resources.host_context_schema` | string |  |
+| `resources.host_context_schema_0.2` | string |  |
 | `resources.output_schemas` | string | Package directory of these output schemas; agent-contrib schema COMMAND prints one |
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
@@ -1548,6 +1611,68 @@ Added by --responsiveness; one-page sample of recently closed PRs, report only
 | `errors` | string[] |  |
 | `explanation` | string |  |
 
+#### `signature_github_verification`
+
+GitHub verification object for the evidence head (git/commits)
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean |  |
+| `verified` | boolean or null | GitHub key-to-account match; not approval. Null when unread |
+| `reason` | "bad_cert" \| "bad_email" \| "expired_key" \| "gpgverify_error" \| "gpgverify_unavailable" \| "invalid" \| "malformed_signature" \| "no_user" \| "not_signing_key" \| "ocsp_pending" \| "unknown_key" \| "unknown_signature_type" \| "unsigned" \| "unverified_email" \| "valid" \| "unrecognized" \| null | GitHub verification reason; unrecognized values are not echoed |
+| `verified_at` | string or null | Timezone-bearing time GitHub verified, or null |
+| `errors` | string[] |  |
+| `verified_means` | string | What verified does and does not show |
+
+#### `signature_local_commit`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `sha` | string |  |
+| `signature_header` | "present" \| "absent" | Header presence only, never validity |
+
+#### `signature_local_commits`
+
+Local signature-header presence; no signature program runs
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean |  |
+| `commits` | `signature_local_commit`[] or null | base_commit..git_head, oldest first; null when incomplete, never truncated |
+| `with_header` | integer or null |  |
+| `without_header` | integer or null |  |
+| `limit` | integer | Commit cap; more is reported as incomplete |
+| `errors` | string[] |  |
+| `notice` | string |  |
+
+#### `signature_observation`
+
+Report-only commit-signature observation (verify --observe-signatures); never a gate
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `repository` | string | Repository read: the execution target, else the source |
+| `head_sha` | string or null | Evidence git_head; null when the evidence has none |
+| `complete` | boolean |  |
+| `github_verification` | null or `signature_github_verification` |  |
+| `required_signatures` | null or `signature_required` |  |
+| `local_commits` | object or `signature_local_commits` |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
+
+#### `signature_required`
+
+Active ruleset rules for the base branch (rules/branches)
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean |  |
+| `branch` | string | Base branch whose active rules were read |
+| `required` | boolean or null | An active required_signatures ruleset rule applies; null when unread |
+| `ruleset_ids` | integer[] or null | Rulesets requiring signatures, ascending; null when unread |
+| `classic_branch_protection` | "not_observed" | Classic protection needs admin access and is never read |
+| `errors` | string[] |  |
+
 #### `target_pulls_scan`
 
 Open-PR scan of the proposed target repository when it differs from the issue source
@@ -1579,6 +1704,7 @@ Schema 0.1: a schema-valid contract was checked. live_provenance, source_resolut
 | `publication` | string | Fixed notice: this CLI never publishes |
 | `api_budget` | `api_budget` (optional) |  |
 | `ci_observation` | `ci_observation` (optional) |  |
+| `signature_observation` | `signature_observation` (optional) |  |
 | `contract_sha256` | string | Canonical hash of the contract |
 | `requested_repository` | null | Not stored in schema 0.1 |
 | `issue_source_repository` | string |  |
@@ -1617,6 +1743,7 @@ Schema 0.1: the contract failed validation; nothing was read
 | `publication` | string | Fixed notice: this CLI never publishes |
 | `api_budget` | `api_budget` (optional) |  |
 | `ci_observation` | `ci_observation` (optional) |  |
+| `signature_observation` | `signature_observation` (optional) |  |
 
 #### `verify_0_2`
 
@@ -1659,6 +1786,8 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `duplicates` | `duplicate`[] | Open PRs overlapping the issue now |
 | `api_budget` | `api_budget` (optional) |  |
 | `ci_observation` | `ci_observation` (optional) |  |
+| `signature_observation` | `signature_observation` (optional) |  |
+| `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document; never changes a gate |
 
 #### `verify_0_2_rejected`
 
@@ -1731,6 +1860,18 @@ Provenance of the live inspect refresh
 | `policy` | `policy_file` |  |
 | `proposed_target_pulls` | `target_pulls_scan` (optional) |  |
 | `proposed_target_metadata` | `metadata_read` (optional) | Schema 0.1 fork target metadata read |
+
+#### `verify_overlap_dispositions`
+
+Host-context 0.2 overlap_dispositions report; this version waives no overlap
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `status` | "absent" \| "not_evaluated" \| "invalid" | absent: no section; not_evaluated: its own bindings check out but no waiver is evaluated; invalid: schema or binding errors |
+| `trust` | "host-asserted" |  |
+| `sha256` | string or null | Canonical hash of the overlap_dispositions section; null when absent or the host context is invalid |
+| `errors` | string[] |  |
+| `note` | string |  |
 
 #### `verify_own_pr`
 

@@ -62,6 +62,11 @@ installed workflow.
 The strict [host-context schema](../agent_contribute/schemas/host-context/0.1.schema.json)
 is an object with `schema_version: "0.1"` and a required `mandate`. Optional
 sections are omitted until available; `null` is not an absent section.
+[Host-context 0.2](../agent_contribute/schemas/host-context/0.2.schema.json) has
+the same sections, byte for byte, so a mandate's hash does not depend on the
+wrapper. It adds an optional, host-issued `overlap_dispositions` record (#7).
+This version only parses that record and checks its own bindings; it waives no
+overlap. Any other version, or a 0.1 document carrying the section, fails closed.
 
 | Section | Issuer and purpose |
 | --- | --- |

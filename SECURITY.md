@@ -58,7 +58,9 @@ build tooling: review the source and pin a trusted release or immutable commit.
 See the [installed workflow](agent_contribute/instructions.md) for exact limits.
 
 Optional reports are not additional authority. Ownership comments, author
-associations, repository policy hints and observed CI results remain untrusted signals.
+associations, repository policy hints, observed CI results and signature observations
+remain untrusted signals. GitHub's "verified" commit status is not approval, and
+the CLI never runs gpg, ssh-keygen or other signature programs on a checkout.
 Incomplete observations are reported as such even when a separate verification
 stage succeeds. Evidence skeletons and generated PR descriptions are local files,
 not attestations that work ran or that publication is permitted. Text output is

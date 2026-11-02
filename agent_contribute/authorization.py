@@ -132,7 +132,7 @@ def check(task, host_context, client, now):
     if host_context is None:
         errors.append('Missing human/host mandate')
         return result
-    host_errors = core.schema_errors(host_context, core.bundled_schema('host-context'))
+    host_errors = core.schema_errors(host_context, core.host_context_schema(host_context))
     if host_errors:
         errors.extend('Host context ' + error for error in host_errors)
         return result
