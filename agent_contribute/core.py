@@ -62,8 +62,14 @@ def strict_json(text):
         return result
     def invalid_constant(_):
         raise ValueError('nonfinite number')
+    def finite_float(literal):
+        # Exponent overflow (1e999) parses to infinity without reaching parse_constant.
+        value = float(literal)
+        if value in (float('inf'), float('-inf')):
+            raise ValueError('nonfinite number')
+        return value
     try:
-        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant)
+        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant, parse_float=finite_float)
     except (ValueError, RecursionError) as exc:
         raise ProtocolError('invalid_json', 'Invalid JSON (including duplicate keys or excessive nesting)') from exc
     try:
