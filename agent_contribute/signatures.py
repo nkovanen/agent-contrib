@@ -29,10 +29,21 @@ def _timestamp(value):
     return parsed.tzinfo is not None
 
 
+def _unread(name, branch):
+    """The not-observed shape of each part, also used when a part fails unexpectedly."""
+    if name == 'github_verification':
+        return {'complete': False, 'verified': None, 'reason': None, 'verified_at': None, 'errors': [],
+                'verified_means': 'GitHub matched the signature to a key registered to an account; not approval, '
+                                  'authorship, review or test execution'}
+    if name == 'required_signatures':
+        return {'complete': False, 'branch': core.safe_text(branch, 200), 'required': None, 'ruleset_ids': None,
+                'classic_branch_protection': 'not_observed', 'errors': []}
+    return {'complete': False, 'commits': None, 'with_header': None, 'without_header': None, 'limit': MAX_COMMITS,
+            'errors': [], 'notice': LOCAL_NOTICE}
+
+
 def github_verification(client, target, head):
-    part = {'complete': False, 'verified': None, 'reason': None, 'verified_at': None, 'errors': [],
-            'verified_means': 'GitHub matched the signature to a key registered to an account; not approval, '
-                              'authorship, review or test execution'}
+    part = _unread('github_verification', None)
     try:
         data = core.require(client.request(f'repos/{target}/git/commits/{head}'), dict, 'commit')
         if remote.sha(data.get('sha'), 'commit sha') != head:
@@ -55,8 +66,7 @@ def github_verification(client, target, head):
 
 
 def required_signatures(client, target, branch):
-    part = {'complete': False, 'branch': core.safe_text(branch, 200), 'required': None, 'ruleset_ids': None,
-            'classic_branch_protection': 'not_observed', 'errors': []}
+    part = _unread('required_signatures', branch)
     listing = core.paginate(client, f'repos/{target}/rules/branches/{quote(branch, safe="")}',
                             key=lambda rule: f"{rule.get('type')}\0{rule.get('ruleset_id')}")
     errors = list(listing['errors'])
@@ -77,8 +87,7 @@ def required_signatures(client, target, branch):
 
 
 def local_commits(directory, base, head):
-    part = {'complete': False, 'commits': None, 'with_header': None, 'without_header': None, 'limit': MAX_COMMITS,
-            'errors': [], 'notice': LOCAL_NOTICE}
+    part = _unread('local_commits', None)
     try:
         if not isinstance(base, str) or not core.SHA.fullmatch(base):
             raise core.ProtocolError('evidence', 'Evidence base_commit is not a full commit SHA')
@@ -123,10 +132,16 @@ def observe(task, evidence, repo_dir=None, client=None):
         return result
     result['head_sha'] = head
     client = client or core.GitHub()
-    parts = {'github_verification': github_verification(client, target, head),
-             'required_signatures': required_signatures(client, target, branch)}
+    reads = {'github_verification': lambda: github_verification(client, target, head),
+             'required_signatures': lambda: required_signatures(client, target, branch)}
     if repo_dir is not None:
-        parts['local_commits'] = local_commits(repo_dir, evidence.get('base_commit'), head)
+        reads['local_commits'] = lambda: local_commits(repo_dir, evidence.get('base_commit'), head)
+    parts = {}
+    for name, read in reads.items():
+        try:
+            parts[name] = read()
+        except Exception:  # an optional observer must never replace the verify result or change its exit status
+            parts[name] = dict(_unread(name, branch), errors=['Unexpected failure; not observed'])
     result.update(parts)
     result['errors'] = [f'{name}: {error}' for name, part in parts.items() for error in part['errors']]
     result['complete'] = all(part['complete'] for part in parts.values())

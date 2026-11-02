@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from agent_contribute import cli, core, outputs, signatures
 from tests.test_authorization import candidate_task
-from tests.test_protocol import ready_contract
+from tests.test_protocol import evidence_checkout, ready_contract, refresh_checkout_evidence
 
 HEAD = 'a' * 40
 
@@ -355,6 +355,65 @@ class OutputSchemaTests(unittest.TestCase):
             change(value)
             drifted.append(bool(self.errors(value)))
         self.assertEqual(drifted, [True] * len(drifted))
+
+
+class ContainmentTests(unittest.TestCase):
+    """Review R6-02: an optional observer may never replace the verify result or change its exit status."""
+    def verify_both(self, tmp, task, client, evidence, patches=()):
+        contract, path = pathlib.Path(tmp, '..', 'task.json').resolve(), pathlib.Path(tmp, '..', 'e.json').resolve()
+        contract.write_text(json.dumps(task))
+        path.write_text(json.dumps(evidence))
+        runs = []
+        for flags in ([], ['--observe-signatures']):
+            output = io.StringIO()
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(patch.object(core, 'GitHub', return_value=client))
+                stack.enter_context(contextlib.redirect_stdout(output))
+                for target, name, value in patches:
+                    stack.enter_context(patch.object(target, name, value))
+                code = cli.main(['verify', str(contract), '--evidence', str(path), '--repo-dir', tmp, *flags])
+            runs.append((code, json.loads(output.getvalue())))
+        (plain_code, plain), (code, observed) = runs
+        self.assertEqual(code, plain_code)
+        report = observed.pop('signature_observation')
+        self.assertEqual(without_times(observed), without_times(plain))
+        return plain_code, plain, report
+
+    def latin1_checkout(self, tmp):
+        task, base, evidence, git = evidence_checkout(tmp)
+        head = git('rev-parse', 'HEAD')
+        content = (f'tree {git("rev-parse", "HEAD^{tree}")}\nparent {head}\nauthor A <a@e> 1 +0000\n'
+                   f'committer A <a@e> 1 +0000\nencoding ISO-8859-1\n\n').encode() + b'caf\xe9\n'
+        new = subprocess.run(['git', '-C', tmp, 'hash-object', '-t', 'commit', '-w', '--stdin'], input=content,
+                             capture_output=True, check=True).stdout.decode().strip()
+        git('update-ref', 'HEAD', new)
+        refresh_checkout_evidence(evidence, git)
+        return task, SignatureGitHub(base, head=new), evidence
+
+    def test_non_utf8_commit_keeps_a_passing_verify_passing(self):
+        with tempfile.TemporaryDirectory() as root:
+            tmp = os.path.join(root, 'checkout')
+            os.mkdir(tmp)
+            task, client, evidence = self.latin1_checkout(tmp)
+            code, plain, report = self.verify_both(tmp, task, client, evidence)
+            self.assertEqual(code, 0, plain)
+            self.assertTrue(plain['upstream_submission_ready'])
+            self.assertTrue(report['local_commits']['complete'], report['errors'])
+
+    def test_unexpected_observer_failures_stay_inside_the_report(self):
+        failures = [(signatures, 'github_verification', lambda *a: 1 / 0),
+                    (signatures, 'required_signatures', lambda *a: [][1]),
+                    (signatures, 'local_commits', lambda *a: b'\xe9'.decode())]
+        for failure in failures:
+            with self.subTest(part=failure[1]), tempfile.TemporaryDirectory() as root:
+                tmp = os.path.join(root, 'checkout')
+                os.mkdir(tmp)
+                task, client, evidence = self.latin1_checkout(tmp)
+                code, plain, report = self.verify_both(tmp, task, client, evidence, [failure])
+                self.assertEqual(code, 0)
+                part = report[failure[1]]
+                self.assertFalse(part['complete'] or report['complete'])
+                self.assertEqual(part['errors'], ['Unexpected failure; not observed'])
 
 
 class ReportOnlyTests(unittest.TestCase):
