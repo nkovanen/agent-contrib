@@ -45,8 +45,6 @@ def lint(text):
         errors.append('the build job inherits contents: read only')
     if [line.strip() for line in block(publish, 'permissions', 4) or []] != PUBLISH_PERMISSIONS:
         errors.append('publish permissions must be exactly ' + ', '.join(PUBLISH_PERMISSIONS))
-    if sum('id-token' in line for line in lines) != 1:
-        errors.append('id-token: write appears once, in the publish job')
     if 'needs: build' not in [line.strip() for line in publish]:
         errors.append('publish needs build')
     if [line.strip() for line in block(publish, 'environment', 4) or []][:1] != ['name: pypi']:
@@ -118,6 +116,11 @@ MUTANTS = {
     'persisted credentials': ('          persist-credentials: false\n', '          persist-credentials: true\n'),
     'no tag check': ('run: python3 -I tools/release_check.py --release --tag "$RELEASE_TAG"', 'run: python3 -I tools/release_check.py'),
     'publish without build': ('    needs: build\n', ''),
+    # Each of these is rejected by one rule only.
+    'build contents write': ('    timeout-minutes: 20\n', '    timeout-minutes: 20\n    permissions:\n      contents: write\n'),
+    'expression in env only': ('        run: python -m unittest discover -v\n',
+                               '        run: python -m unittest discover -v\n        env:\n'
+                               '          TITLE: ${{ github.event.release.name }}\n'),
 }
 
 

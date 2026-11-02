@@ -36,6 +36,12 @@ class VersionAgreementTests(unittest.TestCase):
         self.assertIn(old, text)
         path.write_text(text.replace(old, new, 1), 'utf-8')
 
+    def test_every_known_version_statement_is_checked(self):
+        self.assertEqual(sorted(release_check.SOURCES), sorted([
+            'pyproject.toml', 'agent_contribute/__init__.py', 'CHANGELOG.md', 'agent_contribute/instructions.md',
+            'tools/check_install.py', 'tests/test_protocol.py']))
+        self.assertEqual(len(release_check.SOURCES['agent_contribute/instructions.md']), 2)
+
     def test_the_checkout_agrees(self):
         self.assertEqual(release_check.problems(ROOT), [])
         version = release_check.version(ROOT)
