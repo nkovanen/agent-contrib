@@ -399,9 +399,13 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     for index, (source, (path, result)) in enumerate(zip(state.sources, state.texts)):
         hints += [dict(hint, source=index) for hint in result['hints']]
         for link in result['links']:
-            if not _assessed(link['url'], source['repository'], path, refs, scanned):
-                state.note(_relative_what(link['url'], path), 'referenced, not assessed',
-                           f'{source["repository"]}:{source["path"]}', link['line'], link['link_text'])
+            origin = f'{source["repository"]}:{source["path"]}'
+            try:
+                if not _assessed(link['url'], source['repository'], path, refs, scanned):
+                    state.note(_relative_what(link['url'], path), 'referenced, not assessed', origin,
+                               link['line'], link['link_text'])
+            except ValueError:  # e.g. 'https://[' or a netloc that NFKC-normalizes to a delimiter
+                state.note(link['url'], 'malformed reference, not assessed', origin, link['line'], link['link_text'])
     if state.skipped:
         state.limit('requests', state.skipped)
     hints.sort(key=lambda hint: (HINT_ORDER.index(hint['kind']), hint['source'], hint['line']))

@@ -558,3 +558,48 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(phrase):
                 self.assertIn(phrase.casefold(), section.casefold())
         self.assertNotIn('--ai-policy', text, 'the report is default-on; the old flag is not workflow guidance')
+
+
+MALFORMED = ('See the [AI policy](https://[) and [rules](https://evil／policy.example/contributing) and '
+             '<https://a℀b/ai-policy> and https://ok.example/contributing.')
+
+
+class MalformedGitHub(FakeGitHub):
+    def request(self, endpoint):
+        if '/contents/CONTRIBUTING.md' in endpoint:
+            self.calls.append(endpoint)
+            return {'encoding': 'base64', 'content': base64.b64encode(MALFORMED.encode()).decode(), 'sha': 'b' * 40}
+        return super().request(endpoint)
+
+
+class MalformedReferenceTests(unittest.TestCase):
+    """RP-15: a malformed URL in remote text is an unassessed reference, never a command failure."""
+    def test_report_lists_malformed_references(self):
+        result, _ = report({'CONTRIBUTING.md': MALFORMED})
+        reasons = {u['what']: u['reason'] for u in result['unassessed']}
+        self.assertEqual(reasons['https://['], 'malformed reference, not assessed')
+        self.assertEqual(reasons['https://evil／policy.example/contributing'], 'malformed reference, not assessed')
+        self.assertEqual(reasons['https://ok.example/contributing'], 'referenced, not assessed')
+
+    def test_inspect_prepare_and_multi_discover_still_succeed(self):
+        import os, tempfile
+        from tests.test_multi_discover import MultiGitHub
+        def run(client, *argv):
+            output = io.StringIO()
+            with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
+                code = cli.main(list(argv))
+            return code, json.loads(output.getvalue())
+        code, result = run(MalformedGitHub(), 'inspect', 'acme/photos#12')
+        self.assertEqual(code, 0)
+        self.assertIn('https://[', [u['what'] for u in result['repository_policy']['unassessed']])
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, 'task.json')
+            code, result = run(MalformedGitHub(), 'prepare', 'acme/photos#12', '--output', out)
+            self.assertEqual(code, 0)
+            self.assertTrue(os.path.exists(out))
+        client = MultiGitHub()
+        client.repos['acme/photos'] = MalformedGitHub()
+        code, result = run(client, 'discover', 'acme/photos', 'person/photos')
+        self.assertEqual(code, 0)
+        self.assertEqual(len(result['repositories']), 2)
+        self.assertTrue(all('repository_policy' in r for r in result['repositories']))
