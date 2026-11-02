@@ -36,7 +36,17 @@ so the host agent, the user and the independent reviewer are responsible for it.
    delegates to is unreadable, when relevant text is in a language or format you
    cannot assess, and when a maintainers-only rule applies and the intended
    submitter's eligibility is unknown. Unresolved policy keeps P-POLICY pending
-   and blocks upstream preparation, implementation and publication. A generic
+   and blocks upstream preparation, implementation and publication.
+   A `limits_reached` entry with `hides_sources: true` (shown by
+   `limits_hide_sources`), or any `omitted_sources` entry, is unresolved:
+   P-POLICY stays pending and upstream preparation, implementation and
+   publication are blocked until every omitted candidate is read manually at the
+   pinned revision or shown inapplicable with evidence. A successful CLI run does
+   not resolve it. Read an omitted file with, for example,
+   `gh api 'repos/OWNER/REPO/contents/PATH?ref=COMMIT'`; a limit that names no
+   file (such as `unassessed entries`) requires listing the pinned tree
+   yourself. A hint-only limit (`hides_sources: false`) hides no source, but
+   every listed source must still be read. A generic
    `never_inspected` category or an owner `.github` lookup that failed does not
    block on its own; dispose of an unrelated link as inapplicable only from its
    actual context.

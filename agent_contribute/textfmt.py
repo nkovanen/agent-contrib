@@ -137,7 +137,9 @@ def _policy(result):
             '(repository_policy; not a verdict)',
             "  Read every source, hint and unassessed reference before choosing work; unresolved policy blocks "
             "upstream work. This is a host obligation even when every count is zero. 'Complete' above concerns "
-            "GitHub reads, not policy."]
+            "GitHub reads, not policy."] + (
+        [f'  Limits hide policy sources ({len(report.get("omitted_sources", []))} omitted candidates listed): repository '
+         'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else [])
 
 
 def render(command, result, stage=None):

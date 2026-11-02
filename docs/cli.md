@@ -386,6 +386,13 @@ exit codes do not change. `--ai-policy` is accepted and does nothing more.
   fit the size bound, hints go first, then unassessed entries, then long source
   paths are shortened, and finally source records are left out. Each step is
   recorded as a `report size: ...` limit.
+- **`omitted_sources` and `hides_sources`.** A policy candidate that a file,
+  byte or request limit left unread is named in `omitted_sources` (at most 50,
+  with its repository, path, kind and reason; overflow is counted). Each
+  `limits_reached` entry says whether it `hides_sources`; hint limits do not.
+  `limits_hide_sources` is true when any limit hides a source or reference. The
+  workflow then treats repository policy as unresolved until every omitted
+  candidate is read manually or shown inapplicable.
 - **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
   comments, other repositories, non-Latin text.
 - **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained

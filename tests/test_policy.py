@@ -464,7 +464,7 @@ class BoundTests(unittest.TestCase):
         result, _ = report(files)
         reasons = [u['reason'] for u in result['unassessed']]
         self.assertIn('exceeds 200 kB', reasons)
-        self.assertIn({'limit': 'policy files', 'not_reported': 4}, result['limits_reached'])
+        self.assertIn({'limit': 'policy files', 'not_reported': 4, 'hides_sources': True}, result['limits_reached'])
         self.assertEqual(sum(1 for s in result['sources_scanned'] if s['origin'] == 'repository'),
                          policy.MAX_SOURCE_FILES - 1)
 
@@ -543,6 +543,62 @@ class BoundTests(unittest.TestCase):
         for literal in patterns:
             with self.subTest(literal):
                 self.assertIsNone(re.search(r'\)[*+?{]', literal), 'quantified group risks backtracking')
+
+
+class HiddenSourceTests(unittest.TestCase):
+    """RP-19: a limit that hides policy candidates names them and is distinguishable from hint overflow."""
+    def test_thirteenth_policy_file_is_named_not_just_counted(self):
+        files = {f'AI_POLICY_{n:02d}.md': 'Using AI tools is welcome.' for n in range(12)}
+        files['AI_POLICY_12.md'] = 'AI-generated contributions are prohibited.'
+        result, _ = report(files)
+        self.assertNotIn('possible_ai_restriction', kinds(result), 'the prohibition itself was not read')
+        self.assertEqual([(o['path'], o['reason']) for o in result['omitted_sources']], [('AI_POLICY_12.md', 'file limit')])
+        self.assertEqual(result['omitted_sources'][0]['repository'], 'acme/photos')
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertEqual(limits['policy files'], {'limit': 'policy files', 'not_reported': 1, 'hides_sources': True})
+        self.assertTrue(result['limits_hide_sources'])
+
+    def test_byte_and_request_limits_name_their_omissions(self):
+        files = {f'docs/{n}/CONTRIBUTING.md': 'word ' * 39000 for n in range(8)}
+        result, _ = report(files)
+        self.assertIn('scan byte limit', {o['reason'] for o in result['omitted_sources']})
+        with patch.object(policy, 'MAX_REQUESTS', 4):
+            result, _ = report({f'docs/{n}/CONTRIBUTING.md': 'x' for n in range(6)})
+        self.assertIn('request limit', {o['reason'] for o in result['omitted_sources']})
+        self.assertTrue(result['limits_hide_sources'])
+
+    def test_hint_overflow_alone_hides_no_source(self):
+        text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(101))
+        result, _ = report({'CONTRIBUTING.md': text}, {})
+        self.assertEqual(result['omitted_sources'], [])
+        self.assertEqual({i['limit']: i['hides_sources'] for i in result['limits_reached']}, {'hints': False})
+        self.assertFalse(result['limits_hide_sources'])
+
+    def test_omitted_list_is_bounded_and_its_overflow_counted(self):
+        files = {f'docs/{n:03d}/CONTRIBUTING.md': 'x' for n in range(policy.MAX_SOURCE_FILES + policy.MAX_OMITTED + 5)}
+        result, _ = report(files)
+        self.assertEqual(len(result['omitted_sources']), policy.MAX_OMITTED)
+        limits = {item['limit']: item for item in result['limits_reached']}
+        self.assertEqual(limits['omitted sources not listed']['not_reported'], 5)
+        self.assertTrue(limits['omitted sources not listed']['hides_sources'])
+
+    def test_text_output_flags_source_hiding_limits(self):
+        from agent_contribute import textfmt
+        result, _ = report({f'AI_POLICY_{n:02d}.md': 'x' for n in range(13)})
+        text = textfmt.render('inspect', {'reference': 'acme/photos#12', 'repository_policy': result})
+        self.assertIn('Limits hide policy sources (1 omitted candidates listed)', text)
+        quiet, _ = report({'AI_POLICY.md': 'x'}, {})
+        self.assertNotIn('Limits hide', textfmt.render('inspect', {'repository_policy': quiet}))
+
+    def test_workflow_blocks_on_source_hiding_limits(self):
+        import importlib.resources
+        text = ' '.join(importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8').split())
+        clause = ('A `limits_reached` entry with `hides_sources: true` (shown by `limits_hide_sources`), or any '
+                  '`omitted_sources` entry, is unresolved: P-POLICY stays pending and upstream preparation, '
+                  'implementation and publication are blocked until every omitted candidate is read manually at the '
+                  'pinned revision or shown inapplicable with evidence. A successful CLI run does not resolve it.')
+        self.assertIn(clause, text)
+        self.assertIn('hides_sources', policy.OBLIGATION)
 
 
 class SanitizationTests(unittest.TestCase):

@@ -24,6 +24,11 @@ MAX_FILE_BYTES = 200000
 MAX_SCANNED_BYTES = 1000000
 MAX_HINTS = 100
 MAX_UNASSESSED = 50
+MAX_OMITTED = 50
+# Limits after which a policy candidate or reference may be unread or unlisted; hint limits hide no source.
+HIDING_LIMITS = {'requests', 'policy files', 'owner policy files', 'scanned bytes', 'unassessed entries',
+                 'omitted sources not listed', 'report size: unassessed entries', 'report size: omitted sources',
+                 'report size: sources not listed'}
 EXCERPT_CHARS = 300
 IDENTIFIER_CHARS = 500
 MAX_REPORT_BYTES = 256 * 1024
@@ -41,8 +46,9 @@ OBLIGATION = ('This report is not a verdict and never shows that contributions a
               'source in full, every hint in context and every unassessed reference before ranking or preparing '
               'work. Record each relevant source with its revision or content digest. A policy-relevant source you '
               'cannot read, or unknown contributor eligibility under a maintainers-only rule, is unresolved: '
-              'unresolved policy blocks upstream preparation, implementation and publication. This review remains '
-              'a host obligation even when every count is zero.')
+              'unresolved policy blocks upstream preparation, implementation and publication. So does any limit with '
+              'hides_sources true or any omitted_sources entry, until each omitted candidate is read manually or '
+              'shown inapplicable. This review remains a host obligation even when every count is zero.')
 
 AI_TERMS = {'ai', 'llm', 'llms', 'chatgpt', 'copilot', 'claude', 'cursor', 'codex', 'gemini', 'vibe', 'genai'}
 AGENT_TERMS = {'agent', 'agents', 'agentic', 'autonomous', 'autonomously', 'bot', 'bots', 'automated', 'automation'}
@@ -227,6 +233,7 @@ class _Report:
         self.client, self.requests, self.skipped = client, 0, 0
         self.sources, self.texts, self.unassessed, self.limits = [], [], [], {}
         self.seen, self.keys = set(), []  # every identity noted; identities of retained entries (aligned)
+        self.omitted = []
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -251,6 +258,16 @@ class _Report:
                                 'link_text': core.safe_text(link_text, EXCERPT_CHARS) if link_text else None,
                                 'what_truncated': len(what) > IDENTIFIER_CHARS})
 
+    def omit(self, repository, path, kind, reason):
+        """A policy candidate a limit kept unread: named (bounded), never only counted (RP-19)."""
+        if len(self.omitted) >= MAX_OMITTED:
+            self.limit('omitted sources not listed')
+            return
+        shown = core.safe_text(path, len(path))
+        self.omitted.append({'repository': repository, 'path': shown[:IDENTIFIER_CHARS],
+                             'path_truncated': len(shown) > IDENTIFIER_CHARS, 'kind': kind or 'instruction',
+                             'reason': reason})
+
     def limit(self, name, count=1):
         self.limits[name] = self.limits.get(name, 0) + count
 
@@ -270,6 +287,7 @@ class _Report:
         """size is the source's UTF-8 byte count, the unit of the 1 MB scan bound (RP-18)."""
         if self.scanned_bytes + size > MAX_SCANNED_BYTES:
             self.limit('scanned bytes')
+            self.omit(repository, path, kind, 'scan byte limit')
             return
         self.scanned_bytes += size
         result = scan(text, path)
@@ -290,7 +308,7 @@ class _Report:
                 raise core.ProtocolError('file_encoding', 'not base64')
             data = base64.b64decode(''.join(core.require(value.get('content'), str, 'content').split()), validate=True)
         except _Limit:
-            self.note(shown if origin == 'repository' else f'{repository}:{shown}', 'not read: request limit')
+            self.omit(repository, path, kind, 'request limit')
             return
         except (core.ProtocolError, ValueError, binascii.Error):
             self.note(shown if origin == 'repository' else f'{repository}:{shown}', 'read failed')
@@ -323,6 +341,8 @@ class _Report:
         found.sort()
         for _, path, blob, kind in found[:cap]:
             self.fetch(origin, repository, commit, path, blob, kind)
+        for _, path, _, kind in found[cap:]:
+            self.omit(repository, path, kind, 'file limit')
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
 
@@ -441,17 +461,22 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     if len(hints) > MAX_HINTS:
         state.limit('hints', len(hints) - MAX_HINTS)
     result = {'report': 'policy-report/1', 'review_obligation': OBLIGATION, 'sources_scanned': state.sources,
-              'unassessed': state.unassessed, 'limits_reached': [],
+              'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
+              'limits_hide_sources': False,
               'never_inspected': list(NEVER_INSPECTED),
               'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints[:MAX_HINTS], 1)],
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:
-        result['limits_reached'] = [{'limit': name, 'not_reported': count} for name, count in sorted(state.limits.items())]
+        result['limits_reached'] = [{'limit': name, 'not_reported': count, 'hides_sources': name in HIDING_LIMITS}
+                                    for name, count in sorted(state.limits.items())]
+        result['limits_hide_sources'] = bool(result['omitted_sources']) or any(
+            item['hides_sources'] for item in result['limits_reached'])
         result['inventory_sha256'] = core.canonical_hash({
             'sources': sorted([{k: s[k] for k in ('origin', 'repository', 'path', 'sha256')} for s in result['sources_scanned']],
                               key=lambda s: (s['origin'], s['repository'], s['path'])),
             # Full identities, not the shortened display text (RP-20); state.keys is aligned with retained entries.
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
+            'omitted_sources': sorted([o['repository'], o['path'], o['reason']] for o in result['omitted_sources']),
             'limits_reached': result['limits_reached']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
@@ -463,6 +488,9 @@ def report(repository, commit, instructions, client, *, default_branch=None):
         elif result['unassessed']:
             result['unassessed'].pop()
             state.limit('report size: unassessed entries')
+        elif result['omitted_sources']:
+            result['omitted_sources'].pop()
+            state.limit('report size: omitted sources')
         elif long_paths:
             for source in long_paths:
                 source.update(path=source['path'][:80], path_truncated=True)
