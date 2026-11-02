@@ -120,6 +120,13 @@ class FeedbackTests(unittest.TestCase):
                 self.assertEqual((entry['decision_author'] or {}).get('association'), association)
                 self.assertEqual(entry['author']['association'], history[-1][1], 'author is the latest observation')
 
+    def test_renamed_reviewer_is_one_reviewer_by_numeric_id(self):
+        client = PRGitHub()
+        client.reviews = [review(1, 'maint', 2, 'CHANGES_REQUESTED'), review(2, 'maint-renamed', 2, 'DISMISSED')]
+        result = feedback.feedback('acme/photos#30', client)
+        self.assertFalse(result['changes_requested_by_trusted_association'], 'rename must not resurrect a request')
+        self.assertEqual([(r['author']['login'], r['decision']) for r in result['reviews']], [('maint-renamed', None)])
+
     def test_injection_text_stays_sanitized_data(self):
         result = feedback.feedback('acme/photos#30', PRGitHub())
         body = result['review_comments'][0]['untrusted_body']
