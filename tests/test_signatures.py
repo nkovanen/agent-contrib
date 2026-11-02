@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import cli, core, signatures
+from agent_contribute import cli, core, outputs, signatures
 from tests.test_authorization import candidate_task
 from tests.test_protocol import ready_contract
 
@@ -294,6 +294,39 @@ class LocalCommitTests(unittest.TestCase):
         self.assertNotIn('subprocess', vars(signatures))
         for args in calls:
             self.assertFalse({'--show-signature', 'verify-commit', '--pretty', '--format'} & set(args), args)
+
+
+class OutputSchemaTests(unittest.TestCase):
+    def errors(self, value):
+        schema = outputs.output_schema('verify')
+        return core.schema_errors(value, {'$ref': '#/$defs/signature_observation'}, root=schema)
+
+    def test_observations_match_the_closed_output_schema(self):
+        local = LocalCommitTests()
+        local.setUp()
+        base, head, _ = local.build()
+        complete = observe(SignatureGitHub(ready_contract()[1], head=head), evidence={'git_head': head, 'base_commit': base},
+                           repo_dir=local.repo)[0]
+        failed = observe(evidence={})[0]
+        local.doCleanups()
+        for value in (complete, failed, observe()[0]):
+            self.assertEqual(self.errors(value), [])
+        drifted = []
+        for change in [lambda v: v.update(extra=1), lambda v: v['github_verification'].update(reason='bogus'),
+                       lambda v: v['github_verification'].update(verified='true'),
+                       lambda v: v['github_verification'].update(extra=1),
+                       lambda v: v['required_signatures'].update(classic_branch_protection='none'),
+                       lambda v: v['required_signatures'].update(ruleset_ids=[0]),
+                       lambda v: v['local_commits']['commits'][0].update(signature_header='valid'),
+                       lambda v: v['local_commits']['commits'][0].update(sha='A' * 40),
+                       lambda v: v['local_commits'].update(with_header=-1),
+                       lambda v: v['local_commits'].update(commits=[v['local_commits']['commits'][0]] * 1001),
+                       lambda v: v.update(local_commits={'status': 'skipped'}),
+                       lambda v: v.update(head_sha='a' * 39)]:
+            value = copy.deepcopy(complete)
+            change(value)
+            drifted.append(bool(self.errors(value)))
+        self.assertEqual(drifted, [True] * len(drifted))
 
 
 class ReportOnlyTests(unittest.TestCase):

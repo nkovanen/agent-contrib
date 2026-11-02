@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:1:skill",
+  "title": "skill result",
+  "description": "Result of exporting the canonical agent Skill.",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "description": "Path of the new SKILL.md",
+      "maxLength": 2147483647
+    },
+    "cli_version": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the exported file",
+      "maxLength": 64,
+      "minLength": 64
+    }
+  },
+  "required": [
+    "output",
+    "cli_version",
+    "sha256"
+  ],
+  "additionalProperties": false
+}

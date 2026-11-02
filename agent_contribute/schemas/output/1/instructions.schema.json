@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:1:instructions",
+  "title": "instructions result",
+  "description": "Installed workflow, versions and packaged resources.",
+  "type": "object",
+  "properties": {
+    "cli_version": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "supported_schema_versions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "description": "Task/evidence schema versions this CLI accepts",
+      "maxItems": 1000
+    },
+    "supported_host_context_versions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 1000
+    },
+    "host_authorization": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "workflow_markdown": {
+      "type": "string",
+      "maxLength": 1000000,
+      "description": "The installed workflow (instructions.md)"
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "task_schema": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "evidence_schema": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "task_schema_0.2": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "evidence_schema_0.2": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "host_context_schema": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "output_schemas": {
+          "type": "string",
+          "description": "Package directory of these output schemas; agent-contrib schema COMMAND prints one",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "task_schema",
+        "evidence_schema",
+        "task_schema_0.2",
+        "evidence_schema_0.2",
+        "host_context_schema",
+        "output_schemas"
+      ],
+      "additionalProperties": false,
+      "description": "Package-relative resource paths"
+    },
+    "output_schema_version": {
+      "type": "string",
+      "description": "Version of the output schemas, independent of task/evidence schema versions",
+      "maxLength": 2147483647
+    },
+    "automatic_updates": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "cli_version",
+    "supported_schema_versions",
+    "supported_host_context_versions",
+    "host_authorization",
+    "workflow_markdown",
+    "resources",
+    "output_schema_version",
+    "automatic_updates"
+  ],
+  "additionalProperties": false
+}
