@@ -27,6 +27,12 @@ found. Authenticate `gh` using its own supported mechanism, and check with
 LightCraft checkout, subscription to a particular model, or repository-specific
 setup is needed for discovery.
 
+A failed GitHub read never echoes `gh` output, which can contain credentials.
+HTTP 404 is reported as not found or not visible to this account (check the
+repository and issue names, or private access), HTTP 401 as an authentication
+failure (`gh auth status`), and anything else as a generic auth, access or rate
+limit failure. The error code stays `api_error` and the command still fails.
+
 For a standard virtual environment instead of pipx:
 
 ```sh
@@ -91,7 +97,7 @@ CI matrix. A virtual environment uses `Scripts/python.exe` and `Scripts` on PATH
 The published CLI **0.2.0** bundles task and evidence schemas **0.1**, workflow guidance and
 the thin adapter together. `agent-contrib instructions` reports this support set.
 The unreleased CLI **0.3.0** also bundles explicit task/evidence schema **0.2**
-and host-context schema **0.1**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
+and host-context schemas **0.1** and **0.2**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
 of the protocol: it asks the installed CLI for instructions every time.
 
 Updates are explicit. Read the target release notes, back up contracts/evidence

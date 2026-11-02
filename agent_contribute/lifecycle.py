@@ -71,10 +71,11 @@ def human_signoff(task, context, evidence, authority, publication, review, now):
     result = {'valid': False, 'status': 'pending', 'trust': 'host-asserted', 'errors': [], 'sha256': None}
     if not isinstance(context, dict) or 'final_signoff' not in context:
         return result
-    if core.schema_errors(context, core.bundled_schema('host-context')):
+    schema = core.host_context_schema(context)
+    if core.schema_errors(context, schema):
         return dict(result, status='invalid', errors=['Host context schema is invalid'])
     record = context['final_signoff']
-    errors = core.schema_errors(record, core.bundled_schema('host-context')['properties']['final_signoff'])
+    errors = core.schema_errors(record, schema['properties']['final_signoff'])
     result.update(status='invalid', errors=errors)
     if errors:
         return result
@@ -108,6 +109,57 @@ def human_signoff(task, context, evidence, authority, publication, review, now):
         errors.append('Final signoff requires valid independent review')
     result.update(valid=not errors, status='passed' if not errors else 'invalid')
     return result
+
+
+DISPOSITION_NOTE = 'Parsed only: this version does not evaluate overlap dispositions, so nothing is waived'
+
+
+def overlap_dispositions(task, context, authority, now):
+    """Report a host-context 0.2 overlap_dispositions section. It checks the record's own bindings
+    but never waives an overlap: live PR-state evaluation is not implemented in this version."""
+    report = {'status': 'absent', 'trust': 'host-asserted', 'sha256': None, 'errors': [], 'note': DISPOSITION_NOTE}
+    if core.schema_errors(context, core.host_context_schema(context)):
+        return dict(report, status='invalid', errors=['Host context schema is invalid'])
+    record = context.get('overlap_dispositions')
+    if record is None:
+        return report
+    errors = report['errors']
+    report['sha256'] = core.canonical_hash(record)
+    if record['event']['binding_sha256'] != authorization.event_hash(record):
+        errors.append('Overlap disposition event binding hash differs')
+    if record['contract_sha256'] != core.canonical_hash(task):
+        errors.append('Overlap disposition contract hash differs')
+    if record['mandate_sha256'] != authority['mandate_sha256']:
+        errors.append('Overlap disposition mandate hash differs')
+    if not authority['historical_valid']:
+        errors.append('Overlap disposition requires a valid mandate')
+    actor = authority['credential_actor']
+    if actor is None or actor['id'] != record['credential_actor_id']:
+        errors.append('Overlap disposition credential actor differs')
+    for other, name in ((context['mandate'], 'mandate'), (context.get('final_signoff'), 'final sign-off')):
+        if other and (record['id'] == other['id'] or record['nonce'] == other['nonce'] or
+                      record['event']['reference'] == other['event']['reference']):
+            errors.append(f'Overlap disposition reuses the {name} event identity')
+    seen = set()
+    for entry in record['dispositions']:
+        number, key = entry['pr_number'], (entry['repository_id'], entry['pr_number'])
+        if key in seen:
+            errors.append(f'Overlap disposition repeats a PR: #{number}')
+        seen.add(key)
+        if entry['repository_id'] != task['source']['repository_id']:
+            errors.append(f'Overlap disposition names another repository: #{number}')
+        if entry['author_id'] == record['credential_actor_id']:
+            errors.append(f'Overlap disposition names a PR by the credential actor: #{number}')
+        if entry['comparison']['head_sha'] != entry['head_sha']:
+            errors.append(f'Overlap disposition comparison head differs from bound head: #{number}')
+    try:
+        _, expires = authorization.interval(record, now)
+        if now >= expires:
+            errors.append('Overlap disposition record expired')
+    except (ValueError, OverflowError) as exc:
+        errors.append(str(exc))
+    report.update(errors=list(dict.fromkeys(errors)), status='invalid' if errors else 'not_evaluated')
+    return report
 
 
 def without_own(duplicates, own):
@@ -226,6 +278,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
                             dt.datetime.now(dt.timezone.utc))
     result['human_signoff'] = signoff
     result['final_signoff_sha256'] = signoff['sha256']
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
+        # Inert in this version: reported after every blocking read, never consulted by a gate.
+        result['overlap_dispositions'] = overlap_dispositions(task, host_context, authority,
+                                                              dt.datetime.now(dt.timezone.utc))
     completion_errors = list(post_errors) + signoff['errors']
     if not publication['verified']:
         completion_errors.append('An exact-head published draft is not fully verified')

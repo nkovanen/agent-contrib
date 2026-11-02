@@ -21,6 +21,7 @@ from urllib.parse import quote
 
 VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
+HOST_CONTEXT_VERSIONS = ('0.1', '0.2')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PAGES = 40
 SHA = re.compile('[0-9a-f]{40}')
@@ -136,7 +137,12 @@ class GitHub:
                 if transient and attempt < 2:
                     time.sleep(attempt + 1)
                     continue
-                # Never echo gh stderr: authentication errors can contain credentials.
+                # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
+                if re.search(r'\bHTTP 404\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or path '
+                                        'does not exist or is not visible to this gh account')
+                if re.search(r'\bHTTP 401\b', error):
+                    raise ProtocolError('api_error', 'GitHub GET was not authenticated (HTTP 401); check gh auth status')
                 raise ProtocolError('api_error', 'GitHub GET failed; check gh auth, access and rate limits')
             except (OSError, subprocess.TimeoutExpired) as exc:
                 raise ProtocolError('transport_error', 'Could not run gh GET within 30 seconds') from exc
@@ -426,7 +432,13 @@ def overlap_matches(words, ids):
         return title + ': ' + ', '.join(items[:limit]) + (f' and {len(items) - limit} more' if len(items) > limit else '')
     parts = ([listed('shared title words', words)] if len(words) >= 2 else []) + (
         [listed('shared checklist IDs', ids)] if ids else [])
+    # Explanation only: a standards-shaped ID may still be a real ticket, so the match keeps blocking.
+    parts += [f'{item} may name a standard, not a work item' for item in sorted(ids & STANDARD_TOKENS)[:10]]
     return '(' + '; '.join(parts) + ')'
+
+
+STANDARD_TOKENS = {'AES-128', 'AES-192', 'AES-256', 'CRC-32', 'ISO-8601', 'ISO-8859-1', 'RSA-2048', 'RSA-4096', 'SHA-1',
+                   'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512', 'SHA3-256', 'SHA3-512', 'UTF-16', 'UTF-32', 'UTF-8'}
 
 
 def ranking(issue, duplicates):
@@ -667,12 +679,20 @@ def schema_errors(value, schema, path='$', depth=0, root=None):
 
 
 def bundled_schema(name, version='0.1'):
-    if name not in ('task', 'evidence', 'host-context') or (version not in SUPPORTED_SCHEMA_VERSIONS or
-            (name == 'host-context' and version != '0.1')):
+    supported = HOST_CONTEXT_VERSIONS if name == 'host-context' else SUPPORTED_SCHEMA_VERSIONS
+    if name not in ('task', 'evidence', 'host-context') or version not in supported:
         raise ProtocolError('unsupported_schema', 'Unsupported schema resource or version')
     path = (f'schemas/host-context/{version}.schema.json' if name == 'host-context' else
             name + '.schema.json' if version == '0.1' else f'schemas/{version}/{name}.schema.json')
     return json.loads(importlib.resources.files('agent_contribute').joinpath(path).read_text('utf-8'))
+
+
+def host_context_schema(context):
+    """The schema named by the document's own exact version. Anything else is checked against 0.1,
+    whose schema_version constant then rejects it, so no unknown version is ever accepted."""
+    version = context.get('schema_version') if isinstance(context, dict) else None
+    exact = isinstance(version, str) and version in HOST_CONTEXT_VERSIONS
+    return bundled_schema('host-context', version if exact else '0.1')
 
 
 def validate_contract(contract):
@@ -692,10 +712,13 @@ def prerequisite_errors(prerequisites):
     return ['Prerequisites are not satisfied with evidence: ' + ', '.join(failing)] if failing else []
 
 
-def git_read(directory, *args):
+def git_read(directory, *args, index_file=None, raw=False):
+    """raw=True returns Git's exact output bytes: no decoding and no newline conversion (object parsing)."""
     nul_delimited = '-z' in args
     try:
         env = {key: os.environ[key] for key in ('PATH', 'SYSTEMROOT', 'TEMP', 'TMP') if key in os.environ}
+        if index_file is not None:
+            env['GIT_INDEX_FILE'] = index_file
         # A missing object must be a read error, never a fetch: GIT_NO_LAZY_FETCH (Git 2.44+) and
         # protocol.allow=never; promisor config is refused by require_safe_config for older Git.
         env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_OPTIONAL_LOCKS='0',
@@ -707,10 +730,14 @@ def git_read(directory, *args):
                                  # Full stat and mode checks: relaxed checkout settings could hide an edit.
                                  '-c', 'core.checkStat=default', '-c', 'core.trustctime=true',
                                  '-c', 'core.ignoreStat=false', '-c', 'core.fileMode=true',
+                                 # POSIX has symlinks: a file standing in for a tracked symlink is a change.
+                                 *(('-c', 'core.symlinks=true') if os.name == 'posix' else ()),
                                  '-C', str(directory), *args], stdin=subprocess.DEVNULL, env=env,
-                                capture_output=True, text=not nul_delimited, timeout=15, shell=False)
+                                capture_output=True, text=not (nul_delimited or raw), timeout=15, shell=False)
         if result.returncode:
             raise ProtocolError('git_error', 'Git evidence checkout read failed')
+        if raw:
+            return result.stdout
         # Drop only Git's line terminator: names may legitimately end in other (Unicode) whitespace.
         return result.stdout.decode('utf-8', errors='surrogateescape') if nul_delimited else result.stdout.removesuffix('\n')
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -725,24 +752,34 @@ UNSAFE_CONFIG = re.compile(r'filter\..+|gpg(\..+)?\.program|diff\.external|diff\
 
 
 def _case_insensitive(directory):
+    """Only a real filesystem property counts: a .GIT symlink or mount is a second directory entry, which a
+    case-insensitive filesystem cannot list next to .git."""
     try:
-        return os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
+        variants = [name for name in os.listdir(directory) if name.lower() == '.git']
+        return variants == ['.git'] and os.path.samefile(Path(directory, '.git'), Path(directory, '.GIT'))
     except OSError:
+        return False
+
+
+def _config_true(directory, key):
+    """Git's own effective boolean (last value wins, empty is false); unset or unreadable reads as false."""
+    try:
+        return git_read(directory, 'config', '--type=bool', '--get', key) == 'true'
+    except ProtocolError:
         return False
 
 
 def require_safe_config(directory):
     """Effective checkout config, includes and includeIf resolved; listing it executes nothing."""
     entries = git_read(directory, 'config', '--list', '--includes', '--show-scope', '-z').split('\0')
-    for scope, entry in zip(entries[::2], entries[1::2]):
-        key, _, value = entry.partition('\n')
-        key = key.lower()
-        # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
-        case_hiding = (key == 'core.ignorecase' and value.lower() not in ('false', 'no', 'off', '0') and
-                       not _case_insensitive(directory))
-        if scope != 'command' and (UNSAFE_CONFIG.fullmatch(key) or case_hiding):
-            raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(key, 200)}, which a read '
-                                'could run as a program or use to hide changes; remove it or use a fresh clone')
+    keys = [entry.split('\n', 1)[0].lower() for scope, entry in zip(entries[::2], entries[1::2]) if scope != 'command']
+    unsafe = [key for key in keys if UNSAFE_CONFIG.fullmatch(key)]
+    # ignoreCase hides case twins, but Git needs it on a filesystem that really ignores case.
+    if _config_true(directory, 'core.ignorecase') and not _case_insensitive(directory):
+        unsafe.append('core.ignorecase')
+    if unsafe:
+        raise ProtocolError('unsafe_git_config', f'Checkout Git config sets {safe_text(unsafe[0], 200)}, which a read '
+                            'could run as a program or use to hide changes; remove it or use a fresh clone')
 
 
 def require_worktree_root(directory):
@@ -761,6 +798,37 @@ def require_plain_index(directory):
                             'checkout); use a full checkout without these flags')
 
 
+def untracked_paths(directory):
+    """Untracked files under only the per-directory .gitignore rules a commit can carry. .git/info/exclude and
+    core.excludesFile are local and never hide a file. Untracked .gitignore files are listed unfiltered, so one
+    cannot ignore itself away."""
+    listed = git_read(directory, 'ls-files', '-z', '--others', '--exclude-per-directory=.gitignore')
+    listed += git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore')
+    return {path for path in listed.split('\0') if path}
+
+
+def shallow_or(directory, error):
+    """A failed base or ancestry read in a shallow clone usually means missing history; say so."""
+    try:
+        shallow = git_read(directory, 'rev-parse', '--is-shallow-repository') == 'true'
+    except ProtocolError:
+        shallow = False
+    return ProtocolError('shallow_checkout', 'Checkout is shallow and lacks the history needed to check the base; '
+                         'fetch more history (git fetch --unshallow or --deepen) and retry') if shallow else error
+
+
+def worktree_changes(directory, commit):
+    """Tracked paths whose worktree content differs from commit, judged without the checkout's index: a fresh
+    temporary index outside the checkout has no stat cache, so Git hashes every tracked file."""
+    with tempfile.TemporaryDirectory() as scratch:
+        index = os.path.join(scratch, 'index')
+        git_read(directory, 'read-tree', commit, index_file=index)
+        listed = git_read(directory, 'status', '--porcelain', '-z', '--no-renames', '--untracked-files=no',
+                          '--ignore-submodules=all', index_file=index)
+    # Porcelain v1 is 'XY path'; Y is the worktree against that index.
+    return {entry[3:] for entry in listed.split('\0') if len(entry) > 3 and entry[1] != ' '}
+
+
 def current_head(directory):
     """Capture HEAD once by exact lookup. A literal HEAD argument would fall back to refs/tags/HEAD and similar
     names when the current branch is unborn or deleted, so later reads use this object ID instead."""
@@ -775,6 +843,8 @@ def current_head(directory):
 
 
 def implementation_paths(directory, base, head=None):
+    # Commit-to-commit only: no worktree is read, so no submodule command can start, and =none keeps gitlink
+    # paths visible to the scope check. Every index or worktree diff/status uses --ignore-submodules=all.
     head = head or current_head(directory)
     return [path for path in git_read(directory, 'diff', '--no-ext-diff', '--no-textconv',
                                       '--ignore-submodules=none', '--no-renames', '--name-only', '-z', base, head).split('\0') if path]
@@ -830,12 +900,16 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         # The full ref, exactly: --short would accept refs/tags/NAME for a reviewed branch NAME.
         if schema_version == '0.2' and git_read(directory, 'symbolic-ref', 'HEAD') != 'refs/heads/' + task['execution']['head_ref']:
             errors.append('Checkout branch differs from reviewed head ref')
-        if has_gitlink(directory, head, evidence['base_commit']):
-            errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
-        dirty = git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all')
-        # A base from another checkout cannot satisfy this task, even with a matching string.
-        git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
-        git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        dirty = (git_read(directory, 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=all') or
+                 untracked_paths(directory) or worktree_changes(directory, head))
+        try:  # every read that needs the base commit and its history
+            if has_gitlink(directory, head, evidence['base_commit']):
+                errors.append('Submodule/gitlink evidence is unsupported; no submodule commands were run')
+            # A base from another checkout cannot satisfy this task, even with a matching string.
+            git_read(directory, 'merge-base', '--is-ancestor', task['source']['commit'], evidence['base_commit'])
+            git_read(directory, 'merge-base', '--is-ancestor', evidence['base_commit'], head)
+        except ProtocolError as exc:
+            raise shallow_or(directory, exc) from None
         changed = implementation_paths(directory, evidence['base_commit'], head)
         if not changed:
             errors.append('Implementation diff is empty')

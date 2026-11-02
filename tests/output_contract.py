@@ -8,7 +8,8 @@ import contextlib
 import functools
 import json
 
-from agent_contribute import audit, budget, ci, cli, core, drift, feedback, multi, outputs, ownership, signals, textfmt, workspace
+from agent_contribute import (audit, budget, ci, cli, core, drift, feedback, multi, outputs, ownership, signals, signatures,
+                              textfmt, workspace)
 
 
 class OutputSchemaViolation(BaseException):
@@ -106,5 +107,6 @@ def install():
             (ownership, 'ownership_signals', 'inspect', 'ownership_signals'),
             (signals, 'issue_signals', 'discover', 'issue_signals'),
             (signals, 'responsiveness', 'discover', 'responsiveness'),
-            (ci, 'observe', 'verify', 'ci_observation'), (budget, 'report', 'discover', 'api_budget')]:
+            (ci, 'observe', 'verify', 'ci_observation'), (signatures, 'observe', 'verify', 'signature_observation'),
+            (budget, 'report', 'discover', 'api_budget')]:
         _wrap(module, name, schema, definition)
