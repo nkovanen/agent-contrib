@@ -62,9 +62,15 @@ def strict_json(text):
     def invalid_constant(_):
         raise ValueError('nonfinite number')
     try:
-        return json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant)
+        value = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid_constant)
     except (ValueError, RecursionError) as exc:
         raise ProtocolError('invalid_json', 'Invalid JSON (including duplicate keys or excessive nesting)') from exc
+    try:
+        # A lone surrogate escape parses but cannot be encoded or hashed later; reject it here as input.
+        json.dumps(value, ensure_ascii=False).encode('utf-8')
+    except UnicodeEncodeError as exc:
+        raise ProtocolError('invalid_json', 'Invalid JSON: a string is not valid Unicode (lone surrogate)') from exc
+    return value
 
 
 def read_regular(path, limit):

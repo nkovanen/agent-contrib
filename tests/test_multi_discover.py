@@ -59,6 +59,42 @@ class MultiDiscoverTests(unittest.TestCase):
         self.assertEqual({c['reference'] for c in result['candidates']}, {'acme/photos#12', 'person/photos#12'})
         self.assertTrue(all(c['complete'] for c in result['candidates']))
 
+    def test_malformed_unicode_in_one_repository_never_aborts_the_others(self):
+        # R1-07: a lone surrogate escape parses as JSON; it must become a per-repository error.
+        class SurrogateGitHub(RepositoryGitHub):
+            def __init__(self):
+                super().__init__()
+                for name in ('good/first', 'good/last'):
+                    self.metadata[name] = dict(full_name=name, default_branch='main', fork=False, has_issues=True)
+                    self.repos[name] = FakeGitHub()
+
+            def request(self, endpoint):
+                value = super().request(endpoint)
+                if endpoint.startswith('repos/acme/photos/issues?'):
+                    value[0]['body'] = 'LONE-SURROGATE'
+                    # Parse the wire text exactly as GitHub.request does.
+                    return core.strict_json(json.dumps(value).replace('"LONE-SURROGATE"', '"\\ud800"'))
+                return value
+
+        client = SurrogateGitHub()
+        code, result = run(client, 'discover', 'good/first', 'acme/photos', 'good/last')
+        self.assertEqual(code, 1)
+        self.assertNotIn('error', result)
+        by = {r['requested_repository']: r for r in result['repositories']}
+        self.assertTrue(by['good/first']['complete'])
+        self.assertTrue(by['good/last']['complete'])
+        self.assertFalse(by['acme/photos']['complete'])
+        self.assertIn('Invalid JSON: a string is not valid Unicode', ' '.join(by['acme/photos']['errors']))
+        self.assertTrue(any(call.startswith('repos/good/last/issues?') for call in client.calls))
+
+    def test_strict_json_rejects_lone_surrogates_but_keeps_valid_pairs(self):
+        for text in ('"\\ud800"', '"x\\udc00"', '{"\\ud800": 1}', '["ok", {"a": "\\udfff"}]'):
+            with self.subTest(text=text):
+                with self.assertRaises(core.ProtocolError) as caught:
+                    core.strict_json(text)
+                self.assertEqual(caught.exception.code, 'invalid_json')
+        self.assertEqual(core.strict_json('"\\ud83d\\ude00"'), '\U0001f600')
+
     def test_candidate_from_incomplete_repository_is_incomplete(self):
         partial = core.discover('acme/photos', FakeGitHub())
         self.assertTrue(partial['issues'][0]['complete'])

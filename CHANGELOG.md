@@ -2,6 +2,13 @@
 
 ## 0.3.0 — unreleased
 
+- Reject JSON strings containing a lone surrogate escape (such as `"\ud800"`)
+  as `invalid_json` when parsing GitHub responses, contracts, evidence and host
+  context (R1-07). Such a value used to raise an uncaught encoding error at
+  hashing time, which aborted a whole multi-repository `discover`. It now
+  makes only the affected repository incomplete. For schema 0.1 inputs this is
+  a fail-closed hardening: a contract or response that already failed with
+  `input_error` now fails with `invalid_json`.
 - `drift` reports a source repository or issue URL change, and for schema 0.2 a
   changed repository, owner or issue numeric ID, as drift; an unresolved 0.2
   identity makes the report incomplete (R1-06).
