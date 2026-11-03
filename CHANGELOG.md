@@ -515,6 +515,12 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- Paginated issue/PR lists now reject a repeated repository number even if the
+  API supplies different IDs. The repeated entry is omitted and the scan stays
+  incomplete, including without `--limit`; inconsistent identities cannot expand
+  the limited detail lists or produce contradictory display counts. Valid
+  no-limit output is unchanged.
+
 - `repository_policy` adds `inventory_format` (currently 2), and the format is
   part of the `inventory_sha256` input, so every inventory hash differs from
   earlier 0.3.0 candidate builds (format 1, unversioned). `drift

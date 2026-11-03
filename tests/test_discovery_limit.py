@@ -186,6 +186,44 @@ class DiscoveryLimitTests(unittest.TestCase):
         self.assertIn('shown 1 of 7', output.getvalue())
         self.assertNotIn('acme/photos#4 [', output.getvalue())
 
+    def test_conflicting_issue_identities_never_complete_or_expand_projection(self):
+        # Reject both aliases of one number and one API identity claiming different numbers.
+        for ids, numbers in (((101, 102), (1, 1)), ((101, 101), (1, 2)), ((101, 101), (1, 1))):
+            for limit in (None, 1):
+                with self.subTest(ids=ids, numbers=numbers, limit=limit):
+                    client = RepositoryGitHub()
+                    client.overrides['repos/acme/photos/issues?state=open&per_page=100&page=1'] = [
+                        dict(issue(client, number), id=identity) for identity, number in zip(ids, numbers)]
+                    result = multi.discover_many(['acme/photos', 'person/photos'], client, limit=limit)
+                    self.assertFalse(result['complete'])
+                    self.assertTrue(result['errors'])
+                    self.assertTrue(all(not r['complete'] and r['issue_scan']['complete'] is False
+                                        for r in result['repositories']))
+                    self.assertTrue(all(len(r['issues']) <= 1 for r in result['repositories']))
+                    details = [i['reference'] for r in result['repositories'] for i in r['issues']]
+                    self.assertEqual(details, [c['reference'] for c in result['candidates']])
+                    self.assertTrue(all(not c['complete'] for c in result['candidates']))
+                    if limit is not None:
+                        self.assertEqual(result['display']['returned'], 1)
+                        self.assertEqual(result['display']['returned'], len(details))
+                        self.assertEqual(result['display']['total_issues_considered'], 2)
+
+    def test_late_conflicting_number_with_distinct_api_id_marks_scan_incomplete(self):
+        client = RepositoryGitHub()
+        endpoint = 'repos/acme/photos/issues?state=open&per_page=100&page='
+        client.overrides[endpoint + '1'] = [dict(issue(client, n), id=1000 + n) for n in range(1, 101)]
+        client.overrides[endpoint + '2'] = [dict(issue(client, 1), id=5001), dict(issue(client, 101), id=1101)]
+        result = core.discover('acme/photos', client, limit=1)
+        self.assertFalse(result['complete'])
+        self.assertFalse(result['issue_scan']['complete'])
+        self.assertTrue(result['issue_scan']['errors'])
+        self.assertEqual(result['display']['total_issues_considered'], 101)
+        self.assertEqual(result['display']['returned'], 1)
+        self.assertEqual(result['display']['omitted'], 100)
+        self.assertEqual(result['issues'][0]['reference'], 'acme/photos#1')
+        self.assertFalse(result['issues'][0]['complete'])
+        self.assertIn(endpoint + '2', client.calls)
+
     def test_explicit_no_limit_preserves_frozen_output_and_reads(self):
         with patch.object(core.dt, 'datetime', FrozenClock):
             for name, (repo, client) in scenarios().items():

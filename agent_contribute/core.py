@@ -181,7 +181,7 @@ class GitHub:
 
 def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
     """key derives an identity for endpoints whose items lack id/number/name (timeline events)."""
-    items, errors, seen = [], [], set()
+    items, errors, seen, seen_numbers = [], [], set(), set()
     page_count = 0
     for page in range(1, max_pages + 1):
         separator = '&' if '?' in endpoint else '?'
@@ -196,10 +196,15 @@ def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
                 identity = key(item) if key else item.get('id', item.get('number', item.get('name')))
                 if not isinstance(identity, (str, int)) or isinstance(identity, bool):
                     raise ProtocolError('api_shape', 'GitHub list item lacks an identity')
-                if identity in seen:
+                # Issue/PR references use number even when the API also supplies an id.
+                number = item.get('number') if key is None else None
+                numbered = type(number) is int
+                if identity in seen or (numbered and number in seen_numbers):
                     errors.append('Pagination repeated an item; snapshot may have moved')
                 else:
                     seen.add(identity)
+                    if numbered:
+                        seen_numbers.add(number)
                     items.append(item)
             if len(data) < 100:
                 return {'items': items, 'complete': not errors, 'pages': page_count, 'errors': errors}
