@@ -19,6 +19,17 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Opt-in required CI checks for schema 0.2 completion (#17): an optional
+  `ci_requirements` list of `{check, app_id}` pairs in the unreleased task
+  schema 0.2. Once the exact-head draft is verified, `verify` reads the head's
+  check suites and every check run and reports `ci_gate`. A requirement is met
+  only if every run with that exact raw name from that app succeeded, every
+  suite of that app is completed, at least one run exists, and the reads are
+  complete and below GitHub's 1,000-suite window. A `.github/` change also
+  blocks. Blockers appear only at completion. Contracts without the field
+  verify byte-identically (golden), and `--observe-ci` is unchanged.
+- `remote.counted_pages` appends its pagination parameters with `&` when the
+  endpoint already has a query string.
 - Release preparation (#26, not activated): `docs/releasing.md` runbook with
   verification and rollback, `tools/release_check.py` (version statements
   agree; `--release` needs a dated CHANGELOG heading; `--tag` checks the tag),

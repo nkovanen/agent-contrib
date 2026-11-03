@@ -1394,6 +1394,24 @@ def reviewed_contract_errors(task, schema_version):
     elif schema_version != '0.2' and (not task['discovery']['complete'] or task['discovery']['duplicate_prs']):
         errors.append('Prepared discovery is incomplete or has unresolved duplicates')
     errors.extend(prerequisite_errors(task['prerequisites']))
+    if schema_version == '0.2':
+        errors.extend(ci_requirement_errors(task))
+    return errors
+
+
+def ci_requirement_errors(task):
+    """Reviewed rules for schema 0.2 ci_requirements (#17) beyond its schema; a missing or empty list adds none."""
+    items = task.get('ci_requirements') or []
+    if not items:
+        return []
+    errors = []
+    pairs = [(item['check'], item['app_id']) for item in items]
+    if len(set(pairs)) != len(pairs):
+        errors.append('CI requirements must be unique')
+    if any(unicodedata.category(char) in ('Cc', 'Cf') for check, _ in pairs for char in check):
+        errors.append('CI requirement names cannot contain control or format characters')
+    if 'create_draft' not in task['execution']['requested_actions']:
+        errors.append('CI requirements need the create_draft action')
     return errors
 
 

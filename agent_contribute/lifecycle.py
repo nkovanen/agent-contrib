@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core, dispositions, draft_updates
+from . import authorization, cigate, core, dispositions, draft_updates
 
 
 def prepare_v2(inspected, client):
@@ -243,6 +243,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not publication['creation_clear']:
         draft_errors.append('Exact-head PR history does not permit creation' if authority['historical_valid'] else unchecked)
     result['draft_create_ready'] = not draft_errors and not identity_verified
+    ci_blockers = []
+    if cigate.requirements(task):  # opt-in; read before the expiry judgements below (#17)
+        result['ci_gate'], ci_blockers = cigate.evaluate(task, evidence, repo_dir, publication, client)
     # Judge final sign-off expiry after every blocking read, never at the start of verification.
     signoff = human_signoff(task, host_context, evidence, authority, publication, review,
                             dt.datetime.now(dt.timezone.utc))
@@ -253,6 +256,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         completion_errors.append('An exact-head published draft is not fully verified')
     if not signoff['valid']:
         completion_errors.append('Final human signoff is pending or invalid')
+    completion_errors += ci_blockers
     result['completion_ready'] = not completion_errors
     result['stage_blockers'] = {'implementation': implementation_errors,
                                 'draft': [] if publication['verified'] else draft_errors,

@@ -434,7 +434,10 @@ Run `verify task.json --evidence evidence.json --repo-dir checkout
 - `publication.verified`: exactly one already published open draft at the tested
   head is authenticated and all other gates still hold. `next_action` is `none`.
 - `completion_ready`: exact published draft plus separate current final human
-  sign-off after the final tests, review and publication.
+  sign-off after the final tests, review and publication. If the reviewed
+  contract declares `ci_requirements`, every named check from its app must also
+  have succeeded on that exact head (`ci_gate`); a pending, failed, missing or
+  unknown requirement, or a change under `.github/`, blocks completion only.
 
 Before a separately authorized host push/PR action, follow "Independent review
 and publication" (destination, head and base, PR template, disclosure) and use

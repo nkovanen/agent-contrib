@@ -1,0 +1,710 @@
+[
+ {
+  "blocking_duplicates": [],
+  "completion_ready": false,
+  "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+  "draft_create_ready": false,
+  "duplicates": [],
+  "errors": [
+   "Missing human/host mandate"
+  ],
+  "evidence_errors": [
+   "No technical execution evidence provided"
+  ],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "final_signoff_sha256": null,
+  "human_signoff": {
+   "errors": [],
+   "sha256": null,
+   "status": "pending",
+   "trust": "host-asserted",
+   "valid": false
+  },
+  "implementation_ready": false,
+  "independent_review": {
+   "errors": [],
+   "status": "pending",
+   "trust": "self-attested",
+   "valid": false
+  },
+  "live_complete": true,
+  "live_provenance": {
+   "labels": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   },
+   "policy": null,
+   "policy_state": "missing",
+   "pulls": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   }
+  },
+  "mandate_sha256": null,
+  "mandate_trust": "host-asserted",
+  "next_action": "resolve_blockers",
+  "publication": {
+   "creation_clear": false,
+   "errors": [],
+   "identity_verified": false,
+   "own_pr": null,
+   "provenance": {},
+   "stage_errors": [
+    "Missing human/host mandate",
+    "No technical execution evidence provided",
+    "Independent review is pending",
+    "Both implement and create_draft actions must be authorized"
+   ],
+   "status": "unknown",
+   "verified": false
+  },
+  "repository_approval": {
+   "matched_labels": [],
+   "policy_commit": "58f593a4d0a38b5da8a1278135ec6f246f5766dd",
+   "policy_path": ".agent-contrib.json",
+   "reason": "No explicit agent approval policy exists at the default branch snapshot",
+   "status": "candidate"
+  },
+  "schema_valid": true,
+  "schema_version": "0.2",
+  "source_identity": {
+   "issue": 12,
+   "issue_id": 1201,
+   "owner_id": 7,
+   "repository": "acme/photos",
+   "repository_id": 101
+  },
+  "stage_blockers": {
+   "completion": [
+    "Missing human/host mandate",
+    "No technical execution evidence provided",
+    "Independent review is pending",
+    "Both implement and create_draft actions must be authorized",
+    "An exact-head published draft is not fully verified",
+    "Final human signoff is pending or invalid"
+   ],
+   "draft": [
+    "Missing human/host mandate",
+    "No technical execution evidence provided",
+    "Independent review is pending",
+    "Both implement and create_draft actions must be authorized",
+    "Current implement/create_draft actions are not authorized",
+    "Exact-head PR history not checked: requires a valid mandate"
+   ],
+   "implementation": [
+    "Missing human/host mandate",
+    "Current implement action is not authorized",
+    "Exact-head PR history not checked: requires a valid mandate"
+   ]
+  },
+  "technical_evidence_valid": false,
+  "user_authorization": {
+   "actions": [],
+   "authorized": false,
+   "binding": null,
+   "create_draft": false,
+   "credential_actor": {
+    "id": 7,
+    "login": "human",
+    "type": "User"
+   },
+   "current_errors": [],
+   "errors": [
+    "Missing human/host mandate"
+   ],
+   "historical_valid": false,
+   "implement": false,
+   "mandate_sha256": null,
+   "mandate_trust": "host-asserted",
+   "permission": {
+    "endpoint": "repos/acme/photos/collaborators/human/permission",
+    "role_name": "maintain",
+    "user_id": 7
+   },
+   "provenance": {
+    "endpoints": [
+     "user",
+     "repos/acme/photos/collaborators/human/permission",
+     "repos/acme/photos",
+     "repos/acme/photos/issues/12"
+    ],
+    "fetched_at": "2030-01-01T12:00:00+00:00"
+   },
+   "source_errors": []
+  }
+ },
+ {
+  "blocking_duplicates": [],
+  "completion_ready": false,
+  "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+  "draft_create_ready": false,
+  "duplicates": [],
+  "errors": [],
+  "evidence_errors": [
+   "No technical execution evidence provided"
+  ],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "final_signoff_sha256": null,
+  "human_signoff": {
+   "errors": [],
+   "sha256": null,
+   "status": "pending",
+   "trust": "host-asserted",
+   "valid": false
+  },
+  "implementation_ready": true,
+  "independent_review": {
+   "errors": [],
+   "status": "pending",
+   "trust": "self-attested",
+   "valid": false
+  },
+  "live_complete": true,
+  "live_provenance": {
+   "labels": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   },
+   "policy": null,
+   "policy_state": "missing",
+   "pulls": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   }
+  },
+  "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+  "mandate_trust": "host-asserted",
+  "next_action": "implement",
+  "publication": {
+   "creation_clear": true,
+   "errors": [],
+   "identity_verified": false,
+   "own_pr": null,
+   "provenance": {
+    "authority_evaluated": false,
+    "publication_claim_trust": "untrusted"
+   },
+   "stage_errors": [
+    "No technical execution evidence provided",
+    "Independent review is pending"
+   ],
+   "status": "absent",
+   "verified": false
+  },
+  "repository_approval": {
+   "matched_labels": [],
+   "policy_commit": "58f593a4d0a38b5da8a1278135ec6f246f5766dd",
+   "policy_path": ".agent-contrib.json",
+   "reason": "No explicit agent approval policy exists at the default branch snapshot",
+   "status": "candidate"
+  },
+  "schema_valid": true,
+  "schema_version": "0.2",
+  "source_identity": {
+   "issue": 12,
+   "issue_id": 1201,
+   "owner_id": 7,
+   "repository": "acme/photos",
+   "repository_id": 101
+  },
+  "stage_blockers": {
+   "completion": [
+    "No technical execution evidence provided",
+    "Independent review is pending",
+    "An exact-head published draft is not fully verified",
+    "Final human signoff is pending or invalid"
+   ],
+   "draft": [
+    "No technical execution evidence provided",
+    "Independent review is pending"
+   ],
+   "implementation": []
+  },
+  "technical_evidence_valid": false,
+  "user_authorization": {
+   "actions": [
+    "implement",
+    "create_draft"
+   ],
+   "authorized": true,
+   "binding": {
+    "base_ref": "main",
+    "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+    "credential_actor_id": 7,
+    "expires_at": "2030-01-01T13:00:00+00:00",
+    "head_ref": "agent/bounds",
+    "head_repository": "acme/photos",
+    "head_repository_id": 101,
+    "issued_at": "2030-01-01T11:00:00+00:00",
+    "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+    "target_repository": "acme/photos",
+    "target_repository_id": 101
+   },
+   "create_draft": true,
+   "credential_actor": {
+    "id": 7,
+    "login": "human",
+    "type": "User"
+   },
+   "current_errors": [],
+   "errors": [],
+   "event_reference": "fixture://human-event-1",
+   "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "historical_valid": true,
+   "implement": true,
+   "mandate_id": "fixture-mandate-1",
+   "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+   "mandate_trust": "host-asserted",
+   "permission": {
+    "endpoint": "repos/acme/photos/collaborators/human/permission",
+    "role_name": "maintain",
+    "user_id": 7
+   },
+   "provenance": {
+    "endpoints": [
+     "user",
+     "repos/acme/photos/collaborators/human/permission",
+     "repos/acme/photos",
+     "repos/acme/photos/issues/12"
+    ],
+    "fetched_at": "2030-01-01T12:00:00+00:00"
+   },
+   "source_errors": []
+  }
+ },
+ {
+  "blocking_duplicates": [],
+  "completion_ready": false,
+  "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+  "draft_create_ready": true,
+  "duplicates": [],
+  "errors": [],
+  "evidence_errors": [],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "final_signoff_sha256": null,
+  "human_signoff": {
+   "errors": [],
+   "sha256": null,
+   "status": "pending",
+   "trust": "host-asserted",
+   "valid": false
+  },
+  "implementation_ready": true,
+  "independent_review": {
+   "errors": [],
+   "status": "passed",
+   "trust": "self-attested",
+   "valid": true
+  },
+  "live_complete": true,
+  "live_provenance": {
+   "labels": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   },
+   "policy": null,
+   "policy_state": "missing",
+   "pulls": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   }
+  },
+  "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+  "mandate_trust": "host-asserted",
+  "next_action": "create_draft",
+  "publication": {
+   "creation_clear": true,
+   "errors": [],
+   "identity_verified": false,
+   "own_pr": null,
+   "provenance": {
+    "authority_evaluated": false,
+    "publication_claim_trust": "untrusted"
+   },
+   "stage_errors": [],
+   "status": "absent",
+   "verified": false
+  },
+  "repository_approval": {
+   "matched_labels": [],
+   "policy_commit": "58f593a4d0a38b5da8a1278135ec6f246f5766dd",
+   "policy_path": ".agent-contrib.json",
+   "reason": "No explicit agent approval policy exists at the default branch snapshot",
+   "status": "candidate"
+  },
+  "schema_valid": true,
+  "schema_version": "0.2",
+  "source_identity": {
+   "issue": 12,
+   "issue_id": 1201,
+   "owner_id": 7,
+   "repository": "acme/photos",
+   "repository_id": 101
+  },
+  "stage_blockers": {
+   "completion": [
+    "An exact-head published draft is not fully verified",
+    "Final human signoff is pending or invalid"
+   ],
+   "draft": [],
+   "implementation": []
+  },
+  "technical_evidence_valid": true,
+  "user_authorization": {
+   "actions": [
+    "implement",
+    "create_draft"
+   ],
+   "authorized": true,
+   "binding": {
+    "base_ref": "main",
+    "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+    "credential_actor_id": 7,
+    "expires_at": "2030-01-01T13:00:00+00:00",
+    "head_ref": "agent/bounds",
+    "head_repository": "acme/photos",
+    "head_repository_id": 101,
+    "issued_at": "2030-01-01T11:00:00+00:00",
+    "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+    "target_repository": "acme/photos",
+    "target_repository_id": 101
+   },
+   "create_draft": true,
+   "credential_actor": {
+    "id": 7,
+    "login": "human",
+    "type": "User"
+   },
+   "current_errors": [],
+   "errors": [],
+   "event_reference": "fixture://human-event-1",
+   "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "historical_valid": true,
+   "implement": true,
+   "mandate_id": "fixture-mandate-1",
+   "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+   "mandate_trust": "host-asserted",
+   "permission": {
+    "endpoint": "repos/acme/photos/collaborators/human/permission",
+    "role_name": "maintain",
+    "user_id": 7
+   },
+   "provenance": {
+    "endpoints": [
+     "user",
+     "repos/acme/photos/collaborators/human/permission",
+     "repos/acme/photos",
+     "repos/acme/photos/issues/12"
+    ],
+    "fetched_at": "2030-01-01T12:00:00+00:00"
+   },
+   "source_errors": []
+  }
+ },
+ {
+  "blocking_duplicates": [],
+  "completion_ready": false,
+  "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+  "draft_create_ready": false,
+  "duplicates": [
+   {
+    "number": 30,
+    "reason": "Explicit reference to this issue",
+    "repository": "acme/photos",
+    "url": "https://github.com/acme/photos/pull/30"
+   }
+  ],
+  "errors": [],
+  "evidence_errors": [],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "final_signoff_sha256": null,
+  "human_signoff": {
+   "errors": [],
+   "sha256": null,
+   "status": "pending",
+   "trust": "host-asserted",
+   "valid": false
+  },
+  "implementation_ready": false,
+  "independent_review": {
+   "errors": [],
+   "status": "passed",
+   "trust": "self-attested",
+   "valid": true
+  },
+  "live_complete": true,
+  "live_provenance": {
+   "labels": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   },
+   "policy": null,
+   "policy_state": "missing",
+   "pulls": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   }
+  },
+  "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+  "mandate_trust": "host-asserted",
+  "next_action": "none",
+  "publication": {
+   "creation_clear": false,
+   "errors": [],
+   "identity_verified": true,
+   "own_pr": {
+    "author_id": 7,
+    "base_ref": "main",
+    "created_at": "2030-01-01T11:30:00+00:00",
+    "head_ref": "agent/bounds",
+    "head_sha": "fd6ec76d74f7e2ca76948bfba1f7b04ed02538a6",
+    "id": 3001,
+    "number": 30,
+    "repository": "acme/photos",
+    "repository_id": 101,
+    "url": "https://github.com/acme/photos/pull/30"
+   },
+   "provenance": {
+    "authority_evaluated": false,
+    "publication_claim_trust": "untrusted"
+   },
+   "stage_errors": [],
+   "status": "own_draft",
+   "verified": true
+  },
+  "repository_approval": {
+   "matched_labels": [],
+   "policy_commit": "58f593a4d0a38b5da8a1278135ec6f246f5766dd",
+   "policy_path": ".agent-contrib.json",
+   "reason": "No explicit agent approval policy exists at the default branch snapshot",
+   "status": "candidate"
+  },
+  "schema_valid": true,
+  "schema_version": "0.2",
+  "source_identity": {
+   "issue": 12,
+   "issue_id": 1201,
+   "owner_id": 7,
+   "repository": "acme/photos",
+   "repository_id": 101
+  },
+  "stage_blockers": {
+   "completion": [
+    "Final human signoff is pending or invalid"
+   ],
+   "draft": [],
+   "implementation": [
+    "Issue overlaps an open or unresolved prepared PR",
+    "Implementation requires complete empty exact-head PR history"
+   ]
+  },
+  "technical_evidence_valid": true,
+  "user_authorization": {
+   "actions": [
+    "implement",
+    "create_draft"
+   ],
+   "authorized": true,
+   "binding": {
+    "base_ref": "main",
+    "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+    "credential_actor_id": 7,
+    "expires_at": "2030-01-01T13:00:00+00:00",
+    "head_ref": "agent/bounds",
+    "head_repository": "acme/photos",
+    "head_repository_id": 101,
+    "issued_at": "2030-01-01T11:00:00+00:00",
+    "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+    "target_repository": "acme/photos",
+    "target_repository_id": 101
+   },
+   "create_draft": true,
+   "credential_actor": {
+    "id": 7,
+    "login": "human",
+    "type": "User"
+   },
+   "current_errors": [],
+   "errors": [],
+   "event_reference": "fixture://human-event-1",
+   "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "historical_valid": true,
+   "implement": true,
+   "mandate_id": "fixture-mandate-1",
+   "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+   "mandate_trust": "host-asserted",
+   "permission": {
+    "endpoint": "repos/acme/photos/collaborators/human/permission",
+    "role_name": "maintain",
+    "user_id": 7
+   },
+   "provenance": {
+    "endpoints": [
+     "user",
+     "repos/acme/photos/collaborators/human/permission",
+     "repos/acme/photos",
+     "repos/acme/photos/issues/12"
+    ],
+    "fetched_at": "2030-01-01T12:00:00+00:00"
+   },
+   "source_errors": []
+  }
+ },
+ {
+  "blocking_duplicates": [],
+  "completion_ready": true,
+  "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+  "draft_create_ready": false,
+  "duplicates": [
+   {
+    "number": 30,
+    "reason": "Explicit reference to this issue",
+    "repository": "acme/photos",
+    "url": "https://github.com/acme/photos/pull/30"
+   }
+  ],
+  "errors": [],
+  "evidence_errors": [],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "final_signoff_sha256": "2881a5cd94acbf721682a6cdac2cc6479a4c4984a3d38cf08a043574d0c7e472",
+  "human_signoff": {
+   "errors": [],
+   "sha256": "2881a5cd94acbf721682a6cdac2cc6479a4c4984a3d38cf08a043574d0c7e472",
+   "status": "passed",
+   "trust": "host-asserted",
+   "valid": true
+  },
+  "implementation_ready": false,
+  "independent_review": {
+   "errors": [],
+   "status": "passed",
+   "trust": "self-attested",
+   "valid": true
+  },
+  "live_complete": true,
+  "live_provenance": {
+   "labels": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   },
+   "policy": null,
+   "policy_state": "missing",
+   "pulls": {
+    "complete": true,
+    "errors": [],
+    "pages": 1
+   }
+  },
+  "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+  "mandate_trust": "host-asserted",
+  "next_action": "none",
+  "publication": {
+   "creation_clear": false,
+   "errors": [],
+   "identity_verified": true,
+   "own_pr": {
+    "author_id": 7,
+    "base_ref": "main",
+    "created_at": "2030-01-01T11:30:00+00:00",
+    "head_ref": "agent/bounds",
+    "head_sha": "fd6ec76d74f7e2ca76948bfba1f7b04ed02538a6",
+    "id": 3001,
+    "number": 30,
+    "repository": "acme/photos",
+    "repository_id": 101,
+    "url": "https://github.com/acme/photos/pull/30"
+   },
+   "provenance": {
+    "authority_evaluated": false,
+    "publication_claim_trust": "untrusted"
+   },
+   "stage_errors": [],
+   "status": "own_draft",
+   "verified": true
+  },
+  "repository_approval": {
+   "matched_labels": [],
+   "policy_commit": "58f593a4d0a38b5da8a1278135ec6f246f5766dd",
+   "policy_path": ".agent-contrib.json",
+   "reason": "No explicit agent approval policy exists at the default branch snapshot",
+   "status": "candidate"
+  },
+  "schema_valid": true,
+  "schema_version": "0.2",
+  "source_identity": {
+   "issue": 12,
+   "issue_id": 1201,
+   "owner_id": 7,
+   "repository": "acme/photos",
+   "repository_id": 101
+  },
+  "stage_blockers": {
+   "completion": [],
+   "draft": [],
+   "implementation": [
+    "Issue overlaps an open or unresolved prepared PR",
+    "Implementation requires complete empty exact-head PR history"
+   ]
+  },
+  "technical_evidence_valid": true,
+  "user_authorization": {
+   "actions": [
+    "implement",
+    "create_draft"
+   ],
+   "authorized": true,
+   "binding": {
+    "base_ref": "main",
+    "contract_sha256": "af7b7c7624f732b5972b92dac52fce9961f03859629b94605afd21e8327314c1",
+    "credential_actor_id": 7,
+    "expires_at": "2030-01-01T13:00:00+00:00",
+    "head_ref": "agent/bounds",
+    "head_repository": "acme/photos",
+    "head_repository_id": 101,
+    "issued_at": "2030-01-01T11:00:00+00:00",
+    "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+    "target_repository": "acme/photos",
+    "target_repository_id": 101
+   },
+   "create_draft": true,
+   "credential_actor": {
+    "id": 7,
+    "login": "human",
+    "type": "User"
+   },
+   "current_errors": [],
+   "errors": [],
+   "event_reference": "fixture://human-event-1",
+   "event_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "historical_valid": true,
+   "implement": true,
+   "mandate_id": "fixture-mandate-1",
+   "mandate_sha256": "c404c5a7c95dfe9608545ae42f516b6a8236b12750edf65a169e8877036606b1",
+   "mandate_trust": "host-asserted",
+   "permission": {
+    "endpoint": "repos/acme/photos/collaborators/human/permission",
+    "role_name": "maintain",
+    "user_id": 7
+   },
+   "provenance": {
+    "endpoints": [
+     "user",
+     "repos/acme/photos/collaborators/human/permission",
+     "repos/acme/photos",
+     "repos/acme/photos/issues/12"
+    ],
+    "fetched_at": "2030-01-01T12:00:00+00:00"
+   },
+   "source_errors": []
+  }
+ }
+]

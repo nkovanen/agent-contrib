@@ -702,7 +702,41 @@ that stays stable across pages and equals the number of unique items read. Any f
 invalid evidence head, gives `complete: false` with errors. Queued, pending,
 approval-required or missing runs are never success. This is an observation of
 what GitHub reports, not proof that the evidence checks equal the CI checks.
-Required-check gating is a deferred future-schema design.
+
+## Required CI checks (schema 0.2 completion, opt-in)
+
+A reviewed schema 0.2 contract may declare `ci_requirements`: 0 to 20 unique
+`{"check": NAME, "app_id": N}` pairs. `check` is 1 to 200 characters without
+control or format characters, and `app_id` is a positive integer. A non-empty list
+needs `create_draft` in `execution.requested_actions`. An absent or empty list
+changes nothing: no reads, no output, no blocker.
+
+With requirements, once an exact-head published draft is verified, `verify` reads
+every check suite and then every check run (`filter=all`) for the evidence
+`git_head`, within a 50-request budget. It adds `ci_gate`. A requirement is `met`
+only when all of these hold:
+
+- every check run whose raw name is exactly `check`, from app `app_id`, on that
+  head, is completed with `success`;
+- every check suite of that app on the head is completed;
+- at least one such run exists;
+- both reads are complete, consistent and cover fewer than 1,000 suites.
+
+There is no latest-attempt selection: a retained failed attempt blocks even if a
+retry succeeded. Other states, decided in this order:
+`unknown` (incomplete or inconsistent reads, the suite window, an exhausted
+budget), `failed`, `not_met` (neutral or skipped), `pending` (an unfinished run,
+`action_required`, or an unfinished suite of that app, such as after a
+rerequest), and `missing`. Same-name runs from other apps are counted, never
+accepted, and commit statuses never count.
+
+A contract with requirements also cannot complete when the implementation diff
+touches `.github/` (additions, deletions and renames). Every gate blocker appears
+only in `stage_blockers.completion`; the implementation and draft gates and the
+`--observe-ci` report are unchanged. The gate observes the results GitHub
+currently retains for that head. It does not prove which tree a job checked out,
+and it never replaces review or final sign-off. Design:
+[docs/design/2026-11-03-ci-gating.md](design/2026-11-03-ci-gating.md).
 
 ## Signature observation (opt-in, report only)
 
@@ -1281,6 +1315,30 @@ The repository could not be resolved or its snapshot read
 | --- | --- | --- |
 | `fetched_at` | string |  |
 | `endpoints` | string[] | GitHub endpoints read |
+
+#### `ci_gate`
+
+Present only when the contract declares ci_requirements; its blockers appear only in stage_blockers.completion
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `head_sha` | string or null | Exact head observed; null until an exact-head published draft is verified |
+| `complete` | boolean |  |
+| `suites_read` | integer |  |
+| `github_paths_changed` | boolean or null | Whether the implementation diff touches .github/; null when not read |
+| `requirements` | object[] |  |
+| `requirements[].check` | string | Reviewed check name (display copy) |
+| `requirements[].app_id` | integer |  |
+| `requirements[].state` | "met" \| "failed" \| "not_met" \| "pending" \| "missing" \| "unknown" | Only met passes |
+| `requirements[].runs` | object[] | Every retained run with this exact raw name from this app on the head |
+| `requirements[].runs[].id` | integer |  |
+| `requirements[].runs[].status` | "queued" \| "in_progress" \| "completed" \| "waiting" \| "requested" \| "pending" |  |
+| `requirements[].runs[].conclusion` | "success" \| "failure" \| "neutral" \| "cancelled" \| "skipped" \| "timed_out" \| "action_required" \| "stale" \| "startup_failure" \| null |  |
+| `requirements[].runs[].url` | string |  |
+| `requirements[].blocking_suites` | integer[] | Suites of this app on the head that are not completed |
+| `requirements[].other_app_runs` | integer | Same-name runs from other apps; never accepted |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `ci_observation`
 
@@ -2066,6 +2124,7 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document |
 | `waived_duplicates` | `verify_waived_overlap`[] (optional) | Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them |
 | `draft_update` | `verify_draft_update` (optional) | Present only when a host-context 0.2 document carries draft_update |
+| `ci_gate` | `ci_gate` (optional) |  |
 
 #### `verify_0_2_rejected`
 
