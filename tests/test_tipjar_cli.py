@@ -26,6 +26,16 @@ class JarCommandTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         self.assertIn('inspection only', ' '.join(output.getvalue().split()))
 
+    def test_invalid_jar_repository_is_usage_without_network(self):
+        for repository in ('invalid', 'a/b/c', '/repo', 'owner/', ''):
+            with self.subTest(repository=repository), patch.object(core.GitHub, 'request',
+                    side_effect=AssertionError('invalid argument must not read GitHub')):
+                code, result = invoke('--report-budget', 'jar', repository)
+            self.assertEqual(code, 2)
+            self.assertEqual(result['error']['code'], 'usage')
+        # Only jar gains this classification; existing commands retain their public exit shapes.
+        self.assertEqual(invoke('audit', 'invalid')[0], 1)
+
     def test_jar_states_and_exit_codes(self):
         for state in ('welcome', 'closed', 'undeclared', 'unknown'):
             data = responses(RAW.replace(b'welcome', b'closed') if state == 'closed' else RAW,

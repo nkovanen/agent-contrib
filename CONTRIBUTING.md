@@ -23,6 +23,10 @@ python -m unittest discover -v
 python tools/check_install.py
 ```
 
+The optional independent manifest-schema parity regression uses Node.js with
+Ajv's draft-2020-12 engine (`ajv/dist/2020`); it skips when either is unavailable.
+These are test-only tools, not Python runtime dependencies.
+
 The protocol tests use fake GitHub responses and temporary Git repositories;
 they need Git but no GitHub authentication or network. Run them from this root.
 The build/install check downloads standard build tools, creates wheel and source

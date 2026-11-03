@@ -1238,10 +1238,17 @@ The command inspects the named repository itself, even when its issue tracker is
 disabled. It never resolves a parent or inherits an owner jar. It pins the actual
 default-branch commit and a complete tree, and checks exact file bytes against
 the tree's Git blob identity. No issue, label or pull-request endpoints are read.
-There are at most four actual jar GET transport attempts, each without retry;
-a transient failure immediately reports unknown. With `--report-budget`, the
-before/after rate-limit reads and their existing retries are additional attempts.
+There are at most four jar `gh api` invocations, without application retries;
+a transient failure immediately reports unknown. GitHub CLI may follow internal
+HTTP redirects, so this is not a cap on raw HTTP GETs. The reader rejects changed
+canonical repository identities and never follows application-returned URLs.
+With `--report-budget`, the before/after rate-limit invocations and their existing
+retries are additional to the four-invocation jar budget.
 This command stays fresh even when `--cache` is selected.
+
+Malformed repository arguments are usage errors (exit 2) before any GitHub read,
+including budget instrumentation. Existing commands keep their argument-exit
+behavior.
 
 The JSON is `tipjar-report/1` (output schema version 2). States:
 

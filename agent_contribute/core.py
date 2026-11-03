@@ -124,7 +124,7 @@ def safe_text(value, limit=100000):
 class GitHub:
     """Only fixed GET endpoints; no gh aliases, shell, writes, or remote argv."""
     def request_once(self, endpoint):
-        """One transport attempt, no retry: for callers that bound and report their own GitHub reads."""
+        """At most one gh api invocation, no application retry; gh may follow HTTP redirects."""
         return self.request(endpoint, attempts=1)
 
     def request(self, endpoint, attempts=3):
