@@ -10,8 +10,10 @@ task contract. Your agent implements and publishes only after a human authorizes
 each step; the CLI itself never writes to GitHub.
 
 The candidate can inspect a repository's root invitation with
-`tipjar jar owner/repo`. This slice is **inspection only**: discover, prepare and
-verify do not yet read or enforce jars; welcome-only discovery is planned.
+`tipjar jar owner/repo`. Discovery, preparation and live verification read the actual issue source’s
+pinned declaration. Closed or unknown jars block contribution readiness; use
+`tipjar discover acme/one acme/two --welcomed-only` to select declared welcomes
+among named repositories. All other policy and authority gates still apply.
 You can explicitly target a repository without a jar through existing discovery
 and pending preparation. An absent jar is undeclared and grants no approval.
 Explicit repository bans remain binding. Source approval, local execution

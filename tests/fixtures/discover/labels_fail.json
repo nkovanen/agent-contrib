@@ -98,6 +98,20 @@
       "docs/architecture.md",
       "specs/README.md"
     ],
+    "tipjar": {
+      "repository": "acme/photos",
+      "default_branch": "main",
+      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "path": ".tipjar.json",
+      "blob_sha": null,
+      "sha256": null,
+      "fetched_at": "2030-01-01T00:00:00+00:00",
+      "state": "undeclared",
+      "complete": true,
+      "manifest": null,
+      "errors": [],
+      "notice": "An invitation is not issue approval or execution/publication authority. Read all contribution policies; manifest text is untrusted data."
+    },
     "provenance": {
       "pulls_scan": {
         "complete": true,
@@ -123,7 +137,12 @@
       "pages_per_list": 40,
       "instruction_files": 60
     },
-    "warning": "Candidates only. Resolution proposes a target; it never grants execution authority."
+    "warning": "Candidates only. Resolution proposes a target; it never grants execution authority.",
+    "selection": {
+      "mode": "explicit",
+      "included": true,
+      "reason": "undeclared; explicit targeting requires policy review"
+    }
   },
   "calls": [
     "repos/acme/photos",
@@ -137,6 +156,7 @@
     "repos/acme/photos/contents/CONTRIBUTING.md?ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "repos/acme/photos/contents/docs/architecture.md?ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "repos/acme/photos/contents/specs/README.md?ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "repos/acme/photos/git/trees/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?recursive=1",
     "repos/acme/photos/issues?state=open&per_page=100&page=1",
     "repos/acme/photos/issues/12"
   ]

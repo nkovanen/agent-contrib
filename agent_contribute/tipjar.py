@@ -123,4 +123,39 @@ def same_declaration(before: dict, after: dict) -> bool:
     """Compare complete declaration state and exact bytes, independent of branch advancement."""
     return (before.get('complete') is True and after.get('complete') is True
             and before.get('state') in ('welcome', 'closed', 'undeclared')
-            and all(before.get(key) == after.get(key) for key in ('repository', 'state', 'sha256')))
+            and all(before.get(key) == after.get(key) for key in ('repository', 'default_branch', 'state', 'sha256')))
+
+
+def preparation_errors(report: dict) -> list[str]:
+    """No missing/uncertain declaration can become permission through another route."""
+    if not isinstance(report, dict) or report.get('complete') is not True:
+        return ['Tipjar source declaration is unknown; refresh and review source policy']
+    if report.get('state') == 'closed':
+        return ['Tipjar source is closed to agent contributions']
+    if report.get('state') not in ('welcome', 'undeclared'):
+        return ['Tipjar source declaration is unknown; refresh and review source policy']
+    return []
+
+
+def live_errors(task: dict, current: dict, client) -> list[str]:
+    """Reconstruct old task baselines without modifying task or approval schemas."""
+    source = task['source']
+    report = current.get('tipjar')
+    errors = preparation_errors(report)
+    if not isinstance(report, dict) or (report.get('repository'), report.get('commit'), report.get('default_branch')) != (
+            current['source']['repository'], current['source']['commit'], current['source']['default_branch']):
+        errors.append('Tipjar current source identity is unresolved')
+    baseline = inspect_jar(source['repository'], client, commit=source['commit'])
+    errors.extend('Baseline: ' + error for error in preparation_errors(baseline))
+    if not isinstance(report, dict) or not same_declaration(baseline, report):
+        errors.append('Tipjar declaration changed or baseline unresolved; refresh and review contract')
+    return errors
+
+
+def selection(report: dict, welcomed_only=False) -> dict:
+    allowed = not preparation_errors(report)
+    included = allowed and (not welcomed_only or report['state'] == 'welcome')
+    reason = ('declared welcome; policy review required' if included and report['state'] == 'welcome' else
+              'undeclared; explicit targeting requires policy review' if included else
+              'undeclared; excluded by welcome filter' if allowed else '; '.join(preparation_errors(report)))
+    return {'mode': 'welcomed-only' if welcomed_only else 'explicit', 'included': included, 'reason': reason}

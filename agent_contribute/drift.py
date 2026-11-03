@@ -82,6 +82,13 @@ def drift(task, client=None, policy_sha256=None):
                                         for path in sorted(set(stored) & set(current_files)) if stored[path] != current_files[path]]
     except core.ProtocolError as exc:
         errors.append('Could not read pinned instruction baseline: ' + str(exc))
+    from . import tipjar
+    before = baseline.get('tipjar') if baseline is not None else None
+    after = current.get('tipjar')
+    jar_changed = None if not before or not before['complete'] or not after or not after['complete'] else not tipjar.same_declaration(before, after)
+    report['tipjar'] = {'baseline': before, 'current': after, 'changed': jar_changed}
+    if jar_changed is None:
+        errors.append('Tipjar declaration baseline/current read unresolved')
     report['instructions'] = instructions
     policy = {'stored_approval': task['approval']['status'], 'current_approval': current['approval']['status'],
               'current_policy_state': current['provenance']['policy_state']}
@@ -99,7 +106,7 @@ def drift(task, client=None, policy_sha256=None):
     if policy_sha256 is not None:
         report['repository_policy_drift'] = _policy_drift(policy_sha256, current, baseline, source, client, errors)
         policy_changed = report['repository_policy_drift']['policy_drifted'] is True
-    report['drifted'] = bool(report['source']['changed'] or report['issue']['changed'] or instructions['changed'] or policy['changed'] or
+    report['drifted'] = bool(jar_changed or report['source']['changed'] or report['issue']['changed'] or instructions['changed'] or policy['changed'] or
                              report['overlap']['added'] or report['default_branch']['stored_branch'] !=
                              report['default_branch']['current_branch'] or policy_changed)
     report['errors'] = errors
@@ -114,7 +121,7 @@ def _policy_drift(expected, current, baseline, source, client, errors):
     recorded hash. The owner .github repository is read at its current tip, so it may not; then only the hash
     comparison is reported, never invented deltas."""
     now = policy_report.for_inspected(current, client)
-    incomplete = now['limits_hide_sources'] or any(item['reason'] in POLICY_READ_FAILURES for item in now['unassessed'])
+    incomplete = not now['tipjar']['complete'] or now['limits_hide_sources'] or any(item['reason'] in POLICY_READ_FAILURES for item in now['unassessed'])
     result = {'expected_sha256': expected, 'current_sha256': now['inventory_sha256'],
               'policy_drifted': None if incomplete else now['inventory_sha256'] != expected,
               'limits_hide_sources': now['limits_hide_sources'], 'baseline_verified': False,

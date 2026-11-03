@@ -11,10 +11,13 @@ channel or runtime model provider is added.
 
 ### Highlights
 
-- Inspection-only `jar owner/repo` reads a strict, pinned root `.tipjar.json`
-  invitation and exports `schema jar` (output version stays 1). Existing command
-  shapes and task/evidence schemas are unchanged. Normal discover/prepare/verify
-  do not yet enforce jars; welcome/absence grants no new route or authority.
+- Pinned `.tipjar.json` declarations now appear in discover/inspect/audit/prepare
+  and policy inventory format 3. Closed/unknown and changed declarations block
+  preparation/live contribution gates on both existing routes. No-jar explicit
+  targeting remains available; welcome grants no issue or execution authority.
+  `discover --welcomed-only` filters named sources after full scans, before limits.
+  Output schema 2 adds wrapper fields and preserves output/1; task, evidence,
+  host and instruction-baseline schema/hash semantics are unchanged.
 
 - Schema 0.2: one candidate issue in a repository you own or maintain, with a
   host-issued mandate and separate `implementation`, `draft` and `completion`
@@ -44,7 +47,7 @@ channel or runtime model provider is added.
 - Tipjar identity for gifting useful agent work, with a `tipjar` console alias
   for the existing CLI. `agent-contrib`, the distribution and Python module,
   canonical Skill, repository URLs and output identifiers remain compatible.
-  Discoverable repository jars are planned; this alias adds no protocol or
+  Repository jars use separate source-policy declarations; this alias adds no
   authority.
 
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,

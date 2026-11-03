@@ -168,6 +168,36 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 | `repository_policy_drift.changed[].current.state` | string |  |
 | `repository_policy_drift.changed[].current.fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
 | `repository_policy_drift.note` | string |  |
+| `tipjar` | object (optional) |  |
+| `tipjar.baseline` | object or null |  |
+| `tipjar.baseline.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.baseline.default_branch` | string or null |  |
+| `tipjar.baseline.commit` | string or null |  |
+| `tipjar.baseline.path` | ".tipjar.json" |  |
+| `tipjar.baseline.blob_sha` | string or null |  |
+| `tipjar.baseline.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.baseline.fetched_at` | string |  |
+| `tipjar.baseline.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.baseline.complete` | boolean |  |
+| `tipjar.baseline.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.baseline.errors` | string[] |  |
+| `tipjar.baseline.notice` | string |  |
+| `tipjar.baseline.api_budget` | `api_budget` (optional) |  |
+| `tipjar.current` | object or null |  |
+| `tipjar.current.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.current.default_branch` | string or null |  |
+| `tipjar.current.commit` | string or null |  |
+| `tipjar.current.path` | ".tipjar.json" |  |
+| `tipjar.current.blob_sha` | string or null |  |
+| `tipjar.current.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.current.fetched_at` | string |  |
+| `tipjar.current.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.current.complete` | boolean |  |
+| `tipjar.current.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.current.errors` | string[] |  |
+| `tipjar.current.notice` | string |  |
+| `tipjar.current.api_budget` | `api_budget` (optional) |  |
+| `tipjar.changed` | boolean or null |  |
 
 ### `error`
 
@@ -403,6 +433,21 @@ Source approval from the default-branch .agent-contrib.json policy; never execut
 | `policy_template.agent_approved_labels` | string[] |  |
 | `policy_template.label_authority` | "repository-label-permission" |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `tipjar` | object |  |
+| `tipjar.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.default_branch` | string or null |  |
+| `tipjar.commit` | string or null |  |
+| `tipjar.path` | ".tipjar.json" |  |
+| `tipjar.blob_sha` | string or null |  |
+| `tipjar.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.fetched_at` | string |  |
+| `tipjar.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.complete` | boolean |  |
+| `tipjar.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.errors` | string[] |  |
+| `tipjar.notice` | string |  |
+| `tipjar.api_budget` | `api_budget` (optional) |  |
+| `repository_policy` | `repository_policy` |  |
 
 #### `audit_unread`
 
@@ -573,6 +618,24 @@ One repository was resolved and read
 | `api_budget` | `api_budget` (optional) |  |
 | `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
 | `display` | `discovery_display` (optional) |  |
+| `tipjar` | object |  |
+| `tipjar.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.default_branch` | string or null |  |
+| `tipjar.commit` | string or null |  |
+| `tipjar.path` | ".tipjar.json" |  |
+| `tipjar.blob_sha` | string or null |  |
+| `tipjar.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.fetched_at` | string |  |
+| `tipjar.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.complete` | boolean |  |
+| `tipjar.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.errors` | string[] |  |
+| `tipjar.notice` | string |  |
+| `tipjar.api_budget` | `api_budget` (optional) |  |
+| `selection` | object |  |
+| `selection.mode` | "explicit" \| "welcomed-only" |  |
+| `selection.included` | boolean |  |
+| `selection.reason` | string |  |
 
 #### `discover_unresolved`
 
@@ -592,6 +655,10 @@ The repository could not be resolved or its snapshot read
 | `api_budget` | `api_budget` (optional) |  |
 | `local_work` | `local_work` (optional) |  |
 | `display` | `discovery_display` (optional) |  |
+| `selection` | object (optional) |  |
+| `selection.mode` | "explicit" \| "welcomed-only" |  |
+| `selection.included` | boolean |  |
+| `selection.reason` | string |  |
 
 #### `discovery_display`
 
@@ -743,6 +810,20 @@ The issue was read
 | `ownership_signals` | `ownership_signals` (optional) | Added by --ownership |
 | `api_budget` | `api_budget` (optional) |  |
 | `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
+| `tipjar` | object |  |
+| `tipjar.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.default_branch` | string or null |  |
+| `tipjar.commit` | string or null |  |
+| `tipjar.path` | ".tipjar.json" |  |
+| `tipjar.blob_sha` | string or null |  |
+| `tipjar.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.fetched_at` | string |  |
+| `tipjar.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.complete` | boolean |  |
+| `tipjar.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.errors` | string[] |  |
+| `tipjar.notice` | string |  |
+| `tipjar.api_budget` | `api_budget` (optional) |  |
 
 #### `instruction_file`
 
@@ -950,6 +1031,20 @@ A draft was written; it grants no authorization
 | `warning` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
 | `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
+| `tipjar` | object |  |
+| `tipjar.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.default_branch` | string or null |  |
+| `tipjar.commit` | string or null |  |
+| `tipjar.path` | ".tipjar.json" |  |
+| `tipjar.blob_sha` | string or null |  |
+| `tipjar.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.fetched_at` | string |  |
+| `tipjar.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.complete` | boolean |  |
+| `tipjar.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.errors` | string[] |  |
+| `tipjar.notice` | string |  |
+| `tipjar.api_budget` | `api_budget` (optional) |  |
 
 #### `ranking`
 
@@ -1066,6 +1161,20 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `owner_lookup` | object or null | Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted. |
 | `owner_lookup.repository` | string |  |
 | `owner_lookup.status` | "read" \| "not_found_or_inaccessible" \| "unavailable" \| "not_read_request_limit" \| "not_applicable" |  |
+| `tipjar` | object |  |
+| `tipjar.repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `tipjar.default_branch` | string or null |  |
+| `tipjar.commit` | string or null |  |
+| `tipjar.path` | ".tipjar.json" |  |
+| `tipjar.blob_sha` | string or null |  |
+| `tipjar.sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `tipjar.fetched_at` | string |  |
+| `tipjar.state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `tipjar.complete` | boolean |  |
+| `tipjar.manifest` | `tipjar_manifest` or null |  |
+| `tipjar.errors` | string[] |  |
+| `tipjar.notice` | string |  |
+| `tipjar.api_budget` | `api_budget` (optional) |  |
 
 #### `resolution_provenance`
 

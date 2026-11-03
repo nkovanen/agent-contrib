@@ -232,3 +232,12 @@ the PR ready for review, merges it or releases anything. `feedback
 - [Host authorization](host-authorization.md): mandates, sign-off and issuer duties.
 - [Maintainers](maintainers.md): opt-in label policy, `audit` and the passive Action.
 - [Upgrading from 0.2](upgrading.md).
+
+
+To find declared welcomes among repositories you name, run
+`tipjar discover acme/one acme/two --welcomed-only`. Names may come from projects
+you use or a list you supply; there is no global jar registry. Selection means
+“declared welcome; policy review required.” For a repository without a jar,
+use the same ordinary discovery and preparation commands without this filter.
+Absence grants no approval and needs no override. Closed or unknown source
+jars block this contribution workflow even through a fork or host mandate.

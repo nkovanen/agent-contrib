@@ -8,6 +8,10 @@ from . import authorization, cigate, core, dispositions, draft_updates
 
 
 def prepare_v2(inspected, client):
+    from .tipjar import preparation_errors
+    jar_errors = preparation_errors(inspected.get('tipjar'))
+    if jar_errors:
+        raise core.ProtocolError('tipjar_blocked', '; '.join(jar_errors))
     source = inspected['source']
     proposed = inspected.get('proposed_target_repository', source['repository'])
     if proposed != source['repository']:
@@ -181,7 +185,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     authority = authorization.check(task, host_context, client, now)
     result.update(user_authorization=authority, mandate_sha256=authority['mandate_sha256'])
     historical_errors = list(errors) + [error for error in authority['errors'] if error not in route]
-    action_errors = historical_errors + authority['current_errors']
+    from .tipjar import live_errors
+    jar_errors = live_errors(task, current, client) if current and 'source' in current else ['Tipjar source refresh unresolved']
+    action_errors = historical_errors + authority['current_errors'] + jar_errors
     disposition, waived, observed = None, set(), []
     if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
         if core.schema_errors(host_context, core.host_context_schema(host_context)):
@@ -233,7 +239,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         implementation_errors.append('Implementation requires complete empty exact-head PR history'
                                      if authority['historical_valid'] else unchecked)
     result['implementation_ready'] = not implementation_errors
-    stage_errors = historical_errors + result['evidence_errors'] + review['errors']
+    stage_errors = historical_errors + jar_errors + result['evidence_errors'] + review['errors']
     if not review['valid'] and not review['errors']:
         stage_errors.append('Independent review is pending')
     if not {'implement', 'create_draft'}.issubset(authority['actions']):
@@ -288,7 +294,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result['stage_blockers'] = {'implementation': implementation_errors,
                                 'draft': [] if publication['verified'] else draft_errors,
                                 'completion': completion_errors}
-    result['errors'] = list(dict.fromkeys(historical_errors + authority['current_errors']))
+    result['errors'] = list(dict.fromkeys(historical_errors + authority['current_errors'] + jar_errors))
     if publication['verified']:
         result['next_action'] = 'none'
     elif result['draft_create_ready']:

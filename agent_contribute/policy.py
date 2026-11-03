@@ -38,7 +38,7 @@ IDENTIFIER_CHARS = 500
 MAX_REPORT_BYTES = 256 * 1024
 # Version of the inventory_sha256 input (N11). 1 is the unversioned hash of earlier 0.3.0 candidates; bump this
 # whenever the hashed material changes, so a recorded hash from another format is recognizable as such.
-INVENTORY_FORMAT = 2
+INVENTORY_FORMAT = 3
 WINDOW = 12
 SCANNED_FORMATS = {'', '.md', '.markdown', '.rst', '.txt'}
 # Other document formats a policy may use; listed as unsupported. Code, data and image files are not candidates.
@@ -614,9 +614,14 @@ def _relative_what(url, base_path):
                               posixpath.join(posixpath.dirname(base_path), target)), True
 
 
-def report(repository, commit, instructions, client, *, default_branch=None, hashes=None):
+def report(repository, commit, instructions, client, *, default_branch=None, hashes=None, tipjar_report=None):
     """Read-only policy report for the issue source repository at its observed commit; never raises on reads.
-    A dict passed as hashes receives the inventory hash under each known format (1 and INVENTORY_FORMAT)."""
+    A dict passed as hashes receives historical format 1/2 and current inventory digests."""
+    from .tipjar import inspect_jar
+    if (not isinstance(tipjar_report, dict) or
+            (tipjar_report.get('repository'), tipjar_report.get('commit')) != (repository, commit) or
+            default_branch is not None and tipjar_report.get('default_branch') != default_branch):
+        tipjar_report = inspect_jar(repository, client, commit=commit)
     state = _Report(client)
     if default_branch is None:
         try:
@@ -680,7 +685,8 @@ def report(repository, commit, instructions, client, *, default_branch=None, has
               'never_inspected': list(NEVER_INSPECTED),
               'hints': _with_ids(hints, state.sources, state),
               'owner_lookup': state.owner_lookup,
-              'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
+              'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}, 'tipjar': tipjar_report}
+    historical_hashes = None
     while True:
         result['hinted_lines'], result['project_vocabulary'] = _group(result['hints'], terms, vocabulary)
         result['limits_reached'] = [{'limit': name, 'not_reported': count, 'hides_sources': name in HIDING_LIMITS}
@@ -696,10 +702,20 @@ def report(repository, commit, instructions, client, *, default_branch=None, has
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
             'omitted_sources': sorted([o['identity_sha256'], o['reason'], o['blob_sha']] for o in result['omitted_sources']),
             'limits_reached': result['limits_reached'], 'owner_lookup': result['owner_lookup']}
-        result['inventory_sha256'] = _inventory_hash(material, INVENTORY_FORMAT)
+        legacy = dict(material)
+        # Preserve the old report-size boundary: a jar must not shorten the historical prose inventory.
+        if historical_hashes is None:
+            historical = {key: value for key, value in result.items() if key != 'tipjar'}
+            historical.update(inventory_format=2, inventory_sha256=_inventory_hash(legacy, 2))
+            if len(json.dumps(historical, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
+                historical_hashes = {fmt: _inventory_hash(legacy, fmt) for fmt in (1, 2)}
+        material['tipjar'] = {key: tipjar_report.get(key) for key in
+                              ('repository', 'default_branch', 'state', 'complete', 'sha256', 'path')}
+        result['inventory_sha256'] = _inventory_hash(material if INVENTORY_FORMAT >= 3 else legacy, INVENTORY_FORMAT)
         if hashes is not None:
             hashes.clear()
-            hashes.update({fmt: _inventory_hash(material, fmt) for fmt in (1, INVENTORY_FORMAT)})
+            hashes.update(historical_hashes or {fmt: _inventory_hash(legacy, fmt) for fmt in (1, 2)})
+            hashes[INVENTORY_FORMAT] = result['inventory_sha256']
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
         # Shrink until the serialized report fits, recording every reduction (RP-18).
@@ -733,4 +749,4 @@ def for_inspected(inspected, client):
     """The report for an inspect result's issue source at its observed commit."""
     source = inspected['source']
     return report(source['repository'], source['commit'], inspected['instructions'], client,
-                  default_branch=source['default_branch'])
+                  default_branch=source['default_branch'], tipjar_report=inspected.get('tipjar'))

@@ -68,8 +68,8 @@ class JarCommandTests(unittest.TestCase):
         code, schema = invoke('schema', 'jar')
         self.assertEqual(code, 0)
         self.assertEqual(schema, outputs.output_schema('jar'))
-        self.assertEqual(outputs.VERSION, '1')
-        self.assertEqual(schema['$id'], 'urn:agent-contrib:output:1:jar')
+        self.assertEqual(outputs.VERSION, '2')
+        self.assertEqual(schema['$id'], 'urn:agent-contrib:output:2:jar')
         for raw in (RAW, RAW.replace(b'welcome', b'closed'), b'not JSON'):
             self.assertEqual(core.schema_errors(tipjar.read_jar('acme/project', Fake(responses(raw))), schema), [])
 

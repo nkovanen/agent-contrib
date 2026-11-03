@@ -15,16 +15,16 @@ separate source approval, execution authorization and publication authority.
 ## Tipjar invitation status
 
 - [3] Inspection-only `jar owner/repo`: strict root manifest 0.1, pinned identities,
-  welcome/closed/undeclared/unknown reports and packaged output schema 1.
-- [ ] Enforce jar declarations in discovery, preparation and live verification.
-- [ ] Filter supplied repository names by declared welcome; no global registry.
+  welcome/closed/undeclared/unknown reports and preserved output schema 1; integrated reports use output schema 2.
+- [3] Enforce jar declarations in discovery, preparation and live verification.
+- [3] Filter supplied repository names by declared welcome; no global registry.
 - [ ] New policy-reviewed outside-contributor upstream route for welcome or
   manually selected no-jar repositories. Existing fork/owner routes cover only
   part of this goal; a jar alone grants no execution or publication authority.
 
 Explicit no-jar discovery and pending preparation remain available. See
 [jar inspection](cli.md#jar-inspection-candidate-inspection-only) for the exact
-inspection-only boundary and route limitations.
+source-policy boundary and route limitations.
 
 ## Shipped in v0.2.0
 

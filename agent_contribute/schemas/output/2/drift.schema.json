@@ -1,0 +1,972 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:drift",
+  "title": "drift result",
+  "description": "Read-only report of what changed since the contract was prepared. issue, source, default_branch, instructions, policy and overlap are present once the current source was read.",
+  "type": "object",
+  "properties": {
+    "contract_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 64,
+      "minLength": 64
+    },
+    "complete": {
+      "type": "boolean",
+      "description": "False when any read failed; then drifted may be null or partial"
+    },
+    "drifted": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Null when the current source could not be read"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647
+    },
+    "notice": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "issue": {
+      "type": "object",
+      "properties": {
+        "changed": {
+          "type": "boolean"
+        },
+        "stored_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "current_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "stored_updated_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_updated_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_components": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "title_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "maxLength": 64,
+              "minLength": 64
+            },
+            "body_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "maxLength": 64,
+              "minLength": 64
+            },
+            "state": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            },
+            "assignees": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            }
+          },
+          "required": [
+            "title_sha256",
+            "body_sha256",
+            "state",
+            "labels",
+            "assignees"
+          ],
+          "additionalProperties": false,
+          "description": "Per-component hashes of the current issue; null when unreadable"
+        },
+        "component_baseline": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "changed",
+        "stored_sha256",
+        "current_sha256",
+        "stored_updated_at",
+        "current_updated_at",
+        "current_components",
+        "component_baseline"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "stored_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "stored_issue_url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_issue_url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "stored_identity": {
+          "type": "object",
+          "properties": {
+            "repository_id": {
+              "type": "integer"
+            },
+            "owner_id": {
+              "type": "integer"
+            },
+            "issue_id": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "repository_id",
+            "owner_id",
+            "issue_id"
+          ],
+          "additionalProperties": false,
+          "description": "Schema 0.2 contracts only"
+        },
+        "current_identity": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository_id": {
+              "type": "integer"
+            },
+            "owner_id": {
+              "type": "integer"
+            },
+            "issue_id": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "repository_id",
+            "owner_id",
+            "issue_id"
+          ],
+          "additionalProperties": false,
+          "description": "Schema 0.2 contracts only; null when unresolved"
+        }
+      },
+      "required": [
+        "stored_repository",
+        "current_repository",
+        "stored_issue_url",
+        "current_issue_url",
+        "changed"
+      ],
+      "additionalProperties": false
+    },
+    "default_branch": {
+      "type": "object",
+      "properties": {
+        "stored_branch": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_branch": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "stored_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "current_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "advanced": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "stored_branch",
+        "current_branch",
+        "stored_commit",
+        "current_commit",
+        "advanced",
+        "note"
+      ],
+      "additionalProperties": false
+    },
+    "instructions": {
+      "type": "object",
+      "properties": {
+        "changed": {
+          "type": "boolean"
+        },
+        "baseline_verified": {
+          "type": "boolean"
+        },
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "modified": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "stored_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              "current_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "maxLength": 64,
+                "minLength": 64
+              }
+            },
+            "required": [
+              "path",
+              "stored_sha256",
+              "current_sha256"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "changed",
+        "baseline_verified",
+        "added",
+        "removed",
+        "modified"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "stored_approval": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_approval": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "current_policy_state": {
+          "type": "string",
+          "enum": [
+            "missing",
+            "present",
+            "unknown"
+          ]
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "stored_policy_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Schema 0.2 contracts only",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "current_policy_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Schema 0.2 contracts only",
+          "maxLength": 64,
+          "minLength": 64
+        }
+      },
+      "required": [
+        "stored_approval",
+        "current_approval",
+        "current_policy_state",
+        "changed"
+      ],
+      "additionalProperties": false
+    },
+    "overlap": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Open PR URLs overlapping now but not at preparation",
+          "maxItems": 2147483647
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "scope": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "added",
+        "removed",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "api_budget": {
+      "$ref": "#/$defs/api_budget"
+    },
+    "repository_policy_drift": {
+      "type": "object",
+      "properties": {
+        "expected_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "current_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "policy_drifted": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "null when the current policy inventory read is incomplete or limited"
+        },
+        "limits_hide_sources": {
+          "type": "boolean"
+        },
+        "baseline_verified": {
+          "type": "boolean"
+        },
+        "current_inventory_format": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "inventory_format of the current report"
+        },
+        "recorded_inventory_format": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "Format of the recorded hash when the current report or the pinned baseline reproduces it under a known format; null when unknown"
+        },
+        "added": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "what": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "state": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64,
+                "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "identity_sha256",
+              "what",
+              "state",
+              "fingerprint"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "removed": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "what": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "state": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64,
+                "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "identity_sha256",
+              "what",
+              "state",
+              "fingerprint"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "changed": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "what": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "stored": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 64,
+                    "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+                  }
+                },
+                "required": [
+                  "state",
+                  "fingerprint"
+                ],
+                "additionalProperties": false
+              },
+              "current": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 64,
+                    "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+                  }
+                },
+                "required": [
+                  "state",
+                  "fingerprint"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "identity_sha256",
+              "what",
+              "stored",
+              "current"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "expected_sha256",
+        "current_sha256",
+        "policy_drifted",
+        "limits_hide_sources",
+        "baseline_verified",
+        "current_inventory_format",
+        "recorded_inventory_format",
+        "added",
+        "removed",
+        "changed",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --policy-sha256: the reviewed policy inventory hash compared with the current inventory"
+    },
+    "tipjar": {
+      "type": "object",
+      "properties": {
+        "baseline": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Actual repository inspected; no parent or owner inheritance"
+            },
+            "default_branch": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1024
+            },
+            "commit": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "path": {
+              "type": "string",
+              "const": ".tipjar.json"
+            },
+            "blob_sha": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+              "description": "Exact decoded-byte digest, even when validation fails; not by itself trusted provenance"
+            },
+            "fetched_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "welcome",
+                "closed",
+                "undeclared",
+                "unknown"
+              ]
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "manifest": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/tipjar_manifest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "errors": {
+              "type": "array",
+              "maxItems": 1,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "notice": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "api_budget": {
+              "$ref": "#/$defs/api_budget"
+            }
+          },
+          "required": [
+            "repository",
+            "default_branch",
+            "commit",
+            "path",
+            "blob_sha",
+            "sha256",
+            "fetched_at",
+            "state",
+            "complete",
+            "manifest",
+            "errors",
+            "notice"
+          ],
+          "additionalProperties": false
+        },
+        "current": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Actual repository inspected; no parent or owner inheritance"
+            },
+            "default_branch": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1024
+            },
+            "commit": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "path": {
+              "type": "string",
+              "const": ".tipjar.json"
+            },
+            "blob_sha": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+              "description": "Exact decoded-byte digest, even when validation fails; not by itself trusted provenance"
+            },
+            "fetched_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "welcome",
+                "closed",
+                "undeclared",
+                "unknown"
+              ]
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "manifest": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/tipjar_manifest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "errors": {
+              "type": "array",
+              "maxItems": 1,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "notice": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "api_budget": {
+              "$ref": "#/$defs/api_budget"
+            }
+          },
+          "required": [
+            "repository",
+            "default_branch",
+            "commit",
+            "path",
+            "blob_sha",
+            "sha256",
+            "fetched_at",
+            "state",
+            "complete",
+            "manifest",
+            "errors",
+            "notice"
+          ],
+          "additionalProperties": false
+        },
+        "changed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "baseline",
+        "current",
+        "changed"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "contract_sha256",
+    "complete",
+    "drifted",
+    "errors",
+    "notice"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    },
+    "tipjar_manifest": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "welcome",
+            "closed"
+          ]
+        },
+        "wanted": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -163,6 +163,8 @@ def main(argv=None):
             sub.add_argument('--limit', metavar='N',
                              help='Display at most N ranked candidates (1-1000, globally across repositories); '
                                   'all scans still run')
+            sub.add_argument('--welcomed-only', action='store_true',
+                             help='Select only declared welcomes among named repositories; all scans still run')
             sub.add_argument('--signals', action='store_true',
                              help='Add report-only code-location, clarity, activity and maintainer signals')
             sub.add_argument('--responsiveness', action='store_true',
@@ -338,6 +340,8 @@ def main(argv=None):
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
+            if args.welcomed_only:
+                options['welcomed_only'] = True
             names, client = args.names, core.GitHub()
             if args.limit is not None:
                 options['limit'] = args.limit
@@ -356,7 +360,7 @@ def main(argv=None):
             for single in result.get('repositories', [result]):
                 if 'commit' in single:  # report only: never part of completeness or the exit code
                     single['repository_policy'] = policy.report(single['repository'], single['commit'],
-                                                                single['instructions'], client)
+                                                                single['instructions'], client, tipjar_report=single.get('tipjar'))
             if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
                 reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
                 code = code or (0 if all(r and r['complete'] for r in reports) else 1)
@@ -378,7 +382,8 @@ def main(argv=None):
                 context = {k: result[k] for k in ('requested_repository', 'issue_source_repository',
                                                   'proposed_target_repository', 'resolution_provenance', 'reference')}
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
-                          'warning': 'Draft saved; inspect and review before execution', 'repository_policy': report}
+                          'warning': 'Draft saved; inspect and review before execution', 'repository_policy': report,
+                          'tipjar': result['tipjar']}
         else:
             task, evidence = args.task, args.evidence_data
             version = task.get('schema_version') if isinstance(task, dict) else None

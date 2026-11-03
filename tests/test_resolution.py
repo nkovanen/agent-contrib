@@ -30,6 +30,16 @@ class RepositoryGitHub:
         self.overrides = {}
         self.calls = []
 
+    def request_once(self, endpoint):
+        result = self.request(endpoint)
+        if '/git/trees/' in endpoint and isinstance(result, dict):
+            result = __import__('copy').deepcopy(result)
+            result.setdefault('sha', 'c' * 40)
+            for entry in result.get('tree', []):
+                entry.setdefault('sha', 'b' * 40)
+                entry.setdefault('mode', '100644')
+        return result
+
     def request(self, endpoint):
         self.calls.append(endpoint)
         if endpoint in self.failed:
