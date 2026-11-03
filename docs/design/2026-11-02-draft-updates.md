@@ -1,7 +1,7 @@
 # Updating a recognized draft after review (#21): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, **revision 4**. Review rounds 1 to 3 (DU-01 to DU-08) are resolved in [Review resolution](#review-resolution). **Slice 1 (inert schema and host requirements) is implemented**; slices 2 to 4 are not.
+- Status: proposal, **revision 4**. Review rounds 1 to 3 (DU-01 to DU-08) are resolved in [Review resolution](#review-resolution); DU-09 (wording) is fixed below. **Slice 1 (inert schema and host requirements) is implemented**; slices 2 to 4 are not.
 - Base: `rsi/v03-land` at `e454848` (unreleased v0.3.0 candidate: task and evidence schemas 0.1 and 0.2, host-context 0.1 and 0.2).
 - Issue: [#21](https://github.com/nkovanen/agent-contrib/issues/21), product-map key F3. Depends on #3. Uses #20 (`feedback`).
 
@@ -100,7 +100,7 @@ All of these are required. Only the original mandate's expiry is waived.
 2. The original mandate is `historical_valid`, and its actions include `create_draft`. Its expiry (`authority['current_errors']`) is **not** a blocker for update states. Nothing else is waived.
 3. The `draft_update` record is schema-valid, and every binding, the event hash and the distinct identities hold.
 4. Currency: `issued_at <= now < expires_at` is required for round open and ready to push, judged after every blocking read. After the push, the record may have expired.
-5. Overlaps: `without_own(live_duplicates + prepared_duplicates, own)` is empty, where `own` is the PR identified in `I`. Every unrelated or prepared overlap still blocks. `overlap_dispositions` stays inert and never waives anything.
+5. Overlaps: `without_own(all_duplicates, own)` is empty, where `own` is the PR identified in `I` and `all_duplicates` is the same list every schema 0.2 gate uses today: live and prepared overlaps, minus only the topical overlaps that an active, valid `overlap_dispositions` section waives under its own rules (#7), plus anything that section observed. Every other unrelated or prepared overlap still blocks. `draft_update` itself never waives an overlap or extends a disposition.
 6. **Operative round only (DU-02).** The result echoes the record's hash. It is operative only if that hash equals the host's **current-round pointer** for (contract, mandate, PR) and the mandate is not `revoked` or `superseded`. Otherwise it is void for every gate: round open, push, recognition and completion. This is a host rule; the stateless CLI cannot see the pointer.
 
 ### `I(X)`: identity of the own draft at head `X`, with no evidence needed
@@ -191,7 +191,7 @@ These extend "Status and action-time checks" in `docs/host-authorization.md`. Th
 
   Review text stays untrusted and never widens scope; a scope change needs a new contract, and so a new PR.
 - **Final sign-off.** It binds `git_head = E` and the review hash at `E`. A sign-off for `A` or `F` is stale automatically. Completion requires the recognized state at exactly the signed head.
-- **Overlap dispositions (#7).** Inert as today. The new section must not activate any waiver.
+- **Overlap dispositions (#7).** Active on the baseline: a valid, current `overlap_dispositions` section waives only the topical overlaps it binds, under its own rules, and every gate (including the update path) uses the resulting overlap list. The `draft_update` section adds no waiver, never widens a disposition, and does not change how dispositions are evaluated.
 - **`pr-body`.** Unchanged.
 
 ## Replay and staleness
@@ -224,7 +224,7 @@ These extend "Status and action-time checks" in `docs/host-authorization.md`. Th
 
   The denylist plus host prevention is the stated guarantee. A successful listing is an observation, not an authenticated event log.
 - **Compare.** Only full SHAs, in the stated order; only `status` is interpreted. Requirement for any response cache, present or future: compare, PR, timeline and other mutable or authority-bearing reads are never served from a cache. The opt-in content cache in #27 serves only blob-verified file contents.
-- **Coexistence.** Whole-context schema validation and the pairwise event-identity rules apply to every present section. A valid-shaped `overlap_dispositions` section stays report-only, as in the baseline.
+- **Coexistence.** Whole-context schema validation and the pairwise event-identity rules apply to every present section. An `overlap_dispositions` section is evaluated exactly as without a `draft_update` section; its waivers apply to the update path only through the shared overlap list (`U.5`).
 - **Expiry.** The record and final sign-off are evaluated after every blocking read. The host re-checks the round's status at push time.
 
 ## Compatibility
@@ -254,7 +254,7 @@ All tests use fixtures: fake PR, compare, timeline and detail responses, and tem
 
 **Overlaps:**
 
-11. The own PR alone passes. The own PR plus an unrelated PR blocks. A prepared duplicate blocks. An `overlap_dispositions` section present (valid, invalid or expired) changes nothing.
+11. The own PR alone passes. The own PR plus an unrelated PR blocks. A prepared duplicate blocks. An `overlap_dispositions` section affects the update path exactly as it affects the other gates: a valid, current waiver of a topical overlap removes only that overlap; an invalid or expired one waives nothing; a direct reference is never waived.
 
 **Evidence:**
 
@@ -321,3 +321,9 @@ All tests use fixtures: fake PR, compare, timeline and detail responses, and tem
 | DU-08: the host could not bind its reservation to the validated head | Confirmed. The record binds only `F`, and the report had no field naming `E`, so a host would reread worker-controlled evidence or `HEAD`. A bare lease on `F` even accepts an unrelated `E2`. | The smaller fix: the report gains `candidate_head`, the exact `E` that passed `T(E)` in that run. It is non-null exactly for `push` and `recognized`. The host reserves and pushes that SHA from its own captured `verify` result, never a worker-relayed copy or a reread, and re-proves the frozen `F → E` before submitting. Tests 25 and the mutant list. No exact-`to_head` human event (D3 unchanged). |
 | DU-07 (Low): the final read dropped the raw merged flag | Confirmed. `_pr_facts(detail=True)` validates `merged` but does not project it. | `I.5` also requires the final raw detail to satisfy `state == "open"`, `draft is True`, `merged is False` and `merged_at is None`, as `check_publication` does. Test 16 adds the inconsistent `merged: true` fixture. |
 | Notes: lease wording, retries and expiry, round-open prose, status inventory, pointer restore, commit-list cross-check | Accepted. | The lease is described as a predecessor condition only; fast-forward comes from the separate ancestry proof; "no force-push event" is an expectation the acceptance trial observes, with the denylist kept. Every submission, including retries, needs the original deadline, the current pointer and non-revocation; late retries are refused (test 26). Round-open prose is narrowed to no evidence or `E == F`. `reserved(F→E)` is in the status list. Restoring the pointer moves the previous round back to `consumed`, and voided sign-offs stay void. The commit-list cross-check is removed. |
+
+### Round 4
+
+| Finding | Verified | Resolution |
+| --- | --- | --- |
+| DU-09 (Low): the design still called overlap dispositions inert | Confirmed: since `efe7e68` a valid, current `overlap_dispositions` section waives bound topical overlaps for every schema 0.2 gate. | `U.5`, Interplay, Coexistence and test 11 now say the update path uses the same post-disposition overlap list as every other gate, and that `draft_update` adds or widens no waiver. No behaviour change. |
