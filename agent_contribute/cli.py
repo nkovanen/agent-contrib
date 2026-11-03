@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from . import (audit, authrequest, budget, cache, ci, core, dependencies, drift, feedback, multi, onboarding, outputs,
-               ownership, policy, prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
+               ownership, policy, prbody, receipts, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -49,7 +49,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check', 'dependencies')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check', 'dependencies', 'impact')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -114,7 +114,7 @@ def prevalidate(args):
         if args.repo_dir is not None and len(args.names) != 1:
             raise core.ProtocolError('usage', '--repo-dir with discover supports one repository')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
-    elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
+    elif args.command in ('inspect', 'prepare', 'ownership', 'feedback', 'receipt'):
         core.parse_issue(args.reference)
         if args.command == 'feedback' and args.expected_head is not None and not remote.SHA.fullmatch(args.expected_head):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
@@ -200,6 +200,11 @@ def main(argv=None):
     sub.add_argument('--installed', action='store_true',
                      help='Also read up to 100 direct registry packages from existing node_modules metadata; no links or installs')
     sub.add_argument('--output', help='Optional new JSON report file; never overwritten')
+    sub = commands.add_parser('receipt', help='Save a public PR observation; never proof or permission')
+    sub.add_argument('reference', help='Public GitHub owner/repo#PR')
+    sub.add_argument('--output', required=True, help='New receipt file; never overwritten')
+    sub = commands.add_parser('impact', help='Offline impact from editable recorded PR observations')
+    sub.add_argument('files', nargs='+', help='1-100 receipt files, at most 64 KiB each')
     sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
                               description='Pinned root invitation inspection only; grants no approval or authority.')
     sub.add_argument('repository', help='GitHub owner/repo to inspect directly, without parent tracker resolution')
@@ -327,6 +332,14 @@ def main(argv=None):
             code = 0
         elif args.command == 'jar-check':
             result = onboarding.jar_check(args.file)
+            code = 0
+        elif args.command == 'receipt':
+            receipt = receipts.observe(args.reference)
+            write_new_json(args.output, receipt)
+            result = {'output': str(args.output), 'receipt': receipt, 'warning': receipts.NOTICE}
+            code = 0
+        elif args.command == 'impact':
+            result = receipts.impact(args.files)
             code = 0
         elif args.command == 'lint':
             result = core.lint(core.read_json(args.contract))

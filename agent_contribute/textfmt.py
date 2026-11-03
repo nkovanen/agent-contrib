@@ -358,6 +358,23 @@ def _vocabulary(report):
             'project_vocabulary']
 
 
+def _receipt(result):
+    receipt = result['receipt']
+    pr = receipt['pull_request']
+    return [f"Receipt saved: {line(result['output'])}",
+            f"PR: {line(pr['url'])} ({line(pr['state'])})",
+            f"Observed: {line(receipt['observed_at'])}", line(result['warning'], 1000),
+            line(receipt['refresh'])]
+
+
+def _impact(result):
+    counts = result['counts']
+    return [f"Impact: {result['trust']}",
+            f"Unique PRs: {result['unique_prs']}; repositories represented: {result['repositories_represented']}",
+            f"Open: {counts['open']} (includes drafts); closed: {counts['closed']}; merged: {counts['merged']}",
+            line(result['warning'], 1000)]
+
+
 def _jar(result):
     out = [f'Repository: {line(result["repository"])}',
            f'Jar: {line(result["state"], 30)} (complete: {_flag(result["complete"])})',
@@ -407,7 +424,7 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command, 'jar': _jar, 'init': _onboarding, 'jar-check': _onboarding}.get(command)
+            'ownership': _ownership_command, 'jar': _jar, 'init': _onboarding, 'jar-check': _onboarding, 'receipt': _receipt, 'impact': _impact}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:

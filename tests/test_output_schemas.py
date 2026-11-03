@@ -214,7 +214,11 @@ class SchemaFileTests(unittest.TestCase):
             valid = 'a' * int(length.group(1)) if length else 'usage'
             if pattern.startswith('^H-'):  # stable policy hint IDs (N12)
                 valid = 'H-' + 'a' * int(length.group(1))
-            for value, expected in ((valid, True), ('-' + valid, False), (valid + '-', False), (valid + '\n', False),
+            if pattern.startswith('^[0-9]{4}-'):
+                valid = '2026-11-03T12:00:00Z'
+            elif '/[A-Za-z0-9]' in pattern:
+                valid = 'acme/photos'
+            for value, expected in ((valid, True), ('!' + valid, False), (valid + '!', False), (valid + '\n', False),
                                     ('\n' + valid, False), ('!' + valid + '!', False)):
                 with self.subTest(pattern=pattern, value=value):
                     bundled = not core.schema_errors(value, {'type': 'string', **schema})

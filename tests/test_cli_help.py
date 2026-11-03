@@ -37,7 +37,7 @@ class HelpTests(unittest.TestCase):
                     missing.append(' '.join(path + [action.option_strings[0] if action.option_strings else action.dest]))
         walk(built_parser(), [])
         self.assertIn('evidence init', commands)
-        self.assertEqual(len(commands), 21)  # all registered command leaves
+        self.assertEqual(len(commands), 23)  # all registered command leaves
         self.assertEqual(missing, [])
 
     def test_top_level_help_lists_described_commands_and_exit_status(self):
@@ -80,7 +80,7 @@ class OfflineGlobalOptionTests(unittest.TestCase):
     """GitHub-only global options are refused alike on every offline command, before any work."""
     OFFLINE = (('init', '--status', 'closed', '--output', 'jar.json'), ('jar-check', 'jar.json'),
                ('dependencies', '.'), ('instructions',), ('schema', 'lint'), ('skill', '--output', 'out.md'), ('lint', 'task.json'),
-               ('scope-check', 'task.json', '--repo-dir', '.'),
+               ('impact', 'missing.json'), ('scope-check', 'task.json', '--repo-dir', '.'),
                ('evidence', 'init', 'task.json', '--repo-dir', '.', '--base', 'HEAD', '--output', 'e.json'))
 
     def invoke(self, *args):
