@@ -161,8 +161,20 @@ The prerequisite blocker lists each prerequisite that is not `satisfied` with
 non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 
 `instructions.resources` lists both task/evidence versions and host-context
-schemas 0.1 and 0.2. With a host-context 0.2 document, `verify` adds
-`overlap_dispositions` and `waived_duplicates`. The status is:
+schemas 0.1 and 0.2.
+
+When a host-context 0.2 document carries a `draft_update` record (#21), `verify`
+adds a `draft_update` report. Its status is `not_evaluated` (the record's
+contract, mandate, credential, repository, PR, event, interval and identity
+bindings check out) or `invalid`. The report also has `sha256`, `from_head`,
+`current` (whether the interval contains the verification time), `errors` and a
+note. `candidate_head` is always `null` in this version. The record is parsed
+only: no gate, blocker, `next_action`, exit status or GitHub read changes, and
+without the section the output is byte-identical. See
+[host authorization](host-authorization.md#draft-update-rounds-host-context-02).
+
+With a host-context 0.2 document, `verify` adds `overlap_dispositions` and
+`waived_duplicates`. The status is:
 - `absent`: no record;
 - `invalid`: a schema, binding or expiry error. Nothing is waived. A record
   rejected on its own checks makes no extra read, but one that expires during
@@ -1976,6 +1988,7 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `signature_observation` | `signature_observation` (optional) |  |
 | `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document |
 | `waived_duplicates` | `verify_waived_overlap`[] (optional) | Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them |
+| `draft_update` | `verify_draft_update` (optional) | Present only when a host-context 0.2 document carries draft_update |
 
 #### `verify_0_2_rejected`
 
@@ -2035,6 +2048,21 @@ Normalized mandate binding; null unless the mandate is historically valid
 | `status` | "queued" \| "in_progress" \| "completed" \| "waiting" \| "requested" \| "pending" |  |
 | `conclusion` | "success" \| "failure" \| "neutral" \| "cancelled" \| "skipped" \| "timed_out" \| "action_required" \| "stale" \| "startup_failure" \| null | Null unless status is completed |
 | `url` | string | Empty when GitHub gave none |
+
+#### `verify_draft_update`
+
+Host-context 0.2 draft_update report (#21, slice 1): parsed and binding-checked only; never consulted by a gate
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `status` | "not_evaluated" \| "invalid" | not_evaluated: bindings valid, but this version evaluates no update and authorizes nothing; invalid: schema or binding errors |
+| `trust` | "host-asserted" |  |
+| `sha256` | string or null | Canonical hash of the draft_update section; null when the host context is invalid |
+| `from_head` | string or null | The record's from_head; null when the host context is invalid |
+| `candidate_head` | null | Reserved for the validated candidate head of a later version; always null here |
+| `current` | boolean | Whether the record's interval contains the verification time |
+| `errors` | string[] |  |
+| `note` | string |  |
 
 #### `verify_live_provenance`
 

@@ -1283,6 +1283,10 @@
           },
           "maxItems": 20,
           "description": "Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them"
+        },
+        "draft_update": {
+          "$ref": "#/$defs/verify_draft_update",
+          "description": "Present only when a host-context 0.2 document carries draft_update"
         }
       },
       "required": [
@@ -1581,6 +1585,75 @@
         "url"
       ],
       "additionalProperties": false
+    },
+    "verify_draft_update": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_evaluated",
+            "invalid"
+          ],
+          "description": "not_evaluated: bindings valid, but this version evaluates no update and authorizes nothing; invalid: schema or binding errors"
+        },
+        "trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64,
+          "description": "Canonical hash of the draft_update section; null when the host context is invalid"
+        },
+        "from_head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "The record's from_head; null when the host context is invalid"
+        },
+        "candidate_head": {
+          "type": "null",
+          "description": "Reserved for the validated candidate head of a later version; always null here"
+        },
+        "current": {
+          "type": "boolean",
+          "description": "Whether the record's interval contains the verification time"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "status",
+        "trust",
+        "sha256",
+        "from_head",
+        "candidate_head",
+        "current",
+        "errors",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Host-context 0.2 draft_update report (#21, slice 1): parsed and binding-checked only; never consulted by a gate"
     },
     "verify_live_provenance": {
       "type": "object",
