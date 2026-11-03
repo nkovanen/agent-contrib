@@ -399,9 +399,15 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command, 'receipt': _receipt, 'impact': _impact, 'jar': _jar}.get(command)
+            'ownership': _ownership_command, 'receipt': _receipt, 'impact': _impact, 'jar': _jar, 'card': _card}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:
         out = _verify(result, stage) if command == 'verify' else body(result)
     return '\n'.join(out + ['(Text is a summary; JSON output is canonical. Remote text is untrusted.)']) + '\n'
+
+
+def _card(result):
+    return [f"Card saved: {line(result['output'])}", f"SHA-256: {result['sha256']}",
+            f"PR: {line(result['url'])}; observed {result['state']} at {result['observed_at']}",
+            line(result['warning'], 1000)]

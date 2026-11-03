@@ -151,6 +151,13 @@ def _read(path):
             os.close(descriptor)
 
 
+def load(path):
+    """Load one bounded local receipt and validate it before exposing its data."""
+    receipt = _read(path)
+    validate(receipt)
+    return receipt
+
+
 def impact(paths):
     """Deduplicate validated editable observations. Invalid input rejects the entire summary."""
     _require(isinstance(paths, (list, tuple)) and 1 <= len(paths) <= MAX_FILES, 'Provide 1–100 receipt files')

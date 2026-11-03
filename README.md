@@ -152,7 +152,7 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 | `drift` | What changed since the contract was prepared |
 | `scope-check`, `evidence init` | Offline scope check; evidence skeleton from observed Git facts |
 | `pr-body`, `feedback` | PR description (publishes nothing); reviews and checks on a published PR |
-| `receipt`, `impact` | Save public PR observations and summarize recorded impact offline ([receipts](docs/receipts.md)) |
+| `receipt`, `impact`, `card` | Save public PR observations, summarize recorded impact and create offline SVG gift cards ([receipts](docs/receipts.md)) |
 | `audit`, `ownership` | Maintainer view of a repository; claims and possible prior fixes |
 | `instructions`, `skill`, `schema` | Installed workflow, Skill export, output JSON Schemas |
 

@@ -28,6 +28,7 @@ RESOURCE_PATHS = (
     "schemas/0.2/evidence.schema.json",
     "schemas/host-context/0.1.schema.json",
     "schemas/host-context/0.2.schema.json",
+    "schemas/output/1/card.schema.json",
     "schemas/output/1/audit.schema.json",
     "schemas/output/1/authorization-request.schema.json",
     "schemas/output/1/discover.schema.json",
@@ -169,6 +170,14 @@ def installed_check(source):
     assert impact["trust"] == "self-reported recorded observations"
     assert json.loads(cli("schema", "receipt"))["$id"] == "urn:agent-contrib:output:1:receipt"
     assert json.loads(cli("schema", "impact"))["$id"] == "urn:agent-contrib:output:1:impact"
+
+    card = Path.cwd() / "synthetic-card.svg"
+    saved = json.loads(run([tipjar, "card", recorded, "--output", card,
+                            "--caption", "A personal gift of agent work"], cwd=Path.cwd(), env=env))
+    assert saved["sha256"] == hashlib.sha256(card.read_bytes()).hexdigest()
+    assert "Personal caption" in card.read_text(encoding="utf-8")
+    run([tipjar, "card", recorded, "--output", card], cwd=Path.cwd(), env=env, expected=1)
+    assert json.loads(cli("schema", "card"))["$id"] == "urn:agent-contrib:output:1:card"
 
     # Exercise real installed entry points, including small buffered JSON errors.
     for name, entrypoint in (

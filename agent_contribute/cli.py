@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+from . import (audit, authrequest, budget, cache, cards, ci, core, drift, feedback, multi, outputs, ownership, policy,
                prbody, receipts, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
@@ -49,7 +49,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'impact')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'impact', 'card')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -198,6 +198,10 @@ def main(argv=None):
     sub = commands.add_parser('receipt', help='Save a public PR observation; never proof or permission')
     sub.add_argument('reference', help='Public GitHub owner/repo#PR')
     sub.add_argument('--output', required=True, help='New receipt file; never overwritten')
+    sub = commands.add_parser('card', help='Create an offline SVG from a local receipt; share manually')
+    sub.add_argument('receipt', help='Validated local receipt JSON, at most 64 KiB')
+    sub.add_argument('--caption', help='Optional personal caption (1–4096 characters); never a GitHub title')
+    sub.add_argument('--output', required=True, help='New SVG file; never overwritten')
     sub = commands.add_parser('impact', help='Offline impact from editable recorded PR observations')
     sub.add_argument('files', nargs='+', help='1-100 receipt files, at most 64 KiB each')
     sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
@@ -314,6 +318,13 @@ def main(argv=None):
             receipt = receipts.observe(args.reference)
             write_new_json(args.output, receipt)
             result = {'output': str(args.output), 'receipt': receipt, 'warning': receipts.NOTICE}
+            code = 0
+        elif args.command == 'card':
+            svg, receipt = cards.render(args.receipt, caption=args.caption)
+            create_new(args.output, svg, 'SVG card')
+            result = {'output': str(args.output), 'sha256': hashlib.sha256(svg.encode('utf-8')).hexdigest(),
+                      'url': receipt['pull_request']['url'], 'observed_at': receipt['observed_at'],
+                      'state': receipt['pull_request']['state'], 'warning': cards.NOTICE}
             code = 0
         elif args.command == 'impact':
             result = receipts.impact(args.files)

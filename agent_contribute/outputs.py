@@ -8,7 +8,7 @@ import json
 from . import core
 
 VERSION = '1'
-SCHEMAS = ('audit', 'authorization-request', 'discover', 'drift', 'error', 'evidence-init', 'feedback', 'inspect', 'instructions', 'jar',
+SCHEMAS = ('card', 'audit', 'authorization-request', 'discover', 'drift', 'error', 'evidence-init', 'feedback', 'inspect', 'instructions', 'jar',
            'impact', 'lint', 'ownership', 'receipt', 'pr-body', 'prepare', 'scope-check', 'skill', 'verify')
 DIRECTORY = f'schemas/output/{VERSION}'
 

@@ -66,6 +66,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 | `evidence init` | Unfilled evidence skeleton from observed Git facts | No | 0 file written; 1 error |
 | `pr-body` | Markdown PR description from the contract, evidence and a fresh `verify` | Yes | 0 file written; 1 error |
 | `receipt` | Save a public PR observation to a new file | Yes | 0 written; 1 invalid/incomplete read or write error |
+| `card` | Create a local SVG gift card from a receipt; share manually | No | 0 written; 1 invalid input or write error |
 | `impact` | Summarize editable recorded observations, deduplicated by numeric identity | No | 0 valid summary; 1 invalid/conflicting input |
 | `feedback` | Reviews, comments and exact-head checks of a published PR | Yes | 0 complete; 1 incomplete |
 | `ownership` | Report-only claims, linked PRs and possible prior fixes for one issue | Yes | 0 complete; 1 incomplete |
@@ -84,6 +85,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
 | `agent-contrib discover owner/repo --responsiveness` | One extra read of recently closed PRs, reported as `repository_signals.responsiveness`; issues and ordering unchanged |
 | `agent-contrib receipt owner/repo#123 --output receipt.json` | New schema 0.1 public PR observation; never overwrites |
+| `agent-contrib card receipt.json --output gift.svg [--caption TEXT]` | Offline SVG; personal caption, never a GitHub title; never overwrites |
 | `agent-contrib impact receipt.json [FILE...]` | Offline counts from at most 100 bounded local receipts |
 | `agent-contrib audit owner/repo [--print-policy]` | Read-only maintainer report: policy validity, labels, instruction coverage, issue-quality and overlap counts, non-binding suggestions |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
@@ -1057,6 +1059,8 @@ signed evidence attestations (the rest of #18) are not implemented.
 ```sh
 tipjar receipt 'owner/repo#123' --output receipt.json
 tipjar --format text impact receipt.json later-receipt.json
+tipjar card receipt.json --output gift.svg
+tipjar card receipt.json --caption 'A personal gift of agent work' --output captioned.svg
 ```
 
 `receipt` exclusively saves a schema 0.1 public PR observation from two fixed
@@ -1071,7 +1075,13 @@ file order; equal-time conflicting snapshots reject. Drafts count as open;
 closed means unmerged. Output counts unique PRs and repositories represented and
 lists selected observations. Editable local data is labeled self-reported
 recorded observations, never signed proof, authenticated contributions, tests,
-quality or permission. See [receipt limits and refresh](receipts.md).
+quality or permission. `card` reuses the bounded offline receipt loader and creates
+an exclusive, inert SVG file. Its JSON result includes the artifact SHA-256,
+canonical PR link, exact observed state/date and observation warning. Receipt 0.1
+has no title: cards show an honest missing-title fallback, or optional bounded
+`--caption` text visibly labeled personal (never a GitHub title). Full sanitized
+captions remain accessible when visually truncated. Review and share manually;
+nothing posts or refreshes. See [receipt limits and card workflow](receipts.md).
 
 ### Output schemas
 
@@ -1239,7 +1249,7 @@ option before the subcommand.
 
 #### Global options on offline commands
 
-`instructions`, `schema`, `skill`, `lint`, `scope-check`, `evidence init` and `impact`
+`instructions`, `schema`, `skill`, `lint`, `scope-check`, `evidence init`, `impact` and `card`
 never read GitHub. On them `--report-budget` and `--cache` are both usage errors
 (exit 2, "`--cache` applies only to commands that read GitHub", and likewise for
 `--report-budget`), checked before any file is read; `--min-remaining` already
