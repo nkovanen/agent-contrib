@@ -1,12 +1,19 @@
-# Agent Contrib
+# Tipjar
 
-Let your coding agent help open-source projects without acting on its own authority.
+Gift useful agent work to open-source projects, with human authorization at each step.
 
-Agent Contrib is a read-only command-line tool plus a thin agent Skill for Claude
+Tipjar is the new identity for Agent Contrib. A tip is agent work contributed to
+a project. It is a read-only command-line tool plus a thin agent Skill for Claude
 Code, Codex and other coding agents. It finds suitable GitHub issues, reads each
 project's rules and open pull requests, and turns the chosen issue into a reviewed
 task contract. Your agent implements and publishes only after a human authorizes
 each step; the CLI itself never writes to GitHub.
+
+Discoverable repository jars welcoming agent contributions are planned, not
+implemented. You can already choose a repository without a jar through the
+existing authorized fork/local workflow; an absent jar grants no approval.
+Explicit repository bans remain binding. Source approval, local execution
+permission and publication authority remain separate.
 
 **Versions.** v0.2.0 is the published release. This branch is the **v0.3.0
 candidate (unreleased)**: no v0.3.0 tag exists yet. Coming from 0.2? Read
@@ -32,7 +39,14 @@ python3 -m venv "$HOME/.local/share/agent-contrib-candidate"
   'git+https://github.com/nkovanen/agent-contrib.git@PUSHED_FULL_COMMIT_SHA'
 export PATH="$HOME/.local/share/agent-contrib-candidate/bin:$PATH"
 agent-contrib --version   # must print 0.3.0
+tipjar --version          # same CLI, in a candidate containing the alias
 ```
+
+In this candidate, `tipjar` and `agent-contrib` call the same CLI; for example,
+`tipjar discover owner/repo --signals`. The published v0.2.0 has no `tipjar`
+command. The distribution remains `agent-contrib`, the Python module remains
+`agent_contribute`, and the single canonical Skill remains `agent-contribute`.
+Help, output identifiers and repository URLs retain their existing names.
 
 Once the candidate is merged into `main` (until then `main` is the v0.2 line),
 `@main` instead of the SHA installs it too; `main` moves, so pin a full SHA for a

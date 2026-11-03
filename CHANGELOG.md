@@ -36,6 +36,12 @@ channel or runtime model provider is added.
   text keeps hidden overlaps visible in its totals. No-limit output, scan
   completeness, approval, task/evidence schemas and read-only authority are unchanged.
 
+- Tipjar identity for gifting useful agent work, with a `tipjar` console alias
+  for the existing CLI. `agent-contrib`, the distribution and Python module,
+  canonical Skill, repository URLs and output identifiers remain compatible.
+  Discoverable repository jars are planned; this alias adds no protocol or
+  authority.
+
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,
   bounded collector of issues open at a past cutoff with post-cutoff outcome
   labels, an offline replay of `discover` and `--signals` ranking, and
@@ -515,7 +521,7 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
-- Paginated issue/PR lists now reject a repeated repository number even if the
+- Discovery's issue lists now reject a repeated repository number even if the
   API supplies different IDs. The repeated entry is omitted and the scan stays
   incomplete, including without `--limit`; inconsistent identities cannot expand
   the limited detail lists or produce contradictory display counts. Valid

@@ -179,7 +179,7 @@ class GitHub:
         return paginate(self, endpoint)
 
 
-def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
+def paginate(client, endpoint, key=None, max_pages=MAX_PAGES, *, unique_numbers=False):
     """key derives an identity for endpoints whose items lack id/number/name (timeline events)."""
     items, errors, seen, seen_numbers = [], [], set(), set()
     page_count = 0
@@ -196,8 +196,8 @@ def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
                 identity = key(item) if key else item.get('id', item.get('number', item.get('name')))
                 if not isinstance(identity, (str, int)) or isinstance(identity, bool):
                     raise ProtocolError('api_shape', 'GitHub list item lacks an identity')
-                # Issue/PR references use number even when the API also supplies an id.
-                number = item.get('number') if key is None else None
+                # Discovery references use number even when the API also supplies an id.
+                number = item.get('number') if unique_numbers else None
                 numbered = type(number) is int
                 if identity in seen or (numbered and number in seen_numbers):
                     errors.append('Pagination repeated an item; snapshot may have moved')
@@ -677,7 +677,7 @@ def discover_with_snapshot(repository, client=None, *, signals=False, assignees=
     except ProtocolError as exc:
         return {**context, 'complete': False, 'errors': [str(exc)], 'issues': []}, None
     source = snapshot['repository']
-    listing = paginate(client, f'repos/{source}/issues?state=open')
+    listing = paginate(client, f'repos/{source}/issues?state=open', unique_numbers=True)
     issues, errors = [], list(snapshot['errors']) + listing['errors']
     target_scan, target_index = None, []
     if source.casefold() != repository.casefold():

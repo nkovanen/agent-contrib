@@ -30,6 +30,7 @@ Issues = "https://github.com/nkovanen/agent-contrib/issues"
 
 [project.scripts]
 agent-contrib = "agent_contribute.cli:main"
+tipjar = "agent_contribute.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["agent_contribute*"]
