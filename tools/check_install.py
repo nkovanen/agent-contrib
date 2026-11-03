@@ -35,6 +35,7 @@ RESOURCE_PATHS = (
     "schemas/output/1/feedback.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
+    "schemas/output/1/lint.schema.json",
     "schemas/output/1/ownership.schema.json",
     "schemas/output/1/pr-body.schema.json",
     "schemas/output/1/prepare.schema.json",
@@ -225,11 +226,12 @@ def main():
             names = {name.split("/", 1)[1] for name in archive.getnames() if "/" in name}
         expected = {"pyproject.toml", "MANIFEST.in", "README.md", "NOTICE",
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
-                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py",
+                    "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py", "tools/release_check.py",
                     "tools/benchmark/benchlib.py", "tools/benchmark/collect.py", "tools/benchmark/score.py",
                     "tools/benchmark/experiment.py",
                     "tools/benchmark/README.md",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
+                    "docs/examples/release-pypi.yml", "docs/output-reference.md",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
                         if file.is_file() and file.suffix in (".py", ".json") and "__pycache__" not in file.parts)

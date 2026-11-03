@@ -490,6 +490,29 @@
           }
         }
       }
+    },
+    "ci_requirements": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check",
+          "app_id"
+        ],
+        "properties": {
+          "check": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "app_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
     }
   }
 }

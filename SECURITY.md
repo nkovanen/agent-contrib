@@ -60,13 +60,25 @@ build tooling: review the source and pin a trusted release or immutable commit.
 See the [installed workflow](agent_contribute/instructions.md) for exact limits.
 
 Optional reports are not additional authority. Ownership comments, author
-associations, AI-policy excerpts, observed CI results and signature observations
+associations, repository policy hints, observed CI results and signature observations
 remain untrusted signals. GitHub's "verified" commit status is not approval, and
 the CLI never runs gpg, ssh-keygen or other signature programs on a checkout.
 Incomplete observations are reported as such even when a separate verification
 stage succeeds. Evidence skeletons and generated PR descriptions are local files,
 not attestations that work ran or that publication is permitted. Text output is
 abridged; use canonical JSON for audits and automated decisions.
+
+The opt-in `--cache` stores only file contents of repositories observed public in
+the same command, under a user-owned 0700 directory. That directory is opened
+once by a symlink-free walk from `/`. It is refused (the cache is then disabled)
+if any ancestor is group- or other-writable without being a root-owned sticky
+directory or is owned by another account, if an ancestor you own carries a POSIX
+ACL (ACLs on root-owned ancestors are not checked), or if the cache directory is
+not exactly 0700 or carries a POSIX ACL. After that it is used only through the open
+descriptor. Each hit must hash to the
+Git blob SHA from a live tree read, so a corrupted or tampered entry is discarded
+rather than used. The cache does not defend against other code running as the
+same user, which could alter the CLI itself.
 
 Repository compliance is checked by the host and independent reviewer, not by
 interpreting prose as executable policy. The installed workflow requires a

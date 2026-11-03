@@ -156,12 +156,14 @@ class PRBodyTests(unittest.TestCase):
     def test_schema_02_real_path_does_not_claim_the_work_is_unauthorized(self):
         task, client = candidate_task()
         client.compare_status = 'ahead'
+        client.commit = 'b' * 40  # a different tip: equal commits can only be identical (FR1-04)
         body, verification = prbody.pr_body(task, None, None, client)
         self.assertIn('Current implement action is not authorized', verification['stage_blockers']['implementation'])
         for text in ['mandate', 'not authorized', '`implementation_ready`', '`draft_create_ready`', '`completion_ready`']:
             self.assertNotIn(text, body)
         self.assertIn(prbody.AUTHORITY_OMITTED, body)
-        self.assertIn('- source: Reviewed source commit is not in current source default-branch history\n', body)
+        self.assertIn('- source: Reviewed source commit is not in current source default-branch history: base '
+                      f'{task["source"]["commit"]} is ahead of acme/photos default branch main at {"b" * 40}\n', body)
         self.assertIn('- evidence: No technical execution evidence provided\n', body)
 
     def test_schema_02_keeps_source_identity_blockers_reported_by_authorization(self):
@@ -246,6 +248,35 @@ class PRBodyTests(unittest.TestCase):
         truncated = FakeGitHub()
         truncated.request = lambda endpoint: {'truncated': True, 'tree': []}
         self.assertEqual(prbody.template_pointer(task, truncated)['state'], 'unknown')
+
+    def test_a_malformed_tree_entry_makes_the_template_lookup_unknown(self):
+        # A template entry without a valid type was skipped, so the body claimed no template exists.
+        task, client = ready_contract()
+        original = client.request
+        for name, entry in {'type missing': {'path': '.github/PULL_REQUEST_TEMPLATE.md'},
+                            'type unknown': {'path': '.github/PULL_REQUEST_TEMPLATE.md', 'type': 'unknown'},
+                            'mode contradicts type': {'path': 'docs', 'type': 'tree', 'mode': '100644'},
+                            'empty path': {'path': '', 'type': 'blob'},
+                            'repeated path': {'path': 'AGENTS.md', 'type': 'blob', 'sha': 'e' * 40}}.items():
+            def request(endpoint, entry=entry):
+                value = original(endpoint)
+                if '/git/trees/' in endpoint:
+                    value['tree'].append(dict(entry))
+                return value
+            with self.subTest(case=name):
+                client.request = request
+                self.assertEqual(prbody.template_pointer(task, client), {'state': 'unknown', 'templates': []})
+                self.assertIn('Pull request template presence is unknown', prbody.pr_body(task, client=client)[0])
+
+        def non_blobs(endpoint):  # valid tree and submodule entries with template names are not templates
+            value = original(endpoint)
+            if '/git/trees/' in endpoint:
+                value['tree'] += [{'path': 'docs/pull_request_template.md', 'type': 'tree', 'mode': '040000'},
+                                  {'path': '.github/pull_request_template.md', 'type': 'commit', 'mode': '160000'}]
+            return value
+        client.request = non_blobs
+        self.assertEqual(prbody.template_pointer(task, client), {'state': 'none', 'templates': []})
+        client.request = original
 
     def test_closing_keyword_only_when_requested(self):
         task, client = ready_contract()

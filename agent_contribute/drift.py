@@ -1,14 +1,17 @@
 """Read-only drift report for a prepared contract (#16). It never rewrites the contract."""
 import hashlib
 
-from . import core
+from . import core, policy as policy_report
+
+# Current-report reasons that mean the inventory itself could not be read completely.
+POLICY_READ_FAILURES = {'repository tree not read', 'read failed', 'content did not match the pinned tree entry'}
 
 
 def _sha(text):
     return hashlib.sha256(text.encode('utf-8', errors='surrogateescape')).hexdigest()
 
 
-def drift(task, client=None):
+def drift(task, client=None, policy_sha256=None):
     if core.validate_contract(task):
         raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
     client = client or core.GitHub()
@@ -62,6 +65,7 @@ def drift(task, client=None):
     current_files = {item['path']: item['sha256'] for item in current['instructions']}
     instructions = {'changed': live['instructions_sha256'] != source['instructions_sha256'],
                     'baseline_verified': False, 'added': [], 'removed': [], 'modified': []}
+    baseline = None
     try:
         # The pinned commit is immutable: re-reading it reconstructs per-file baselines without a schema change.
         baseline = core.repository_snapshot(live['repository'], client, core.repository_metadata(live['repository'], client),
@@ -91,9 +95,81 @@ def drift(task, client=None):
     live_urls = {item['url'] for item in current['duplicates']}
     report['overlap'] = {'added': sorted(live_urls - stored_urls), 'removed': sorted(u for u in stored_urls - live_urls if u),
                          'scope': 'open PRs in the source repository only'}
+    policy_changed = False
+    if policy_sha256 is not None:
+        report['repository_policy_drift'] = _policy_drift(policy_sha256, current, baseline, source, client, errors)
+        policy_changed = report['repository_policy_drift']['policy_drifted'] is True
     report['drifted'] = bool(report['source']['changed'] or report['issue']['changed'] or instructions['changed'] or policy['changed'] or
                              report['overlap']['added'] or report['default_branch']['stored_branch'] !=
-                             report['default_branch']['current_branch'])
+                             report['default_branch']['current_branch'] or policy_changed)
     report['errors'] = errors
     report['complete'] = not errors
     return report
+
+
+def _policy_drift(expected, current, baseline, source, client, errors):
+    """Compare the reviewed policy inventory hash with the inventory at the current default-branch commit (N1).
+
+    Per-source deltas need a baseline: the inventory rebuilt at the contract's pinned commit must reproduce the
+    recorded hash. The owner .github repository is read at its current tip, so it may not; then only the hash
+    comparison is reported, never invented deltas."""
+    now = policy_report.for_inspected(current, client)
+    incomplete = now['limits_hide_sources'] or any(item['reason'] in POLICY_READ_FAILURES for item in now['unassessed'])
+    result = {'expected_sha256': expected, 'current_sha256': now['inventory_sha256'],
+              'policy_drifted': None if incomplete else now['inventory_sha256'] != expected,
+              'limits_hide_sources': now['limits_hide_sources'], 'baseline_verified': False,
+              'current_inventory_format': now['inventory_format'],
+              'recorded_inventory_format': now['inventory_format'] if now['inventory_sha256'] == expected else None,
+              'added': None, 'removed': None, 'changed': None,
+              'note': 'The hash covers policy source bytes, unassessed references and limits. Re-read every changed '
+                      'source and repeat the policy review before any authorization or publication.'}
+    if incomplete:
+        errors.append('Policy inventory read is incomplete or limited; policy drift is unknown')
+    if baseline is not None and not baseline['errors']:
+        hashes = {}
+        then = policy_report.report(source['repository'], source['commit'], baseline['instructions'], client,
+                                    default_branch=source['default_branch'], hashes=hashes)
+        # The same pinned snapshot hashed under another known format identifies the recorded hash's format.
+        fmt = next((fmt for fmt, digest in sorted(hashes.items(), reverse=True) if digest == expected), None)
+        result['baseline_verified'] = fmt is not None
+        if fmt is not None:
+            result['recorded_inventory_format'] = fmt
+    current = result['current_inventory_format']
+    if result['recorded_inventory_format'] not in (None, current):
+        result['note'] += (f' The recorded hash is inventory format {result["recorded_inventory_format"]} of the same '
+                           f'pinned snapshot; the current report is format {current}, so the hashes cannot match. '
+                           'Re-review and record the new inventory_sha256.')
+    if not result['baseline_verified']:
+        result['note'] += (f' No per-source deltas: the baseline rebuilt at the pinned commit (inventory format '
+                           f'{current}) does not reproduce the recorded hash. It may come from a different inventory '
+                           'format (another agent-contrib version), the owner .github repository may have moved, or '
+                           'the review used another snapshot.')
+        return result
+    old, new = _inventory_entries(then), _inventory_entries(now)
+    result['added'] = [dict(new[i], identity_sha256=i) for i in sorted(set(new) - set(old))]
+    result['removed'] = [dict(old[i], identity_sha256=i) for i in sorted(set(old) - set(new))]
+    result['changed'] = [{'identity_sha256': i, 'what': new[i]['what'],
+                          'stored': {k: old[i][k] for k in ('state', 'fingerprint')},
+                          'current': {k: new[i][k] for k in ('state', 'fingerprint')}}
+                         for i in sorted(set(old) & set(new))
+                         if (old[i]['state'], old[i]['fingerprint']) != (new[i]['state'], new[i]['fingerprint'])]
+    return result
+
+
+def _inventory_entries(rep):
+    """identity -> {what, state, fingerprint} for every inventoried candidate, read or unread (RP-28): scanned
+    sources by content SHA-256, unread files and omissions by pinned Git blob id, references by identity alone."""
+    entries = {}
+    for s in rep['sources_scanned']:
+        what = s['path'] if s['origin'] == 'repository' else f"{s['repository']}:{s['path']}"
+        entries.setdefault(s['identity_sha256'], {'what': what, 'state': 'scanned', 'fingerprint': s['sha256']})
+    for u in rep['unassessed']:
+        entries.setdefault(u['identity_sha256'], {'what': u['what'], 'state': 'unassessed: ' + u['reason'],
+                                                  'fingerprint': u['blob_sha']})
+    for o in rep['omitted_sources']:
+        owner = o['repository'].rsplit('/', 1)[-1] == '.github'  # owner .github entries display with their repository
+        what = f"{o['repository']}:{o['path']}" if owner else o['path']
+        entries.setdefault(o['identity_sha256'], {'what': what, 'state': 'omitted: ' + o['reason'],
+                                                  'fingerprint': o['blob_sha']})
+    return entries
+

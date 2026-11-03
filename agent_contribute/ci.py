@@ -30,21 +30,14 @@ def combined_status(client, repository, sha):
 
 
 def observe(task, evidence, client=None):
-    target = task.get('execution', {}).get('target_repository') or task['source']['repository']
-    result = {'repository': target, 'head_sha': None, 'complete': False, 'errors': [],
+    _, target, head, error = core.observation_target(task, evidence)
+    result = {'repository': target, 'head_sha': head, 'complete': False, 'errors': [],
               'notice': 'Observation only. It never changes readiness, does not prove the evidence checks equal the '
                         'CI checks, and queued, pending, approval-required or missing runs are not success.'}
-    head = evidence.get('git_head') if isinstance(evidence, dict) else None
-    if not isinstance(head, str) or not remote.SHA.fullmatch(head):
-        result['errors'].append('No valid evidence git_head to observe')
+    if error:
+        result['errors'].append(error)
         return result
-    result['head_sha'] = head
     client = client or core.GitHub()
-    try:
-        core.parse_repository(target)
-    except core.ProtocolError as exc:
-        result['errors'].append(str(exc))
-        return result
     runs, run_errors = check_runs(client, target, head)
     status, status_errors = combined_status(client, target, head)
     current = [run for run in runs if run['head_sha'] == head]

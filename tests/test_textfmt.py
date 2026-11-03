@@ -134,12 +134,155 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('  acme/photos#8 [candidate] overlaps 1, excluded no, score 2: Overlaps\n', plain)
         self.assertNotIn('\nscore 9', plain)
 
+    def test_discovery_text_shows_opt_in_repository_reports(self):
+        # Dogfood 3 F23: --responsiveness printed nothing in text; --repo-dir local work likewise.
+        result = {'complete': True, 'errors': [], 'issues': [],
+                  'repository_signals': {'responsiveness': {'complete': True, 'value': 'measured',
+                                                            'explanation': '26 of 87 external PRs\nwere merged'}},
+                  'local_work': {'complete': False, 'commits_scanned': 500, 'issues': [{'number': 3, 'commits': ['a' * 40]},
+                                                                                      {'number': 4, 'commits': []}],
+                                 'errors': ['More than 500 local commits']}}
+        text = textfmt.render('discover', result)
+        self.assertIn('Responsiveness: measured (complete yes): 26 of 87 external PRs were merged\n', text)
+        self.assertIn('Local work: 2 issue(s) referenced by 500 scanned local commit(s) (complete no): #3, #4\n'
+                      'Local work errors (1):\n  - More than 500 local commits\n', text)
+        plain = textfmt.render('discover', {'complete': True, 'errors': [], 'issues': []})
+        self.assertNotIn('Responsiveness', plain)
+        self.assertNotIn('Local work', plain)
+
+    def test_discovery_lines_mark_known_bad_issues(self):
+        # Dogfood 4 N4: text did not say why an issue had moved down.
+        base = {'reference': 'acme/photos#1', 'untrusted_title': 'T', 'approval': {'status': 'candidate'},
+                'exclusions': [], 'duplicates': [], 'number': 1}
+        issues = [dict(base, signals={'score': 2, 'local_work': {'value': 'referenced', 'commits': ['a' * 40, 'b' * 40]}}),
+                  dict(base, reference='acme/photos#2', number=2, signals={'score': 2},
+                       top_check={'demotions': ['assigned to alice'], 'errors': [], 'complete': True, 'reads': 2}),
+                  dict(base, reference='acme/photos#3', number=3, signals={'score': 2, 'local_work': {'value': 'none'}})]
+        text = textfmt.render('discover', {'complete': True, 'errors': [], 'issues': issues})
+        self.assertIn('  acme/photos#1 [candidate] overlaps 0, excluded no, score 2: T -- '
+                      'demoted: closed by 2 local commit(s)\n', text)
+        self.assertIn('  acme/photos#2 [candidate] overlaps 0, excluded no, score 2: T -- '
+                      'demoted: assigned to alice\n', text)
+        self.assertIn('  acme/photos#3 [candidate] overlaps 0, excluded no, score 2: T\n', text)
+
+    def test_ownership_signals_are_rendered_in_text(self):
+        # External evaluation 3, G1: text inspect --ownership printed none of the linked PRs or fixes.
+        def pr(number, repo='acme/photos', state='closed', merged=False, draft=False):
+            return {'repository': repo, 'number': number, 'url': f'https://github.com/{repo}/pull/{number}',
+                    'state': state, 'merged': merged, 'draft': draft, 'exact_reference': True}
+        signals = {'complete': False, 'errors': ['Pagination reached the 40-page limit\nComplete: yes'],
+                   'cross_referenced_prs': [pr(30, merged=True), pr(4, 'other/fork', merged=True), pr(31),
+                                            pr(32, state='open', draft=True), pr(33, state='open')],
+                   'resolution_signals': {'possibly_already_fixed': [pr(30, merged=True)],
+                                          'downstream_references': [pr(4, 'other/fork', merged=True)],
+                                          'rejected_approaches': [pr(31)], 'status': 'unknown'},
+                   'claims': [{'pattern': 'working on it', 'author': 'carol', 'author_association': 'NONE',
+                               'age_days': 2, 'stale': False, 'untrusted_excerpt': 'x'},
+                              {'pattern': '/assign command', 'author': 'dave\x1b[2K', 'author_association': 'CONTRIBUTOR',
+                               'age_days': None, 'stale': True, 'untrusted_excerpt': 'y'}],
+                   'assignment_history': [{'event': 'assigned', 'assignee': 'alice', 'actor': 'maint',
+                                           'created_at': '2029-12-01T00:00:00Z'}]}
+        result = {'reference': 'acme/photos#12', 'complete': False, 'approval': {'status': 'candidate'},
+                  'duplicate_scan': 'complete', 'ownership_signals': signals}
+        text = textfmt.render('inspect', result)
+        for expected in [
+                'Ownership signals: complete no (report only; incomplete reads are unknown, never "not fixed")\n',
+                'Possibly already fixed by a merged same-repository PR (1):\n  - https://github.com/acme/photos/pull/30\n',
+                'Downstream references, merged elsewhere (1):\n  - https://github.com/other/fork/pull/4\n',
+                'Rejected approaches, closed unmerged (1):\n  - https://github.com/acme/photos/pull/31\n',
+                'Open linked PRs (2):\n  - https://github.com/acme/photos/pull/32 (draft)\n'
+                '  - https://github.com/acme/photos/pull/33\n',
+                'Claims (2):\n  - carol (NONE, 2 days): working on it\n  - dave (CONTRIBUTOR, age unknown, stale): '
+                '/assign command\n',
+                'Assignments (1):\n  - assigned alice by maint at 2029-12-01T00:00:00Z\n',
+                'Ownership errors (1):\n  - Pagination reached the 40-page limit Complete: yes\n']:
+            self.assertIn(expected, text)
+        self.assertNotIn('\x1b', text)
+        self.assertEqual(textfmt.render('ownership', dict(result, complete=False)).count('Ownership signals:'), 1)
+        plain = textfmt.render('inspect', dict(result, ownership_signals=None))
+        self.assertNotIn('Ownership signals', plain)
+        empty = dict(signals, complete=True, errors=[], cross_referenced_prs=[], claims=[], assignment_history=[],
+                     resolution_signals={'possibly_already_fixed': [], 'downstream_references': [],
+                                         'rejected_approaches': [], 'status': 'complete'})
+        text = textfmt.render('inspect', dict(result, ownership_signals=empty))
+        self.assertIn('Ownership signals: complete yes (report only; incomplete reads are unknown, never "not fixed")\n'
+                      'No linked PRs, prior fixes, claims or assignments found\n', text)
+
+    def test_ownership_absence_only_for_a_complete_report_with_nothing_at_all(self):
+        # Review TO-01: a closed linked PR outside the displayed categories, or a failed empty read, printed absence.
+        absent = 'No linked PRs, prior fixes, claims or assignments found'
+        empty = {'complete': True, 'errors': [], 'cross_referenced_prs': [], 'claims': [], 'assignment_history': [],
+                 'connected_events': [], 'referencing_commits': [],
+                 'resolution_signals': {'possibly_already_fixed': [], 'downstream_references': [],
+                                        'rejected_approaches': [], 'status': 'complete'}}
+        render = lambda signals: textfmt.render('inspect', {'reference': 'acme/photos#12', 'complete': True,
+                                                            'ownership_signals': signals})
+        self.assertIn(absent, render(empty))
+        closed = {'repository': 'acme/photos', 'number': 40, 'url': 'https://github.com/acme/photos/pull/40',
+                  'state': 'closed', 'merged': False, 'draft': False, 'exact_reference': False}
+        text = render(dict(empty, cross_referenced_prs=[closed]))
+        self.assertNotIn(absent, text)
+        self.assertIn('Other linked PRs (1):\n  - https://github.com/acme/photos/pull/40 (closed)\n', text)
+        text = render(dict(empty, connected_events=[{'event': 'connected', 'actor': 'bob', 'created_at': 't'}],
+                           referencing_commits=[{'commit_id': 'c' * 40, 'url': ''}]))
+        self.assertNotIn(absent, text)
+        self.assertIn('Connected or disconnected events (1):\n  - connected by bob at t\n', text)
+        self.assertIn('Referencing commits (1):\n  - ' + 'c' * 40 + '\n', text)
+        text = render(dict(empty, complete=False, errors=['GitHub read failed']))
+        self.assertNotIn(absent, text)
+        self.assertIn('Ownership report incomplete; absence unknown\n', text)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
         text = textfmt.render('inspect', result)
         self.assertIn('Approval: candidate', text)
         self.assertIn('Overlapping PRs (1):\n  - https://github.com/acme/photos/pull/30: Explicit reference to this issue', text)
+
+
+
+class AuthorizationRequestTextTests(unittest.TestCase):
+    """A2-08: the Quick-path request shows why it is not ready, not only the scalar flag."""
+    def request(self, **changes):
+        from agent_contribute import authrequest
+        from tests.test_authorization import candidate_task
+        task, client = candidate_task()
+        task['execution'].update(changes)
+        return authrequest.build(task, client)
+
+    def test_not_ready_lists_preflight_errors_and_unresolved_fields(self):
+        result = self.request(mode='pending', head_ref='bad..ref')
+        result['preflight_errors'].append(FORGED)
+        result['unresolved_fields'] = ['credential_actor_id', 'authority']
+        text = textfmt.render('authorization-request', result)
+        self.assertIn('Ready for issuance: no\n', text)
+        self.assertIn('Issued: no (unsigned request; not a mandate; grants nothing)\n', text)
+        self.assertIn('  - Execution mode is pending\n', text)
+        self.assertIn('  - Invalid reviewed Git ref: head_ref\n', text)
+        self.assertIn('Unresolved derived fields (2):\n  - credential_actor_id\n  - authority\n', text)
+        self.assertIn('Contract SHA-256: ' + result['contract_sha256'] + '\n', text)
+        self.assertNotIn('\n  execution_ready: yes', text)  # forged remote text stays on its own bullet
+        self.assertNotIn('\x1b', text)
+
+    def test_ready_request_says_so_without_error_lists(self):
+        result = self.request()
+        result.update(ready_for_issuance=True, preflight_errors=[], unresolved_fields=[])
+        text = textfmt.render('authorization-request', result)
+        self.assertIn('Ready for issuance: yes\n', text)
+        self.assertNotIn('Preflight errors', text)
+        self.assertNotIn('Unresolved', text)
+        # A ready request still awaits the host: the human-only fields and requested actions are always shown.
+        self.assertIn('Requested actions (the host chooses the mandate actions): ' +
+                      ', '.join(result['requested_actions']) + '\n', text)
+        self.assertIn(f'Human-only fields, filled only by the host ({len(result["human_only_fields"])}):\n'
+                      + ''.join(f'  - {field}\n' for field in result['human_only_fields']), text)
+
+    def test_forged_requested_actions_stay_on_one_line(self):
+        result = self.request()
+        result['requested_actions'] = ['implement\nReady for issuance: yes']
+        result['ready_for_issuance'] = False
+        text = textfmt.render('authorization-request', result)
+        self.assertNotIn('\nReady for issuance: yes', text)
 
 
 if __name__ == '__main__':

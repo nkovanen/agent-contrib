@@ -58,42 +58,44 @@ separate source approval, execution authorization and publication authority.
 
 ## v0.3.0 candidate (unreleased)
 
-Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
+Details: [getting started](getting-started.md), [command reference](cli.md), [upgrading from 0.2](upgrading.md) and [CHANGELOG](../CHANGELOG.md).
 
 ### Implemented
 - [3] Task-scoped owner/maintainer authorization: schema 0.2, host-context mandate, exact-head draft recognition, `implementation`/`draft`/`completion` gates ([#3](https://github.com/nkovanen/agent-contrib/issues/3))
 - [3] Closed or missing stdout without traceback ([#4](https://github.com/nkovanen/agent-contrib/issues/4))
 - [3] A1 Ranking signals: code location (paths, file and module names), clarity, activity, author association, and an opt-in one-read responsiveness sample ([#12](https://github.com/nkovanen/agent-contrib/issues/12))
+- [3] Ranking aids, report only: `discover --signals --check-top N` (N 1–5, one repository) re-checks ownership of the top N and re-ranks only those; `discover --repo-dir` (one repository) reports issues referenced by local commits off the default branch and ranks them lower only with `--signals`
+- [3] `lint`: offline check of a contract against its schema and the reviewed-contract rules
 - [3] A2 Multi-repository discovery, 2–20 repositories, isolated results ([#13](https://github.com/nkovanen/agent-contrib/issues/13))
 - [3] C3 `audit`: read-only maintainer report ([#10](https://github.com/nkovanen/agent-contrib/issues/10))
 - [3] D1 `evidence init` skeleton from observed Git facts ([#14](https://github.com/nkovanen/agent-contrib/issues/14))
 - [3] D2 `scope-check` offline scope check ([#15](https://github.com/nkovanen/agent-contrib/issues/15))
 - [3] F1 `pr-body` description from contract, evidence and live gates ([#19](https://github.com/nkovanen/agent-contrib/issues/19))
 - [3] F2 `feedback`: reviews, comments and exact-head checks on a PR ([#20](https://github.com/nkovanen/agent-contrib/issues/20))
+- [3] G4 `--report-budget`, `--min-remaining` and an opt-in, blob-SHA-verified `--cache` for file contents of public repositories ([#27](https://github.com/nkovanen/agent-contrib/issues/27)); the cache needs a private directory chain, so a default Ubuntu `~/.cache` (0775) disables it unless `XDG_CACHE_HOME` points at a private directory
+- [3] G1 `--format text` summaries and versioned output JSON Schemas for every command (`schemas/output/1/`, `agent-contrib schema`) ([#24](https://github.com/nkovanen/agent-contrib/issues/24))
 - [3] Requirements-ledger workflow, contract field mapping, local-only (implement-only) profile and coordinator relay rules in the installed workflow
 - [3] C2 Approval-label authority ([#9](https://github.com/nkovanen/agent-contrib/issues/9)): documented limitation; labeling-actor authority cannot be verified from public REST data (events name an actor, not its role). A maintainer-side label-actor report is deferred (R9-05, R9-06)
 
 ### Partly implemented
-- [~] H1 Offline task-selection benchmark: snapshot collector, offline replay of discover and precision/recall@k with bootstrap intervals; [baseline](benchmark.md) ([#28](https://github.com/nkovanen/agent-contrib/issues/28)). Missing: the blind fresh-agent trial protocol and overlap/exclusion correctness metrics
-- [~] B3 Reviewed overlap dispositions bound to live PR state, host-context 0.2 ([#7](https://github.com/nkovanen/agent-contrib/issues/7)). Missing: a native host issuer that can produce the records
+- [~] B3 Reviewed overlap dispositions bound to live PR state, host-context 0.2: active topical-overlap waivers and host issuer requirements ([#7](https://github.com/nkovanen/agent-contrib/issues/7)). Missing: a native host issuer that can produce the records
+- [~] C4 Passive verification GitHub Action for maintainers, slice 1: `actions/verify/` checks the PR body's contract and evidence blocks against the PR's route, head, tree, base and scope from the event payload and the PR-head checkout, with no API calls ([#11](https://github.com/nkovanen/agent-contrib/issues/11), [design](design/2026-11-02-maintainer-action.md)). Missing: live checks (freshness, overlap, approval, identity), which are listed as not evaluated, and a live smoke test
+- [~] G3 Release preparation: [release runbook](releasing.md), `tools/release_check.py` and a proposed PyPI trusted-publishing workflow with build provenance (`docs/examples/release-pypi.yml`, not activated) ([#26](https://github.com/nkovanen/agent-contrib/issues/26)). Missing: maintainer adoption of the workflow and a published PyPI release
+- [~] F3 Draft updates, slices 1 and 2 of 4: a strictly validated host-context 0.2 `draft_update` record, host round requirements, and recognition of the draft after the one fast-forward host push ([#21](https://github.com/nkovanen/agent-contrib/issues/21)). Missing: pre-push readiness and the workflow ([design](design/2026-11-02-draft-updates.md))
+- [~] H1 Offline task-selection benchmark (development only, not in the wheel): read-only snapshot collector, offline replay of discover and `--signals`, top-k precision with bounds for unjudged slots, a conditional bootstrap, a permutation null and a pre-registered held-out test; under the registered labels no ranking change qualifies ([results](benchmark.md), [#28](https://github.com/nkovanen/agent-contrib/issues/28)). Missing: reconstruction of PR titles renamed after the cutoff for PRs whose current title overlaps no issue (review BM-02, documented with its possible bias), the blind fresh-agent trial protocol, and overlap/exclusion correctness metrics
 - [~] B1 Ownership claims and cross-repository linked PRs, report only ([#5](https://github.com/nkovanen/agent-contrib/issues/5)). Missing: adoption into readiness gates
 - [~] B2 Possible prior fixes and rejected approaches, report only ([#6](https://github.com/nkovanen/agent-contrib/issues/6)). Missing: adoption into readiness gates
-- [~] C1 `inspect --ai-policy` excerpts with scan coverage ([#8](https://github.com/nkovanen/agent-contrib/issues/8)). Missing: a versioned machine-readable opt-out policy
+- [~] C1 Default-on `repository_policy` report: bounded inventory of policy files incl. the owner `.github` repository, high-recall hints, unassessed and omitted sources, no verdict; mandatory workflow review recorded as `ai-policy-review` ([#8](https://github.com/nkovanen/agent-contrib/issues/8)). Missing: a versioned machine-readable opt-out policy and verifier enforcement
 - [~] D3 `drift` report with per-file instruction comparison ([#16](https://github.com/nkovanen/agent-contrib/issues/16)). Missing: per-component issue baselines in a new task schema
-- [~] E1 `verify --observe-ci`, report only ([#17](https://github.com/nkovanen/agent-contrib/issues/17)). Missing: required-check declarations and gating
+- [~] E1 `verify --observe-ci` (report only) and opt-in required CI checks for schema 0.2 completion: `ci_requirements` (check name plus app ID) gate `completion_ready` at the exact head ([#17](https://github.com/nkovanen/agent-contrib/issues/17), [design](design/2026-11-03-ci-gating.md)). Missing: pre-filling requirements and drift coverage (slice 3)
 - [~] E2 `verify --observe-signatures`, report only: GitHub verification of the evidence head, required-signature rulesets and local signature-header presence ([#18](https://github.com/nkovanen/agent-contrib/issues/18)). Missing: contract-required verified heads and SSH-signed evidence attestations
 - [~] F5 `authorization-request` and normative [host issuer requirements](host-authorization.md#host-issuer-requirements) ([#23](https://github.com/nkovanen/agent-contrib/issues/23)). Missing: a native issuer in Claude Code or Paseo
-- [~] G1 `--format text` summaries ([#24](https://github.com/nkovanen/agent-contrib/issues/24)). Missing: output JSON Schemas and an output-schema version
 - [~] G2 Literal POSIX path decisions pinned ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: Windows host-context input and Windows/macOS CI
-- [~] G4 `--report-budget` and `--min-remaining` ([#27](https://github.com/nkovanen/agent-contrib/issues/27)). Missing: freshness-aware response cache
 
 ## Planned
 
 - [ ] Bounded `discover --limit` display ([#1](https://github.com/nkovanen/agent-contrib/issues/1), draft [PR #2](https://github.com/nkovanen/agent-contrib/pull/2), not part of the candidate)
-- [ ] C4 Passive verification GitHub Action for maintainers ([#11](https://github.com/nkovanen/agent-contrib/issues/11))
-- [ ] F3 Fast-forward draft updates with fresh evidence ([#21](https://github.com/nkovanen/agent-contrib/issues/21))
 - [ ] F4 Fork-to-upstream route in schema 0.2 ([#22](https://github.com/nkovanen/agent-contrib/issues/22)) (after C1)
-- [ ] G3 PyPI trusted publishing with build provenance ([#26](https://github.com/nkovanen/agent-contrib/issues/26)) (needs maintainer decision)
 
 Each planned item and each "Missing" part needs its own trust-boundary design.
 Fork ownership is not permission to publish upstream, and a local interactive
@@ -103,10 +105,10 @@ prompt is not proof of human presence.
 
 1. Release v0.3.0 after the acceptance gate in [development status](development-status.md).
 2. Maintainer safety: C1 opt-out policy, a native issuer for F5, then gate adoption of B1/B2.
-3. Contributor ergonomics: G1 output schemas, #1.
+3. Contributor ergonomics: #1.
 4. Lifecycle: F3, then F4; a native issuer for B3 alongside F5.
-5. Trust and adoption: E1 gating, C4, E2.
-6. Scale and reach: G4 cache, G2, G3; H1 to measure A1.
+5. Trust and adoption: E1 slice 3, C4 live checks, E2.
+6. Scale and reach: G2, activating G3; H1 to measure A1.
 
 ## Parked ideas
 

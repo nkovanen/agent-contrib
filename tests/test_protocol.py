@@ -25,6 +25,15 @@ class BootstrapTests(unittest.TestCase):
         self.assertTrue(AVAILABLE, 'agent_contribute implementation is missing')
 
 
+def comparison(base, head, status):
+    """A GitHub compare/{base}...{head} response that is internally consistent for status (FR1-01)."""
+    ahead = {'ahead': 2, 'diverged': 2}.get(status, 0)
+    behind = {'behind': 2, 'diverged': 1}.get(status, 0)
+    merge = {'ahead': base, 'behind': head, 'identical': base}.get(status, 'd' * 40)
+    return {'status': status, 'ahead_by': ahead, 'behind_by': behind, 'total_commits': ahead,
+            'base_commit': {'sha': base}, 'merge_base_commit': {'sha': merge}}
+
+
 class FakeGitHub:
     """Only the network boundary is replaced; inspection/ranking remain real."""
     def __init__(self, policy=None, labels=None, prs=None):
@@ -39,6 +48,10 @@ class FakeGitHub:
         if any(key in endpoint for key in self.failed):
             raise core.ProtocolError('api_error', 'GitHub read failed')
         path = endpoint.split('?')[0]
+        if path.split('/')[2:3] == ['.github']:  # no owner .github repository (policy report reads): HTTP 404
+            missing = core.ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404)')
+            missing.http_status = 404
+            raise missing
         if path == 'repos/acme/photos':
             return {'full_name': 'acme/photos', 'default_branch': 'main', 'fork': False, 'has_issues': True}
         if path == 'repos/human/photos':
@@ -47,7 +60,9 @@ class FakeGitHub:
         if path.endswith('/commits/main'):
             return {'sha': getattr(self, 'commit', 'a' * 40)}
         if '/compare/' in path:
-            return {'status': getattr(self, 'compare_status', 'identical')}
+            base, head = path.rsplit('/compare/', 1)[1].split('...')
+            default = 'identical' if base == head else 'behind'
+            return comparison(base, head, getattr(self, 'compare_status', default))
         if '/git/trees/' in path:
             paths = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'CONTRIBUTING.md',
                      'docs/architecture.md', 'specs/README.md']
@@ -80,6 +95,9 @@ class FakeGitHub:
 def ready_contract():
     client = FakeGitHub({'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'], 'label_authority': 'repository-label-permission'}, ['agent-ok'])
     task = core.prepare(core.inspect_issue('acme/photos#12', client))
+    # A contract reviewed before prepare added the pending ai-policy-review prerequisite: existing contracts and
+    # their verify goldens are unchanged. New contracts must satisfy or visibly remove it (tests/test_policy.py).
+    task['prerequisites'] = []
     task.update(status='reviewed', objective='Reject out-of-bounds thumbnails',
                 behavior_criteria=[{'id': 'bounds', 'description': 'Malformed dimensions return an error'}],
                 code_locations=['src/thumb.rs'], constraints=['Preserve valid thumbnails'],
@@ -551,6 +569,24 @@ class VerificationTests(unittest.TestCase):
             self.assertIn(expected, client.calls)
             client.failed.add('/compare/')
             self.assertFalse(core.verify(task, evidence, tmp, client)['evidence_valid'])
+
+    def test_base_errors_name_the_base_and_the_commit_it_was_compared_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, git = evidence_checkout(tmp)
+            client.commit = 'c' * 40
+            base = evidence['base_commit']
+            client.compare_status = 'ahead'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is ahead of '
+                          f'acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.compare_status = 'diverged'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is diverged '
+                          f'from acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.failed.add('/compare/')
+            self.assertIn(f'Could not authenticate evidence base against source default-branch history: base {base} '
+                          f'compared with acme/photos default branch main at {"c" * 40}: GitHub read failed',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
 
     def test_git_commit_utc_z_timestamp_preserves_evidence_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:

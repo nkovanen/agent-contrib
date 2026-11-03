@@ -352,92 +352,12 @@
           "$ref": "#/$defs/ownership_signals",
           "description": "Added by --ownership"
         },
-        "ai_policy": {
-          "type": "object",
-          "properties": {
-            "ai_policy_review": {
-              "type": "string",
-              "const": "required"
-            },
-            "coverage": {
-              "type": "string",
-              "enum": [
-                "complete",
-                "incomplete"
-              ]
-            },
-            "excerpts_capped": {
-              "type": "boolean"
-            },
-            "lines_partially_scanned": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "excerpts": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "path": {
-                    "type": "string",
-                    "maxLength": 2147483647
-                  },
-                  "line": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "instruction_sha256": {
-                    "type": "string",
-                    "pattern": "^[0-9a-f]{64}$",
-                    "maxLength": 64,
-                    "minLength": 64
-                  },
-                  "patterns": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "maxLength": 2147483647
-                    },
-                    "maxItems": 1000
-                  },
-                  "untrusted_excerpt": {
-                    "type": "string",
-                    "maxLength": 300
-                  },
-                  "excerpt_truncated": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "path",
-                  "line",
-                  "instruction_sha256",
-                  "patterns",
-                  "untrusted_excerpt",
-                  "excerpt_truncated"
-                ],
-                "additionalProperties": false
-              },
-              "maxItems": 200
-            },
-            "notice": {
-              "type": "string",
-              "maxLength": 2147483647
-            }
-          },
-          "required": [
-            "ai_policy_review",
-            "coverage",
-            "excerpts_capped",
-            "lines_partially_scanned",
-            "excerpts",
-            "notice"
-          ],
-          "additionalProperties": false,
-          "description": "Added by --ai-policy: located AI-contribution statements, signals only"
-        },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
+        },
+        "repository_policy": {
+          "$ref": "#/$defs/repository_policy",
+          "description": "Default-on, report-only; never a verdict"
         }
       },
       "required": [
@@ -682,6 +602,14 @@
               "exact_reference": {
                 "type": "boolean",
                 "description": "The PR text references this issue exactly"
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "base_ref": {
+                "type": "string",
+                "maxLength": 2147483647
               }
             },
             "required": [
@@ -694,7 +622,9 @@
               "merged",
               "merged_at",
               "closed_at",
-              "exact_reference"
+              "exact_reference",
+              "title",
+              "base_ref"
             ],
             "additionalProperties": false
           },
@@ -902,6 +832,14 @@
                   "exact_reference": {
                     "type": "boolean",
                     "description": "The PR text references this issue exactly"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "base_ref": {
+                    "type": "string",
+                    "maxLength": 2147483647
                   }
                 },
                 "required": [
@@ -914,7 +852,9 @@
                   "merged",
                   "merged_at",
                   "closed_at",
-                  "exact_reference"
+                  "exact_reference",
+                  "title",
+                  "base_ref"
                 ],
                 "additionalProperties": false
               },
@@ -971,6 +911,14 @@
                   "exact_reference": {
                     "type": "boolean",
                     "description": "The PR text references this issue exactly"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "base_ref": {
+                    "type": "string",
+                    "maxLength": 2147483647
                   }
                 },
                 "required": [
@@ -983,7 +931,9 @@
                   "merged",
                   "merged_at",
                   "closed_at",
-                  "exact_reference"
+                  "exact_reference",
+                  "title",
+                  "base_ref"
                 ],
                 "additionalProperties": false
               },
@@ -996,12 +946,92 @@
                 "complete",
                 "unknown"
               ]
+            },
+            "downstream_references": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "repository": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "repository_id": {
+                    "type": "integer"
+                  },
+                  "number": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  },
+                  "draft": {
+                    "type": "boolean"
+                  },
+                  "merged": {
+                    "type": "boolean"
+                  },
+                  "merged_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2147483647
+                  },
+                  "closed_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2147483647
+                  },
+                  "exact_reference": {
+                    "type": "boolean",
+                    "description": "The PR text references this issue exactly"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "base_ref": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  }
+                },
+                "required": [
+                  "repository",
+                  "repository_id",
+                  "number",
+                  "url",
+                  "state",
+                  "draft",
+                  "merged",
+                  "merged_at",
+                  "closed_at",
+                  "exact_reference",
+                  "title",
+                  "base_ref"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 50,
+              "description": "Merged PRs with an exact reference in other repositories; never a fix"
             }
           },
           "required": [
             "possibly_already_fixed",
             "rejected_approaches",
-            "status"
+            "status",
+            "downstream_references"
           ],
           "additionalProperties": false
         },
@@ -1281,6 +1311,517 @@
       ],
       "additionalProperties": false,
       "description": "Open-PR scan of the proposed target repository when it differs from the issue source"
+    },
+    "repository_policy": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "type": "string",
+          "enum": [
+            "policy-report/1"
+          ]
+        },
+        "review_obligation": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "sources_scanned": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "enum": [
+                  "repository",
+                  "owner-github"
+                ]
+              },
+              "repository": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "path_truncated": {
+                "type": "boolean"
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ai_policy",
+                  "agent_instructions",
+                  "contributing",
+                  "pr_template",
+                  "community",
+                  "readme",
+                  "instruction"
+                ]
+              },
+              "notes": {
+                "type": "array",
+                "maxItems": 2147483647,
+                "items": {
+                  "type": "string",
+                  "maxLength": 2147483647
+                }
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              }
+            },
+            "required": [
+              "origin",
+              "repository",
+              "path",
+              "path_truncated",
+              "commit",
+              "sha256",
+              "kind",
+              "notes",
+              "path_sanitized",
+              "identity_sha256"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "unassessed": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "what": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 2147483647
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              },
+              "link_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 300
+              },
+              "what_truncated": {
+                "type": "boolean"
+              },
+              "what_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "what",
+              "reason",
+              "from",
+              "line",
+              "link_text",
+              "what_truncated",
+              "what_sanitized",
+              "identity_sha256",
+              "blob_sha"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "omitted_sources": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "repository": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "path_truncated": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ai_policy",
+                  "agent_instructions",
+                  "contributing",
+                  "pr_template",
+                  "community",
+                  "readme",
+                  "instruction"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "file limit",
+                  "scan byte limit",
+                  "request limit"
+                ]
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "repository",
+              "path",
+              "path_truncated",
+              "kind",
+              "reason",
+              "path_sanitized",
+              "identity_sha256",
+              "blob_sha"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limits_reached": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "not_reported": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "hides_sources": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "limit",
+              "not_reported",
+              "hides_sources"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limits_hide_sources": {
+          "type": "boolean",
+          "description": "A limit hid a policy candidate or reference, or omitted_sources is non-empty"
+        },
+        "never_inspected": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          }
+        },
+        "hints": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "possible_agent_restriction",
+                  "possible_ai_restriction",
+                  "possible_pr_restriction",
+                  "ai_mention"
+                ]
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^H-[0-9a-f]{64}(?![\\s\\S])",
+                "maxLength": 66,
+                "description": "Stable ID: H- and the SHA-256 of (source identity_sha256, line, kind); unchanged by report order"
+              },
+              "excerpt_truncated": {
+                "type": "boolean",
+                "description": "The excerpt omits text before or after it"
+              }
+            },
+            "required": [
+              "kind",
+              "line",
+              "heading",
+              "untrusted_excerpt",
+              "source",
+              "id",
+              "excerpt_truncated"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "reads": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "requests",
+            "limit"
+          ],
+          "additionalProperties": false
+        },
+        "inventory_format": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version of the inventory_sha256 input; 1 was the unversioned hash of earlier 0.3.0 candidates"
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "hinted_lines": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "kinds": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "possible_agent_restriction",
+                    "possible_ai_restriction",
+                    "possible_pr_restriction",
+                    "ai_mention"
+                  ]
+                }
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "excerpt_truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source",
+              "line",
+              "kinds",
+              "heading",
+              "untrusted_excerpt",
+              "excerpt_truncated"
+            ],
+            "additionalProperties": false
+          },
+          "description": "One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line"
+        },
+        "project_vocabulary": {
+          "type": "object",
+          "properties": {
+            "terms": {
+              "type": "array",
+              "maxItems": 2147483647,
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              }
+            },
+            "mentions_collapsed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lines": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "source",
+                  "line"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lines_not_listed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "terms",
+            "mentions_collapsed",
+            "lines",
+            "lines_not_listed"
+          ],
+          "additionalProperties": false,
+          "description": "Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions"
+        },
+        "owner_lookup": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "read",
+                "not_found_or_inaccessible",
+                "unavailable",
+                "not_read_request_limit",
+                "not_applicable"
+              ]
+            }
+          },
+          "required": [
+            "repository",
+            "status"
+          ],
+          "additionalProperties": false,
+          "description": "Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted."
+        }
+      },
+      "required": [
+        "report",
+        "review_obligation",
+        "sources_scanned",
+        "unassessed",
+        "omitted_sources",
+        "limits_reached",
+        "limits_hide_sources",
+        "never_inspected",
+        "hints",
+        "reads",
+        "inventory_format",
+        "inventory_sha256",
+        "hinted_lines",
+        "project_vocabulary",
+        "owner_lookup"
+      ],
+      "additionalProperties": false,
+      "description": "Default-on, report-only policy inventory and hints; never a verdict"
     }
   }
 }

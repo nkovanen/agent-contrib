@@ -100,7 +100,8 @@ The unreleased CLI **0.3.0** also bundles explicit task/evidence schema **0.2**
 and host-context schemas **0.1** and **0.2**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
 of the protocol: it asks the installed CLI for instructions every time.
 
-Updates are explicit. Read the target release notes, back up contracts/evidence
+Updates are explicit. Read the target release notes (for 0.2 to 0.3, see
+[upgrading](upgrading.md)), back up contracts/evidence
 and the existing Skill, then deliberately reinstall a chosen Git tag. For
 example, reinstalling this release with pipx is:
 

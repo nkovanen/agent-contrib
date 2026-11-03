@@ -6,7 +6,7 @@ import re
 from urllib.parse import quote
 
 from .authorization import positive as _positive_id
-from .core import ProtocolError, paginate, parse_repository
+from .core import ProtocolError, compare_relation, paginate, parse_repository
 
 _BINDING_KEYS = {'target_repository', 'target_repository_id', 'head_repository',
                  'head_repository_id', 'head_ref', 'base_ref', 'credential_actor_id',
@@ -203,6 +203,8 @@ def check_publication(binding, publication_claim, expected_head, client):
             return blocked('Published head differs from the exact validated evidence HEAD')
         if not issued <= _timestamp(current['created_at']) < expires:
             return blocked('Pull request was created outside the publication mandate interval')
+        if _timestamp(current['created_at']) > dt.datetime.now(dt.timezone.utc):  # judged after the reads (FR1-03)
+            return blocked('Pull request creation time is in the future')
         result.update(status='own_draft', verified=True, own_pr={
             'repository': repository, 'repository_id': binding['target_repository_id'],
             **{key: current[key] for key in ('number', 'id', 'url', 'head_sha', 'head_ref',
@@ -211,3 +213,124 @@ def check_publication(binding, publication_claim, expected_head, client):
     except ProtocolError as exc:
         result['errors'].append(str(exc))
         return result
+
+
+# Timeline events that rewrite, delete or restore the head ref, end or reopen the PR, or change its draft state.
+# Other event types are allowed: GitHub adds types, and the denylist plus host prevention is the stated guarantee.
+UPDATE_FORBIDDEN_EVENTS = frozenset({'head_ref_force_pushed', 'head_ref_deleted', 'head_ref_restored', 'closed',
+                                     'reopened', 'merged', 'ready_for_review', 'convert_to_draft'})
+
+
+def _timeline_key(item):
+    """Typed identity: a positive id, or commit:<sha> for a committed item; anything else is malformed."""
+    if _positive_id(item.get('id')):
+        return item['id']
+    if item.get('event') == 'committed' and _hex(item.get('sha'), 40):
+        return 'commit:' + item['sha']
+    return None
+
+
+def check_updated_publication(binding, publication_claim, from_head, expected_head, client):
+    """Recognize the claimed draft after one fast-forward update round (#21 slice 2, design I(P)).
+
+    Returns ``(publication, live_head)``. ``live_head`` is the PR head of the first complete read, or None. A live
+    head equal to ``from_head`` is no update: the result is blocked, never verified. Otherwise the live head must
+    equal the validated evidence HEAD and strictly advance ``from_head``; both the creation head and ``from_head``
+    must be ancestors; the complete timeline must hold no forbidden event; and a final full re-read must equal the
+    first read and still match the route. Snapshots are not atomic: re-verify after a later change.
+    """
+    result = {'status': 'unknown', 'verified': False, 'creation_clear': False,
+              'own_pr': None, 'errors': [],
+              'provenance': {'publication_claim_trust': 'untrusted', 'authority_evaluated': False}}
+
+    def blocked(message):
+        result['status'] = 'blocked'
+        result['errors'].append(message)
+        return result
+
+    live = None
+    try:
+        issued, expires = _binding(binding)
+        _require(_hex(from_head, 40), 'Invalid draft update from_head')
+        if expected_head is not None:
+            _require(_hex(expected_head, 40), 'Invalid expected evidence HEAD')
+        if publication_claim is None:
+            return blocked('A draft update requires a publication claim'), live
+        _claim(publication_claim)
+        claim = publication_claim
+        repository = binding['target_repository']
+        head_owner = binding['head_repository'].split('/')[0]
+        endpoint = (f'repos/{repository}/pulls?state=all'
+                    f"&head={quote(head_owner + ':' + binding['head_ref'], safe='')}"
+                    f"&base={quote(binding['base_ref'], safe='')}&sort=created&direction=asc")
+        history = paginate(client, endpoint)
+        result['provenance']['history'] = {
+            'endpoint': endpoint, 'complete': history['complete'], 'pages': history['pages'],
+            'matches': len(history['items']), 'errors': history['errors']}
+        if not history['complete']:
+            result['errors'].extend(history['errors'])
+            return result, live
+        facts = [_pr_facts(item) for item in history['items']]
+        _require(all(_route_matches(item, binding) for item in facts),
+                 'Exact-head history returned a different repository, ref or URL')
+        _require(len({item['number'] for item in facts}) == len(facts),
+                 'Exact-head history repeated a pull request number')
+        if (claim['repository_id'] != binding['target_repository_id']
+                or claim['contract_sha256'] != binding['contract_sha256']
+                or claim['mandate_sha256'] != binding['mandate_sha256']):
+            return blocked('Publication claim does not match the reviewed binding'), live
+        if len(facts) != 1 or facts[0]['id'] != claim['pr_id'] or facts[0]['number'] != claim['pr_number']:
+            return blocked('Publication claim requires exactly one matching historical pull request'), live
+        detail_endpoint = f"repos/{repository}/pulls/{claim['pr_number']}"
+        result['provenance']['detail_endpoint'] = detail_endpoint
+
+        def open_draft(detail):
+            current = _pr_facts(detail, detail=True)
+            return current, (current['author_id'] == binding['credential_actor_id'] and current['state'] == 'open'
+                             and current['draft'] is True and detail['merged'] is False
+                             and current['merged_at'] is None)
+
+        current, ok = open_draft(client.request(detail_endpoint))
+        _require(current == facts[0], 'Pull request list/detail race; repeat the complete read')
+        if not ok:
+            return blocked('Claimed publication is not an open unmerged draft by the bound actor'), live
+        if not issued <= _timestamp(current['created_at']) < expires:
+            return blocked('Pull request was created outside the publication mandate interval'), live
+        live = current['head_sha']
+        if live == from_head:
+            return blocked('The draft is still at the update round from_head; no update was pushed'), live
+        if expected_head is None or live != expected_head:
+            return blocked('Updated draft head differs from the exact validated evidence HEAD'), live
+        creation = claim['head_sha']
+        if compare_relation(client, repository, creation, from_head) not in ('identical', 'ahead'):
+            return blocked('Draft update from_head does not descend from the creation head'), live
+        if compare_relation(client, repository, creation, live) not in ('identical', 'ahead'):
+            return blocked('Updated draft head does not descend from the creation head'), live
+        if compare_relation(client, repository, from_head, live) != 'ahead':
+            return blocked('Updated draft head is not a strict fast-forward of the round from_head'), live
+        timeline = paginate(client, f"repos/{repository}/issues/{claim['pr_number']}/timeline", key=_timeline_key)
+        if not timeline['complete']:
+            result['errors'].extend(timeline['errors'])
+            return result, live
+        for item in timeline['items']:
+            _require(isinstance(item.get('event'), str), 'Malformed pull request timeline event')
+        forbidden = sorted({item['event'] for item in timeline['items']} & UPDATE_FORBIDDEN_EVENTS)
+        if forbidden:
+            return blocked('Pull request timeline has a forbidden event: ' + ', '.join(forbidden)), live
+        # Final re-read after every other read: all normalized facts, the raw predicates and the route (DU-07).
+        final, ok = open_draft(client.request(detail_endpoint))
+        _require(final == current, 'Pull request changed during the update reads; repeat the complete read')
+        if not ok:
+            return blocked('Claimed publication is not an open unmerged draft by the bound actor'), live
+        if not _route_matches(final, binding):
+            return blocked('Pull request route differs from the reviewed binding'), live
+        if _timestamp(final['created_at']) > dt.datetime.now(dt.timezone.utc):  # judged after the reads (FR1-03)
+            return blocked('Pull request creation time is in the future'), live
+        result.update(status='own_draft', verified=True, own_pr={
+            'repository': repository, 'repository_id': binding['target_repository_id'],
+            **{key: final[key] for key in ('number', 'id', 'url', 'head_sha', 'head_ref',
+                                         'base_ref', 'author_id', 'created_at')}})
+        return result, live
+    except ProtocolError as exc:
+        result['errors'].append(str(exc))
+        return result, live

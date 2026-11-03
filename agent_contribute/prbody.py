@@ -141,10 +141,9 @@ def template_pointer(task, client):
         if tree.get('truncated') is not False:
             raise core.ProtocolError('partial_tree', 'Repository tree is truncated')
         found = []
-        for entry in entries:
-            core.require(entry, dict, 'tree entry')
-            path = core.require(entry.get('path'), str, 'tree path')
-            if entry.get('type') == 'blob' and TEMPLATE.fullmatch(path):
+        # A malformed entry or a repeated path makes presence unknown, never absent.
+        for entry, (path, kind) in zip(entries, core.tree_entries(entries)):
+            if kind == 'blob' and TEMPLATE.fullmatch(path):
                 sha = entry.get('sha')
                 found.append({'path': core.safe_text(path, 500),
                               'sha': sha if isinstance(sha, str) and core.SHA.fullmatch(sha) else None})

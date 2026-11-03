@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core, dispositions
+from . import authorization, cigate, core, dispositions, draft_updates
 
 
 def prepare_v2(inspected, client):
@@ -43,6 +43,11 @@ def check_publication(binding, publication_claim, expected_head, client):
     # Lazy import keeps legacy users independent of the new publication boundary.
     from .pr_identity import check_publication as check
     return check(binding, publication_claim, expected_head, client)
+
+
+def check_updated_publication(binding, publication_claim, from_head, expected_head, client):
+    from .pr_identity import check_updated_publication as check
+    return check(binding, publication_claim, from_head, expected_head, client)
 
 
 def independent_review(task, evidence, now):
@@ -141,10 +146,15 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result.update(contract_sha256=digest, source_identity={key: source[key] for key in
                   ('repository', 'repository_id', 'owner_id', 'issue', 'issue_id')}, live_complete=False)
     errors.extend(core.reviewed_contract_errors(task, '0.2'))
+    # Contract-only route checks hold with or without a mandate (A2-02); authorization.check repeats them for its
+    # own historical validity, so its copies are not listed twice below.
+    route = authorization.route_errors(task)
+    errors.extend(route)
     current = None
     live_duplicates = []
+    scan_ids = {}
     try:
-        current = core.inspect_issue(source['repository'] + '#' + str(source['issue']), client)
+        current = core.inspect_issue(source['repository'] + '#' + str(source['issue']), client, pr_ids=scan_ids)
         if 'source' not in current:
             raise core.ProtocolError('refresh_incomplete', 'Current issue/source could not be read completely')
         result.update(repository_approval=current['approval'], live_complete=current['complete'],
@@ -161,16 +171,16 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
                 errors.append('Source changed; refresh and review contract: ' + key)
         if source['policy_sha256'] != authorization.policy_hash(current['provenance']):
             errors.append('Source policy state/content changed; refresh and review contract')
-        comparison = core.require(client.request('repos/' + source['repository'] + '/compare/' +
-                                  current['source']['commit'] + '...' + source['commit']), dict, 'reviewed base comparison')
-        if comparison.get('status') not in ('behind', 'identical'):
-            errors.append('Reviewed source commit is not in current source default-branch history')
+        status = core.compare_relation(client, source['repository'], current['source']['commit'], source['commit'])
+        if status not in ('behind', 'identical'):
+            errors.append('Reviewed source commit is not in current source default-branch history: ' +
+                          core.base_relation(task, source['commit'], current['source']['commit'], status))
         live_duplicates = [dict(item, repository=source['repository']) for item in current['duplicates']]
     except core.ProtocolError as exc:
         errors.append('Live GitHub refresh failed: ' + str(exc))
     authority = authorization.check(task, host_context, client, now)
     result.update(user_authorization=authority, mandate_sha256=authority['mandate_sha256'])
-    historical_errors = list(errors) + authority['errors']
+    historical_errors = list(errors) + [error for error in authority['errors'] if error not in route]
     action_errors = historical_errors + authority['current_errors']
     disposition, waived, observed = None, set(), []
     if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
@@ -178,7 +188,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
             disposition = dict(dispositions.report(), status='invalid', errors=['Host context schema is invalid'])
         else:
             disposition, waived, observed = dispositions.evaluate(task, host_context, authority, current, client,
-                                                                  dt.datetime.now(dt.timezone.utc))
+                                                                  dt.datetime.now(dt.timezone.utc), scan_ids)
     # A disposition only ever removes the disposed topical entries; anything it observed blocks.
     waived_items = [item for item in live_duplicates + task['discovery']['duplicate_prs']
                     if item.get('repository') == source['repository'] and item['number'] in waived]
@@ -201,10 +211,23 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result['independent_review'] = review
     publication = result['publication']
     unchecked = HISTORY_UNCHECKED
-    if authority['historical_valid']:
+    # A host-context 0.2 draft_update record replaces creation-head recognition with the update path (#21 slice 2):
+    # with a record present the draft at the creation head is never recognized, so no completion can bypass it.
+    update, live_head = None, None
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2' and 'draft_update' in host_context:
+        update = draft_updates.evaluate(task, host_context, authority, now)
+    if authority['historical_valid'] and update is None:
         claim = host_context.get('publication')
         head = evidence['git_head'] if result['technical_evidence_valid'] else None
         publication = check_publication(authority['binding'], claim, head, client)
+        result['publication'] = publication
+    elif authority['historical_valid'] and update['status'] != 'invalid':
+        record = host_context['draft_update']
+        head = evidence['git_head'] if result['technical_evidence_valid'] else None
+        publication, live_head = check_updated_publication(authority['binding'], host_context.get('publication'),
+                                                           record['from_head'], head, client)
+        if publication['verified']:
+            publication['errors'].extend(draft_updates.technical_errors(task, record, evidence, repo_dir))
         result['publication'] = publication
     if publication['status'] != 'absent' or not publication['creation_clear'] or publication['errors']:
         implementation_errors.append('Implementation requires complete empty exact-head PR history'
@@ -216,6 +239,11 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not {'implement', 'create_draft'}.issubset(authority['actions']):
         stage_errors.append('Both implement and create_draft actions must be authorized')
     own = publication['own_pr'] if publication['verified'] else None
+    if own is not None and scan_ids.get(own['number']) != own['id']:
+        # The open scan must list the own draft with the same numeric ID before it is exempted (FR1-02).
+        publication['errors'].append('Open-PR scan and exact-head history disagree on the draft pull request '
+                                     'identity; repeat the complete read')
+        own = None
     blocking = without_own(all_duplicates, own)
     result['blocking_duplicates'] = blocking
     post_errors = stage_errors + publication['errors']
@@ -233,9 +261,21 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not publication['creation_clear']:
         draft_errors.append('Exact-head PR history does not permit creation' if authority['historical_valid'] else unchecked)
     result['draft_create_ready'] = not draft_errors and not identity_verified
+    ci_blockers = []
+    if cigate.requirements(task):  # opt-in; read before the expiry judgements below (#17)
+        result['ci_gate'], ci_blockers = cigate.evaluate(task, evidence, repo_dir, publication, client)
     # Judge final sign-off expiry after every blocking read, never at the start of verification.
     signoff = human_signoff(task, host_context, evidence, authority, publication, review,
                             dt.datetime.now(dt.timezone.utc))
+    if update is not None and signoff['valid']:
+        try:  # the CLI-visible half of host rule 6: a sign-off must postdate the update round
+            if authorization.timestamp(host_context['final_signoff']['issued_at']) <= authorization.timestamp(
+                    host_context['draft_update']['issued_at']):
+                signoff = dict(signoff, valid=False, status='invalid',
+                               errors=signoff['errors'] + ['Final signoff must follow the draft update round'])
+        except (ValueError, OverflowError, KeyError, TypeError):
+            signoff = dict(signoff, valid=False, status='invalid',
+                           errors=signoff['errors'] + ['Final signoff must follow the draft update round'])
     result['human_signoff'] = signoff
     result['final_signoff_sha256'] = signoff['sha256']
     completion_errors = list(post_errors) + signoff['errors']
@@ -243,6 +283,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         completion_errors.append('An exact-head published draft is not fully verified')
     if not signoff['valid']:
         completion_errors.append('Final human signoff is pending or invalid')
+    completion_errors += ci_blockers
     result['completion_ready'] = not completion_errors
     result['stage_blockers'] = {'implementation': implementation_errors,
                                 'draft': [] if publication['verified'] else draft_errors,
@@ -269,4 +310,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         disposition['errors'] = list(dict.fromkeys(disposition['errors'] + expired))
         result['overlap_dispositions'] = disposition
         result['waived_duplicates'] = disposition['waived']
+    if update is not None:
+        # Currency is judged again after every blocking read; recognition itself does not need a current record.
+        now_after = dt.datetime.now(dt.timezone.utc)
+        current = draft_updates.evaluate(task, host_context, authority, now_after)['current']
+        result['draft_update'] = draft_updates.finish(dict(update, current=current), result['publication'],
+                                                      live_head, evidence, now_after)
     return result

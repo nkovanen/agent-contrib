@@ -4,13 +4,14 @@ import json
 import hashlib
 import importlib.resources
 import os
+import re
 import select
 import sys
 import time
 from pathlib import Path
 
-from . import (aipolicy, audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, prbody, remote,
-               signatures, textfmt, workspace, __version__)
+from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+               prbody, remote, signals, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -41,7 +42,11 @@ def read_host_context_stdin():
                                  'Cannot read explicit bounded UTF-8 host context from stdin') from exc
 
 
-GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining')
+GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
+# Commands that never read GitHub; GitHub-only global options are refused on them alike.
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
+                    'inspect always adds repository_policy')
 
 
 class Parser(argparse.ArgumentParser):
@@ -49,9 +54,27 @@ class Parser(argparse.ArgumentParser):
         # Global options are parsed only before the subcommand; say so instead of a bare rejection.
         if message.startswith('unrecognized arguments: ') and any(
                 token.split('=', 1)[0] in GLOBAL_OPTIONS for token in message.split()[2:]):
-            message += ('; global options --format, --report-budget and --min-remaining go before the subcommand, '
+            message += ('; global options --format, --report-budget, --min-remaining and --cache go before the subcommand, '
                         'for example: agent-contrib --format text verify task.json')
         raise core.ProtocolError('usage', message)
+
+
+def notice():
+    """Best effort: a missing or closed stderr never changes stdout or the exit status. Not print(): the result
+    is the CLI's only print() call."""
+    stream = sys.stderr
+    try:
+        stream.write(AI_POLICY_NOTICE + '\n')
+        stream.flush()
+    except (AttributeError, OSError, ValueError):
+        # As for a broken stdout: close the failed stream so interpreter shutdown cannot retry its buffered write
+        # and exit 120. Closing a closed stream is a no-op; a failed final flush still closes it.
+        try:
+            close = getattr(stream, 'close', None)
+            if close is not None:
+                close()
+        except (OSError, ValueError):
+            pass
 
 
 def create_new(path, text, what, newline=''):
@@ -78,6 +101,12 @@ def prevalidate(args):
     """The single local argument check, run before any GitHub read (including the optional rate_limit read)."""
     if args.command == 'discover':
         args.names = discover_names(args)
+        if args.check_top is not None and (not args.signals or not 1 <= args.check_top <= signals.CHECK_TOP_MAX or
+                                           len(args.names) != 1):
+            raise core.ProtocolError('usage', f'--check-top needs --signals, one repository and N from 1 to '
+                                     f'{signals.CHECK_TOP_MAX}')
+        if args.repo_dir is not None and len(args.names) != 1:
+            raise core.ProtocolError('usage', '--repo-dir with discover supports one repository')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
     elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
         core.parse_issue(args.reference)
@@ -93,6 +122,8 @@ def prevalidate(args):
         args.evidence_data = None
         if args.command == 'pr-body' and args.evidence:
             args.evidence_data = core.read_json(args.evidence)
+        if args.command == 'drift' and args.policy_sha256 is not None and not re.fullmatch('[0-9a-f]{64}', args.policy_sha256):
+            raise core.ProtocolError('usage', '--policy-sha256 must be a lowercase 64-character SHA-256 hex digest')
         task = args.task = core.read_json(args.contract)
         if args.command in ('drift', 'pr-body') and core.validate_contract(task):
             raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
@@ -117,6 +148,9 @@ def main(argv=None):
                         help='Add GitHub rate-limit snapshots around a GitHub-reading command')
     parser.add_argument('--min-remaining', type=int, metavar='N',
                         help='With --report-budget, refuse to start below N remaining core requests')
+    parser.add_argument('--cache', action='store_true',
+                        help='Reuse verified file contents at pinned commits of public repositories from the user cache '
+                             '(blob-SHA checked); every other read stays live and output is unchanged')
     commands = parser.add_subparsers(dest='command', required=True, metavar='COMMAND')
     summaries = {'discover': 'Rank open issues of one repository, or 2-20, with policy and overlap context',
                  'inspect': 'Inspect one issue: approval, instructions, exclusions and overlapping PRs',
@@ -129,13 +163,20 @@ def main(argv=None):
                              help='Add report-only code-location, clarity, activity and maintainer signals')
             sub.add_argument('--responsiveness', action='store_true',
                              help='Add a report-only repository responsiveness report from one read of recently closed PRs')
+            sub.add_argument('--check-top', type=int, metavar='N',
+                             help='With --signals and one repository: read ownership signals (one timeline and comment '
+                                  'page, at most 4 PR details) for the top N (1-5) and re-rank only those N; report only')
             sub.add_argument('--repositories-file', help='File with one owner/repo per line; # comments are ignored')
+            sub.add_argument('--repo-dir', metavar='CHECKOUT',
+                             help='One repository only: report issues referenced by local commits not in the source '
+                                  'default branch (with --signals they rank below other candidates); report only')
         else:
             sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
             sub.add_argument('--ai-policy', action='store_true',
-                             help='Add located AI-contribution policy excerpts from the loaded instructions')
+                             help='Deprecated and ignored (one notice on stderr); inspect always adds '
+                                  'repository_policy')
         if command == 'prepare':
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
@@ -165,6 +206,9 @@ def main(argv=None):
     sub = commands.add_parser('authorization-request',
                               help='Schema 0.2: print an unsigned mandate request pre-filled from the contract; grants nothing')
     sub.add_argument('contract', help='Task contract JSON file')
+    sub = commands.add_parser('lint', help='Offline check of a contract against its schema and the reviewed-contract '
+                                           'rules; no GitHub or Git reads')
+    sub.add_argument('contract', help='Task contract JSON file')
     sub = commands.add_parser('scope-check', help='Offline check of local changes against the contract scope; never evidence')
     sub.add_argument('contract', help='Task contract JSON file')
     sub.add_argument('--repo-dir', required=True, help='Local checkout to check')
@@ -187,6 +231,9 @@ def main(argv=None):
     sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
     sub = commands.add_parser('drift', help='Report what changed since the contract was prepared; never rewrites it')
     sub.add_argument('contract', help='Task contract JSON file')
+    sub.add_argument('--policy-sha256', metavar='HASH',
+                     help='The reviewed repository_policy inventory_sha256 (from the ai-policy-review evidence); '
+                          're-reads the policy inventory and reports repository_policy_drift')
     sub = commands.add_parser('feedback', help='Latest reviews, comments and checks for one pull request')
     sub.add_argument('reference', help="Pull request reference such as 'owner/repo#45'")
     sub.add_argument('--expected-head', metavar='SHA',
@@ -204,8 +251,13 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'scope-check', 'evidence'):
-            raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
+        if args.command in OFFLINE_COMMANDS:
+            for flag, given in (('--report-budget', args.report_budget), ('--cache', args.cache)):
+                if given:
+                    raise core.ProtocolError('usage', flag + ' applies only to commands that read GitHub')
+        cache.configure(args.cache)
+        if getattr(args, 'ai_policy', False):
+            notice()
         prevalidate(args)
         if args.report_budget:
             before = budget.snapshot()
@@ -236,6 +288,9 @@ def main(argv=None):
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
             code = 0
+        elif args.command == 'lint':
+            result = core.lint(core.read_json(args.contract))
+            code = 0 if result['reviewed'] else 1
         elif args.command == 'scope-check':
             result = workspace.scope_check(core.read_json(args.contract), args.repo_dir, args.base)
             code = 0 if result['within_scope'] else 1
@@ -262,43 +317,56 @@ def main(argv=None):
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1
-        elif args.command == 'inspect' and (args.ownership or args.ai_policy):
-            client = core.GitHub()
-            result = core.inspect_issue(args.reference, client)
-            code = 0 if result['complete'] and 'source' in result else 1
-            if 'source' in result and args.ownership:
-                result['ownership_signals'] = ownership.ownership_signals(
-                    result['issue_source_repository'], result['source']['issue'], client)
-                code = code or (0 if result['ownership_signals']['complete'] else 1)
-            if 'source' in result and args.ai_policy:
-                result['ai_policy'] = aipolicy.ai_policy_excerpts(result)
         elif args.command == 'ownership':
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
         elif args.command == 'drift':
-            result = drift.drift(args.task)
+            result = drift.drift(args.task, policy_sha256=args.policy_sha256)
             code = 0 if result['complete'] and result['drifted'] is False else 1
         elif args.command == 'feedback':
             result = feedback.feedback(args.reference, expected_head=args.expected_head)
             code = 0 if result['complete'] else 1
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
-            names = args.names
-            result = core.discover(names[0], **options) if len(names) == 1 else multi.discover_many(names, **options)
+            names, client = args.names, core.GitHub()
+            if args.check_top is not None:
+                options['check_top'] = args.check_top
+            if args.repo_dir is not None:
+                options['repo_dir'] = args.repo_dir
+            result = (core.discover(names[0], client, **options) if len(names) == 1 else
+                      multi.discover_many(names, client, **options))
             code = 0 if result['complete'] else 1
+            # An incomplete opted-in report is a nonzero exit, as for --responsiveness.
+            if args.check_top is not None:
+                code = code or (0 if result.get('top_check', {}).get('complete') else 1)
+            if args.repo_dir is not None:
+                code = code or (0 if result['local_work']['complete'] else 1)
+            for single in result.get('repositories', [result]):
+                if 'commit' in single:  # report only: never part of completeness or the exit code
+                    single['repository_policy'] = policy.report(single['repository'], single['commit'],
+                                                                single['instructions'], client)
             if args.responsiveness:  # Like --ownership: an incomplete opted-in report is a nonzero exit.
                 reports = [r.get('repository_signals', {}).get('responsiveness') for r in result.get('repositories', [result])]
                 code = code or (0 if all(r and r['complete'] for r in reports) else 1)
         elif args.command in ('inspect', 'prepare'):
-            result = core.inspect_issue(args.reference)
+            client = core.GitHub()
+            result = core.inspect_issue(args.reference, client)
             code = 0 if result['complete'] else 1
+            # Default-on, report only: the policy report never changes the result, the contract or the exit code.
+            report = policy.for_inspected(result, client) if 'source' in result else None
+            if args.command == 'inspect' and 'source' in result:
+                if args.ownership:
+                    result['ownership_signals'] = ownership.ownership_signals(
+                        result['issue_source_repository'], result['source']['issue'], client)
+                    code = code or (0 if result['ownership_signals']['complete'] else 1)
+                result['repository_policy'] = report
             if args.command == 'prepare' and 'source' in result:
                 task = core.prepare(result) if args.schema_version == '0.1' else core.prepare(result, schema_version=args.schema_version)
                 write_new_json(args.output, task)
                 context = {k: result[k] for k in ('requested_repository', 'issue_source_repository',
                                                   'proposed_target_repository', 'resolution_provenance', 'reference')}
                 result = {**context, 'output': str(args.output), 'complete': result['complete'], 'contract': task,
-                          'warning': 'Draft saved; inspect and review before execution'}
+                          'warning': 'Draft saved; inspect and review before execution', 'repository_policy': report}
         else:
             task, evidence = args.task, args.evidence_data
             version = task.get('schema_version') if isinstance(task, dict) else None
@@ -328,6 +396,8 @@ def main(argv=None):
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}
         code = 1
+    finally:
+        cache.configure(False)  # --cache lasts one invocation; library callers never inherit it
     stream = sys.stdout
     if stream is None:
         return 1

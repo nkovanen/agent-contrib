@@ -212,6 +212,8 @@ class SchemaFileTests(unittest.TestCase):
         for pattern, schema in patterns.items():
             length = re.search(r'\{(\d+)\}', pattern)
             valid = 'a' * int(length.group(1)) if length else 'usage'
+            if pattern.startswith('^H-'):  # stable policy hint IDs (N12)
+                valid = 'H-' + 'a' * int(length.group(1))
             for value, expected in ((valid, True), ('-' + valid, False), (valid + '-', False), (valid + '\n', False),
                                     ('\n' + valid, False), ('!' + valid + '!', False)):
                 with self.subTest(pattern=pattern, value=value):
@@ -387,7 +389,7 @@ class DocsReferenceTests(unittest.TestCase):
     def test_cli_docs_reference_matches_the_schemas(self):
         tool = reference_tool()
         self.assertEqual(tool.current()[1], tool.render(),
-                         'docs/cli.md output reference is stale; run python tools/output_reference.py --write')
+                         'docs/output-reference.md is stale; run python tools/output_reference.py --write')
         self.assertEqual(tool.main([]), 0)
 
     def test_reference_changes_when_a_field_is_renamed(self):
