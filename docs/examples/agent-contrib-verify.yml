@@ -1,0 +1,34 @@
+# Example maintainer workflow for the passive Agent Contrib check (report-only).
+# Copy to .github/workflows/ and replace the action SHA with a reviewed release commit;
+# see docs/design/2026-11-02-maintainer-action.md for the threat model and settings.
+name: Agent Contrib verification
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+permissions:
+  contents: read
+concurrency:
+  group: agent-contrib-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    if: contains(github.event.pull_request.body, '```agent-contrib-task')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr-head
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - uses: nkovanen/agent-contrib/actions/verify@0000000000000000000000000000000000000000 # replace with a reviewed release commit
+        with:
+          checkout-path: pr-head

@@ -1,0 +1,236 @@
+"""Opt-in API budget reporting: no default change, fail-early threshold, malformed limits unknown."""
+import contextlib
+import io
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from agent_contribute import budget, cli, core
+from tests.test_protocol import FakeGitHub
+
+
+class BudgetGitHub(FakeGitHub):
+    def __init__(self, remaining=4000, malformed=False):
+        super().__init__()
+        self.used = 5000 - remaining
+        self.malformed = malformed
+
+    def request(self, endpoint):
+        if endpoint == 'rate_limit':
+            self.calls.append(endpoint)
+            core_limit = {'limit': 5000, 'remaining': 5000 - self.used, 'used': self.used, 'reset': 1900000000}
+            if self.malformed:
+                core_limit['remaining'] = '4000'
+            return {'resources': {'core': core_limit}}
+        self.used += 1
+        return super().request(endpoint)
+
+
+def run(client, *argv):
+    output = io.StringIO()
+    with patch.object(core, 'GitHub', return_value=client), contextlib.redirect_stdout(output):
+        code = cli.main(list(argv))
+    return code, json.loads(output.getvalue())
+
+
+class BudgetTests(unittest.TestCase):
+    def test_default_output_is_unchanged_and_makes_no_rate_limit_read(self):
+        client = BudgetGitHub()
+        code, result = run(client, 'discover', 'acme/photos')
+        self.assertEqual(code, 0)
+        self.assertNotIn('api_budget', result)
+        self.assertNotIn('rate_limit', client.calls)
+
+    def test_report_counts_reads_between_snapshots(self):
+        client = BudgetGitHub()
+        code, result = run(client, '--report-budget', 'discover', 'acme/photos')
+        self.assertEqual(code, 0)
+        reads = len([c for c in client.calls if c != 'rate_limit'])
+        self.assertEqual(result['api_budget']['used_during_command'], reads)
+        self.assertEqual(client.calls[0], 'rate_limit')
+        self.assertEqual(client.calls[-1], 'rate_limit')
+
+    def test_min_remaining_fails_before_any_command_read(self):
+        client = BudgetGitHub(remaining=10)
+        code, result = run(client, '--report-budget', '--min-remaining', '100', 'discover', 'acme/photos')
+        self.assertEqual((code, result['error']['code']), (1, 'rate_limit_budget'))
+        self.assertEqual(client.calls, ['rate_limit'])
+        client = BudgetGitHub(malformed=True)
+        code, result = run(client, '--report-budget', '--min-remaining', '1', 'discover', 'acme/photos')
+        self.assertEqual(result['error']['code'], 'rate_limit_budget')
+
+    def test_inconsistent_counters_are_unknown_and_deltas_never_negative(self):
+        class Limits:
+            def __init__(self, limit, remaining, used, reset=1900000000):
+                self.values = dict(limit=limit, remaining=remaining, used=used, reset=reset)
+            def request(self, endpoint):
+                return {'resources': {'core': self.values}}
+        for limit, remaining, used in [(10, 9999, 0), (5000, 4000, 2000), (5000, 6000, 0), (100, 50, 200)]:
+            with self.subTest(limit=limit, remaining=remaining, used=used):
+                snap = budget.snapshot(Limits(limit, remaining, used))
+                self.assertTrue(snap['error'])
+                self.assertIsNone(snap['remaining'])
+                with self.assertRaises(core.ProtocolError):
+                    budget.require_remaining(snap, 1)
+        before = budget.snapshot(Limits(5000, 4000, 1000))
+        for after, reason in [(Limits(5000, 4100, 900), 'decreased'), (Limits(5000, 5000, 0, reset=1900003600), 'reset'),
+                              (Limits(15000, 13900, 1100), 'limit')]:
+            with self.subTest(reason=reason):
+                report = budget.report(before, after)
+                self.assertIsNone(report['used_during_command'])
+                self.assertIn(reason, report['delta_unknown_reason'])
+        report = budget.report(before, Limits(5000, 3990, 1010))
+        self.assertEqual((report['used_during_command'], report['delta_unknown_reason']), (10, None))
+
+    def test_malformed_budget_is_unknown_not_zero(self):
+        snap = budget.snapshot(BudgetGitHub(malformed=True))
+        self.assertIsNone(snap['remaining'])
+        self.assertTrue(snap['error'])
+        code, result = run(BudgetGitHub(malformed=True), '--report-budget', 'discover', 'acme/photos')
+        self.assertEqual(code, 0)
+        self.assertIsNone(result['api_budget']['used_during_command'])
+
+    def test_invalid_inputs_are_rejected_before_the_budget_read(self):
+        too_many = ['o/r%d' % i for i in range(21)]
+        for argv, code in [(['discover'], 2), (['discover', 'acme/photos', 'ACME/photos'], 2),
+                           (['discover', 'invalid'], 1), (['discover', 'a/b', 'invalid'], 1), (['discover', *too_many], 2),
+                           (['discover', '--repositories-file', '/nonexistent/repos.txt'], 1),
+                           (['inspect', 'acme/photos#0'], 1), (['ownership', 'nope'], 1), (['audit', 'x'], 1),
+                           (['feedback', 'acme/photos#30', '--expected-head', 'HEAD'], 1),
+                           (['verify', '/nonexistent/task.json'], 1), (['drift', '/nonexistent/task.json'], 1),
+                           (['pr-body', '/nonexistent/task.json', '--output', '/nonexistent/x.md'], 1)]:
+            with self.subTest(argv=argv):
+                client = BudgetGitHub()
+                result_code, result = run(client, '--report-budget', *argv)
+                self.assertEqual(result_code, code, result)
+                self.assertIn('error', result)
+                self.assertEqual(client.calls, [], 'no read, including rate_limit, before input validation')
+                plain_code, plain = run(BudgetGitHub(), *argv)
+                self.assertEqual((plain_code, plain['error']['code']), (result_code, result['error']['code']))
+
+    def test_budget_flag_never_changes_which_input_error_is_reported(self):
+        # One validation path: the first failing check is the same with or without --report-budget (A1-11).
+        from tests.test_protocol import ready_contract
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory, 'task.json')
+            task.write_text(json.dumps(ready_contract()[0]))
+            invalid = Path(directory, 'invalid.json')
+            invalid.write_text('{"schema_version":"0.1"}')
+            missing = str(Path(directory, 'missing.json'))
+            cases = [(['verify', str(task), '--stage', 'draft', '--evidence', missing], 'schema_options'),
+                     (['verify', str(task), '--host-context-stdin', '--evidence', missing], 'schema_options'),
+                     (['verify', str(task), '--evidence', missing], 'file_error'),
+                     (['verify', missing, '--evidence', missing], 'file_error'),
+                     (['pr-body', str(invalid), '--evidence', missing, '--output', missing], 'file_error')]
+            for argv, expected in cases:
+                with self.subTest(argv=argv[0:3]):
+                    plain_code, plain = run(BudgetGitHub(), *argv)
+                    client = BudgetGitHub()
+                    code, result = run(client, '--report-budget', *argv)
+                    self.assertEqual(plain['error']['code'], expected)
+                    self.assertEqual((code, result), (plain_code, plain))
+                    self.assertEqual(client.calls, [])
+
+    def test_input_files_are_read_once_so_a_swap_during_the_budget_read_cannot_change_the_route(self):
+        # R1-09: the task validated before the rate_limit GET is the task that is dispatched.
+        from tests.test_authorization import candidate_task, host_context
+        from tests.test_protocol import evidence_checkout
+        with tempfile.TemporaryDirectory() as checkout, tempfile.TemporaryDirectory() as output:
+            legacy, _, evidence, _ = evidence_checkout(checkout)
+            candidate, client = candidate_task()
+            task_path, evidence_path = Path(output, 'task.json'), Path(output, 'evidence.json')
+            task_path.write_text(json.dumps(candidate))
+            evidence_path.write_text(json.dumps(evidence))
+            original = client.request
+
+            def request(endpoint):
+                if endpoint == 'rate_limit':
+                    task_path.write_text(json.dumps(legacy))  # a concurrent writer swaps in a valid 0.1 task
+                    return {'resources': {'core': dict(limit=5000, remaining=4000, used=1000, reset=1900000000)}}
+                return original(endpoint)
+
+            client.request = request
+            with patch.object(cli, 'read_host_context_stdin', return_value=host_context(candidate)) as stdin, \
+                    patch.object(core, 'read_json', wraps=core.read_json) as read_json:
+                code, result = run(client, '--report-budget', 'verify', str(task_path), '--stage', 'draft',
+                                   '--host-context-stdin', '--evidence', str(evidence_path), '--repo-dir', checkout)
+            self.assertEqual(result.get('schema_version'), '0.2', 'the swapped-in legacy task was dispatched')
+            self.assertTrue(stdin.called)
+            self.assertEqual(code, 1)
+            self.assertNotIn('upstream_submission_ready', result)
+            self.assertEqual(sorted(call.args[0] for call in read_json.call_args_list),
+                             sorted([str(evidence_path), str(task_path)]))
+
+    def test_drift_and_pr_body_read_each_input_file_once(self):
+        from tests.test_protocol import ready_contract
+        with tempfile.TemporaryDirectory() as directory:
+            task_path = Path(directory, 'task.json')
+            task_path.write_text(json.dumps(ready_contract()[0]))
+            for argv in (['drift', str(task_path)], ['pr-body', str(task_path), '--output', str(Path(directory, 'b.md'))]):
+                with self.subTest(command=argv[0]), patch.object(core, 'read_json', wraps=core.read_json) as read_json:
+                    run(BudgetGitHub(), *argv)
+                    self.assertEqual([call.args[0] for call in read_json.call_args_list], [str(task_path)])
+
+    def test_authorization_request_reads_its_contract_once(self):
+        from tests.test_authorization import candidate_task
+        task, client = candidate_task()
+        with tempfile.TemporaryDirectory() as directory:
+            task_path = Path(directory, 'task.json')
+            task_path.write_text(json.dumps(task))
+            with patch.object(core, 'read_json', wraps=core.read_json) as read_json:
+                code, result = run(client, 'authorization-request', str(task_path))
+            self.assertEqual(result['kind'], 'agent-contrib/authorization-request')
+            self.assertEqual([call.args[0] for call in read_json.call_args_list], [str(task_path)])
+
+    def test_invalid_report_contract_is_rejected_before_budget_or_threshold(self):
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory, 'task.json')
+            task.write_text('{"schema_version":"0.1"}')
+            commands = [['drift', str(task)],
+                        ['pr-body', str(task), '--output', str(Path(directory, 'body.md'))]]
+            for command in commands:
+                for prefix in ([], ['--report-budget'], ['--report-budget', '--min-remaining', '5001']):
+                    with self.subTest(command=command[0], prefix=prefix):
+                        client = BudgetGitHub()
+                        code, result = run(client, *prefix, *command)
+                        self.assertEqual((code, result['error']['code']), (1, 'invalid_contract'))
+                        self.assertEqual(client.calls, [])
+            self.assertFalse(Path(directory, 'body.md').exists())
+
+    def test_min_remaining_equal_to_remaining_is_enough(self):
+        code, result = run(BudgetGitHub(remaining=100), '--report-budget', '--min-remaining', '100', 'discover', 'acme/photos')
+        self.assertEqual(code, 0, result)
+        self.assertEqual(result['api_budget']['before']['remaining'], 100)
+        code, result = run(BudgetGitHub(remaining=99), '--report-budget', '--min-remaining', '100', 'discover', 'acme/photos')
+        self.assertEqual((code, result['error']['code']), (1, 'rate_limit_budget'))
+
+    def test_lifecycle_options_on_legacy_task_fail_before_the_budget_read(self):
+        from tests.test_protocol import ready_contract
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory, 'task.json')
+            task.write_text(json.dumps(ready_contract()[0]))
+            for option in (['--stage', 'draft'], ['--host-context-stdin']):
+                with self.subTest(option=option):
+                    client = BudgetGitHub()
+                    code, result = run(client, '--report-budget', 'verify', str(task), *option)
+                    self.assertEqual((code, result['error']['code']), (1, 'schema_options'))
+                    self.assertEqual(client.calls, [])
+
+    def test_usage_errors(self):
+        for argv in [('--min-remaining', '5', 'discover', 'acme/photos'),
+                     ('--report-budget', '--min-remaining', '-1', 'discover', 'acme/photos'),
+                     ('--report-budget', 'instructions'), ('--report-budget', 'skill', '--output', '/nonexistent/s.md'),
+                     ('--report-budget', 'scope-check', '/nonexistent/task.json', '--repo-dir', '.'),
+                     ('--report-budget', 'evidence', 'init', '/nonexistent/task.json', '--repo-dir', '.',
+                      '--base', 'a' * 40, '--output', '/nonexistent/e.json')]:
+            with self.subTest(argv=argv):
+                client = BudgetGitHub()
+                code, result = run(client, *argv)
+                self.assertEqual((code, result['error']['code']), (2, 'usage'))
+                self.assertEqual(client.calls, [])
+
+
+if __name__ == '__main__':
+    unittest.main()

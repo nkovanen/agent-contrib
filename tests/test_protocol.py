@@ -25,6 +25,15 @@ class BootstrapTests(unittest.TestCase):
         self.assertTrue(AVAILABLE, 'agent_contribute implementation is missing')
 
 
+def comparison(base, head, status):
+    """A GitHub compare/{base}...{head} response that is internally consistent for status (FR1-01)."""
+    ahead = {'ahead': 2, 'diverged': 2}.get(status, 0)
+    behind = {'behind': 2, 'diverged': 1}.get(status, 0)
+    merge = {'ahead': base, 'behind': head, 'identical': base}.get(status, 'd' * 40)
+    return {'status': status, 'ahead_by': ahead, 'behind_by': behind, 'total_commits': ahead,
+            'base_commit': {'sha': base}, 'merge_base_commit': {'sha': merge}}
+
+
 class FakeGitHub:
     """Only the network boundary is replaced; inspection/ranking remain real."""
     def __init__(self, policy=None, labels=None, prs=None):
@@ -39,6 +48,10 @@ class FakeGitHub:
         if any(key in endpoint for key in self.failed):
             raise core.ProtocolError('api_error', 'GitHub read failed')
         path = endpoint.split('?')[0]
+        if path.split('/')[2:3] == ['.github']:  # no owner .github repository (policy report reads): HTTP 404
+            missing = core.ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404)')
+            missing.http_status = 404
+            raise missing
         if path == 'repos/acme/photos':
             return {'full_name': 'acme/photos', 'default_branch': 'main', 'fork': False, 'has_issues': True}
         if path == 'repos/human/photos':
@@ -47,7 +60,9 @@ class FakeGitHub:
         if path.endswith('/commits/main'):
             return {'sha': getattr(self, 'commit', 'a' * 40)}
         if '/compare/' in path:
-            return {'status': getattr(self, 'compare_status', 'identical')}
+            base, head = path.rsplit('/compare/', 1)[1].split('...')
+            default = 'identical' if base == head else 'behind'
+            return comparison(base, head, getattr(self, 'compare_status', default))
         if '/git/trees/' in path:
             paths = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'CONTRIBUTING.md',
                      'docs/architecture.md', 'specs/README.md']
@@ -80,6 +95,9 @@ class FakeGitHub:
 def ready_contract():
     client = FakeGitHub({'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'], 'label_authority': 'repository-label-permission'}, ['agent-ok'])
     task = core.prepare(core.inspect_issue('acme/photos#12', client))
+    # A contract reviewed before prepare added the pending ai-policy-review prerequisite: existing contracts and
+    # their verify goldens are unchanged. New contracts must satisfy or visibly remove it (tests/test_policy.py).
+    task['prerequisites'] = []
     task.update(status='reviewed', objective='Reject out-of-bounds thumbnails',
                 behavior_criteria=[{'id': 'bounds', 'description': 'Malformed dimensions return an error'}],
                 code_locations=['src/thumb.rs'], constraints=['Preserve valid thumbnails'],
@@ -181,20 +199,20 @@ class DiscoveryTests(unittest.TestCase):
         for body, expected in cases:
             with self.subTest(body=body):
                 client = FakeGitHub(prs=[{'number': 30, 'title': 'Unrelated work', 'body': body,
-                                          'html_url': 'https://github.com/acme/photos/pull/30'}])
+                                          'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}])
                 result = core.inspect_issue('acme/photos#12', client)
                 self.assertEqual(bool(result['duplicates']), expected)
 
     def test_long_remote_pr_is_scanned_in_linear_time(self):
         started = time.monotonic()
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'Other', 'body': 'a' * 30000 + ' Fixes #12', 'html_url': 'url'}]))
+            {'number': 30, 'title': 'Other', 'body': 'a' * 30000 + ' Fixes #12', 'html_url': 'url', 'head': None}]))
         self.assertTrue(result['duplicates'])
         self.assertLess(time.monotonic() - started, 1.0)
 
     def test_project_independent_identifier_overlap_warns(self):
         client = FakeGitHub(prs=[{'number': 30, 'title': 'Other work',
-                                 'body': 'Implements ABC-FEATURE-ID', 'html_url': 'url'}])
+                                 'body': 'Implements ABC-FEATURE-ID', 'html_url': 'url', 'head': None}])
         original = client.request
         def request(endpoint):
             result = original(endpoint)
@@ -202,13 +220,52 @@ class DiscoveryTests(unittest.TestCase):
                 result['title'] = 'ABC-FEATURE-ID reset'
             return result
         client.request = request
-        self.assertTrue(core.inspect_issue('acme/photos#12', client)['duplicates'])
+        self.assertEqual([item['reason'] for item in core.inspect_issue('acme/photos#12', client)['duplicates']],
+                         ['Potential title/checklist overlap; review manually (shared checklist IDs: ABC-FEATURE-ID)'])
 
     def test_topic_overlap_warns(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
-            {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url'}]))
+            {'number': 30, 'title': 'Repair thumbnail bounds', 'body': '', 'html_url': 'url', 'head': None}]))
         self.assertTrue(result['duplicates'])
-        self.assertIn('overlap', result['duplicates'][0]['reason'])
+        self.assertEqual(result['duplicates'][0]['reason'],
+                         'Potential title/checklist overlap; review manually (shared title words: bounds, thumbnail)')
+
+    def test_overlap_match_list_is_sorted_bounded_and_limited_to_the_trigger(self):
+        words = ['word%02d' % n for n in range(30)]
+        index = core.index_prs([{'number': 30, 'title': ' '.join(reversed(words)), 'html_url': 'url',
+                                 'body': 'Tracks ABC-ONE and ABC-TWO', 'head': None}])
+        issue = {'number': 12, 'title': ' '.join(words), 'body': 'See ABC-TWO'}
+        [finding] = core.duplicate_prs('acme/photos', issue, index)
+        self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared title words: ' +
+                         ', '.join(words[:10]) + ' and 20 more; shared checklist IDs: ABC-TWO)')
+        issue['title'] = 'word00 unrelated'
+        [finding] = core.duplicate_prs('acme/photos', issue, index)
+        self.assertEqual(finding['reason'], 'Potential title/checklist overlap; review manually (shared checklist IDs: ABC-TWO)')
+        self.assertEqual(sorted(finding), ['number', 'reason', 'url'])
+
+    def test_standards_shaped_ticket_ids_still_overlap_and_block_readiness(self):
+        class TicketGitHub(FakeGitHub):
+            def request(self, endpoint):
+                value = super().request(endpoint)
+                if endpoint.split('?')[0].endswith('/issues/12'):
+                    value['body'] += ' Tracks SHA-1234, ISO-123456 and SHA-256.'
+                return value
+        task, _ = ready_contract()
+        client = TicketGitHub(*[{'schema_version': '0.1', 'agent_approved_labels': ['agent-ok'],
+                                 'label_authority': 'repository-label-permission'}, ['agent-ok']])
+        task['source'] = core.prepare(core.inspect_issue('acme/photos#12', client))['source']
+        self.assertTrue(core.verify(task, client=client)['execution_ready'])
+        for token, note in [('SHA-1234', ''), ('ISO-123456', ''),
+                            ('SHA-256', '; SHA-256 may name a standard, not a work item')]:
+            with self.subTest(token=token):
+                client.prs = [{'number': 30, 'title': 'Other work', 'body': 'Implements ' + token, 'html_url': 'url',
+                               'head': None}]
+                result = core.verify(task, client=client)
+                self.assertFalse(result['execution_ready'])
+                self.assertIn('Live issue is excluded or overlaps an open PR', result['errors'])
+                self.assertEqual([item['reason'] for item in result['duplicates']],
+                                 ['Potential title/checklist overlap; review manually '
+                                  f'(shared checklist IDs: {token}{note})'])
 
     def test_failed_pr_policy_or_tree_reads_cannot_be_complete(self):
         for path in ['/pulls', '/git/trees', '/contents/AGENTS.md', '/labels']:
@@ -285,6 +342,27 @@ class TransportTests(unittest.TestCase):
         self.assertLessEqual(sum(x.args[0] for x in sleep.call_args_list), 6)
         self.assertNotIn('SECRET', str(raised.exception))
 
+    def test_not_found_and_authentication_failures_have_distinct_messages(self):
+        cases = [(b'gh: Not Found (HTTP 404) token=SECRET', 'GitHub GET found nothing (HTTP 404): the repository, issue '
+                  'or path does not exist or is not visible to this gh account'),
+                 (b'gh: Bad credentials (HTTP 401) token=SECRET', 'GitHub GET was not authenticated (HTTP 401); '
+                  'check gh auth status'),
+                 (b'gh: Resource not accessible (HTTP 403) token=SECRET', 'GitHub GET failed; check gh auth, access '
+                  'and rate limits'),
+                 (b'error connecting to api.github.com token=SECRET', 'GitHub GET failed; check gh auth, access and '
+                  'rate limits'),
+                 (b'gh: Not Found (HTTP 4040)', 'GitHub GET failed; check gh auth, access and rate limits')]
+        for stderr, message in cases:
+            with self.subTest(stderr=stderr):
+                def failure(argv, **kwargs):
+                    kwargs['stderr'].write(stderr)
+                    return subprocess.CompletedProcess(argv, 1)
+                with patch('subprocess.run', side_effect=failure) as run, \
+                        self.assertRaises(core.ProtocolError) as raised:
+                    core.GitHub().request('repos/acme/missing')
+                self.assertEqual((raised.exception.code, str(raised.exception)), ('api_error', message))
+                self.assertEqual(run.call_count, 1)
+
 
 @unittest.skipUnless(AVAILABLE, 'implementation absent')
 class VerificationTests(unittest.TestCase):
@@ -310,6 +388,34 @@ class VerificationTests(unittest.TestCase):
         task['behavior_criteria'][0]['description'] = '   '
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
+    def test_legacy_prepared_duplicate_blocks_execution_without_a_live_overlap(self):
+        task, client = ready_contract()
+        self.assertTrue(core.verify(task, client=client)['execution_ready'])
+        task['discovery']['duplicate_prs'] = [{'number': 30, 'url': 'https://github.com/acme/photos/pull/30',
+                                               'reason': 'Explicit reference to this issue'}]
+        result = core.verify(task, client=client)
+        self.assertEqual(result['errors'], ['Prepared discovery is incomplete or has unresolved duplicates'])
+        self.assertFalse(result['execution_ready'])
+
+    def test_prerequisite_blocker_names_each_failing_id_and_status(self):
+        expected = ('Prerequisites are not satisfied with evidence: P1 (pending), '
+                    'P3 (blocked), P4 (satisfied without evidence)')
+        from tests.test_authorization import candidate_task
+        prerequisites = [{'id': 'P1', 'description': 'One', 'status': 'pending', 'evidence': ''},
+                         {'id': 'P2', 'description': 'Two', 'status': 'satisfied', 'evidence': 'Done'},
+                         {'id': 'P3', 'description': 'Three', 'status': 'blocked', 'evidence': 'Waiting'},
+                         {'id': 'P4', 'description': 'Four', 'status': 'satisfied', 'evidence': '  '}]
+        task, client = ready_contract()
+        task['prerequisites'] = prerequisites
+        result = core.verify(task, client=client)
+        self.assertFalse(result['execution_ready'])
+        self.assertIn(expected, result['errors'])
+        task, client = candidate_task()
+        task['prerequisites'] = copy.deepcopy(prerequisites)
+        self.assertIn(expected, core.reviewed_contract_errors(task, '0.2'))
+        task['prerequisites'] = [prerequisites[1]]
+        self.assertFalse([item for item in core.reviewed_contract_errors(task, '0.2') if 'Prerequisites' in item])
+
     def test_duplicate_json_keys_are_rejected(self):
         with self.assertRaises(core.ProtocolError):
             core.strict_json('{"status":"draft","status":"reviewed"}')
@@ -329,7 +435,7 @@ class VerificationTests(unittest.TestCase):
 
     def test_new_duplicate_blocks_prepared_contract(self):
         task, client = ready_contract()
-        client.prs = [{'number': 30, 'title': 'Unrelated', 'body': 'Fixes #12', 'html_url': 'url'}]
+        client.prs = [{'number': 30, 'title': 'Unrelated', 'body': 'Fixes #12', 'html_url': 'url', 'head': None}]
         self.assertFalse(core.verify(task, client=client)['execution_ready'])
 
     def test_duplicate_ids_and_done_omissions_fail_readiness(self):
@@ -464,6 +570,24 @@ class VerificationTests(unittest.TestCase):
             client.failed.add('/compare/')
             self.assertFalse(core.verify(task, evidence, tmp, client)['evidence_valid'])
 
+    def test_base_errors_name_the_base_and_the_commit_it_was_compared_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, git = evidence_checkout(tmp)
+            client.commit = 'c' * 40
+            base = evidence['base_commit']
+            client.compare_status = 'ahead'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is ahead of '
+                          f'acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.compare_status = 'diverged'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is diverged '
+                          f'from acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.failed.add('/compare/')
+            self.assertIn(f'Could not authenticate evidence base against source default-branch history: base {base} '
+                          f'compared with acme/photos default branch main at {"c" * 40}: GitHub read failed',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+
     def test_git_commit_utc_z_timestamp_preserves_evidence_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, client, evidence, git = evidence_checkout(tmp)
@@ -471,13 +595,17 @@ class VerificationTests(unittest.TestCase):
             utc_timestamp = commit_time.astimezone(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             original_git_read = core.git_read
 
-            def read_git(directory, *args):
-                if args == ('show', '-s', '--format=%cI', 'HEAD'):
+            patched = []
+
+            def read_git(directory, *args, **options):
+                if args == ('show', '-s', '--format=%cI', evidence['git_head']):  # the captured HEAD (R4-05)
+                    patched.append(args)
                     return utc_timestamp
-                return original_git_read(directory, *args)
+                return original_git_read(directory, *args, **options)
 
             with patch.object(core, 'git_read', side_effect=read_git):
                 result = core.verify(task, evidence, tmp, client)
+            self.assertEqual(len(patched), 1, 'the commit time read must use the captured HEAD')
             self.assertTrue(result['evidence_valid'], result['evidence_errors'])
             self.assertTrue(result['upstream_submission_ready'], result['evidence_errors'])
 
@@ -607,14 +735,14 @@ class AdapterTests(unittest.TestCase):
     def test_version_reports_semantic_cli_version(self):
         status, output = self.invoke('--version')
         self.assertEqual(status, 0)
-        self.assertEqual(output.strip(), '0.2.0')
+        self.assertEqual(output.strip(), '0.3.0')
 
     def test_instructions_are_local_packaged_protocol(self):
         status, output = self.invoke('instructions')
         self.assertEqual(status, 0)
         result = json.loads(output)
-        self.assertEqual(result['cli_version'], '0.2.0')
-        self.assertEqual(result['supported_schema_versions'], ['0.1'])
+        self.assertEqual(result['cli_version'], '0.3.0')
+        self.assertEqual(result['supported_schema_versions'], ['0.1', '0.2'])
         self.assertGreater(len(result['workflow_markdown']), 100)
 
     def test_skill_export_is_portable_and_never_overwrites(self):
@@ -639,7 +767,7 @@ class AdapterTests(unittest.TestCase):
             result = subprocess.run([os.sys.executable, '-m', 'agent_contribute', 'instructions'],
                                     cwd=tmp, env=env, capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(json.loads(result.stdout)['supported_schema_versions'], ['0.1'])
+            self.assertEqual(json.loads(result.stdout)['supported_schema_versions'], ['0.1', '0.2'])
             exported = pathlib.Path(tmp, 'SKILL.md')
             result = subprocess.run([os.sys.executable, '-m', 'agent_contribute', 'skill', '--output', str(exported)],
                                     cwd=tmp, env=env, capture_output=True, text=True, timeout=15)

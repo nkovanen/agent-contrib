@@ -4,8 +4,8 @@ Agent Contrib separates a small portable adapter from a versioned protocol.
 
 - **Skill:** asks the installed CLI for its workflow, then uses the host agent's
   normal tools. One canonical source is packaged and exported without overwrite.
-- **CLI (`agent_contribute.cli`):** fixed commands and JSON output; exclusive
-  local draft/Skill writes; no model, task executor or GitHub write operations.
+- **CLI (`agent_contribute.cli`):** fixed commands and canonical JSON, with optional text summaries;
+  exclusive local contract, evidence-skeleton, PR-body and Skill writes; no model, task executor or GitHub write operations.
 - **Library (`agent_contribute.core`):** GitHub GETs through `gh`, bounded discovery,
   repository resolution, policy evaluation, contract/evidence validation and
   defensive Git reads. The agent still judges feasibility and implements work.
@@ -35,6 +35,57 @@ executable instruction. There is no central service, database, model credential,
 agent subscription or automatic update channel.
 
 CLI versions use semantic versioning; schema support is an explicit exact set
-(currently `0.1`). The closed schemas and bundled validator reject unknown
+(`0.1` and explicit `0.2`). The closed schemas and bundled validator reject unknown
 versions/properties and malformed JSON. A schema migration requires a future
 reviewed release; it is never guessed from a contract.
+
+## Same-repository candidates in schema 0.2
+
+`authorization.py` checks an explicit human/host mandate against live GitHub
+credential, role, repository and issue identities. `pr_identity.py` observes
+exact-head PR history and details. `lifecycle.py` combines those facts with the
+reviewed contract, technical evidence and separate final human sign-off.
+
+Host context has independently hashed mandate, optional worker publication claim
+and optional later human sign-off sections. It is explicit stdin/library input,
+never discovered repository data. The host is responsible for the actual human
+approval; the CLI labels the mandate host-asserted and verifies only GitHub facts
+and record consistency.
+
+Before implementation or first publication, overlapping PRs block. A
+host-context 0.2 `overlap_dispositions` record can waive a topical overlap with
+one PR while that PR and its base tip are unchanged; direct references,
+contradictions, the actor's own PRs, failed reads and incomplete scans still
+block. After a separately authorized publication, exactly one matching draft can
+be recognized at the tested commit. Every other overlap that no valid
+disposition waives remains. Draft-stage success reports whether to create or
+simply return the existing verified draft; completion still requires final human
+sign-off. No draft-update lifecycle is implemented: a host-context 0.2
+`draft_update` record is validated and reported, never consulted by a gate.
+
+The old schemas and evaluator keep their formats and route meaning, apart from
+the hardening and message changes in the
+[compatibility notes](../CHANGELOG.md#compatibility-notes). The new mode does not
+change the label approval policy or reinterpret a legacy task. Full details are
+in [host authorization](host-authorization.md) and the installed workflow.
+
+## Optional observations and local helpers
+
+Ownership, prior-resolution hints, repository policy reports and CI observations are
+report-only additions. They cannot promote a candidate, satisfy a validation or
+waive an overlap. `audit` reuses the discovery snapshot. `drift` compares current
+facts with the pinned contract without rewriting it. Multi-repository discovery
+keeps each repository's identities, errors and completeness separate.
+
+`scope-check` and evidence verification share the path-scope evaluator. Evidence
+initialization records observed Git facts and leaves claims unfilled.
+`authorization-request` prepares an unsigned schema 0.2 mandate request and
+issues nothing. `pr-body`
+quotes live verification results with remote prose neutralized; it has no host
+context input, so it omits schema 0.2 authority gates and human sign-off
+rather than attesting or misstating them.
+
+The [product map](product-map.md) lists what is shipped, partial and planned by
+issue; [development status](development-status.md) records acceptance trials.
+New users start with [getting started](getting-started.md); [upgrading](upgrading.md)
+lists what changes from 0.2.

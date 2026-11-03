@@ -1,0 +1,34 @@
+{
+  "approval": {
+    "reason": "Not refreshed",
+    "status": "unknown"
+  },
+  "errors": [
+    "$.status: missing",
+    "$.source: missing",
+    "$.objective: missing",
+    "$.behavior_criteria: missing",
+    "$.code_locations: missing",
+    "$.constraints: missing",
+    "$.prohibited_changes: missing",
+    "$.validation: missing",
+    "$.prerequisites: missing",
+    "$.approval: missing",
+    "$.discovery: missing",
+    "$.done: missing",
+    "$.evidence: missing",
+    "$.questions: missing",
+    "$.execution: missing",
+    "$.scope: missing",
+    "$.schema_version: wrong constant or version"
+  ],
+  "evidence_errors": [],
+  "evidence_trust": "self-attested; identity and truth are not authenticated",
+  "evidence_valid": false,
+  "execution_ready": false,
+  "fork_completion_ready": false,
+  "publication": "This CLI never publishes. Readiness is not authorization to push or open a PR.",
+  "schema_valid": false,
+  "schema_version": "0.1",
+  "upstream_submission_ready": false
+}

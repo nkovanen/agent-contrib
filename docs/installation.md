@@ -4,7 +4,11 @@ Install on the machine that runs your agent. A remote Paseo agent needs the CLI,
 Git and `gh` on its host, not merely on the device displaying the conversation.
 The package requires Python 3.10+ and has no Python runtime dependencies. Build
 and installer tools have their own Python requirements. Linux is the tested
-platform for this release.
+platform; Windows and macOS are untested. In the unreleased v0.3.0 route, `verify --host-context-stdin` waits on stdin with
+`select()`, which Windows supports only for sockets, so it fails closed there.
+Scope and containment decisions use the literal POSIX paths Git reports on
+every OS. Backslashes, drive letters and case are never normalized, so a path
+that would match only after normalization is out of scope.
 
 ## Pinned GitHub install
 
@@ -22,6 +26,12 @@ found. Authenticate `gh` using its own supported mechanism, and check with
 `gh auth status`. Do not paste credentials into a task contract or chat. No
 LightCraft checkout, subscription to a particular model, or repository-specific
 setup is needed for discovery.
+
+A failed GitHub read never echoes `gh` output, which can contain credentials.
+HTTP 404 is reported as not found or not visible to this account (check the
+repository and issue names, or private access), HTTP 401 as an authentication
+failure (`gh auth status`), and anything else as a generic auth, access or rate
+limit failure. The error code stays `api_error` and the command still fails.
 
 For a standard virtual environment instead of pipx:
 
@@ -84,12 +94,14 @@ CI matrix. A virtual environment uses `Scripts/python.exe` and `Scripts` on PATH
 
 ## Compatibility and updates
 
-CLI **0.2.0** bundles task and evidence schemas **0.1**, workflow guidance and
+The published CLI **0.2.0** bundles task and evidence schemas **0.1**, workflow guidance and
 the thin adapter together. `agent-contrib instructions` reports this support set.
-Unknown versions fail closed. The Skill intentionally has no independent copy
+The unreleased CLI **0.3.0** also bundles explicit task/evidence schema **0.2**
+and host-context schemas **0.1** and **0.2**; default contracts remain 0.1. Unknown versions fail closed. The Skill intentionally has no independent copy
 of the protocol: it asks the installed CLI for instructions every time.
 
-Updates are explicit. Read the target release notes, back up contracts/evidence
+Updates are explicit. Read the target release notes (for 0.2 to 0.3, see
+[upgrading](upgrading.md)), back up contracts/evidence
 and the existing Skill, then deliberately reinstall a chosen Git tag. For
 example, reinstalling this release with pipx is:
 
@@ -106,3 +118,31 @@ silent update checks, migrations or downloads happen while using the CLI.
 
 To uninstall the CLI, use `pipx uninstall agent-contrib`; remove the Skill file
 separately if desired. Existing task/evidence files are yours and are not removed.
+
+## Testing the unreleased v0.3.0 candidate
+
+The published v0.2.0 tag is unchanged. To test the new route, create a separate
+virtual environment and install the exact reviewed candidate commit from GitHub.
+Replace `PUSHED_FULL_COMMIT_SHA` with the full immutable SHA supplied by its
+review; it must already be pushed to GitHub:
+
+```sh
+python3 -m venv "$HOME/.local/share/agent-contrib-candidate"
+"$HOME/.local/share/agent-contrib-candidate/bin/python" -m pip install \
+  'git+https://github.com/nkovanen/agent-contrib.git@PUSHED_FULL_COMMIT_SHA'
+export PATH="$HOME/.local/share/agent-contrib-candidate/bin:$PATH"
+agent-contrib --version   # must print 0.3.0, not 0.2.0
+```
+
+A local integration commit may not be pushed yet. In that case, install a clean
+`git archive` export of that exact commit into the new environment instead; do not
+substitute a different remote commit or a mutable working tree.
+
+The exported Skill runs the unqualified `agent-contrib instructions`, so the
+agent uses whichever installation comes first on its PATH. Persist the PATH
+entry above in the environment that launches the harness and restart it. Then
+check that the unqualified `agent-contrib --version` prints 0.3.0 inside that
+environment before exporting the Skill. Record the installed commit, CLI version
+and exported hash. To return to the release, remove the PATH entry. Keep the
+published installation separate; do not install a v0.3.0 tag that does not exist.
+Use the [human/host handoff](host-authorization.md) at authorization boundaries.
