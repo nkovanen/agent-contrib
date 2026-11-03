@@ -211,6 +211,10 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- Text `inspect --ownership` and `ownership` show the ownership report:
+  possible prior fixes, downstream references, rejected approaches, open linked
+  PRs, claims, assignments, completeness and errors (external evaluation 3, G1).
+  JSON is unchanged.
 - The Quick path names the "Repository policy review" section explicitly instead
   of "the repository policy step below" (N3, dogfood 4).
 - The repository policy report adds `hinted_lines` (N2, dogfood 4), one
