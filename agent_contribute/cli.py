@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from . import (audit, authrequest, budget, cache, ci, core, dependencies, drift, feedback, multi, onboarding, outputs,
-               ownership, policy, prbody, receipts, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
+               ownership, policy, prbody, receipts, remote, sessions, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -49,7 +49,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check', 'dependencies', 'impact')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check', 'dependencies', 'impact', 'session')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -213,6 +213,11 @@ def main(argv=None):
     sub.add_argument('--output', required=True, help='New manifest file; edit and review before adopting')
     sub = commands.add_parser('jar-check', help='Validate a local Tipjar manifest offline; grants no authority')
     sub.add_argument('file', help='Bounded regular UTF-8 manifest file to check without changing it')
+    sub = commands.add_parser('session', help='Plan an offline proposed gift-work session from discovery JSON')
+    sub.add_argument('discovery', help='Bounded canonical discovery JSON file (8 MiB maximum)')
+    sub.add_argument('--max-tasks', type=int, required=True, help='Maximum shortlisted tasks (1–20)')
+    sub.add_argument('--minutes', type=int, required=True, help='Total stopping budget, not an estimate (1–1440)')
+    sub.add_argument('--output', required=True, help='New file for the proposed session; never overwritten')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -315,6 +320,10 @@ def main(argv=None):
                                     'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
                       'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}
+            code = 0
+        elif args.command == 'session':
+            result = sessions.plan(args.discovery, max_tasks=args.max_tasks, minutes=args.minutes)
+            write_new_json(args.output, result)
             code = 0
         elif args.command == 'schema':
             result = outputs.output_schema(args.name)

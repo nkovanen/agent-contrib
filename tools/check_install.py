@@ -48,6 +48,7 @@ RESOURCE_PATHS = (
     "schemas/output/1/pr-body.schema.json",
     "schemas/output/1/prepare.schema.json",
     "schemas/output/1/scope-check.schema.json",
+    "schemas/output/1/session.schema.json",
     "schemas/output/1/skill.schema.json",
     "schemas/output/1/verify.schema.json",
     "instructions.md",
@@ -133,6 +134,19 @@ def installed_check(source):
     assert instructions["output_schema_version"] == "1"
     assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:1:verify"
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
+    session_schema = json.loads(cli("schema", "session"))
+    discovery_path = Path.cwd() / "discovery.json"
+    discovery_path.write_text(json.dumps(json.loads(
+        (source / "tests/fixtures/discover/plain.json").read_text("utf-8"))["result"]), encoding="utf-8")
+    session_path = Path.cwd() / "session.json"
+    proposal = json.loads(cli("session", discovery_path, "--max-tasks", "3", "--minutes", "60",
+                              "--output", session_path))
+    assert proposal["status"] == "proposed" and proposal["actions_authorized"] is False
+    assert not core.schema_errors(proposal, session_schema)
+    assert json.loads(session_path.read_text("utf-8")) == proposal
+    original_session = session_path.read_bytes()
+    cli("session", discovery_path, "--max-tasks", "3", "--minutes", "60", "--output", session_path, expected=1)
+    assert session_path.read_bytes() == original_session
     manifest_schema = json.loads(resources.joinpath("tipjar.schema.json").read_text("utf-8"))
     assert manifest_schema["properties"]["schema_version"]["const"] == "0.1"
     assert not core.schema_errors({"schema_version": "0.1", "status": "welcome"}, manifest_schema)

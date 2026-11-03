@@ -416,6 +416,15 @@ def render(command, result, stage=None):
                      (d['package'] + ' [' + d['source_file'] + ':' + d['field'] + ']: ' + d['reason']
                       for d in result['dependencies'] if d['status'] != 'github'))
         return '\n'.join(out + [line(result['warning'])]) + '\n'
+    if command == 'session':
+        out = ['Session: proposed; actions are not authorized',
+               f'Stopping budget: {result["minutes"]} minutes; allocated: {result["allocated_minutes"]}',
+               f'Source complete: {_flag(result["source_complete"])}; retained candidates: {len(result["candidates"])}',
+               'Source display and scan limits are preserved in source_report; no fresh checks occurred.']
+        out += [f'  {line(t["reference"])}: stop after {t["stop_after_minutes"]} minutes' for t in result['tasks']]
+        out += _list('Not selected', [c['reference'] + ': ' + ', '.join(c['reasons'])
+                                      for c in result['candidates'] if not c['selected']])
+        return '\n'.join(out + [line(result['notice'], 1000)]) + '\n'
     if command == 'instructions':
         # The workflow is the packaged Markdown, not remote text: print it whole so agents need no JSON unwrapping.
         versions = ', '.join(result['supported_schema_versions'])
