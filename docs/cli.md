@@ -34,11 +34,12 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
-| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is syntax-compatible only |
+| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is deprecated and ignored (one stderr notice) |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib verify task.json --evidence e.json [--repo-dir checkout] --observe-signatures` | Also reports GitHub's signature verification for the evidence head, required-signature rulesets on the base branch and local signature-header presence; never verifies locally or changes gates or exit code |
 | `agent-contrib --report-budget [--min-remaining N] COMMAND ...` | Adds the core REST rate-limit budget before and after a GitHub-reading command; optionally refuses to start below N |
+| `agent-contrib --cache COMMAND ...` | Reuses verified file contents at pinned commits of public repositories from the user cache; every other read stays live and output is unchanged |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib schema COMMAND` | The JSON Schema of COMMAND's JSON output; see [Output schemas](#output-schemas) |
@@ -70,8 +71,10 @@ Worktree content is compared with a commit through a fresh temporary index
 outside the checkout, so the checkout's stat cache is never trusted; every
 tracked file is hashed on each run. Each file's bytes must equal either the
 committed blob or exactly what checkout writes for it (`cat-file --filters`,
-using the committed `.gitattributes` with `core.autocrlf=false` and
-`core.eol=lf`). So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
+with `core.autocrlf=false` and `core.eol=lf`). Git takes those attributes from
+the checkout's `.gitattributes` files; a changed tracked one is reported as a
+change, and an untracked one is always reported (even when a committed
+`.gitignore` would ignore it) and is never within `scope-check` scope. So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
 an edit, and an untouched checkout with those conversions stays clean. A CRLF
 copy produced only by a local `core.autocrlf` reports as changed. A non-empty
 `.git/info/attributes` is refused with `unsafe_git_attributes`;
@@ -211,11 +214,15 @@ with `schema_errors` and no template (exit 1), before any read; the payload is
 identical with `--report-budget`, which takes no budget snapshot in that case.
 
 The output has `issued: false`, `contract_sha256`, `mandate_fields`,
-`human_only_fields`, `unresolved_fields`, `preflight_errors` and
+`human_only_fields`, `requested_actions`, `unresolved_fields`, `preflight_errors` and
 `ready_for_issuance` (exit 0 only when true). In a ready request the `null`
-leaves of `mandate_fields` are exactly `human_only_fields`. When identity or
+leaves of `mandate_fields` are exactly `human_only_fields`: a ready request
+still awaits the host for every one of them. `requested_actions` repeats the
+contract's actions; the host chooses `mandate_fields.actions`. When identity or
 permission reads fail, `credential_actor_id` and `authority` are also `null` and
-listed in `unresolved_fields`; only fresh trusted reads resolve them.
+listed in `unresolved_fields`, which names only these derived fields; only fresh
+trusted reads resolve them. Text output shows the requested actions, any
+unresolved derived fields and the human-only fields.
 `preflight_errors` omit the blockers that exist only because no mandate exists
 yet. They are untrusted diagnostics and may contain repository-authored paths.
 
@@ -566,8 +573,9 @@ unknown`; an unknown is never "not fixed". With
 `discover` (once per repository), `inspect` and `prepare` add `repository_policy`
 in the CLI output. The report changes no core result, contract field,
 `instructions_sha256` or exit code. Separately, `prepare` now writes a pending
-`ai-policy-review` prerequisite into new contracts; existing contracts are unchanged. `--ai-policy` is syntax-compatible only: it is
-accepted and changes nothing. The earlier unreleased `ai_policy` excerpts and
+`ai-policy-review` prerequisite into new contracts; existing contracts are unchanged. `--ai-policy` is deprecated: it is
+accepted, changes no output or exit status, and writes one notice line to stderr (best effort: a missing,
+closed or readerless stderr changes nothing). The earlier unreleased `ai_policy` excerpts and
 the `agent_contribute.aipolicy` module no longer exist.
 
 - **Inventory.** The issue source repository (never a requested fork) at the
@@ -694,7 +702,41 @@ that stays stable across pages and equals the number of unique items read. Any f
 invalid evidence head, gives `complete: false` with errors. Queued, pending,
 approval-required or missing runs are never success. This is an observation of
 what GitHub reports, not proof that the evidence checks equal the CI checks.
-Required-check gating is a deferred future-schema design.
+
+## Required CI checks (schema 0.2 completion, opt-in)
+
+A reviewed schema 0.2 contract may declare `ci_requirements`: 0 to 20 unique
+`{"check": NAME, "app_id": N}` pairs. `check` is 1 to 200 characters without
+control or format characters, and `app_id` is a positive integer. A non-empty list
+needs `create_draft` in `execution.requested_actions`. An absent or empty list
+changes nothing: no reads, no output, no blocker.
+
+With requirements, once an exact-head published draft is verified, `verify` reads
+every check suite and then every check run (`filter=all`) for the evidence
+`git_head`, within a 50-request budget. It adds `ci_gate`. A requirement is `met`
+only when all of these hold:
+
+- every check run whose raw name is exactly `check`, from app `app_id`, on that
+  head, is completed with `success`;
+- every check suite of that app on the head is completed;
+- at least one such run exists;
+- both reads are complete, consistent and cover fewer than 1,000 suites.
+
+There is no latest-attempt selection: a retained failed attempt blocks even if a
+retry succeeded. Other states, decided in this order:
+`unknown` (incomplete or inconsistent reads, the suite window, an exhausted
+budget), `failed`, `not_met` (neutral or skipped), `pending` (an unfinished run,
+`action_required`, or an unfinished suite of that app, such as after a
+rerequest), and `missing`. Same-name runs from other apps are counted, never
+accepted, and commit statuses never count.
+
+A contract with requirements also cannot complete when the implementation diff
+touches `.github/` (additions, deletions and renames). Every gate blocker appears
+only in `stage_blockers.completion`; the implementation and draft gates and the
+`--observe-ci` report are unchanged. The gate observes the results GitHub
+currently retains for that head. It does not prove which tree a job checked out,
+and it never replaces review or final sign-off. Design:
+[docs/design/2026-11-03-ci-gating.md](design/2026-11-03-ci-gating.md).
 
 ## Signature observation (opt-in, report only)
 
@@ -760,9 +802,69 @@ cause no GitHub read.
 `verify` still reports schema and evidence failures in its normal result envelope;
 optional budget reads do not turn those failures into success. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
-estimate a command's cost; choose N yourself. Offline commands reject the flag.
-Without the flag, no rate-limit read happens and output is unchanged. Response
-caching is a deferred design.
+estimate a command's cost; choose N yourself. Offline commands reject the flag
+(see "Global options on offline commands").
+Without the flag, no rate-limit read happens and output is unchanged.
+
+## Content cache (opt-in)
+
+`--cache` before a command reuses file contents that GitHub returned for a
+pinned commit, so repeated `discover`, `inspect`, `prepare`, `verify` and
+`drift` runs skip re-reading the same instruction and policy files. The cache is
+content-addressed and self-verifying, and it never changes output, gates or exit
+status.
+
+- Only `repos/{owner}/{repo}/contents/{path}?ref={40-hex commit}` reads are
+  served from it, and only for a repository whose live metadata earlier in the
+  same command said both `"private": false` and `"visibility": "public"`. Private, internal or unobserved
+  repositories always read live.
+- The expected Git blob SHA for the path comes from the **live** recursive tree
+  read at that commit. Trees, metadata, issues, PRs, labels, permissions, branch
+  heads, comparisons, checks and every other read are never cached.
+- Entries are the decoded file bytes, named by blob SHA. A stored response must
+  carry that SHA and hash to it. Every hit recomputes the Git blob hash
+  (SHA-1 of `blob <length>\0<bytes>`) and must match the live tree; a
+  mismatching, oversized, symlinked, foreign-owned or non-regular entry (such
+  as a FIFO, opened nonblocking) is deleted and read live. Identical files at different paths share one entry.
+- The directory is `$XDG_CACHE_HOME/agent-contrib` (an absolute
+  `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`.
+  - It is opened once by walking every component of the absolute path from `/`
+    without following symlinks: a symlink anywhere in the path disables the
+    cache. Ancestors must already exist; only the cache directory itself is
+    created (0700), after every ancestor passed.
+  - The configured path is read lexically. `os.path.abspath` collapses `..`
+    before the walk, so `a/link/../c` means `a/c`, even where a shell following
+    `link` would land elsewhere.
+  - Every ancestor must be owned by root or by you, and not group- or
+    other-writable. The only exception is a root-owned sticky directory, such
+    as `/tmp`. Ancestors you own must carry no POSIX ACL.
+  - The cache directory itself must be yours, mode exactly 0700, with no POSIX
+    ACL.
+  - Any doubt disables the cache for that run; it is never an error and, by
+    design, prints no diagnostic, so output stays identical. If warm runs never
+    get faster, check these rules for your `XDG_CACHE_HOME`. Platforms
+    without `os.listxattr`, where ACLs cannot be ruled out, disable it too.
+  - **Default Ubuntu homes disable the cache:** umask 002 makes `~/.cache`
+    0775. To enable it, point `XDG_CACHE_HOME` at a private 0700 directory, for
+    example `mkdir -m 700 ~/.agent-contrib-cache` and then
+    `XDG_CACHE_HOME=~/.agent-contrib-cache agent-contrib --cache …`. Every
+    ancestor of that directory must meet the rules above.
+  - Every read, write, rename, scan and delete then works relative to that
+    open directory, so renaming or replacing its name afterwards cannot
+    redirect them.
+  - Writes are atomic and private (0600), and eviction touches only valid
+    entry names and the CLI's own temporary files. A temporary file older than
+    one hour, left by a crashed store, is removed. Younger ones count toward the
+    total but are never deleted, since they may belong to a concurrent store.
+  - Without POSIX ownership checks or `dir_fd` support, the cache is bypassed.
+- Entries are at most 8 MiB. After each store the total is brought under
+  256 MiB by deleting the oldest entries. Entries another invocation removes
+  meanwhile are skipped, so concurrent commands may exceed the total briefly,
+  but once they finish the last eviction pass has seen every stored entry. Delete the directory to clear it; any cache error falls back
+  to the live read.
+- `--report-budget` counts only the live reads that remain. The cache is active
+  for one invocation; library callers never inherit it.
+- Offline commands reject `--cache`, as they reject `--report-budget`.
 
 ## Several repositories
 
@@ -816,9 +918,17 @@ commands show top-level scalar fields; use JSON for full nested results, instruc
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured
 JSON when argument parsing has not produced a valid format selection.
-A global option (`--format`, `--report-budget`, `--min-remaining`) placed after
+A global option (`--format`, `--report-budget`, `--min-remaining`, `--cache`) placed after
 the subcommand is still a usage error (exit 2); its message says to move the
 option before the subcommand.
+
+### Global options on offline commands
+
+`instructions`, `schema`, `skill`, `lint`, `scope-check` and `evidence init`
+never read GitHub. On them `--report-budget` and `--cache` are both usage errors
+(exit 2, "`--cache` applies only to commands that read GitHub", and likewise for
+`--report-budget`), checked before any file is read; `--min-remaining` already
+requires `--report-budget`. `--format` applies to every command.
 
 The text option uses the same stdout handling as JSON. Closed output returns 1
 quietly; writable output retains the command's normal exit status.
@@ -859,7 +969,7 @@ One of `audit_report`, `audit_unread`.
 | `ready_for_issuance` | boolean | No preflight errors and no unresolved fields; sets the exit status |
 | `preflight_errors` | string[] | Blockers a mandate would not clear |
 | `preflight_errors_trust` | string |  |
-| `unresolved_fields` | "credential_actor_id" \| "authority"[] |  |
+| `unresolved_fields` | "credential_actor_id" \| "authority"[] | Derived fields that fresh trusted reads could not resolve; never the human-only fields |
 | `contract_sha256` | string |  |
 | `exact_head_pr_history` | string |  |
 | `mandate_fields` | object | Binding fields; null fields are filled only by the human/host |
@@ -891,7 +1001,8 @@ One of `audit_report`, `audit_unread`.
 | `mandate_fields.head_repository_id` | integer |  |
 | `mandate_fields.head_ref` | string |  |
 | `mandate_fields.base_ref` | string |  |
-| `human_only_fields` | string[] |  |
+| `human_only_fields` | string[] | mandate_fields paths left null for the human/host to fill, even in a ready request |
+| `requested_actions` | "implement" \| "create_draft"[] | The contract's requested actions; the human/host chooses mandate_fields.actions |
 | `provenance` | `authorization_provenance` |  |
 | `api_budget` | `api_budget` (optional) |  |
 
@@ -1204,6 +1315,30 @@ The repository could not be resolved or its snapshot read
 | --- | --- | --- |
 | `fetched_at` | string |  |
 | `endpoints` | string[] | GitHub endpoints read |
+
+#### `ci_gate`
+
+Present only when the contract declares ci_requirements; its blockers appear only in stage_blockers.completion
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `head_sha` | string or null | Exact head observed; null until an exact-head published draft is verified |
+| `complete` | boolean |  |
+| `suites_read` | integer |  |
+| `github_paths_changed` | boolean or null | Whether the implementation diff touches .github/; null when not read |
+| `requirements` | object[] |  |
+| `requirements[].check` | string | Reviewed check name (display copy) |
+| `requirements[].app_id` | integer |  |
+| `requirements[].state` | "met" \| "failed" \| "not_met" \| "pending" \| "missing" \| "unknown" | Only met passes |
+| `requirements[].runs` | object[] | Every retained run with this exact raw name from this app on the head |
+| `requirements[].runs[].id` | integer |  |
+| `requirements[].runs[].status` | "queued" \| "in_progress" \| "completed" \| "waiting" \| "requested" \| "pending" |  |
+| `requirements[].runs[].conclusion` | "success" \| "failure" \| "neutral" \| "cancelled" \| "skipped" \| "timed_out" \| "action_required" \| "stale" \| "startup_failure" \| null |  |
+| `requirements[].runs[].url` | string |  |
+| `requirements[].blocking_suites` | integer[] | Suites of this app on the head that are not completed |
+| `requirements[].other_app_runs` | integer | Same-name runs from other apps; never accepted |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `ci_observation`
 
@@ -1989,6 +2124,7 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document |
 | `waived_duplicates` | `verify_waived_overlap`[] (optional) | Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them |
 | `draft_update` | `verify_draft_update` (optional) | Present only when a host-context 0.2 document carries draft_update |
+| `ci_gate` | `ci_gate` (optional) |  |
 
 #### `verify_0_2_rejected`
 

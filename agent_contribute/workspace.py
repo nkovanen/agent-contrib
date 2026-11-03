@@ -33,7 +33,10 @@ def scope_check(task, directory, base=None):
         # Index, working tree and untracked files: everything a later commit could contain.
         # The index itself is the subject only for staged changes; worktree content is judged without its stat cache.
         staged = {path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path}
-        working = core.worktree_changes(directory, base) | core.untracked_paths(directory)
+        untracked = core.untracked_paths(directory)
+        if any(path.endswith('/') for path in untracked):  # an untracked nested repository: a future gitlink (FR2-03)
+            raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
+        working = core.worktree_changes(directory, base) | untracked
         paths = committed | staged | working
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
         # G-08: each symlink is also judged by its resolved target, in the snapshot that holds it.
@@ -41,7 +44,11 @@ def scope_check(task, directory, base=None):
                  core.link_violations(task['scope'], staged, core.LinkView(directory, index=True)) +
                  # Every changed path: a path committed since the base is not in worktree_changes (review SL-03).
                  core.link_violations(task['scope'], paths, core.LinkView(directory, worktree=True)))
-        result['violations'] = sorted(core.scope_violations(task['scope'], paths) +
+        # An untracked .gitattributes changes how Git compares files, so it is never within scope (FR2-01).
+        attributes = [{'path': core.safe_text(path, 500), 'rule': 'untracked .gitattributes changes how files are '
+                       'compared; commit or remove it'} for path in sorted(core.untracked_git_behaviour_files(directory))
+                      if path.rsplit('/', 1)[-1] == '.gitattributes']
+        result['violations'] = sorted(core.scope_violations(task['scope'], paths) + attributes +
                                       list({(item['path'], item['rule']): item for item in links}.values()),
                                       key=lambda item: (item['path'], item['rule']))
         if default and result['violations']:

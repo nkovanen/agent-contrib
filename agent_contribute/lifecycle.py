@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core, dispositions, draft_updates
+from . import authorization, cigate, core, dispositions, draft_updates
 
 
 def prepare_v2(inspected, client):
@@ -152,8 +152,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     errors.extend(route)
     current = None
     live_duplicates = []
+    scan_ids = {}
     try:
-        current = core.inspect_issue(source['repository'] + '#' + str(source['issue']), client)
+        current = core.inspect_issue(source['repository'] + '#' + str(source['issue']), client, pr_ids=scan_ids)
         if 'source' not in current:
             raise core.ProtocolError('refresh_incomplete', 'Current issue/source could not be read completely')
         result.update(repository_approval=current['approval'], live_complete=current['complete'],
@@ -170,11 +171,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
                 errors.append('Source changed; refresh and review contract: ' + key)
         if source['policy_sha256'] != authorization.policy_hash(current['provenance']):
             errors.append('Source policy state/content changed; refresh and review contract')
-        comparison = core.require(client.request('repos/' + source['repository'] + '/compare/' +
-                                  current['source']['commit'] + '...' + source['commit']), dict, 'reviewed base comparison')
-        if comparison.get('status') not in ('behind', 'identical'):
+        status = core.compare_relation(client, source['repository'], current['source']['commit'], source['commit'])
+        if status not in ('behind', 'identical'):
             errors.append('Reviewed source commit is not in current source default-branch history: ' +
-                          core.base_relation(task, source['commit'], current['source']['commit'], comparison.get('status')))
+                          core.base_relation(task, source['commit'], current['source']['commit'], status))
         live_duplicates = [dict(item, repository=source['repository']) for item in current['duplicates']]
     except core.ProtocolError as exc:
         errors.append('Live GitHub refresh failed: ' + str(exc))
@@ -239,6 +239,11 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not {'implement', 'create_draft'}.issubset(authority['actions']):
         stage_errors.append('Both implement and create_draft actions must be authorized')
     own = publication['own_pr'] if publication['verified'] else None
+    if own is not None and scan_ids.get(own['number']) != own['id']:
+        # The open scan must list the own draft with the same numeric ID before it is exempted (FR1-02).
+        publication['errors'].append('Open-PR scan and exact-head history disagree on the draft pull request '
+                                     'identity; repeat the complete read')
+        own = None
     blocking = without_own(all_duplicates, own)
     result['blocking_duplicates'] = blocking
     post_errors = stage_errors + publication['errors']
@@ -256,6 +261,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not publication['creation_clear']:
         draft_errors.append('Exact-head PR history does not permit creation' if authority['historical_valid'] else unchecked)
     result['draft_create_ready'] = not draft_errors and not identity_verified
+    ci_blockers = []
+    if cigate.requirements(task):  # opt-in; read before the expiry judgements below (#17)
+        result['ci_gate'], ci_blockers = cigate.evaluate(task, evidence, repo_dir, publication, client)
     # Judge final sign-off expiry after every blocking read, never at the start of verification.
     signoff = human_signoff(task, host_context, evidence, authority, publication, review,
                             dt.datetime.now(dt.timezone.utc))
@@ -275,6 +283,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         completion_errors.append('An exact-head published draft is not fully verified')
     if not signoff['valid']:
         completion_errors.append('Final human signoff is pending or invalid')
+    completion_errors += ci_blockers
     result['completion_ready'] = not completion_errors
     result['stage_blockers'] = {'implementation': implementation_errors,
                                 'draft': [] if publication['verified'] else draft_errors,

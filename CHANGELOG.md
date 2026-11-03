@@ -2,14 +2,6 @@
 
 ## 0.3.0 — unreleased
 
-- A report-only maintainer GitHub Action, slice 1 (#11):
-  `actions/verify/` with an example workflow. It reads only the
-  `pull_request` event payload and the PR-head checkout, needs only
-  `contents: read` and makes no API calls. It checks that the contract and
-  evidence blocks in the PR body describe this PR's route, head, tree, base
-  and scope, and writes a job summary. It never runs PR code and never writes
-  to GitHub. Live checks (freshness, overlap, approval, identity) are listed as
-  not evaluated.
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
 handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
@@ -19,6 +11,31 @@ channel or runtime model provider is added.
 
 ### Added
 
+- A report-only maintainer GitHub Action, slice 1 (#11):
+  `actions/verify/` with an example workflow
+  (`docs/examples/agent-contrib-verify.yml`). It reads only the
+  `pull_request` event payload and the PR-head checkout, needs only
+  `contents: read` and makes no API calls. It checks that the contract and
+  evidence blocks in the PR body describe this PR's route, head, tree, base
+  and scope, and writes a job summary. It never runs PR code and never writes
+  to GitHub. Live checks (freshness, overlap, approval, identity) are listed as
+  not evaluated.
+- Opt-in required CI checks for schema 0.2 completion (#17): an optional
+  `ci_requirements` list of `{check, app_id}` pairs in the unreleased task
+  schema 0.2. Once the exact-head draft is verified, `verify` reads the head's
+  check suites and every check run and reports `ci_gate`. A requirement is met
+  only if every run with that exact raw name from that app succeeded, every
+  suite of that app is completed, at least one run exists, and the reads are
+  complete and below GitHub's 1,000-suite window. A `.github/` change also
+  blocks. Blockers appear only at completion. Contracts without the field
+  verify byte-identically (golden), and `--observe-ci` is unchanged.
+- `remote.counted_pages` appends its pagination parameters with `&` when the
+  endpoint already has a query string.
+- Release preparation (#26, not activated): `docs/releasing.md` runbook with
+  verification and rollback, `tools/release_check.py` (version statements
+  agree; `--release` needs a dated CHANGELOG heading; `--tag` checks the tag),
+  and a proposed PyPI trusted-publishing workflow with build provenance in
+  `docs/examples/release-pypi.yml`, which runs only after a maintainer adopts it.
 - `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
   referenced by local commits that are not in the source default branch, read
   with the hardened Git reader and capped at 500 commits, 64 KiB per commit and
@@ -126,7 +143,13 @@ channel or runtime model provider is added.
   `--repo-dir`, signature-header presence for at most 1000 commits in
   `base_commit..git_head`, never truncated; no gpg, ssh-keygen or
   `verify-commit` runs) and `--report-budget` / `--min-remaining` (#27, part).
-  An opted-in report that is incomplete exits 1 where documented. `discover
+  `--cache` (#27) reuses file contents at a pinned commit of a public
+  repository from the user cache, keyed by Git blob SHA and re-verified
+  against the live tree on every hit; trees and all mutable reads stay live
+  and output is unchanged. It is used only under a private directory chain
+  (cache directory exactly 0700); a default Ubuntu `~/.cache` (0775) disables
+  it, so point `XDG_CACHE_HOME` at a private directory. An opted-in report that is incomplete exits 1
+  where documented. `discover
   --signals` also lists `code_location.named_paths_missing`: file paths the
   issue names that are not in the snapshot tree, compared exactly (F13).
 - `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
@@ -165,6 +188,19 @@ channel or runtime model provider is added.
   them (R5-04).
 
 ### Changed
+
+- `authorization-request` JSON adds `requested_actions` (the contract's actions;
+  the host still chooses the mandate actions). Text output now lists the
+  requested actions and the human-only fields, and labels `unresolved_fields`
+  as derived fields, so a ready request no longer reads as having nothing left
+  to fill (dogfood N6).
+- `--ai-policy` is deprecated: it still changes no output or exit status, and now
+  writes one notice line to stderr (dogfood N5). The notice is best effort: a
+  missing, closed or readerless stderr is closed quietly, so interpreter
+  shutdown cannot turn the exit status into 120 (R13-01).
+- `--cache` on an offline command (`instructions`, `schema`, `skill`, `lint`,
+  `scope-check`, `evidence init`) is now a usage error (exit 2), like
+  `--report-budget`; it was silently accepted (dogfood N7).
 
 - `--observe-ci` and `--observe-signatures` share one target/head prelude.
   With an evidence head but an invalid target repository,
@@ -213,6 +249,21 @@ channel or runtime model provider is added.
 
 ### Security
 
+- Untracked `.gitattributes` files are always reported, even when a committed
+  `.gitignore` ignores them, because they change how Git compares checkout
+  content; `scope-check` treats one as out of scope. Previously an ignored
+  `src/.gitattributes` with `eol=crlf` made CRLF bytes that differ from HEAD
+  pass `verify` (FR2-01).
+- A claimed draft whose GitHub creation time is still in the future is not
+  recognized, even inside the mandate interval (FR1-03).
+- Schema 0.2 exempts the own draft from overlap only when the open-PR scan lists
+  it with the same numeric ID that exact-head history and detail report; a
+  conflicting or missing scan ID keeps it blocking (FR1-02).
+- A GitHub comparison counts as a history proof only when its response proves
+  the status: the echoed base commit, a merge base consistent with the status,
+  and non-negative `ahead_by`/`behind_by`/`total_commits` that agree with it.
+  A bare or contradictory `status` used to authenticate the reviewed source
+  commit and the evidence base (FR1-01).
 - Scope judges each changed symlink by where it points (G-08), in `verify`
   evidence checks and `scope-check`. The committed (or staged, or worktree)
   target is read without following it and resolved lexically from the link's
@@ -298,6 +349,8 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- `scope-check` refuses an untracked nested repository with the gitlink error,
+  since adding it would create a gitlink (FR2-03).
 - An unwritable temporary root is skipped in favour of `/tmp` or `/var/tmp`,
   and a temporary directory that still cannot be created reports
   `temp_dir_error` instead of an unstructured input error (G-20).
@@ -348,6 +401,8 @@ channel or runtime model provider is added.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.
   - An index with assume-unchanged or skip-worktree entries, including a sparse
     checkout, now fails with `index_flags`.
+  - A partial or contradictory GitHub comparison of the evidence base now
+    fails as unauthenticated instead of passing on its `status` alone.
   - A checkout with the Git config keys listed under Security fails with
     `unsafe_git_config`.
   - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make

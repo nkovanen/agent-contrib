@@ -19,6 +19,8 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import quote
 
+from . import cache
+
 VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 HOST_CONTEXT_VERSIONS = ('0.1', '0.2')
@@ -126,6 +128,17 @@ class GitHub:
         return self.request(endpoint, attempts=1)
 
     def request(self, endpoint, attempts=3):
+        store = cache.active()  # opt-in --cache: verified file contents at a pinned commit only
+        if store is not None:
+            hit = store.lookup(endpoint)
+            if hit is not None:
+                return hit
+        value = self._live(endpoint, attempts)
+        if store is not None:
+            store.observe(endpoint, value)
+        return value
+
+    def _live(self, endpoint, attempts):
         for attempt in range(attempts):
             try:
                 env = dict(os.environ, GH_PROMPT_DISABLED='1', GH_NO_UPDATE_NOTIFIER='1')
@@ -414,7 +427,9 @@ def index_prs(prs):
         local = {int(n) for n in re.findall(r'(?<![A-Za-z0-9_/#])#([1-9][0-9]{0,9})(?![A-Za-z0-9_])', local_text)}
         local.update(int(n) for n in re.findall(r'(?i)\bGH-([1-9][0-9]{0,9})(?![0-9])', text))
         local.update(int(n) for n in re.findall(r'(?:^|[/_-])([1-9][0-9]{0,9})(?=[/_-]|$)', branch))
-        index.append({'number': number, 'url': safe_text(url, 500), 'references': references,
+        # The numeric ID is internal only (never output or copied into a contract): it reconciles identities (FR1-02).
+        index.append({'number': number, 'id': pr['id'] if type(pr.get('id')) is int and pr['id'] > 0 else None,
+                      'url': safe_text(url, 500), 'references': references,
                       'local': local, 'words': set(re.findall(r'[a-z][a-z0-9]{3,}', title.lower())),
                       'checklist': set(re.findall(r'\b[A-Z][A-Z0-9]{1,15}(?:-[A-Z0-9]{1,20}){1,5}\b', text))})
     return index
@@ -506,7 +521,8 @@ def inspect_from_snapshot(snapshot, issue):
                            'policy_state': snapshot['policy_state'], 'policy': snapshot['policy']}}
 
 
-def inspect_issue(reference, client=None):
+def inspect_issue(reference, client=None, *, pr_ids=None):
+    """pr_ids, when a dict, receives {number: numeric ID or None} for every open source PR the scan read."""
     repository, number = parse_issue(reference)
     client = client or GitHub()
     context, meta = resolve_repository(repository, client)
@@ -516,6 +532,8 @@ def inspect_issue(reference, client=None):
     try:
         source = context['issue_source_repository']
         snapshot = repository_snapshot(source, client, meta)
+        if pr_ids is not None:
+            pr_ids.update({entry['number']: entry['id'] for entry in snapshot['pr_index']})
         issue = issue_data(client.request(f'repos/{source}/issues/{number}'), number)
         result = inspect_from_snapshot(snapshot, issue)
         if source.casefold() != repository.casefold():
@@ -875,13 +893,19 @@ def require_plain_index(directory):
                             'checkout); use a full checkout without these flags')
 
 
+def untracked_git_behaviour_files(directory):
+    """Untracked .gitignore and .gitattributes files, listed with no ignore rules at all: one could ignore itself
+    away, and an ignored .gitattributes would still change how Git compares checkout content (FR2-01)."""
+    listed = git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore', ':(glob)**/.gitattributes')
+    return {path for path in listed.split('\0') if path}
+
+
 def untracked_paths(directory):
     """Untracked files under only the per-directory .gitignore rules a commit can carry. .git/info/exclude and
-    core.excludesFile are local and never hide a file. Untracked .gitignore files are listed unfiltered, so one
-    cannot ignore itself away."""
+    core.excludesFile are local and never hide a file, and untracked .gitignore/.gitattributes files are always
+    listed."""
     listed = git_read(directory, 'ls-files', '-z', '--others', '--exclude-per-directory=.gitignore')
-    listed += git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore')
-    return {path for path in listed.split('\0') if path}
+    return {path for path in listed.split('\0') if path} | untracked_git_behaviour_files(directory)
 
 
 def shallow_or(directory, error):
@@ -943,7 +967,8 @@ def worktree_changes(directory, commit):
     working-tree-encoding can use to hide an edit, so every other regular file is also hashed raw
     (hash-object --no-filters). A raw mismatch counts only if the bytes also differ from the commit's checkout
     output (cat-file --filters), so a legitimately converted checkout stays clean. Attributes come only from the
-    checkout's .gitattributes files (a changed one is itself reported): info/attributes is refused,
+    checkout's .gitattributes files, and any changed or untracked one (ignored or not) is itself reported by the
+    callers' status and untracked_paths checks: info/attributes is refused,
     core.attributesFile and system attributes are ignored, and autocrlf/eol are forced."""
     blobs = []
     for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0'):
@@ -1057,6 +1082,33 @@ def scope_violations(scope, paths):
             violations.append({'path': safe_text(path, 500),
                                'rule': 'prohibited_paths: ' + safe_text(prohibited[0], 500) if prohibited else 'not in allowed_paths'})
     return violations
+
+
+_COMPARE_SHAPES = {  # status: (ahead_by > 0, behind_by > 0, merge base); GitHub compares base...head
+    'identical': (False, False, 'base'), 'ahead': (True, False, 'base'),
+    'behind': (False, True, 'head'), 'diverged': (True, True, None)}
+
+
+def compare_relation(client, repository, base, head):
+    """The status of compare/{base}...{head}, accepted only when the response proves it (FR1-01): the echoed base
+    commit, a merge base consistent with the status, and non-negative counters that agree with it."""
+    data = client.request(f'repos/{repository}/compare/{base}...{head}')
+    shape = _COMPARE_SHAPES.get(data.get('status')) if isinstance(data, dict) else None
+    counters = [data.get(key) for key in ('ahead_by', 'behind_by', 'total_commits')] if shape else []
+    merge = data.get('merge_base_commit') if shape else None
+    echoed = data.get('base_commit') if shape else None
+    if (shape is None or any(type(value) is not int or value < 0 for value in counters) or
+            not isinstance(merge, dict) or not isinstance(echoed, dict) or echoed.get('sha') != base or
+            not (isinstance(merge.get('sha'), str) and SHA.fullmatch(merge['sha']))):
+        raise ProtocolError('api_shape', 'Inconsistent or partial GitHub commit comparison')
+    ahead, behind, total = counters
+    expected_merge = {'base': base, 'head': head, None: None}[shape[2]]
+    if ((ahead > 0) != shape[0] or (behind > 0) != shape[1] or total != ahead or
+            (expected_merge is not None and merge['sha'] != expected_merge) or
+            (shape[2] is None and merge['sha'] in (base, head)) or
+            (data['status'] == 'identical' and base != head)):
+        raise ProtocolError('api_shape', 'Inconsistent or partial GitHub commit comparison')
+    return data['status']
 
 
 def base_relation(task, base, tip, status=None):
@@ -1200,13 +1252,12 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence base requires a current authenticated source snapshot')
     else:
         try:
-            comparison = require(client.request('repos/' + task['source']['repository'] + '/compare/' +
-                                                 current_commit + '...' + evidence['base_commit']), dict, 'base comparison')
+            status = compare_relation(client, task['source']['repository'], current_commit, evidence['base_commit'])
             # GitHub compares HEAD (evidence base) against BASE (observed upstream tip).
             # Only behind/identical proves the evidence base belongs to upstream history.
-            if comparison.get('status') not in ('behind', 'identical'):
+            if status not in ('behind', 'identical'):
                 errors.append('Evidence base is not in current source default-branch history: ' +
-                              base_relation(task, evidence['base_commit'], current_commit, comparison.get('status')))
+                              base_relation(task, evidence['base_commit'], current_commit, status))
         except ProtocolError as exc:
             errors.append('Could not authenticate evidence base against source default-branch history: ' +
                           base_relation(task, evidence['base_commit'], current_commit) + ': ' + str(exc))
@@ -1343,6 +1394,24 @@ def reviewed_contract_errors(task, schema_version):
     elif schema_version != '0.2' and (not task['discovery']['complete'] or task['discovery']['duplicate_prs']):
         errors.append('Prepared discovery is incomplete or has unresolved duplicates')
     errors.extend(prerequisite_errors(task['prerequisites']))
+    if schema_version == '0.2':
+        errors.extend(ci_requirement_errors(task))
+    return errors
+
+
+def ci_requirement_errors(task):
+    """Reviewed rules for schema 0.2 ci_requirements (#17) beyond its schema; a missing or empty list adds none."""
+    items = task.get('ci_requirements') or []
+    if not items:
+        return []
+    errors = []
+    pairs = [(item['check'], item['app_id']) for item in items]
+    if len(set(pairs)) != len(pairs):
+        errors.append('CI requirements must be unique')
+    if any(unicodedata.category(char) in ('Cc', 'Cf') for check, _ in pairs for char in check):
+        errors.append('CI requirement names cannot contain control or format characters')
+    if 'create_draft' not in task['execution']['requested_actions']:
+        errors.append('CI requirements need the create_draft action')
     return errors
 
 

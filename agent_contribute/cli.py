@@ -9,8 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody,
-               remote, signals, signatures, textfmt, workspace, __version__)
+from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+               prbody, remote, signals, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -41,7 +41,11 @@ def read_host_context_stdin():
                                  'Cannot read explicit bounded UTF-8 host context from stdin') from exc
 
 
-GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining')
+GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
+# Commands that never read GitHub; GitHub-only global options are refused on them alike.
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
+                    'inspect always adds repository_policy')
 
 
 class Parser(argparse.ArgumentParser):
@@ -49,9 +53,27 @@ class Parser(argparse.ArgumentParser):
         # Global options are parsed only before the subcommand; say so instead of a bare rejection.
         if message.startswith('unrecognized arguments: ') and any(
                 token.split('=', 1)[0] in GLOBAL_OPTIONS for token in message.split()[2:]):
-            message += ('; global options --format, --report-budget and --min-remaining go before the subcommand, '
+            message += ('; global options --format, --report-budget, --min-remaining and --cache go before the subcommand, '
                         'for example: agent-contrib --format text verify task.json')
         raise core.ProtocolError('usage', message)
+
+
+def notice():
+    """Best effort: a missing or closed stderr never changes stdout or the exit status. Not print(): the result
+    is the CLI's only print() call."""
+    stream = sys.stderr
+    try:
+        stream.write(AI_POLICY_NOTICE + '\n')
+        stream.flush()
+    except (AttributeError, OSError, ValueError):
+        # As for a broken stdout: close the failed stream so interpreter shutdown cannot retry its buffered write
+        # and exit 120. Closing a closed stream is a no-op; a failed final flush still closes it.
+        try:
+            close = getattr(stream, 'close', None)
+            if close is not None:
+                close()
+        except (OSError, ValueError):
+            pass
 
 
 def create_new(path, text, what, newline=''):
@@ -123,6 +145,9 @@ def main(argv=None):
                         help='Add GitHub rate-limit snapshots around a GitHub-reading command')
     parser.add_argument('--min-remaining', type=int, metavar='N',
                         help='With --report-budget, refuse to start below N remaining core requests')
+    parser.add_argument('--cache', action='store_true',
+                        help='Reuse verified file contents at pinned commits of public repositories from the user cache '
+                             '(blob-SHA checked); every other read stays live and output is unchanged')
     commands = parser.add_subparsers(dest='command', required=True, metavar='COMMAND')
     summaries = {'discover': 'Rank open issues of one repository, or 2-20, with policy and overlap context',
                  'inspect': 'Inspect one issue: approval, instructions, exclusions and overlapping PRs',
@@ -147,7 +172,8 @@ def main(argv=None):
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
             sub.add_argument('--ai-policy', action='store_true',
-                             help='Syntax-compatible only: accepted and ignored; inspect always adds repository_policy')
+                             help='Deprecated and ignored (one notice on stderr); inspect always adds '
+                                  'repository_policy')
         if command == 'prepare':
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
@@ -219,8 +245,13 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence'):
-            raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
+        if args.command in OFFLINE_COMMANDS:
+            for flag, given in (('--report-budget', args.report_budget), ('--cache', args.cache)):
+                if given:
+                    raise core.ProtocolError('usage', flag + ' applies only to commands that read GitHub')
+        cache.configure(args.cache)
+        if getattr(args, 'ai_policy', False):
+            notice()
         prevalidate(args)
         if args.report_budget:
             before = budget.snapshot()
@@ -359,6 +390,8 @@ def main(argv=None):
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}
         code = 1
+    finally:
+        cache.configure(False)  # --cache lasts one invocation; library callers never inherit it
     stream = sys.stdout
     if stream is None:
         return 1

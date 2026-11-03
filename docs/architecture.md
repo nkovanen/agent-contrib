@@ -52,11 +52,16 @@ never discovered repository data. The host is responsible for the actual human
 approval; the CLI labels the mandate host-asserted and verifies only GitHub facts
 and record consistency.
 
-Before implementation or first publication, overlapping PRs block. After a
-separately authorized publication, exactly one matching draft can be recognized
-at the tested commit. Every other overlap remains. Draft-stage success reports
-whether to create or simply return the existing verified draft; completion still
-requires final human sign-off. No draft-update lifecycle is implemented.
+Before implementation or first publication, overlapping PRs block. A
+host-context 0.2 `overlap_dispositions` record can waive a topical overlap with
+one PR while that PR and its base tip are unchanged; direct references,
+contradictions, the actor's own PRs, failed reads and incomplete scans still
+block. After a separately authorized publication, exactly one matching draft can
+be recognized at the tested commit. Every other overlap that no valid
+disposition waives remains. Draft-stage success reports whether to create or
+simply return the existing verified draft; completion still requires final human
+sign-off. No draft-update lifecycle is implemented: a host-context 0.2
+`draft_update` record is validated and reported, never consulted by a gate.
 
 The old schemas and evaluator keep their formats and route meaning, apart from
 the hardening and message changes in the
