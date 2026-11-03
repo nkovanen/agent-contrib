@@ -8,7 +8,7 @@
   function requireValue(condition, message) { if (!condition) throw new Error(message); }
   function texts(value) {
     requireValue(Array.isArray(value) && value.length <= 16, 'Use at most 16 lines per field.');
-    requireValue(value.every(x => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 500 && /\S/u.test(x) && !/[\u0000-\u001f\u007f]/u.test(x)), 'Each line needs 1–500 characters, without control characters.');
+    requireValue(value.every(x => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 500 && ![...x].some(c => c.length === 1 && /[\ud800-\udfff]/u.test(c)) && /\S/u.test(x) && !/[\u0000-\u001f\u007f]/u.test(x)), 'Each line needs 1–500 characters, without control characters.');
     requireValue(new Set(value).size === value.length, 'Each line must be distinct.');
     return value.slice();
   }
@@ -28,7 +28,7 @@
     requireValue(object(value) && value.format === 'find-jars-report/1', 'Expected format find-jars-report/1.');
     requireValue(Array.isArray(value.observations) && value.observations.length <= 200 && typeof value.complete === 'boolean', 'Expected at most 200 observations and a complete flag.');
     const seen = new Set();
-    return value.observations.map((observation, index) => {
+    const reports = value.observations.map((observation, index) => {
       const prefix = `Repository ${index + 1}: `;
       requireValue(object(observation) && typeof observation.repository === 'string' && repoPattern.test(observation.repository), prefix + 'invalid repository.');
       requireValue(['welcome','closed','undeclared','excluded','unknown'].includes(observation.disposition), prefix + 'invalid disposition.');
@@ -49,6 +49,7 @@
       requireValue(observation.disposition === 'excluded' || observation.disposition === effectiveState, prefix + 'disposition and jar state disagree.');
       return {repository:row.repository, state:observation.disposition, complete:row.complete, manifest, commit:row.commit || null, sha256:row.sha256 || null};
     });
+    return {reports,complete:value.complete};
   }
   function sourceURL(row) {
     return repoPattern.test(row.repository) && typeof row.commit === 'string' && /^[a-f0-9]{40}$/.test(row.commit)

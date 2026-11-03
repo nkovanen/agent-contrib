@@ -9,7 +9,7 @@ const samples = [
   ['weekend-labs/notebook','undeclared',[],[]],
   ['kindred-dev/seedling','unknown',['Examples'],[]]
 ];
-const demo = () => model.parseSnapshot(JSON.stringify({format:'find-jars-report/1',complete:true,observations:samples.map(([repository,state,wanted,boundaries]) => ({repository,disposition:state,jar:{repository,state,complete:state !== 'unknown',manifest:['welcome','closed'].includes(state) ? {schema_version:'0.1',status:state,wanted,boundaries} : null,commit:null,sha256:null}}))}));
+const demo = () => model.parseSnapshot(JSON.stringify({format:'find-jars-report/1',complete:true,observations:samples.map(([repository,state,wanted,boundaries]) => ({repository,disposition:state,jar:{repository,state,complete:state !== 'unknown',manifest:['welcome','closed'].includes(state) ? {schema_version:'0.1',status:state,wanted,boundaries} : null,commit:null,sha256:null}}))})).reports;
 let reports = demo(), isDemo = true, preview = null, lastOpener;
 const stateLabel = {welcome:'Welcome',closed:'Closed',undeclared:'Undeclared',unknown:'Unknown / incomplete',excluded:'Excluded'};
 const explanations = {excluded:'Excluded by discovery. Stop and inspect the source policies before considering work.',welcome:'A welcome to explore useful work. Read project policies before choosing a task.',closed:'This declaration declines agent contributions. Respect the stop.',undeclared:'No jar declared in this snapshot. Absence grants no approval.',unknown:'The observation is incomplete or unknown. Recheck before choosing work.'};
@@ -82,8 +82,8 @@ async function importFile(file) {
   try {
     if (!file || file.size > model.MAX_BYTES || !/\.json$/i.test(file.name)) throw new Error('Choose one .json file of at most 1 MiB.');
     const text = new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer());
-    const next = model.parseSnapshot(text); if (sequence !== importSequence) return;
-    reports=next; isDemo=false; $('dataset-label').textContent='LOCAL SNAPSHOT'; $('dataset-description').textContent='Imported data. Unverified observations, never live approval.'; $('reset-demo').hidden=false;
+    const snapshot = model.parseSnapshot(text), next = snapshot.reports; if (sequence !== importSequence) return;
+    reports=next; isDemo=false; $('dataset-label').textContent='LOCAL SNAPSHOT'; $('dataset-description').textContent=(snapshot.complete ? 'Discovery coverage reported complete. ' : 'Discovery incomplete — this collection may omit repositories. ')+'Unverified observations, never live approval.'; $('reset-demo').hidden=false;
     $('search').value=''; $('state').value='all'; render(); $('import-status').textContent=`Loaded ${next.length} repositories locally. Nothing uploaded.`;
   } catch (error) { if (sequence !== importSequence) return; $('import-status').textContent=`Could not import: ${error.message} Your current collection is unchanged.`; $('import-status').classList.add('error'); }
 }

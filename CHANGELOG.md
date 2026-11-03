@@ -34,6 +34,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- A dependency-free local Tipjar directory (`web/`) with clearly fictional demo
+  jars, bounded local `find-jars-report/1` snapshot import, source-linked details,
+  read-only CLI command copying, and schema 0.1 manifest preview/download.
+  Assets ship in the source archive; no hosting or GitHub requests are enabled.
+
 - Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
   isolated Python child that is terminated and reaped on timeout. Strict UTF-8
   JSON, EOF, the 8 MiB bound and five-second deadline remain required. Narrow

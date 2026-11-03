@@ -9,14 +9,20 @@ Constraints: no runtime dependencies, network reads, mutation, or implied author
 Review focus: malformed identities; incomplete welcome; oversized imports; hostile
 HTML; strict manifest download. Test each in model tests and browser QA.
 
-- [ ] Write failing model regressions in tests/web/model.test.cjs and expose them
+- [x] Write failing model regressions in tests/web/model.test.cjs and expose them
   through unittest (skip only when Node unavailable).
-- [ ] Implement web/model.js: bounded snapshot validation, safe source identities,
+- [x] Implement web/model.js: bounded snapshot validation, safe source identities,
   filtering, schema 0.1 editor serialization; run model tests to green.
-- [ ] Build web/index.html, style.css and app.js with demo data, import, filters,
+- [x] Build web/index.html, style.css and app.js with demo data, import, filters,
   detail dialog and manifest download. Exercise actual DOM flows in Paseo.
-- [ ] Document local serving and manual Pages hosting, add sdist assets and
+- [x] Document local serving and manual Pages hosting, add sdist assets and
   packaging assertion, run full unittest and installed-package checks.
-- [ ] Merge latest origin/main without rebase, reverify and commit source only.
+- [x] Merge latest origin/main without rebase, reverify and commit source only.
 
 Controller supplies independent review and CI; no subagents/push/PR/deployment here.
+
+Validation: Node model regressions and Python-parser interoperability pass.
+Desktop and 390px mobile views inspected in Paseo; local hostile/invalid file
+imports, search empty state, editor errors and download action exercised.
+Paseo CSP blocks browser_evaluate and later paint/action timeouts limited final
+keyboard/drop/copy checks. Controller owns independent review and CI.
