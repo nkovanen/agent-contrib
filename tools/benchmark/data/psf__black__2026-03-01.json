@@ -1,0 +1,5748 @@
+{
+ "collected_at": "2026-11-03T01:24:53+00:00",
+ "commit_at_cutoff": "16085d8632d6bb4a6cf5154f86adc19c64f30970",
+ "cutoff": "2026-03-01T00:00:00Z",
+ "default_branch": "main",
+ "format": "agent-contrib-benchmark/2",
+ "horizon_days": 90,
+ "issues": [
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 3,
+   "created_at": "2022-07-28T22:07:02Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3196",
+   "labels": [
+    "F: strings",
+    "S: needs discussion",
+    "T: style"
+   ],
+   "number": 3196,
+   "title": "Better quotes normalisation with triple quotes",
+   "updated_at": "2025-05-09T19:20:54Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 1,
+   "created_at": "2022-08-02T22:54:05Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3206",
+   "labels": [
+    "C: maintenance",
+    "C: packaging"
+   ],
+   "number": 3206,
+   "title": "Run PyPI release workflow weekly on `main` targeting TestPyPI",
+   "updated_at": "2022-08-16T19:58:26Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 0,
+   "created_at": "2022-08-05T04:44:58Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3210",
+   "labels": [
+    "C: preview style",
+    "F: linebreak",
+    "F: strings",
+    "T: bug",
+    "T: style"
+   ],
+   "number": 3210,
+   "title": "string_processing: Worse formatting of assert",
+   "updated_at": "2024-09-17T21:21:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2022-08-25T05:53:45Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3238",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3238,
+   "title": "Is there any way to avoid __getitem__ fom",
+   "updated_at": "2022-09-11T13:55:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2022-09-12T06:57:41Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-01T15:37:12Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-01T15:37:11Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2022-11-09T07:01:01Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3377,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-28T06:35:50Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-01T15:37:10Z",
+      "pr": 5448,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3268",
+   "labels": [
+    "F: linebreak",
+    "F: trailing comma",
+    "T: bug"
+   ],
+   "number": 3268,
+   "title": "Trailing comma gives newline on wrong expressions",
+   "updated_at": "2025-07-22T23:29:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2022-10-03T15:01:24Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-09T01:58:53Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-04-12T18:15:14Z",
+      "kind": "closed",
+      "reason": "duplicate"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-09T01:58:53Z",
+     "state": "closed",
+     "state_reason": "duplicate"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3306",
+   "labels": [
+    "F: docstrings",
+    "T: bug"
+   ],
+   "number": 3306,
+   "title": "Black removing extra spaces in docstrings.  Breaking markdown formatting",
+   "updated_at": "2023-02-01T20:18:21Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 7,
+   "created_at": "2022-10-10T18:14:03Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3324",
+   "labels": [
+    "S: accepted",
+    "T: style"
+   ],
+   "number": 3324,
+   "title": "Consider not wrapping a single import when the line is too long",
+   "updated_at": "2025-07-22T23:40:20Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2022-10-21T06:51:02Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3346",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3346,
+   "title": "Break long lines at dominant semantic features",
+   "updated_at": "2023-01-13T20:07:14Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2022-10-22T15:00:04Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-30T19:10:03Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-30T19:10:03Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2022-10-28T12:18:16Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3362,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-30T18:58:02Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-03-30T19:10:01Z",
+      "pr": 5069,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3350",
+   "labels": [
+    "F: linebreak",
+    "T: bug"
+   ],
+   "number": 3350,
+   "title": "Type hint wrapping after comment",
+   "updated_at": "2022-10-28T12:18:16Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2022-11-02T12:41:58Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-22T23:15:17Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-22T23:15:17Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-22T18:08:50Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T23:15:16Z",
+      "pr": 5585,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3372",
+   "labels": [
+    "F: fmtoff",
+    "T: bug"
+   ],
+   "number": 3372,
+   "title": "# fmt: off block is partially reformatted",
+   "updated_at": "2025-10-26T21:39:55Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2022-11-27T14:00:12Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3395",
+   "labels": [
+    "C: configuration",
+    "C: file collection",
+    "T: enhancement"
+   ],
+   "number": 3395,
+   "title": "Add an option to dereference symlinks",
+   "updated_at": "2024-02-10T01:19:24Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2022-11-30T17:02:14Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-02-21T21:38:43Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2023-02-22T18:53:07Z",
+      "pr": 9793,
+      "repository": "python/typeshed",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3399",
+   "labels": [
+    "F: comments",
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3399,
+   "title": "Breaking `# pyright: ignore[]` used with `# type: ignore[]` comments on short lines",
+   "updated_at": "2023-02-21T21:38:43Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2022-12-08T17:57:04Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3406",
+   "labels": [
+    "F: empty lines",
+    "T: style"
+   ],
+   "number": 3406,
+   "title": "Add newline before indentation decrease, except for continuation of logical blocks",
+   "updated_at": "2023-10-01T12:26:52Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 0,
+   "created_at": "2022-12-09T02:49:20Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3409",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3409,
+   "title": "string_processing: reformats to exceed line length and is also ugly",
+   "updated_at": "2024-01-30T18:26:40Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 1,
+   "created_at": "2022-12-09T03:04:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3410",
+   "labels": [
+    "C: preview style",
+    "F: parentheses",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3410,
+   "title": "string_processing: Ugly reformatting of string literal with .format() method",
+   "updated_at": "2024-01-30T18:27:32Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 2,
+   "created_at": "2022-12-10T18:55:22Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-24T02:00:16Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-24T02:00:16Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2022-12-10T19:44:44Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2022-12-17T18:31:48Z",
+      "pr": 3423,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-11T16:49:42Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-24T02:00:14Z",
+      "pr": 5521,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3424",
+   "labels": [
+    "C: preview style",
+    "C: unstable formatting",
+    "F: parentheses",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3424,
+   "title": "string_processing: Instability with line length = 8 and parenthesized string",
+   "updated_at": "2025-10-26T23:21:28Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 1,
+   "created_at": "2022-12-10T21:06:23Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3429",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3429,
+   "title": "Additional sanity checks",
+   "updated_at": "2023-01-29T14:52:56Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2022-12-12T05:53:20Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3432",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3432,
+   "title": "[style] Function default parameters - ugly lambda explosion",
+   "updated_at": "2023-01-29T15:04:06Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2022-12-15T06:10:01Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-04T00:59:44Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-04T00:59:43Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2022-12-15T06:11:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2022-12-15T16:25:28Z",
+      "pr": 3440,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3442",
+   "labels": [
+    "F: linebreak",
+    "S: accepted",
+    "T: style"
+   ],
+   "number": 3442,
+   "title": "Long dict key with operators are oddly broken into multiple lines",
+   "updated_at": "2023-02-03T04:24:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2022-12-18T11:54:58Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3449",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3449,
+   "title": "Provide option for formatting fluent interfaces",
+   "updated_at": "2022-12-18T11:56:44Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2022-12-20T20:01:50Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-22T18:04:36Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-22T18:04:36Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-15T05:42:24Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T18:04:35Z",
+      "pr": 5544,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3466",
+   "labels": [
+    "C: preview style",
+    "F: parentheses",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3466,
+   "title": "string_processing: Extra parentheses added even when string isn't split",
+   "updated_at": "2024-01-30T18:26:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-01-04T19:26:00Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3480",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3480,
+   "title": "Request for a mechanism to accept more target files than the platform line length will allow",
+   "updated_at": "2023-01-04T19:26:00Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-01-05T22:23:48Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3481",
+   "labels": [
+    "C: maintenance",
+    "T: enhancement"
+   ],
+   "number": 3481,
+   "title": "Add OpenSSF Scorecard to the project CI",
+   "updated_at": "2023-01-05T22:45:07Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2023-01-12T11:46:20Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-05-24T08:55:58Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4925,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3494",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3494,
+   "title": "Enforce parentheses around star unpacking containers modified with operators",
+   "updated_at": "2023-01-12T16:29:13Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 0,
+   "created_at": "2023-01-13T20:13:11Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-20T17:47:15Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-20T17:47:15Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-17T10:18:37Z",
+      "author_association": "NONE",
+      "merged_at": "2026-10-20T17:47:14Z",
+      "pr": 5558,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-30T06:13:50Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5592,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3497",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3497,
+   "title": "string_processing: Multiline string concatenated to be over line length in function argument default value",
+   "updated_at": "2024-01-30T18:26:30Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 7,
+   "created_at": "2023-01-18T10:26:36Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3504",
+   "labels": [
+    "F: strings",
+    "T: style"
+   ],
+   "number": 3504,
+   "title": "Enforce leading vs trailing spaces in existing multiline strings",
+   "updated_at": "2023-01-30T10:04:47Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-01-19T02:35:18Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-01T14:47:29Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-01T14:47:29Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-02T02:58:20Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-01T14:47:27Z",
+      "pr": 5383,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3505",
+   "labels": [
+    "C: invalid code",
+    "F: fmtoff",
+    "T: bug"
+   ],
+   "number": 3505,
+   "title": "\"unindent does not match any outer indentation level\" for valid Python syntax",
+   "updated_at": "2023-12-15T14:19:09Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-01-21T00:19:38Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-01-10T13:03:33Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4925,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3510",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3510,
+   "title": "Formatting of long expressions in arguments",
+   "updated_at": "2026-01-10T16:11:58Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2023-01-22T20:36:34Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-01-22T20:39:06Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 21449,
+      "repository": "numpy/numpy",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3518",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3518,
+   "title": "Format attribute `# fmt: wrap-list=16` to specify format of large arrays",
+   "updated_at": "2025-06-20T14:52:50Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2023-01-25T18:03:27Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3525",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3525,
+   "title": "Should Black have an opinion about sequence pattern matching syntax?",
+   "updated_at": "2023-01-25T18:18:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-01-26T13:07:49Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-03T23:08:28Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-03T23:08:27Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-16T14:02:42Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-03T23:08:26Z",
+      "pr": 5408,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3526",
+   "labels": [
+    "C: integrations",
+    "S: accepted",
+    "T: enhancement"
+   ],
+   "number": 3526,
+   "title": "Github action could return number of changed/formatted files",
+   "updated_at": "2023-01-31T02:19:40Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-01-29T11:11:02Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3530",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3530,
+   "title": "Enforced Spacing Around the Binary Operators",
+   "updated_at": "2024-11-16T14:35:47Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-02-06T20:06:04Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-02-09T10:14:10Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4215,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3552",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3552,
+   "title": "Tests do not reflect real-world CLI file-discovery behavior",
+   "updated_at": "2024-02-09T10:14:10Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-02-07T01:27:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3553",
+   "labels": [
+    "F: linebreak"
+   ],
+   "number": 3553,
+   "title": "Double list index results in newline",
+   "updated_at": "2023-02-07T03:56:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2023-02-10T11:15:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3560",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3560,
+   "title": "Ability to view which files black will actually run on",
+   "updated_at": "2023-02-15T13:42:59Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-02-12T20:36:14Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-10-15T10:10:33Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5545,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3566",
+   "labels": [],
+   "number": 3566,
+   "title": "Do not add empty lines before `# endregion` comments",
+   "updated_at": "2026-02-09T13:59:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-02-14T15:38:57Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-09-03T16:28:37Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5352,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-22T16:36:41Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5545,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3569",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3569,
+   "title": "Consistent handling of too long lines due to directives (no special treatment of `# type: ignore`)",
+   "updated_at": "2024-12-02T14:09:17Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-02-14T20:21:50Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2024-05-03T18:07:34Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2024-05-03T18:08:13Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     }
+    ],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": "reopened"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3571",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3571,
+   "title": "jupyter notebook files and pycharm filewatcher: Following files have changes that cannot be undone",
+   "updated_at": "2024-05-03T18:08:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-02-20T08:07:28Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3576",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3576,
+   "title": "Inferred project root and config file are not aligned",
+   "updated_at": "2023-03-02T05:25:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-02-22T21:56:07Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3579",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3579,
+   "title": "line sometimes split in the middle of a dictionary .get()",
+   "updated_at": "2023-03-30T22:52:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-02-24T20:04:28Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-02-27T01:26:43Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3583,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-07-28T16:12:46Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5269,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-02T11:13:16Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5469,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3581",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3581,
+   "title": "Inference of target versions from `requires-python` config is incorrect.",
+   "updated_at": "2023-02-27T01:26:43Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-02-25T20:05:55Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3582",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3582,
+   "title": "Multiple accesses are turned multiline when the last argument of a call has a trailing comma",
+   "updated_at": "2025-01-27T23:41:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-03-01T00:36:50Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3590",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3590,
+   "title": "dictionary key reference brackets used to split line",
+   "updated_at": "2023-03-01T00:36:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-03-02T05:25:31Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3592",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3592,
+   "title": "Ability to directly specify project root directory from CLI",
+   "updated_at": "2023-03-02T05:25:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-03-13T10:41:15Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-06-15T06:45:47Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4380,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3603",
+   "labels": [
+    "F: fmtskip",
+    "T: enhancement"
+   ],
+   "number": 3603,
+   "title": "# fmt: skip failed to skip one-line format ",
+   "updated_at": "2025-12-12T14:45:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-03-13T13:43:10Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-15T21:53:30Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-15T21:53:30Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3604",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3604,
+   "title": "Black wraps 88-length line when the default 88 line length is set",
+   "updated_at": "2023-03-22T08:23:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-03-14T23:22:13Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-01-10T16:12:35Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4925,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3606",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3606,
+   "title": "Parenthesizing a lambda's body if it contain line wraps",
+   "updated_at": "2026-01-10T16:12:35Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-03-20T06:56:48Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-27T14:36:01Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-27T14:36:01Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-04T18:22:31Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5074,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-07T00:39:21Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-27T14:35:59Z",
+      "pr": 5080,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3616",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3616,
+   "title": "(\ud83d\udc1e) blackd bad f-string fragment causes 500 response",
+   "updated_at": "2023-03-20T06:56:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-03-23T22:46:31Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-29T16:58:48Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-29T16:58:48Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3621",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 3621,
+   "title": "Less whitespace when a function call contains a single list/dict/tuple/string",
+   "updated_at": "2023-04-24T15:08:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-03-28T15:31:03Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3626",
+   "labels": [
+    "F: linebreak"
+   ],
+   "number": 3626,
+   "title": "Break expression in arguments if the call has comments.",
+   "updated_at": "2023-03-28T15:54:49Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-03-28T15:54:58Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-03-28T16:55:05Z",
+      "author_association": "MEMBER",
+      "merged_at": "2023-03-28T17:33:38Z",
+      "pr": 9971,
+      "repository": "python/typeshed",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3627",
+   "labels": [
+    "C: performance",
+    "T: bug"
+   ],
+   "number": 3627,
+   "title": "Black hangs indefinitely trying to format a file with ridiculously long nested dicts",
+   "updated_at": "2023-03-28T16:55:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-03-29T10:22:05Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-07-22T15:22:48Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5252,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-06T13:29:16Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5491,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3629",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3629,
+   "title": "Parenthesize whole conditional expression with function calls rather than wrap the last function call",
+   "updated_at": "2025-02-06T19:01:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-04-14T17:43:18Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3647",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3647,
+   "title": "Inconsistent line splitting of boolean expressions",
+   "updated_at": "2023-04-14T17:43:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-04-26T20:52:37Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3663",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: style"
+   ],
+   "number": 3663,
+   "title": "string_processing: Better whitespace allocation for an assert statement",
+   "updated_at": "2024-09-17T21:21:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-04-27T19:08:21Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-22T16:48:13Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-22T16:48:12Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-10T10:55:40Z",
+      "author_association": "NONE",
+      "merged_at": "2026-10-22T16:48:11Z",
+      "pr": 5515,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3664",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3664,
+   "title": "Multi-line raw strings do not get merged properly into a single string",
+   "updated_at": "2023-04-27T19:08:21Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2023-04-27T21:42:41Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-03T20:36:16Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-03T20:36:16Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-28T06:51:15Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-03T20:36:15Z",
+      "pr": 5449,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3665",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3665,
+   "title": "string_processing: duplicates comments when reformatting a multi-line call with comments in the middle",
+   "updated_at": "2024-01-30T18:27:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-04-28T01:02:37Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3666",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3666,
+   "title": "blackd hangs ",
+   "updated_at": "2023-04-28T01:02:37Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-04-28T11:41:21Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-22T15:13:49Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-22T15:13:48Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-22T01:37:48Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-22T15:13:47Z",
+      "pr": 5148,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3667",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3667,
+   "title": "Excessive additional whitespace when using \"\"\" \"\"\" to document functions and tab indentation",
+   "updated_at": "2023-05-09T10:21:25Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 0,
+   "created_at": "2023-04-29T01:54:48Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-03-18T21:59:45Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 881,
+      "repository": "nbQA-dev/nbQA",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-01-01T04:37:38Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3561,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3668",
+   "labels": [
+    "F: comments",
+    "S: needs discussion",
+    "T: enhancement"
+   ],
+   "number": 3668,
+   "title": "Exceptions to comment spacing",
+   "updated_at": "2026-01-01T04:37:38Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2023-05-04T23:42:57Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-22T17:14:06Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-22T17:14:05Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2023-05-05T06:56:26Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 3680,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-08T07:53:01Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T17:14:04Z",
+      "pr": 5496,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3679",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3679,
+   "title": "(\ud83c\udf81) Remove redundant parenthesis in `getitem`/indexing operator",
+   "updated_at": "2023-05-22T15:37:01Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 0,
+   "created_at": "2023-05-06T04:17:36Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-10T03:46:31Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-10T03:46:31Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-08-29T23:36:44Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5360,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-08T11:57:38Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-10T03:46:30Z",
+      "pr": 5498,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3681",
+   "labels": [
+    "F: comments",
+    "F: linebreak",
+    "T: bug"
+   ],
+   "number": 3681,
+   "title": "Addition of type ignore causes undesirable splitting on another line",
+   "updated_at": "2023-05-06T18:38:37Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-05-10T16:55:02Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-01T14:28:42Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-01T14:28:42Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-30T09:05:32Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-01T14:28:40Z",
+      "pr": 5456,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3685",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3685,
+   "title": "Black is wrapping type hints with arguments when using multi-line string literals",
+   "updated_at": "2023-05-10T16:55:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-05-18T15:56:44Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-12T16:22:53Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5306,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T23:37:17Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5361,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-29T07:48:39Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5453,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-14T01:04:35Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5537,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3694",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3694,
+   "title": "gitignore patterns with trailing slashes are incorrectly handled",
+   "updated_at": "2023-09-08T13:29:47Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2023-05-24T19:36:43Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-07-21T00:54:33Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-07-21T00:54:33Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-07-17T11:33:47Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-07-21T00:54:32Z",
+      "pr": 5241,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3701",
+   "labels": [
+    "C: unstable formatting",
+    "T: bug"
+   ],
+   "number": 3701,
+   "title": "Unstable formatting: Comment is moved to lower line twice",
+   "updated_at": "2025-02-04T04:00:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-05-30T13:03:55Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3711",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3711,
+   "title": "Decouple using .gitignore from `exclude`",
+   "updated_at": "2023-05-30T13:03:55Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-05-31T05:11:41Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-05T04:23:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-05T04:23:47Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-21T22:17:47Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5113,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T23:37:47Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5362,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-05T03:52:13Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-05T04:23:45Z",
+      "pr": 5455,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3713",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3713,
+   "title": "A comment before a multiplication line inside a func call makes the line unnecessarily explode",
+   "updated_at": "2023-05-31T05:12:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-05-31T18:06:15Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3714",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3714,
+   "title": "treatment of code comments inside of parentheses",
+   "updated_at": "2025-10-17T12:12:43Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-06-01T00:50:42Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3715",
+   "labels": [
+    "F: trailing comma",
+    "T: enhancement"
+   ],
+   "number": 3715,
+   "title": "Automatic magic trailing comma behavior to split arguments/items onto separate lines regardless of line length",
+   "updated_at": "2024-07-09T19:00:47Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-06-08T06:08:28Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3725",
+   "labels": [
+    "C: packaging",
+    "T: enhancement"
+   ],
+   "number": 3725,
+   "title": "Signed Windows Binaries",
+   "updated_at": "2024-02-28T08:01:57Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-06-21T12:37:36Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-22T23:50:18Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-22T23:50:18Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2023-06-21T12:38:03Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2023-07-11T06:36:26Z",
+      "pr": 5169,
+      "repository": "astral-sh/ruff",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-11T20:36:43Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-09-22T23:50:17Z",
+      "pr": 5395,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3741",
+   "labels": [
+    "F: comments",
+    "T: bug"
+   ],
+   "number": 3741,
+   "title": "Black moves same-block trailing comment inside expression wrapped with parentheses ",
+   "updated_at": "2023-06-21T13:57:07Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-06-23T22:25:32Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2023-06-23T22:32:36Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2023-06-23T22:47:28Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     }
+    ],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": "reopened"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3747",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3747,
+   "title": "string_processing: Long dictionary and f-string not formatted after breaking first line",
+   "updated_at": "2024-01-30T18:27:39Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-06-26T10:23:36Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3752",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3752,
+   "title": "New type parameter syntax: parameters should be broken up before type parameters",
+   "updated_at": "2023-06-26T10:23:36Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-07-07T12:47:30Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3769",
+   "labels": [
+    "C: configuration",
+    "S: needs discussion",
+    "T: enhancement"
+   ],
+   "number": 3769,
+   "title": "Add line number to the --diff output.",
+   "updated_at": "2023-07-18T01:47:12Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-07-18T17:08:42Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3800",
+   "labels": [
+    "F: comments",
+    "T: enhancement"
+   ],
+   "number": 3800,
+   "title": "Always respect original comment/code-order",
+   "updated_at": "2023-09-07T14:05:27Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-07-19T04:58:29Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-29T06:47:18Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5352,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3802",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3802,
+   "title": "string_processing: makes it impossible to use a comment to ignore a static type violation",
+   "updated_at": "2024-01-30T18:24:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-08-18T16:18:30Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-15T21:59:00Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-15T21:59:00Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3841",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3841,
+   "title": "`black` in stdin mode does not search for config files using the `--stdin-file` path",
+   "updated_at": "2023-08-18T16:20:31Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-08-22T08:38:38Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-06-15T18:40:37Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-06-15T18:40:37Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2023-10-02T09:49:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 3912,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-06T22:03:06Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-06-15T18:40:27Z",
+      "pr": 5170,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3851",
+   "labels": [
+    "S: accepted",
+    "T: style"
+   ],
+   "number": 3851,
+   "title": "single element tuples in yield expressions are not parenthesized",
+   "updated_at": "2025-03-03T04:50:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-08-27T10:33:08Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-03T18:29:31Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-03T18:29:30Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-24T16:23:53Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-03T18:29:29Z",
+      "pr": 5434,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3855",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 3855,
+   "title": "string_processing: Error when re-flowing implicitly concatenated r-strings",
+   "updated_at": "2024-01-30T18:24:25Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-09-09T22:34:56Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-24T22:15:46Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-24T22:15:46Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-08-07T18:18:29Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-09-24T22:15:45Z",
+      "pr": 5297,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T23:02:10Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5356,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3869",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3869,
+   "title": "Failure to consistently format inline type comments on a multi-line attribute access",
+   "updated_at": "2023-09-09T22:34:56Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 3,
+   "created_at": "2023-09-11T02:01:45Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-10-21T11:38:46Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5574,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3880",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3880,
+   "title": "Black should never try to format symlinks",
+   "updated_at": "2023-11-09T16:46:16Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 6,
+   "created_at": "2023-10-03T13:12:47Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-11-04T18:31:12Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2023-11-08T04:21:33Z",
+      "pr": 4023,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2023-11-09T22:38:57Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4038,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3918",
+   "labels": [
+    "T: style"
+   ],
+   "number": 3918,
+   "title": "Formatting one-tuples as multi-line if already multi-line",
+   "updated_at": "2023-11-10T09:16:40Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2023-10-06T10:30:43Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-29T21:44:43Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-29T21:44:43Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-15T15:17:56Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5407,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-29T16:52:13Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-29T21:44:42Z",
+      "pr": 5638,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3925",
+   "labels": [
+    "F: linetoolong",
+    "T: bug"
+   ],
+   "number": 3925,
+   "title": "Black 23.9.1 reformat already clean code expression and creates a line too long",
+   "updated_at": "2024-08-22T10:53:12Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2023-10-06T13:56:38Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-24T21:52:40Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-24T21:52:39Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-08-29T23:05:07Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5357,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-14T11:06:54Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5404,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-22T11:04:36Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-09-24T21:52:38Z",
+      "pr": 5427,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3926",
+   "labels": [
+    "F: linetoolong",
+    "T: bug"
+   ],
+   "number": 3926,
+   "title": "Long string in return annotation does not get split if there's parameters",
+   "updated_at": "2023-10-07T13:40:30Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-10-16T10:04:50Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-10-19T15:24:27Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3661,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T23:05:56Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5358,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-03T16:28:37Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5352,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-01T14:22:06Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5462,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-02T02:27:34Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5467,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-22T02:29:36Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5534,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3946",
+   "labels": [
+    "F: comments",
+    "T: bug"
+   ],
+   "number": 3946,
+   "title": "Black puts \"pyright: ignore\" comments on the wrong line",
+   "updated_at": "2026-01-19T03:24:49Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2023-10-17T16:55:12Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-02-02T03:18:00Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-02-02T05:50:45Z",
+      "pr": 4204,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-02-11T08:05:33Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-02-12T08:04:09Z",
+      "pr": 4222,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3952",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 3952,
+   "title": "Request: supporting sub-configs (aka per-directory config)",
+   "updated_at": "2024-11-05T23:27:28Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2023-10-18T21:12:35Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-05T03:37:37Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-05T03:37:37Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-03T04:44:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-05T03:37:35Z",
+      "pr": 5473,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3954",
+   "labels": [],
+   "number": 3954,
+   "title": "Wraps long unbreakable strings differently based on whether the LHS has an annotation",
+   "updated_at": "2025-11-29T00:41:26Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-10-19T00:10:56Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-12-09T12:28:47Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4899,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3955",
+   "labels": [
+    "C: preview style",
+    "T: bug"
+   ],
+   "number": 3955,
+   "title": "(\ud83c\udf81) String processing: re-enable wrap concatenated strings in parens in all cases",
+   "updated_at": "2026-01-01T04:54:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-10-20T15:55:42Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-18T15:59:08Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-18T15:59:08Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-23T10:28:05Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5061,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-25T22:00:11Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5064,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-06T07:56:25Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-18T15:59:07Z",
+      "pr": 5124,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3960",
+   "labels": [
+    "T: documentation"
+   ],
+   "number": 3960,
+   "title": "Guide for neovim? I Found one for vim but not sure how to apply it to neovim.",
+   "updated_at": "2026-01-11T06:29:38Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2023-10-23T20:42:03Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/3972",
+   "labels": [
+    "C: maintenance",
+    "T: enhancement"
+   ],
+   "number": 3972,
+   "title": "Request: new releases triggering `black-pre-commit-mirror`'s `mirror` action",
+   "updated_at": "2025-03-02T09:10:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-10-30T02:59:16Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-31T23:37:27Z",
+      "kind": "closed",
+      "reason": "duplicate"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-31T23:37:27Z",
+     "state": "closed",
+     "state_reason": "duplicate"
+    },
+    "references": [
+     {
+      "at": "2026-07-02T19:23:30Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5218,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-11T07:21:29Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5518,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/3998",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 3998,
+   "title": "Inconsistent formatting of method call chain with comment",
+   "updated_at": "2023-10-31T07:51:20Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-10-30T08:54:15Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-29T23:06:27Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5359,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4001",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4001,
+   "title": "Avoid parentheszing non-fluent attribute chain exceeding the line-length",
+   "updated_at": "2023-10-31T07:51:19Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-11-06T10:41:00Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4025",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4025,
+   "title": "Support for percent format notebooks",
+   "updated_at": "2026-01-06T12:55:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-11-06T13:04:43Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-05T04:23:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-05T04:23:47Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-08-31T05:10:30Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5375,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-05T03:52:13Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-05T04:23:45Z",
+      "pr": 5455,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4026",
+   "labels": [
+    "F: linebreak",
+    "T: bug"
+   ],
+   "number": 4026,
+   "title": "Single line with binary operator in commented list causes additional line breaks",
+   "updated_at": "2025-10-17T12:13:27Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2023-11-09T11:47:12Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-08-05T21:33:59Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-08-05T21:33:59Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2023-11-09T15:30:50Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4037,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-01-31T03:38:26Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-02-02T05:58:52Z",
+      "pr": 4198,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-04-17T17:56:29Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-11-28T03:59:30Z",
+      "pr": 4312,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-22T15:13:15Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-28T19:18:52Z",
+      "pr": 5144,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-07-29T06:35:46Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-08-05T21:33:58Z",
+      "pr": 5271,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4036",
+   "labels": [
+    "C: crash",
+    "C: preview style",
+    "T: bug"
+   ],
+   "number": 4036,
+   "title": "hug_parens_with_braces_and_square_brackets: \"Black produced code that is not equivalent to the source\" error in preview mode on function call with two `type:ignore` comments",
+   "updated_at": "2025-10-27T01:08:47Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-11-11T12:27:15Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-29T16:42:40Z",
+      "kind": "closed",
+      "reason": "duplicate"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-29T16:42:40Z",
+     "state": "closed",
+     "state_reason": "duplicate"
+    },
+    "references": [
+     {
+      "at": "2026-08-21T17:23:06Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5335,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4040",
+   "labels": [
+    "F: linetoolong",
+    "T: bug"
+   ],
+   "number": 4040,
+   "title": "Black fails to keep within line length limit when using named parameters",
+   "updated_at": "2023-11-14T15:07:28Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-11-18T21:07:15Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-05T18:02:22Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-05T18:02:21Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2023-11-18T21:12:46Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2023-11-21T04:45:40Z",
+      "pr": 4034,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T23:38:24Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5363,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-25T19:36:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-05T18:02:20Z",
+      "pr": 5436,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-05T05:05:59Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-05T17:42:53Z",
+      "pr": 5484,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-11-02T07:00:47Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-11-02T19:00:05Z",
+      "pr": 5650,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4052",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4052,
+   "title": "Improve `adjusted_lines`'s diff algorithm used in `--line-ranges`.",
+   "updated_at": "2023-11-18T21:12:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-11-20T15:43:32Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4058",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4058,
+   "title": "Add parenthesis around walrus",
+   "updated_at": "2023-11-22T11:56:45Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-11-28T17:54:21Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4075",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4075,
+   "title": "Break long expressions at operators, not inside inner parentheses",
+   "updated_at": "2023-11-28T17:54:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-12-09T21:06:10Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4092",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4092,
+   "title": "don't split binary operation if right operand is a function call with short name",
+   "updated_at": "2023-12-09T21:06:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-12-10T23:53:54Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-01-31T03:38:26Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-02-02T05:58:52Z",
+      "pr": 4198,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4098",
+   "labels": [
+    "C: preview style",
+    "T: style"
+   ],
+   "number": 4098,
+   "title": "`hug_parens_with_braces_and_square_brackets`: Recursively hugging parens decrease readability",
+   "updated_at": "2024-11-25T09:39:58Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2023-12-11T00:03:30Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-01-31T03:38:26Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-02-02T05:58:52Z",
+      "pr": 4198,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4099",
+   "labels": [
+    "C: preview style",
+    "T: style"
+   ],
+   "number": 4099,
+   "title": "`hug_parens_with_braces_and_square_brackets`: Doesn't hug if all entries fit on a line",
+   "updated_at": "2024-11-05T15:55:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2023-12-22T10:19:47Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-04-13T09:42:59Z",
+      "author_association": "MEMBER",
+      "merged_at": null,
+      "pr": 2988,
+      "repository": "python-trio/trio",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-08-12T06:29:11Z",
+      "author_association": "MEMBER",
+      "merged_at": null,
+      "pr": 326,
+      "repository": "scientific-python/specs",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4123",
+   "labels": [
+    "C: preview style",
+    "T: style"
+   ],
+   "number": 4123,
+   "title": "Preview style feedback: Parenthesizing long dict, conditional, and type annotations",
+   "updated_at": "2025-11-29T15:45:44Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-01-18T04:08:42Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4156",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4156,
+   "title": "[ISSUE] Github Action Black failing after successful reformatting.",
+   "updated_at": "2024-01-22T20:57:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-01-26T16:25:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4177",
+   "labels": [
+    "F: linetoolong",
+    "T: bug"
+   ],
+   "number": 4177,
+   "title": "Line too long: Long from import",
+   "updated_at": "2024-01-28T05:28:42Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 1,
+   "created_at": "2024-01-26T20:37:42Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-01-27T04:38:37Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-01-29T15:56:48Z",
+      "pr": 4181,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-01-29T17:21:00Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-02-01T01:55:34Z",
+      "pr": 3559,
+      "repository": "SchemaStore/schemastore",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-06-01T09:51:00Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-06-01T09:57:45Z",
+      "pr": 12080,
+      "repository": "python/typeshed",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4178",
+   "labels": [
+    "C: configuration",
+    "T: enhancement"
+   ],
+   "number": 4178,
+   "title": "Deprecate unusual ways to set things in pyproject.toml",
+   "updated_at": "2024-06-01T09:51:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 12,
+   "created_at": "2024-01-30T08:02:20Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-03-21T02:41:55Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-03-24T20:10:13Z",
+      "pr": 100,
+      "repository": "opera-adt/opera-utils",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4196",
+   "labels": [
+    "C: preview style",
+    "T: bug"
+   ],
+   "number": 4196,
+   "title": "Enable enable-unstable-feature = ['string_processing'] without preview flag",
+   "updated_at": "2025-08-31T23:47:57Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-02-01T19:51:23Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4203",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4203,
+   "title": "Improve the style of breaking long lines into two",
+   "updated_at": "2024-11-02T01:42:13Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 7,
+   "created_at": "2024-02-05T01:52:41Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-04-10T13:27:54Z",
+      "author_association": "MEMBER",
+      "merged_at": "2024-04-10T15:06:55Z",
+      "pr": 28802,
+      "repository": "scikit-learn/scikit-learn",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-03-25T15:20:05Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-04-15T11:11:53Z",
+      "pr": 31015,
+      "repository": "scikit-learn/scikit-learn",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-20T19:04:14Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-10-19T00:47:51Z",
+      "pr": 4760,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T23:38:58Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5364,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-26T19:24:55Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5554,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4208",
+   "labels": [
+    "C: preview style",
+    "T: bug"
+   ],
+   "number": 4208,
+   "title": "Future of `string_processing`",
+   "updated_at": "2026-02-26T16:08:02Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-02-13T15:29:18Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4229",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4229,
+   "title": "Option to force \"chop down\" multiline (+ add magic comma) when line too long",
+   "updated_at": "2024-06-05T17:45:28Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 0,
+   "created_at": "2024-02-13T18:27:29Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-22T17:44:45Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-22T17:44:45Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-10T18:18:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T17:44:43Z",
+      "pr": 5516,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4231",
+   "labels": [
+    "F: parentheses",
+    "T: enhancement"
+   ],
+   "number": 4231,
+   "title": "Remove parentheses around simple top-level expressions",
+   "updated_at": "2024-02-13T18:27:29Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-02-15T17:13:02Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-20T20:12:18Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-20T20:12:18Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2024-02-26T23:07:45Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-12-07T23:22:33Z",
+      "pr": 4253,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4235",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4235,
+   "title": "Black joins lines when it shouldn't - short width characters.",
+   "updated_at": "2025-12-07T23:22:34Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-02-19T20:30:41Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4244",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4244,
+   "title": "Vertical method chaining",
+   "updated_at": "2024-02-19T20:30:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-02-23T17:52:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4249",
+   "labels": [
+    "F: parentheses",
+    "F: strings",
+    "T: style"
+   ],
+   "number": 4249,
+   "title": "Bug hazard - multiple strings given same indentation",
+   "updated_at": "2024-10-20T12:18:45Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-02-28T11:39:15Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-14T04:55:17Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-14T04:55:17Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-11T13:26:02Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-14T04:55:15Z",
+      "pr": 5092,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4256",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4256,
+   "title": "Black removes blank lines in between a function and a decorated class in a stub file",
+   "updated_at": "2025-06-22T20:47:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2024-03-15T05:44:29Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4276",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4276,
+   "title": "problematic formatting: indentation change in docstring",
+   "updated_at": "2025-03-17T17:51:07Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-03-15T22:49:03Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-22T14:33:12Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-22T14:33:12Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-12T03:46:08Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5093,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-21T21:00:57Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-22T14:33:11Z",
+      "pr": 5147,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4280",
+   "labels": [
+    "C: crash",
+    "T: bug"
+   ],
+   "number": 4280,
+   "title": "Crash on formatting `case case` syntax when line length set to be small",
+   "updated_at": "2024-03-21T01:44:07Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2024-03-31T23:41:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-28T19:18:54Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-28T19:18:53Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2024-04-15T13:19:14Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-04-17T13:29:50Z",
+      "pr": 25,
+      "repository": "AutoCodeRoverSG/auto-code-rover",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-20T23:24:43Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-28T19:18:52Z",
+      "pr": 5144,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-20T13:38:53Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-09-03T16:30:13Z",
+      "pr": 5330,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-13T23:16:08Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T17:01:41Z",
+      "pr": 5533,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-23T15:42:20Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-23T17:50:45Z",
+      "pr": 5596,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4296",
+   "labels": [
+    "C: crash",
+    "F: comments",
+    "T: bug"
+   ],
+   "number": 4296,
+   "title": "Standalone comments still partially broken",
+   "updated_at": "2025-10-17T12:14:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2024-05-02T08:59:23Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-30T02:10:10Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-30T02:10:10Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2024-06-13T00:35:49Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-12-24T01:07:17Z",
+      "pr": 21056,
+      "repository": "pantsbuild/pants",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-25T02:30:34Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-03-30T02:10:08Z",
+      "pr": 5063,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4344",
+   "labels": [
+    "T: documentation"
+   ],
+   "number": 4344,
+   "title": "Is there any way to have a permalink for a specific version in the changelog doc?",
+   "updated_at": "2024-06-13T00:35:49Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-05-05T11:59:12Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-06-10T21:58:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-06-10T21:58:47Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-12T20:25:28Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-06-10T21:58:46Z",
+      "pr": 5095,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4349",
+   "labels": [
+    "F: parentheses",
+    "T: bug"
+   ],
+   "number": 4349,
+   "title": "Unnecessary parentheses added to expression in indexed assignment",
+   "updated_at": "2026-01-18T14:55:33Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-05-08T14:36:58Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-10T20:43:29Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-10T20:43:29Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-12-06T22:55:41Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4887,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4353",
+   "labels": [
+    "F: linebreak",
+    "T: style"
+   ],
+   "number": 4353,
+   "title": "Long lines that concatenate list comprehensions",
+   "updated_at": "2025-12-06T22:55:41Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-05-18T17:15:42Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-07-21T00:04:33Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-07-21T00:04:33Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-07-15T18:02:36Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-07-21T00:04:32Z",
+      "pr": 5240,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4367",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4367,
+   "title": "Error in github actions when using `use_pyproject: true`",
+   "updated_at": "2025-07-22T23:53:42Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-07-19T22:07:52Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-22T14:12:15Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-22T14:12:15Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4406",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4406,
+   "title": "Allow valid version specifier when specifying Black version in `pyproject.toml`",
+   "updated_at": "2024-07-26T05:55:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-07-24T14:31:29Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-29T23:39:28Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5365,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4411",
+   "labels": [
+    "S: needs discussion",
+    "T: bug"
+   ],
+   "number": 4411,
+   "title": "global config not possible if project contains a `pyproject.toml`",
+   "updated_at": "2025-07-23T00:06:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-07-31T08:24:27Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-03T18:51:21Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-03T18:51:21Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-09-26T22:52:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-03T18:51:19Z",
+      "pr": 5439,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4420",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4420,
+   "title": "Newlines between classes do not get added when the last method of one ends with ellipses",
+   "updated_at": "2025-03-03T03:27:27Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-08-06T18:08:55Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-21T16:53:09Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-21T16:53:09Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-06-12T03:49:33Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-09-21T16:53:07Z",
+      "pr": 5175,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-30T00:55:34Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5367,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4430",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4430,
+   "title": "`--line-ranges` formats lines outside of range",
+   "updated_at": "2025-03-01T20:55:29Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-08-20T15:37:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-04-30T17:43:15Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-05-07T13:17:03Z",
+      "pr": 210,
+      "repository": "bigbio/sdrf-pipelines",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4438",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4438,
+   "title": "Support Python 3.13 free-threaded build",
+   "updated_at": "2025-04-30T17:43:15Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-09-11T20:47:15Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-10-10T18:46:06Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T17:44:43Z",
+      "pr": 5516,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-10T22:09:29Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5517,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-12T05:04:44Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5523,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-23T17:30:53Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 5252,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4455",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4455,
+   "title": "Odd breaking of operators chain",
+   "updated_at": "2024-09-17T07:14:46Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 5,
+   "created_at": "2024-11-05T23:55:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-05-23T21:06:10Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5149,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4506",
+   "labels": [
+    "C: maintenance"
+   ],
+   "number": 4506,
+   "title": "Test organization improvements",
+   "updated_at": "2026-01-01T21:00:11Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-11-11T14:36:00Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-13T01:49:03Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-13T01:49:02Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-12T20:31:57Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-13T01:49:01Z",
+      "pr": 5096,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4510",
+   "labels": [
+    "C: preview style",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 4510,
+   "title": "string_processing: Multi-line strings with type ignore pragma get merged into a single line",
+   "updated_at": "2026-01-03T15:29:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-11-14T02:19:33Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-13T11:09:20Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-13T11:09:19Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-12T20:43:39Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-13T11:09:18Z",
+      "pr": 5097,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4511",
+   "labels": [
+    "F: fmtoff",
+    "T: bug"
+   ],
+   "number": 4511,
+   "title": "Error formatting f-string with `# fmt: off` inside a pair of brackets",
+   "updated_at": "2024-11-15T02:17:30Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 6,
+   "created_at": "2024-11-15T01:35:38Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T21:03:12Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T21:03:11Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-01-28T18:00:39Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4562,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-19T19:58:27Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-19T20:05:37Z",
+      "pr": 5142,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4513",
+   "labels": [
+    "F: fmtskip",
+    "F: strings",
+    "T: bug"
+   ],
+   "number": 4513,
+   "title": "`# fmt: skip` doesn't work with multiline strings",
+   "updated_at": "2025-10-19T21:21:32Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-11-19T22:56:39Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T21:35:05Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T21:35:05Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-18T00:23:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-19T21:35:04Z",
+      "pr": 5135,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4514",
+   "labels": [],
+   "number": 4514,
+   "title": "Line break added in list comprehension separates variable from its expression",
+   "updated_at": "2025-06-20T16:14:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-11-22T11:01:30Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4516",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4516,
+   "title": "Change the formatting behaviour when there is bracket in the if statement, like a list, a function",
+   "updated_at": "2025-11-24T14:09:11Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 5,
+   "created_at": "2024-12-04T07:56:17Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-22T16:20:52Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-22T16:20:51Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-10-12T07:29:46Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T16:20:50Z",
+      "pr": 5526,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4523",
+   "labels": [
+    "F: strings",
+    "T: style"
+   ],
+   "number": 4523,
+   "title": "`hex_codes_in_unicode_sequences`: restrictions around f-strings are too strict",
+   "updated_at": "2024-12-12T18:48:26Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-01-21T11:43:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4554",
+   "labels": [
+    "T: style"
+   ],
+   "number": 4554,
+   "title": "Inconsistencies in how line breaks are added in long \"dot-chains\", depending on brackets and function calls",
+   "updated_at": "2025-01-28T13:05:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2025-03-31T19:56:19Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-02T00:40:56Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-02T00:40:56Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-04-26T03:12:34Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4658,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-17T13:57:59Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-03-02T00:40:55Z",
+      "pr": 4993,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-13T23:16:08Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-10-22T17:01:41Z",
+      "pr": 5533,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4640",
+   "labels": [
+    "C: crash",
+    "T: bug"
+   ],
+   "number": 4640,
+   "title": "Standalone comment within parentheses in lambda default arguments crashes black",
+   "updated_at": "2026-02-20T05:06:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-04-10T09:27:33Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4649",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4649,
+   "title": "Any possible to provide a WASM edition?",
+   "updated_at": "2025-04-12T14:17:33Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-14T09:23:29Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/4651",
+   "labels": [
+    "F: comments",
+    "T: style"
+   ],
+   "number": 4651,
+   "title": "Preserve alignment of inline comments",
+   "updated_at": "2025-09-03T02:08:04Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 5,
+   "created_at": "2025-04-22T19:28:00Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-02T00:41:00Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-02T00:41:00Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-07-18T14:38:19Z",
+      "author_association": "OWNER",
+      "merged_at": "2025-07-31T12:30:58Z",
+      "pr": 1,
+      "repository": "priyce/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4653",
+   "labels": [
+    "F: trailing comma",
+    "T: bug"
+   ],
+   "number": 4653,
+   "title": "Trailing comma in `case` pattern causes `if` guard to explode",
+   "updated_at": "2026-01-01T04:53:43Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-08-01T16:48:35Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T22:59:43Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T22:59:43Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-19T21:54:57Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 5143,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4723",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4723,
+   "title": "strange wrapping with long PEP 695 type and long signature",
+   "updated_at": "2026-01-16T11:42:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-08-07T16:50:32Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2025-12-07T01:46:22Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2025-12-08T00:22:32Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-11T22:27:31Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-11T22:27:31Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-12-05T06:09:29Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-12-07T01:46:21Z",
+      "pr": 4883,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-12-10T16:16:33Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-11T22:27:30Z",
+      "pr": 4903,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4730",
+   "labels": [
+    "F: fmtskip",
+    "T: bug"
+   ],
+   "number": 4730,
+   "title": "`# fmt: skip` ignored inside multi-part if-clause",
+   "updated_at": "2025-12-10T16:16:33Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2025-08-14T17:09:20Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-18T16:04:31Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-18T16:04:30Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-14T14:43:08Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-18T16:04:29Z",
+      "pr": 5130,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4733",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4733,
+   "title": "Internal error: producing different code on second pass of the formatter",
+   "updated_at": "2025-08-14T17:32:18Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-10-02T18:56:09Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-10-06T20:40:39Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": null,
+      "pr": 4784,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4771",
+   "labels": [],
+   "number": 4771,
+   "title": "potential multiprocessing performance improvement",
+   "updated_at": "2026-01-01T04:49:36Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2025-11-04T14:07:38Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-14T14:44:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-14T14:44:46Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-11-18T10:32:06Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4847,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-11-24T11:09:04Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4863,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-15T09:48:48Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4992,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-29T15:53:48Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-14T14:44:45Z",
+      "pr": 5068,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4820",
+   "labels": [
+    "T: enhancement"
+   ],
+   "number": 4820,
+   "title": "Improve syntax error reporting for a better user experience",
+   "updated_at": "2026-02-15T09:50:55Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-11-10T08:14:32Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-11-24T14:44:43Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4864,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4839",
+   "labels": [],
+   "number": 4839,
+   "title": "Release workflow: Atomic PyPI pushing?",
+   "updated_at": "2025-11-24T14:44:43Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 2,
+   "created_at": "2025-11-30T21:58:28Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-11-01T00:21:14Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-11-01T00:21:13Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-12-04T05:02:54Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-11-01T00:21:12Z",
+      "pr": 4881,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4877",
+   "labels": [],
+   "number": 4877,
+   "title": "wrap_comprehension_in: Black preview style removes parentheses that make code harder to read",
+   "updated_at": "2026-01-14T13:24:08Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 4,
+   "created_at": "2025-12-04T07:15:05Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-10-27T00:21:56Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": null,
+      "pr": 5627,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4882",
+   "labels": [],
+   "number": 4882,
+   "title": "Thinking about `wrap_long_dict_values_in_parens`",
+   "updated_at": "2026-01-05T02:00:57Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 6,
+   "created_at": "2026-01-20T14:32:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-02T03:56:30Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-02T03:56:30Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-01-21T14:52:54Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4968,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-01-23T18:11:33Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4971,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-08T07:08:56Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 4985,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-27T02:13:19Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-03-02T03:56:29Z",
+      "pr": 5009,
+      "repository": "psf/black",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4967",
+   "labels": [
+    "T: documentation",
+    "good first issue"
+   ],
+   "number": 4967,
+   "title": "Docs: Better documentation for Jupyter usage",
+   "updated_at": "2026-02-27T02:13:19Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 7,
+   "created_at": "2026-02-02T20:22:32Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-02T02:34:59Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-02T02:34:59Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-02-07T00:46:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-03-02T02:34:58Z",
+      "pr": 4983,
+      "repository": "psf/black",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-03T18:34:20Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-03T19:47:02Z",
+      "pr": 8015,
+      "repository": "quantumlib/Cirq",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-27T13:01:13Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-04-28T17:14:36Z",
+      "pr": 149,
+      "repository": "bbartling/open-fdd",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/psf/black/issues/4980",
+   "labels": [
+    "T: bug"
+   ],
+   "number": 4980,
+   "title": "Internal error when targeting Python 3.14 but running with 3.12",
+   "updated_at": "2026-02-07T00:46:17Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2026-02-22T10:31:44Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-22T03:57:28Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-22T03:57:27Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/psf/black/issues/5001",
+   "labels": [],
+   "number": 5001,
+   "title": "Consecutive @overload definitions have two distinct stable formatting states for the same AST",
+   "updated_at": "2026-02-23T19:14:17Z"
+  }
+ ],
+ "notes": [
+  "298 issues open at the cutoff; kept the 150 most recently created"
+ ],
+ "open_prs_at_cutoff": [
+  {
+   "created_at": "2021-09-26T14:37:40Z",
+   "html_url": "https://github.com/psf/black/pull/2512",
+   "membership_verified": false,
+   "number": 2512,
+   "title": "Add a new `/lsp` endpoint to blackd"
+  },
+  {
+   "created_at": "2021-10-07T08:03:13Z",
+   "html_url": "https://github.com/psf/black/pull/2525",
+   "membership_verified": true,
+   "number": 2525,
+   "title": "feat(config): Support `--config` in pyproject.toml"
+  },
+  {
+   "created_at": "2022-02-17T18:28:26Z",
+   "html_url": "https://github.com/psf/black/pull/2885",
+   "membership_verified": false,
+   "number": 2885,
+   "title": "Add improved docstring processing"
+  },
+  {
+   "created_at": "2022-06-09T15:22:35Z",
+   "html_url": "https://github.com/psf/black/pull/3116",
+   "membership_verified": true,
+   "number": 3116,
+   "title": "Added option to manually specifiy project root"
+  },
+  {
+   "created_at": "2022-08-29T00:02:16Z",
+   "html_url": "https://github.com/psf/black/pull/3243",
+   "membership_verified": true,
+   "number": 3243,
+   "title": "Strip even more redundant for parentheses"
+  },
+  {
+   "created_at": "2022-10-28T12:18:16Z",
+   "html_url": "https://github.com/psf/black/pull/3362",
+   "membership_verified": true,
+   "number": 3362,
+   "title": "Format type hints after comments"
+  },
+  {
+   "created_at": "2023-01-30T08:18:39Z",
+   "html_url": "https://github.com/psf/black/pull/3531",
+   "membership_verified": true,
+   "number": 3531,
+   "title": "Github action now reports state of execution #3531"
+  },
+  {
+   "created_at": "2023-02-27T01:26:43Z",
+   "html_url": "https://github.com/psf/black/pull/3583",
+   "membership_verified": true,
+   "number": 3583,
+   "title": "Fix target version inference."
+  },
+  {
+   "created_at": "2023-04-26T18:44:51Z",
+   "html_url": "https://github.com/psf/black/pull/3661",
+   "membership_verified": true,
+   "number": 3661,
+   "title": "Fix \"# pyright: ignore\" comment mobility"
+  },
+  {
+   "created_at": "2023-10-01T12:07:32Z",
+   "html_url": "https://github.com/psf/black/pull/3908",
+   "membership_verified": false,
+   "number": 3908,
+   "title": "fuzzy testing with pysource_codegen"
+  },
+  {
+   "created_at": "2023-10-02T09:49:17Z",
+   "html_url": "https://github.com/psf/black/pull/3912",
+   "membership_verified": true,
+   "number": 3912,
+   "title": "Parenthesize singleton yield tuples"
+  },
+  {
+   "created_at": "2023-11-09T15:30:50Z",
+   "html_url": "https://github.com/psf/black/pull/4037",
+   "membership_verified": true,
+   "number": 4037,
+   "title": "Don't hug parens if it would mean putting two `# type: ignore` comments on the same line"
+  },
+  {
+   "created_at": "2023-11-10T11:59:08Z",
+   "html_url": "https://github.com/psf/black/pull/4039",
+   "membership_verified": false,
+   "number": 4039,
+   "title": "Don't split on pragma markers"
+  },
+  {
+   "created_at": "2025-04-26T03:12:33Z",
+   "html_url": "https://github.com/psf/black/pull/4658",
+   "membership_verified": true,
+   "number": 4658,
+   "title": "Fix bug with standalone comments in lambda default arguments"
+  },
+  {
+   "created_at": "2025-05-30T21:36:57Z",
+   "html_url": "https://github.com/psf/black/pull/4674",
+   "membership_verified": false,
+   "number": 4674,
+   "title": "Attempt to fix carriage return issues"
+  },
+  {
+   "created_at": "2025-10-06T20:40:38Z",
+   "html_url": "https://github.com/psf/black/pull/4784",
+   "membership_verified": true,
+   "number": 4784,
+   "title": "Try multiprocessing parallelism improvement"
+  },
+  {
+   "created_at": "2025-12-04T05:02:53Z",
+   "html_url": "https://github.com/psf/black/pull/4881",
+   "membership_verified": true,
+   "number": 4881,
+   "title": "wrap_comprehension_in: Always wrap if there's delimiters"
+  },
+  {
+   "created_at": "2025-12-05T23:08:57Z",
+   "html_url": "https://github.com/psf/black/pull/4884",
+   "membership_verified": true,
+   "number": 4884,
+   "title": "Fix #4653 If guard explosion in case statement"
+  },
+  {
+   "created_at": "2025-12-06T22:55:40Z",
+   "html_url": "https://github.com/psf/black/pull/4887",
+   "membership_verified": true,
+   "number": 4887,
+   "title": "Handled #4353: Long lines that concatenate list comprehensions"
+  },
+  {
+   "created_at": "2025-12-10T16:16:31Z",
+   "html_url": "https://github.com/psf/black/pull/4903",
+   "membership_verified": false,
+   "number": 4903,
+   "title": "Improve fmt:skip handling in nested expressions with checks"
+  },
+  {
+   "created_at": "2025-12-24T02:29:44Z",
+   "html_url": "https://github.com/psf/black/pull/4916",
+   "membership_verified": false,
+   "number": 4916,
+   "title": "Added documentation for doctest formatting tools"
+  },
+  {
+   "created_at": "2025-12-26T15:44:06Z",
+   "html_url": "https://github.com/psf/black/pull/4925",
+   "membership_verified": true,
+   "number": 4925,
+   "title": "Parenthesize complex expressions passed as keyword arguments or parameter defaults"
+  },
+  {
+   "created_at": "2026-01-10T07:10:27Z",
+   "html_url": "https://github.com/psf/black/pull/4951",
+   "membership_verified": false,
+   "number": 4951,
+   "title": "Fix parsing error for backslash continuations with no indentation"
+  },
+  {
+   "created_at": "2026-01-16T04:06:16Z",
+   "html_url": "https://github.com/psf/black/pull/4960",
+   "membership_verified": false,
+   "number": 4960,
+   "title": "Bump docutils, sphinx, myst-parser"
+  },
+  {
+   "created_at": "2026-01-23T18:11:32Z",
+   "html_url": "https://github.com/psf/black/pull/4971",
+   "membership_verified": true,
+   "number": 4971,
+   "title": "docs: Add comprehensive Jupyter Notebooks documentation"
+  },
+  {
+   "created_at": "2026-01-30T06:32:52Z",
+   "html_url": "https://github.com/psf/black/pull/4975",
+   "membership_verified": false,
+   "number": 4975,
+   "title": "Bump hatch from 1.15.1 to 1.16.3"
+  },
+  {
+   "created_at": "2026-02-01T04:37:20Z",
+   "html_url": "https://github.com/psf/black/pull/4978",
+   "membership_verified": false,
+   "number": 4978,
+   "title": "A few more small CI tweaks"
+  },
+  {
+   "created_at": "2026-02-07T00:46:16Z",
+   "html_url": "https://github.com/psf/black/pull/4983",
+   "membership_verified": true,
+   "number": 4983,
+   "title": "Warn when target version exceeds runtime Python version"
+  },
+  {
+   "created_at": "2026-02-08T07:08:55Z",
+   "html_url": "https://github.com/psf/black/pull/4985",
+   "membership_verified": true,
+   "number": 4985,
+   "title": "Docs: Add comprehensive Jupyter Notebooks documentation page"
+  },
+  {
+   "created_at": "2026-02-15T09:48:47Z",
+   "html_url": "https://github.com/psf/black/pull/4992",
+   "membership_verified": true,
+   "number": 4992,
+   "title": "enhance: enhancement of the syntex error reporting"
+  },
+  {
+   "created_at": "2026-02-17T13:57:58Z",
+   "html_url": "https://github.com/psf/black/pull/4993",
+   "membership_verified": true,
+   "number": 4993,
+   "title": "Fix crash on standalone comment in lambda default arguments"
+  },
+  {
+   "created_at": "2026-02-19T00:51:37Z",
+   "html_url": "https://github.com/psf/black/pull/4996",
+   "membership_verified": false,
+   "number": 4996,
+   "title": "add winloop support and remove deprecated functionality from uvloop"
+  },
+  {
+   "created_at": "2026-02-20T02:57:03Z",
+   "html_url": "https://github.com/psf/black/pull/4997",
+   "membership_verified": true,
+   "number": 4997,
+   "title": "Mark first block before matching content as changed in line ranges mapping"
+  },
+  {
+   "created_at": "2026-02-24T11:18:29Z",
+   "html_url": "https://github.com/psf/black/pull/5006",
+   "membership_verified": true,
+   "number": 5006,
+   "title": "Clarify error message when no target Python version is specified"
+  },
+  {
+   "created_at": "2026-02-27T02:13:18Z",
+   "html_url": "https://github.com/psf/black/pull/5009",
+   "membership_verified": true,
+   "number": 5009,
+   "title": "docs: add dedicated Jupyter Notebooks guide"
+  }
+ ],
+ "provenance": "Public GitHub metadata (issue and PR titles, label names, timestamps, author associations, file paths) with source URLs for attribution; no bodies or logins. Content rights remain with their authors (GitHub Terms of Service); this is not a licence grant and the harness MIT licence does not cover it.",
+ "reads": 182,
+ "repository": "psf/black",
+ "source": {
+  "api": "https://api.github.com",
+  "repository_url": "https://github.com/psf/black"
+ },
+ "tree_paths": [
+  ".flake8",
+  ".git_archival.txt",
+  ".gitattributes",
+  ".github/CODE_OF_CONDUCT.md",
+  ".github/ISSUE_TEMPLATE/bug_report.md",
+  ".github/ISSUE_TEMPLATE/config.yml",
+  ".github/ISSUE_TEMPLATE/docs-issue.md",
+  ".github/ISSUE_TEMPLATE/feature_request.md",
+  ".github/ISSUE_TEMPLATE/style_issue.md",
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/dependabot.yml",
+  ".github/workflows/changelog.yml",
+  ".github/workflows/diff_shades.yml",
+  ".github/workflows/diff_shades_comment.yml",
+  ".github/workflows/docker.yml",
+  ".github/workflows/docs.yml",
+  ".github/workflows/fuzz.yml",
+  ".github/workflows/lint.yml",
+  ".github/workflows/publish_binaries.yml",
+  ".github/workflows/pypi_upload.yml",
+  ".github/workflows/release_tests.yml",
+  ".github/workflows/test.yml",
+  ".github/workflows/zizmor.yml",
+  ".gitignore",
+  ".pre-commit-config.yaml",
+  ".pre-commit-hooks.yaml",
+  ".prettierrc.yaml",
+  ".readthedocs.yaml",
+  "AUTHORS.md",
+  "CHANGES.md",
+  "CITATION.cff",
+  "CONTRIBUTING.md",
+  "Dockerfile",
+  "LICENSE",
+  "README.md",
+  "SECURITY.md",
+  "action.yml",
+  "action/main.py",
+  "autoload/black.vim",
+  "docs/Makefile",
+  "docs/_static/license.svg",
+  "docs/_static/logo2-readme.png",
+  "docs/_static/logo2.png",
+  "docs/_static/pypi_template.svg",
+  "docs/authors.md",
+  "docs/change_log.md",
+  "docs/compatible_configs/flake8/.flake8",
+  "docs/compatible_configs/flake8/setup.cfg",
+  "docs/compatible_configs/flake8/tox.ini",
+  "docs/compatible_configs/isort/.editorconfig",
+  "docs/compatible_configs/isort/.isort.cfg",
+  "docs/compatible_configs/isort/pyproject.toml",
+  "docs/compatible_configs/isort/setup.cfg",
+  "docs/compatible_configs/pycodestyle/.flake8",
+  "docs/compatible_configs/pycodestyle/setup.cfg",
+  "docs/compatible_configs/pycodestyle/tox.ini",
+  "docs/compatible_configs/pylint/pylintrc",
+  "docs/compatible_configs/pylint/pyproject.toml",
+  "docs/compatible_configs/pylint/setup.cfg",
+  "docs/conf.py",
+  "docs/contributing/gauging_changes.md",
+  "docs/contributing/index.md",
+  "docs/contributing/issue_triage.md",
+  "docs/contributing/release_process.md",
+  "docs/contributing/the_basics.md",
+  "docs/faq.md",
+  "docs/getting_started.md",
+  "docs/guides/index.md",
+  "docs/guides/introducing_black_to_your_project.md",
+  "docs/guides/using_black_with_other_tools.md",
+  "docs/index.md",
+  "docs/integrations/editors.md",
+  "docs/integrations/github_actions.md",
+  "docs/integrations/index.md",
+  "docs/integrations/source_version_control.md",
+  "docs/license.md",
+  "docs/make.bat",
+  "docs/the_black_code_style/current_style.md",
+  "docs/the_black_code_style/future_style.md",
+  "docs/the_black_code_style/index.md",
+  "docs/usage_and_configuration/black_as_a_server.md",
+  "docs/usage_and_configuration/black_docker_image.md",
+  "docs/usage_and_configuration/file_collection_and_discovery.md",
+  "docs/usage_and_configuration/index.md",
+  "docs/usage_and_configuration/the_basics.md",
+  "gallery/Dockerfile",
+  "gallery/README.md",
+  "gallery/gallery.py",
+  "plugin/black.vim",
+  "profiling/dict_big.py",
+  "profiling/dict_huge.py",
+  "profiling/list_big.py",
+  "profiling/list_huge.py",
+  "profiling/mix_big.py",
+  "profiling/mix_huge.py",
+  "profiling/mix_small.py",
+  "pyproject.toml",
+  "scripts/__init__.py",
+  "scripts/check_pre_commit_rev_in_example.py",
+  "scripts/check_version_in_basics_example.py",
+  "scripts/diff_shades_gha_helper.py",
+  "scripts/fuzz.py",
+  "scripts/generate_schema.py",
+  "scripts/make_width_table.py",
+  "scripts/migrate-black.py",
+  "scripts/release.py",
+  "scripts/release_tests.py",
+  "src/_black_version.pyi",
+  "src/black/__init__.py",
+  "src/black/__main__.py",
+  "src/black/_width_table.py",
+  "src/black/brackets.py",
+  "src/black/cache.py",
+  "src/black/comments.py",
+  "src/black/concurrency.py",
+  "src/black/const.py",
+  "src/black/debug.py",
+  "src/black/files.py",
+  "src/black/handle_ipynb_magics.py",
+  "src/black/linegen.py",
+  "src/black/lines.py",
+  "src/black/mode.py",
+  "src/black/nodes.py",
+  "src/black/numerics.py",
+  "src/black/output.py",
+  "src/black/parsing.py",
+  "src/black/py.typed",
+  "src/black/ranges.py",
+  "src/black/report.py",
+  "src/black/resources/__init__.py",
+  "src/black/resources/black.schema.json",
+  "src/black/rusty.py",
+  "src/black/schema.py",
+  "src/black/strings.py",
+  "src/black/trans.py",
+  "src/blackd/__init__.py",
+  "src/blackd/__main__.py",
+  "src/blackd/client.py",
+  "src/blackd/middlewares.py",
+  "src/blib2to3/Grammar.txt",
+  "src/blib2to3/LICENSE",
+  "src/blib2to3/PatternGrammar.txt",
+  "src/blib2to3/README",
+  "src/blib2to3/__init__.py",
+  "src/blib2to3/pgen2/__init__.py",
+  "src/blib2to3/pgen2/conv.py",
+  "src/blib2to3/pgen2/driver.py",
+  "src/blib2to3/pgen2/grammar.py",
+  "src/blib2to3/pgen2/literals.py",
+  "src/blib2to3/pgen2/parse.py",
+  "src/blib2to3/pgen2/pgen.py",
+  "src/blib2to3/pgen2/token.py",
+  "src/blib2to3/pgen2/tokenize.py",
+  "src/blib2to3/pygram.py",
+  "src/blib2to3/pytree.py",
+  "tests/__init__.py",
+  "tests/conftest.py",
+  "tests/data/cases/allow_empty_first_line.py",
+  "tests/data/cases/annotations.py",
+  "tests/data/cases/async_stmts.py",
+  "tests/data/cases/attribute_access_on_number_literals.py",
+  "tests/data/cases/backslash_before_indent.py",
+  "tests/data/cases/beginning_backslash.py",
+  "tests/data/cases/bracketmatch.py",
+  "tests/data/cases/bytes_docstring.py",
+  "tests/data/cases/cantfit.py",
+  "tests/data/cases/class_blank_parentheses.py",
+  "tests/data/cases/class_methods_new_line.py",
+  "tests/data/cases/collections.py",
+  "tests/data/cases/comment_after_escaped_newline.py",
+  "tests/data/cases/comment_type_hint.py",
+  "tests/data/cases/comments.py",
+  "tests/data/cases/comments2.py",
+  "tests/data/cases/comments3.py",
+  "tests/data/cases/comments4.py",
+  "tests/data/cases/comments5.py",
+  "tests/data/cases/comments6.py",
+  "tests/data/cases/comments8.py",
+  "tests/data/cases/comments9.py",
+  "tests/data/cases/comments_in_blocks.py",
+  "tests/data/cases/comments_in_double_parens.py",
+  "tests/data/cases/comments_non_breaking_space.py",
+  "tests/data/cases/composition.py",
+  "tests/data/cases/composition_no_trailing_comma.py",
+  "tests/data/cases/conditional_expression.py",
+  "tests/data/cases/context_managers_38.py",
+  "tests/data/cases/context_managers_39.py",
+  "tests/data/cases/context_managers_autodetect_310.py",
+  "tests/data/cases/context_managers_autodetect_311.py",
+  "tests/data/cases/context_managers_autodetect_38.py",
+  "tests/data/cases/context_managers_autodetect_39.py",
+  "tests/data/cases/docstring.py",
+  "tests/data/cases/docstring2.py",
+  "tests/data/cases/docstring_newline.py",
+  "tests/data/cases/docstring_no_extra_empty_line_before_eof.py",
+  "tests/data/cases/docstring_no_string_normalization.py",
+  "tests/data/cases/dummy_implementations.py",
+  "tests/data/cases/empty_lines.py",
+  "tests/data/cases/expression.diff",
+  "tests/data/cases/expression.py",
+  "tests/data/cases/f_docstring.py",
+  "tests/data/cases/fmtonoff.py",
+  "tests/data/cases/fmtonoff2.py",
+  "tests/data/cases/fmtonoff3.py",
+  "tests/data/cases/fmtonoff4.py",
+  "tests/data/cases/fmtonoff5.py",
+  "tests/data/cases/fmtonoff6.py",
+  "tests/data/cases/fmtpass_imports.py",
+  "tests/data/cases/fmtskip.py",
+  "tests/data/cases/fmtskip10.py",
+  "tests/data/cases/fmtskip11.py",
+  "tests/data/cases/fmtskip12.py",
+  "tests/data/cases/fmtskip13.py",
+  "tests/data/cases/fmtskip2.py",
+  "tests/data/cases/fmtskip3.py",
+  "tests/data/cases/fmtskip4.py",
+  "tests/data/cases/fmtskip5.py",
+  "tests/data/cases/fmtskip6.py",
+  "tests/data/cases/fmtskip7.py",
+  "tests/data/cases/fmtskip8.py",
+  "tests/data/cases/fmtskip9.py",
+  "tests/data/cases/fmtskip_multiple_in_clause.py",
+  "tests/data/cases/fmtskip_multiple_strings.py",
+  "tests/data/cases/form_feeds.py",
+  "tests/data/cases/format_unicode_escape_seq.py",
+  "tests/data/cases/fstring.py",
+  "tests/data/cases/fstring_quotations.py",
+  "tests/data/cases/funcdef_return_type_trailing_comma.py",
+  "tests/data/cases/function.py",
+  "tests/data/cases/function2.py",
+  "tests/data/cases/function_trailing_comma.py",
+  "tests/data/cases/generics_wrapping.py",
+  "tests/data/cases/ignore_pyi.py",
+  "tests/data/cases/import_line_collapse.py",
+  "tests/data/cases/import_spacing.py",
+  "tests/data/cases/is_simple_lookup_for_doublestar_expression.py",
+  "tests/data/cases/jupytext_markdown_fmt.py",
+  "tests/data/cases/keep_newline_after_match.py",
+  "tests/data/cases/line_ranges_basic.py",
+  "tests/data/cases/line_ranges_decorator_edge_case.py",
+  "tests/data/cases/line_ranges_diff_edge_case.py",
+  "tests/data/cases/line_ranges_exceeding_end.py",
+  "tests/data/cases/line_ranges_fmt_off.py",
+  "tests/data/cases/line_ranges_fmt_off_decorator.py",
+  "tests/data/cases/line_ranges_fmt_off_overlap.py",
+  "tests/data/cases/line_ranges_imports.py",
+  "tests/data/cases/line_ranges_indentation.py",
+  "tests/data/cases/line_ranges_outside_source.py",
+  "tests/data/cases/line_ranges_two_passes.py",
+  "tests/data/cases/line_ranges_unwrapping.py",
+  "tests/data/cases/linelength6.py",
+  "tests/data/cases/long_strings__type_annotations.py",
+  "tests/data/cases/long_strings_flag_disabled.py",
+  "tests/data/cases/module_docstring_1.py",
+  "tests/data/cases/module_docstring_2.py",
+  "tests/data/cases/module_docstring_3.py",
+  "tests/data/cases/module_docstring_4.py",
+  "tests/data/cases/module_docstring_after_comment.py",
+  "tests/data/cases/module_docstring_followed_by_class.py",
+  "tests/data/cases/module_docstring_followed_by_function.py",
+  "tests/data/cases/multiline_consecutive_open_parentheses_ignore.py",
+  "tests/data/cases/multiline_strings.py",
+  "tests/data/cases/nested_stub.py",
+  "tests/data/cases/no_blank_line_before_docstring.py",
+  "tests/data/cases/numeric_literals.py",
+  "tests/data/cases/numeric_literals_skip_underscores.py",
+  "tests/data/cases/one_element_subscript.py",
+  "tests/data/cases/parenthesized_context_managers.py",
+  "tests/data/cases/pattern_matching_complex.py",
+  "tests/data/cases/pattern_matching_extras.py",
+  "tests/data/cases/pattern_matching_generic.py",
+  "tests/data/cases/pattern_matching_long.py",
+  "tests/data/cases/pattern_matching_simple.py",
+  "tests/data/cases/pattern_matching_style.py",
+  "tests/data/cases/pattern_matching_trailing_comma.py",
+  "tests/data/cases/pattern_matching_with_if_stmt.py",
+  "tests/data/cases/pep604_union_types_line_breaks.py",
+  "tests/data/cases/pep646_typed_star_arg_type_var_tuple.py",
+  "tests/data/cases/pep_570.py",
+  "tests/data/cases/pep_572.py",
+  "tests/data/cases/pep_572_do_not_remove_parens.py",
+  "tests/data/cases/pep_572_py310.py",
+  "tests/data/cases/pep_572_py39.py",
+  "tests/data/cases/pep_572_remove_parens.py",
+  "tests/data/cases/pep_572_slices.py",
+  "tests/data/cases/pep_604.py",
+  "tests/data/cases/pep_646.py",
+  "tests/data/cases/pep_654.py",
+  "tests/data/cases/pep_654_style.py",
+  "tests/data/cases/pep_701.py",
+  "tests/data/cases/pep_750.py",
+  "tests/data/cases/percent_precedence.py",
+  "tests/data/cases/power_op_newline.py",
+  "tests/data/cases/power_op_spacing.py",
+  "tests/data/cases/power_op_spacing_long.py",
+  "tests/data/cases/prefer_rhs_split.py",
+  "tests/data/cases/prefer_rhs_split_reformatted.py",
+  "tests/data/cases/preview_cantfit_string.py",
+  "tests/data/cases/preview_comments7.py",
+  "tests/data/cases/preview_fstring.py",
+  "tests/data/cases/preview_hug_parens_with_braces_and_square_brackets.py",
+  "tests/data/cases/preview_hug_parens_with_braces_and_square_brackets_no_ll1.py",
+  "tests/data/cases/preview_long_dict_values.py",
+  "tests/data/cases/preview_long_strings.py",
+  "tests/data/cases/preview_long_strings__east_asian_width.py",
+  "tests/data/cases/preview_long_strings__edge_case.py",
+  "tests/data/cases/preview_long_strings__regression.py",
+  "tests/data/cases/preview_remove_multiline_lone_list_item_parens.py",
+  "tests/data/cases/preview_return_annotation_brackets_string.py",
+  "tests/data/cases/preview_simplify_power_operator_hugging.py",
+  "tests/data/cases/preview_simplify_power_operator_hugging_long.py",
+  "tests/data/cases/preview_wrap_comprehension_in.py",
+  "tests/data/cases/py310_pep572.py",
+  "tests/data/cases/python37.py",
+  "tests/data/cases/python38.py",
+  "tests/data/cases/python39.py",
+  "tests/data/cases/raw_docstring.py",
+  "tests/data/cases/raw_docstring_no_string_normalization.py",
+  "tests/data/cases/remove_await_parens.py",
+  "tests/data/cases/remove_except_parens.py",
+  "tests/data/cases/remove_except_types_parens.py",
+  "tests/data/cases/remove_except_types_parens_pre_py314.py",
+  "tests/data/cases/remove_for_brackets.py",
+  "tests/data/cases/remove_lone_list_item_parens.py",
+  "tests/data/cases/remove_newline_after_code_block_open.py",
+  "tests/data/cases/remove_parens.py",
+  "tests/data/cases/remove_parens_from_lhs.py",
+  "tests/data/cases/remove_redundant_parens_in_case_guard.py",
+  "tests/data/cases/remove_with_brackets.py",
+  "tests/data/cases/return_annotation_brackets.py",
+  "tests/data/cases/single_line_format_skip_with_multiple_comments.py",
+  "tests/data/cases/skip_magic_trailing_comma.py",
+  "tests/data/cases/skip_magic_trailing_comma_generic_wrap.py",
+  "tests/data/cases/slices.py",
+  "tests/data/cases/split_delimiter_comments.py",
+  "tests/data/cases/standardize_type_comments.py",
+  "tests/data/cases/starred_for_target.py",
+  "tests/data/cases/string_prefixes.py",
+  "tests/data/cases/stub.py",
+  "tests/data/cases/target_version_flag.py",
+  "tests/data/cases/torture.py",
+  "tests/data/cases/trailing_comma.py",
+  "tests/data/cases/trailing_comma_optional_parens1.py",
+  "tests/data/cases/trailing_comma_optional_parens2.py",
+  "tests/data/cases/trailing_comma_optional_parens3.py",
+  "tests/data/cases/trailing_commas_in_leading_parts.py",
+  "tests/data/cases/tricky_unicode_symbols.py",
+  "tests/data/cases/tuple_with_stmt.py",
+  "tests/data/cases/tupleassign.py",
+  "tests/data/cases/type_aliases.py",
+  "tests/data/cases/type_comment_syntax_error.py",
+  "tests/data/cases/type_expansion.py",
+  "tests/data/cases/type_ignore_with_other_comment.py",
+  "tests/data/cases/type_param_defaults.py",
+  "tests/data/cases/type_params.py",
+  "tests/data/cases/typed_params_trailing_comma.py",
+  "tests/data/cases/walrus_in_dict.py",
+  "tests/data/cases/whitespace.py",
+  "tests/data/empty_pyproject.toml",
+  "tests/data/gitignore_used_on_multiple_sources/.gitignore",
+  "tests/data/gitignore_used_on_multiple_sources/dir1/a.py",
+  "tests/data/gitignore_used_on_multiple_sources/dir1/b.py",
+  "tests/data/gitignore_used_on_multiple_sources/dir2/a.py",
+  "tests/data/gitignore_used_on_multiple_sources/dir2/b.py",
+  "tests/data/ignore_directory_gitignore_tests/.gitignore",
+  "tests/data/ignore_directory_gitignore_tests/abc.py",
+  "tests/data/ignore_directory_gitignore_tests/large_ignored_dir_two/a.py",
+  "tests/data/ignore_directory_gitignore_tests/large_ignored_dir_two/inner/b.py",
+  "tests/data/ignore_directory_gitignore_tests/large_ignored_dir_two/inner2/c.py",
+  "tests/data/ignore_directory_gitignore_tests/large_ignored_dir_two/inner3/d.py",
+  "tests/data/ignore_directory_gitignore_tests/z.py",
+  "tests/data/ignore_subfolders_gitignore_tests/a.py",
+  "tests/data/ignore_subfolders_gitignore_tests/subdir/.gitignore",
+  "tests/data/ignore_subfolders_gitignore_tests/subdir/b.py",
+  "tests/data/ignore_subfolders_gitignore_tests/subdir/subdir/c.py",
+  "tests/data/include_exclude_tests/.gitignore",
+  "tests/data/include_exclude_tests/b/.definitely_exclude/a.pie",
+  "tests/data/include_exclude_tests/b/.definitely_exclude/a.py",
+  "tests/data/include_exclude_tests/b/.definitely_exclude/a.pyi",
+  "tests/data/include_exclude_tests/b/dont_exclude/a.pie",
+  "tests/data/include_exclude_tests/b/dont_exclude/a.py",
+  "tests/data/include_exclude_tests/b/dont_exclude/a.pyi",
+  "tests/data/include_exclude_tests/b/exclude/a.pie",
+  "tests/data/include_exclude_tests/b/exclude/a.py",
+  "tests/data/include_exclude_tests/b/exclude/a.pyi",
+  "tests/data/include_exclude_tests/b/exclude/still_exclude/a.pie",
+  "tests/data/include_exclude_tests/b/exclude/still_exclude/a.py",
+  "tests/data/include_exclude_tests/b/exclude/still_exclude/a.pyi",
+  "tests/data/include_exclude_tests/pyproject.toml",
+  "tests/data/incorrect_spelling.toml",
+  "tests/data/invalid_gitignore_tests/.gitignore",
+  "tests/data/invalid_gitignore_tests/a.py",
+  "tests/data/invalid_gitignore_tests/pyproject.toml",
+  "tests/data/invalid_line_ranges.toml",
+  "tests/data/invalid_nested_gitignore_tests/a.py",
+  "tests/data/invalid_nested_gitignore_tests/a/.gitignore",
+  "tests/data/invalid_nested_gitignore_tests/a/a.py",
+  "tests/data/invalid_nested_gitignore_tests/pyproject.toml",
+  "tests/data/jupyter/non_python_notebook.ipynb",
+  "tests/data/jupyter/notebook_empty_metadata.ipynb",
+  "tests/data/jupyter/notebook_no_trailing_newline.ipynb",
+  "tests/data/jupyter/notebook_trailing_newline.ipynb",
+  "tests/data/jupyter/notebook_which_cant_be_parsed.ipynb",
+  "tests/data/jupyter/notebook_without_changes.ipynb",
+  "tests/data/line_ranges_formatted/basic.py",
+  "tests/data/line_ranges_formatted/pattern_matching.py",
+  "tests/data/miscellaneous/async_as_identifier.py",
+  "tests/data/miscellaneous/blackd_diff.diff",
+  "tests/data/miscellaneous/blackd_diff.py",
+  "tests/data/miscellaneous/debug_visitor.out",
+  "tests/data/miscellaneous/debug_visitor.py",
+  "tests/data/miscellaneous/decorators.py",
+  "tests/data/miscellaneous/expression_skip_magic_trailing_comma.diff",
+  "tests/data/miscellaneous/force_py36.py",
+  "tests/data/miscellaneous/force_pyi.py",
+  "tests/data/miscellaneous/invalid_header.py",
+  "tests/data/miscellaneous/missing_final_newline.diff",
+  "tests/data/miscellaneous/missing_final_newline.py",
+  "tests/data/miscellaneous/pattern_matching_invalid.py",
+  "tests/data/miscellaneous/python2_detection.py",
+  "tests/data/miscellaneous/string_quotes.py",
+  "tests/data/nested_gitignore_tests/pyproject.toml",
+  "tests/data/nested_gitignore_tests/root/.gitignore",
+  "tests/data/nested_gitignore_tests/root/a.py",
+  "tests/data/nested_gitignore_tests/root/b.py",
+  "tests/data/nested_gitignore_tests/root/c.py",
+  "tests/data/nested_gitignore_tests/root/child/.gitignore",
+  "tests/data/nested_gitignore_tests/root/child/a.py",
+  "tests/data/nested_gitignore_tests/root/child/b.py",
+  "tests/data/nested_gitignore_tests/root/child/c.py",
+  "tests/data/nested_gitignore_tests/x.py",
+  "tests/data/project_metadata/both_pyproject.toml",
+  "tests/data/project_metadata/neither_pyproject.toml",
+  "tests/data/project_metadata/only_black_pyproject.toml",
+  "tests/data/project_metadata/only_metadata_pyproject.toml",
+  "tests/empty.toml",
+  "tests/optional.py",
+  "tests/test.toml",
+  "tests/test_black.py",
+  "tests/test_blackd.py",
+  "tests/test_concurrency_manager_shutdown.py",
+  "tests/test_docs.py",
+  "tests/test_format.py",
+  "tests/test_ipynb.py",
+  "tests/test_no_ipynb.py",
+  "tests/test_ranges.py",
+  "tests/test_schema.py",
+  "tests/test_tokenize.py",
+  "tests/test_trans.py",
+  "tests/util.py",
+  "tox.ini"
+ ],
+ "tree_truncated": false
+}

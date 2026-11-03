@@ -84,6 +84,8 @@ def installed_check(source):
     resources = importlib.resources.files("agent_contribute")
     for name in RESOURCE_PATHS:
         assert resources.joinpath(name).read_bytes() == (source / "agent_contribute" / name).read_bytes(), name
+    # Development tools such as the task-selection benchmark never ship in the wheel.
+    assert not [str(file) for file in dist.files if str(file).startswith("tools/") or "benchmark" in str(file)]
     assert [str(file) for file in dist.files if file.name == "SKILL.md"] == [
         "agent_contribute/adapters/agent-contribute/SKILL.md"]
     for name in ("task", "evidence"):
@@ -225,6 +227,9 @@ def main():
         expected = {"pyproject.toml", "MANIFEST.in", "README.md", "NOTICE",
                     "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
                     "CHANGELOG.md", "AGENTS.md", "tools/check_install.py", "tools/output_reference.py", "tools/release_check.py",
+                    "tools/benchmark/benchlib.py", "tools/benchmark/collect.py", "tools/benchmark/score.py",
+                    "tools/benchmark/experiment.py",
+                    "tools/benchmark/README.md",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
                     "docs/examples/release-pypi.yml", "docs/output-reference.md",
                     ".github/workflows/ci.yml"}

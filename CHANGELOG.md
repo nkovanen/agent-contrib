@@ -29,6 +29,17 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `tools/benchmark/` (#28, development only; not in the wheel): a read-only,
+  bounded collector of issues open at a past cutoff with post-cutoff outcome
+  labels, an offline replay of `discover` and `--signals` ranking, and
+  top-k precision with explicit bounds for unjudged slots, a conditional
+  bootstrap and a seeded random-permutation null. Labels come from stored
+  outcome evidence and never assume unknown reasons or authorship; replays
+  refuse incomplete results. Results and the pre-registered protocol are in
+  [docs/benchmark.md](docs/benchmark.md): under the registered labels no
+  ranking change qualifies. PR titles renamed after the cutoff are not
+  reconstructed for PRs whose current title overlaps no issue (open, BM-02).
+
 - `drift task.json --policy-sha256 HASH` (N1, dogfood 4): re-reads the
   repository policy inventory and reports `repository_policy_drift`, with
   `policy_drifted` and, when a baseline can be rebuilt at the pinned commit,
