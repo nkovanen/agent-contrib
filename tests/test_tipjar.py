@@ -3,6 +3,7 @@ import base64
 import copy
 import hashlib
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -56,12 +57,30 @@ class ManifestTests(unittest.TestCase):
             self.assertEqual(tipjar.parse_manifest(json.dumps(value).encode()), value)
         self.assertEqual(tipjar.parse_manifest(RAW + b' ' * (16384 - len(RAW)))['status'], 'welcome')
 
+    def test_required_parity_dependencies_cannot_skip(self):
+        for missing in ('node', 'ajv'):
+            with self.subTest(missing=missing), patch.dict(os.environ, {
+                    'TIPJAR_PARITY_AJV': '/required/ajv/dist/2020'}), patch(
+                    'shutil.which', return_value=None if missing == 'node' else '/node'), patch(
+                    'subprocess.run', return_value=types.SimpleNamespace(returncode=1)):
+                try:
+                    with self.assertRaises(AssertionError):
+                        self.test_manifest_schema_matches_independent_ecmascript_validator()
+                except unittest.SkipTest:
+                    self.fail('Required CI parity check silently skipped')
+
     def test_manifest_schema_matches_independent_ecmascript_validator(self):
+        module = os.environ.get('TIPJAR_PARITY_AJV', 'ajv/dist/2020')
+        required = 'TIPJAR_PARITY_AJV' in os.environ
         node = shutil.which('node')
         if node is None:
+            if required:
+                self.fail('Required independent parity check requires Node')
             self.skipTest('Optional independent parity check requires Node and Ajv 2020')
-        probe = subprocess.run([node, '-e', 'require("ajv/dist/2020")'], capture_output=True)
+        probe = subprocess.run([node, '-e', 'require(process.argv[1])', module], capture_output=True, timeout=15)
         if probe.returncode:
+            if required:
+                self.fail('Required independent parity check cannot load configured Ajv 2020')
             self.skipTest('Optional independent parity check requires Ajv 2020')
         schema = json.loads(pathlib.Path(tipjar.__file__).with_name('tipjar.schema.json').read_text('utf-8'))
         # Unicode White_Space, explicitly fixed by the manifest contract, not either runtime's shorthand.
@@ -77,12 +96,12 @@ class ManifestTests(unittest.TestCase):
                  for field in ('wanted', 'boundaries') for text, expected in texts]
         script = """
 const fs = require('fs');
-const Ajv = require('ajv/dist/2020');
+const Ajv = require(process.argv[1]);
 const {schema, cases} = JSON.parse(fs.readFileSync(0, 'utf8'));
 const validate = new Ajv({strict: true}).compile(schema);
 process.stdout.write(JSON.stringify(cases.map(value => validate(value))));
 """
-        result = subprocess.run([node, '-e', script], input=json.dumps({
+        result = subprocess.run([node, '-e', script, module], input=json.dumps({
             'schema': schema, 'cases': [value for value, _ in cases]}), text=True,
             capture_output=True, check=True, timeout=15)
         for (value, expected), independent in zip(cases, json.loads(result.stdout), strict=True):

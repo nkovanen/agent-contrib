@@ -59,3 +59,25 @@ jobs:
           agent-contrib instructions > instructions.json
           tipjar schema verify > verify-schema.json
           agent-contrib skill --output exported-SKILL.md > skill.json
+
+  schema-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Require Node and install locked schema validator
+        run: |
+          node --version
+          npm --version
+          mkdir -p "$RUNNER_TEMP/schema-parity"
+          cp tests/schema-parity/package*.json "$RUNNER_TEMP/schema-parity/"
+          npm ci --prefix "$RUNNER_TEMP/schema-parity" --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Independent manifest schema parity (required, no skips)
+        env:
+          TIPJAR_PARITY_AJV: ${{ runner.temp }}/schema-parity/node_modules/ajv/dist/2020
+        run: python -m unittest tests.test_tipjar.ManifestTests -v
