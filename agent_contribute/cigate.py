@@ -107,10 +107,14 @@ def observe(client, target, head):
         page='check runs page', count='Check run count', noun='check run',
         oversize='Check runs page exceeds 100 items', malformed='Malformed check run: ')
     errors = list(run_errors)
-    known = {suite['id'] for suite in suites}
-    orphans = sorted(run['id'] for run in runs if run['suite_id'] not in known)
+    apps = {suite['id']: suite['app_id'] for suite in suites}
+    orphans = [run['id'] for run in runs if run['suite_id'] not in apps]
     if orphans:
         errors.append(f'{len(orphans)} check run(s) name a suite missing from the suite read; reads are inconsistent')
+    # A run belongs to its suite's app (CI-07); any disagreement makes the whole snapshot untrustworthy.
+    mismatched = [run['id'] for run in runs if run['suite_id'] in apps and apps[run['suite_id']] != run['app_id']]
+    if mismatched:
+        errors.append(f'{len(mismatched)} check run(s) name a suite of another app; reads are inconsistent')
     return suites, runs, errors, finished and not errors
 
 

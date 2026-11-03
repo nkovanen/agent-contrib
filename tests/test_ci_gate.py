@@ -232,6 +232,14 @@ class ReadTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertEqual(state(suites, runs, **totals), 'unknown')
 
+    def test_run_and_suite_app_disagreement_is_unknown(self):
+        # CI-07: a run from app A naming a suite of app B is inconsistent, never a pass for either app.
+        self.assertEqual(state([suite(1, app=OTHER)], [run(1)]), 'unknown')
+        result, errors, _ = gate([suite(1, app=OTHER), suite(2)], [run(1), run(2, suite_id=2)])
+        self.assertEqual(result[0]['state'], 'unknown')
+        self.assertTrue(any('app' in error for error in errors), errors)
+        self.assertEqual(state([suite(1, app=OTHER)], [run(1, app=OTHER)], items=({'check': 'test', 'app_id': OTHER},)), 'met')
+
     def test_malformed_app_and_state_fields_are_unknown(self):
         def broken(change, target='run'):
             suites, runs = [suite(1)], [run(1)]
@@ -404,6 +412,11 @@ class CompletionWiringTests(unittest.TestCase):
                 self.assertTrue(result['publication']['verified'])
                 self.assertEqual(result['next_action'], 'none')
                 self.assertFalse(any('CI requirement' in error for error in result['errors']))
+
+    def test_a_run_naming_another_apps_suite_never_completes(self):
+        _, result, _, _ = ci_journey(REQUIRE, [suite(1, app=OTHER)], [run(1)])
+        self.assertEqual((result['ci_gate']['requirements'][0]['state'], result['ci_gate']['complete']), ('unknown', False))
+        self.assertFalse(result['completion_ready'])
 
     def test_no_reads_before_an_exact_head_draft_is_verified(self):
         before, _, calls_before, _ = ci_journey(REQUIRE, [suite(1)], [run(1)])
