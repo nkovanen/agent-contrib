@@ -5,102 +5,28 @@ then lands. Method, label definitions and limits are in the
 [harness README](../tools/benchmark/README.md). Rankings are heuristics and never
 approval; these numbers measure them, not the protocol's safety gates.
 
-## Snapshots: cutoff 2026-03-01, 90-day horizon
+## Withdrawn first results (format 1 harness)
 
-Positive counts use the scoring labels: a fix whose PR was already open at T
-is excluded, because that task had already been taken. The raw collected
-positives are shown in brackets.
+The baseline and the first held-out experiment published on 2026-11-02 and
+2026-11-03 used the format 1 harness. They are **withdrawn**: a hostile
+methodology review (BM-01 to BM-06) found flaws that could bias them. The
+flaws were:
 
-| Repository | Issues open at T | Positive | Negative | Excluded |
-| --- | --- | --- | --- | --- |
-| BurntSushi/ripgrep | 94 | 0 (0) | 94 | 0 |
-| honojs/hono | 270 | 4 (6) | 248 | 18 |
-| pallets/click | 124 | 4 (9) | 85 | 35 |
-| psf/black | 298 | 16 (21) | 271 | 11 |
+- positives that included fixes already in flight at T;
+- PR membership at T not reconstructed;
+- missing close reasons and unknown authorship treated as known;
+- references made after the horizon counted;
+- a condensed top-k that removed outcome-excluded slots;
+- a mislabelled bootstrap;
+- replays that could silently shrink the issue set.
 
-ripgrep had no positives in the window, so it is left out of pooled values.
-pallets/flask was also tried: it had no issues open at T, so it has no
-snapshot.
+One stated claim was also wrong. `--signals` precision@20 (0.02, interval
+0.00–0.05) did not overlap the 0.06 random mean, contrary to the text, and
+overlap would not have shown equivalence to random anyway.
 
-## Baseline (v0.3.0 candidate, committed body-free snapshots)
-
-| Variant | k | Precision@k (95% CI) | Recall@k (95% CI) |
-| --- | --- | --- | --- |
-| default | 5 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) |
-| default | 10 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) |
-| default | 20 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) |
-| signals | 5 | 0.00 (0.00–0.07) | 0.00 (0.00–0.07) |
-| signals | 10 | 0.03 (0.00–0.10) | 0.08 (0.00–0.22) |
-| signals | 20 | 0.02 (0.00–0.07) | 0.08 (0.00–0.33) |
-
-Random-order expected precision (mean positive rate): **0.04**.
-
-With raw labels (`--raw-labels`), default is still 0.00 at every k and random
-is 0.06. With current bodies (local only; they may leak post-T edits),
-`--signals` is 0.00 / 0.00 / 0.03 at k = 5 / 10 / 20.
-
-## Held-out ranking experiment
-
-The protocol was fixed before any variant was scored:
-
-- **Splits.** Tune on click and ripgrep; report on black and hono (held out),
-  then on all four. Because ripgrep has no positives, the tuning pool is
-  effectively click alone.
-- **Rule.** A change is recommended only if its held-out precision interval lies
-  wholly above the random interval (both 95%, seeded, 2000 replicates).
-- **Variants:**
-  - (a) default discover;
-  - (b) current `--signals`;
-  - (c) `--signals` from `rsi/ranking-quality` at `209d480` (label and meta
-    demotions), scored from an archive of that tree;
-  - (d) default with the final tie-break changed from oldest issue number to
-    most recent activity at T;
-  - (e) default with issues labelled `help wanted` or `good first issue` at T
-    promoted after the exclusion, overlap and likelihood keys. These labels are
-    the project's own statement that outside contributions are welcome. This
-    was chosen on that principle, not from the data.
-
-Held-out results, black and hono:
-
-| Variant | k | Precision@k (95% CI) | Recall@k (95% CI) | Random (95% CI) | Beats random |
-| --- | --- | --- | --- | --- | --- |
-| (a) default | 5 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (a) default | 10 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (b) signals | 5 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (b) signals | 10 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (c) signals @209d480 | 5 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (c) signals @209d480 | 10 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (d) recent activity | 5 | 0.10 (0.00–0.20) | 0.03 (0.00–0.08) | 0.04 (0.02–0.05) | no |
-| (d) recent activity | 10 | 0.05 (0.00–0.15) | 0.03 (0.00–0.11) | 0.04 (0.02–0.05) | no |
-| (e) help-wanted first | 5 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-| (e) help-wanted first | 10 | 0.00 (0.00–0.00) | 0.00 (0.00–0.00) | 0.04 (0.02–0.05) | no |
-
-All four repositories:
-
-| Variant | k | Precision@k (95% CI) | Random (95% CI) | Beats random |
-| --- | --- | --- | --- | --- |
-| (a) default | 5 / 10 | 0.00 / 0.00 | 0.04 (0.02–0.06) | no |
-| (b) signals | 5 / 10 | 0.00 (0.00–0.07) / 0.03 (0.00–0.10) | 0.04 (0.02–0.06) | no |
-| (c) signals @209d480 | 5 / 10 | 0.00 (0.00–0.10) / 0.03 (0.00–0.10) | 0.04 (0.02–0.06) | no |
-| (d) recent activity | 5 / 10 | 0.13 (0.00–0.27) / 0.07 (0.00–0.17) | 0.04 (0.02–0.06) | no |
-| (e) help-wanted first | 5 / 10 | 0.00 / 0.00 | 0.04 (0.02–0.06) | no |
-
-The raw-label rerun, which keeps fixes already in flight at T as positives,
-reaches the same verdict for every variant.
-
-**Recommendation: no ranking change.**
-- No candidate beats random with non-overlapping intervals on the held-out
-  repositories.
-- (d) has the highest point estimates on every split, but its intervals include
-  both zero and the random rate.
-- (e) never lifted a positive into the top k: few issues carry those labels at T
-  (0 in hono, 7 in black).
-
-What the data does support is a negative finding. Default's held-out interval
-(0.00–0.00) lies below the random interval, so its oldest-first tie-break is
-measurably worse than chance on this corpus. Before changing the ranking,
-re-measure with more repositories and cutoffs, so that a real effect of the
-size (d) suggests could be detected.
+Their qualitative finding was that default ranking's oldest-first tie-break put
+no later-positive issue in its top 20. That finding is re-tested below under the
+corrected harness; it is not carried over.
 
 ## Pre-registered protocol: expanded corpus (registered 2026-11-03, before collection)
 
@@ -141,6 +67,46 @@ variant was scored on them. Nothing below changes after results are seen.
   ranking change is made.
 - **Known dependence.** Two cutoffs of the same repository share maintainers and
   habits, so the intervals are optimistic about independence.
+
+## Amendment to the pre-registration (2026-11-03, before any collection or scoring)
+
+The hostile review (BM-01 to BM-06) arrived after registration and before any
+test snapshot was collected or scored. These changes make the protocol more
+conservative; none was chosen with any result in view.
+
+- **Labels.**
+  - Unknown close reasons and unknown authorship can never make an issue
+    positive.
+  - Only references made by the horizon count.
+  - A fix already linked or open at T is excluded (primary labels).
+  - `--raw-labels` is a secondary sensitivity check.
+- **PR membership at T.** Every PR that can create an overlap is checked against
+  its events: PRs closed at T are dropped and their renames reversed.
+- **Primary metric.** Precision@10 over the first 10 actual recommendations,
+  with unjudged slots counted as misses. It is averaged over **all** test
+  snapshots, including those without positives. Secondary results: precision@5,
+  the upper bound, judged coverage, condensed P@k and recall.
+- **Uncertainty.**
+  - The interval is a conditional issue-population bootstrap with fixed
+    snapshot support (2000 replicates, seed 0). It is not a label-noise or
+    between-repository interval.
+  - The random reference is a seeded random-permutation null (2000
+    permutations, seed 0) on the same snapshots.
+- **Decision rule.** (d) qualifies only if the 2.5th percentile of its
+  test-set precision@10 bootstrap lies above the 97.5th percentile of the
+  permutation null. If it does not, no ranking change is made.
+- **Replay integrity.** Any incomplete replay, or one that changes the issue
+  set, stops the run with an error. Each run reports its population: snapshots,
+  issues, judged issues and positives.
+- **Tuning set.** The four original repositories are re-collected in format 2
+  at cutoff 2026-03-01, and are still not used for the decision.
+- **Collection order and budget.** The 16 test snapshots are collected first,
+  then the four tuning snapshots if the budget allows (about 900 extra reads).
+  The floor of 1000 remaining core reads still applies; a missing snapshot is
+  reported, not replaced.
+- **Data.** Snapshots are no longer included in the source distribution. They
+  are committed under `tools/benchmark/data/` only while the total stays under
+  about 2 MB.
 
 ## Reproduce
 

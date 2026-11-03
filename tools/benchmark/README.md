@@ -44,30 +44,65 @@ identical numbers.
 
 ## Outcome labels
 
-The window is (T, T + horizon], and a label is decided from the issue's state at
-the end of the window.
+Snapshots store raw evidence: close and reopen events with their recorded
+reason, timestamped PR references with merge time, author association and user
+type, and the issue's current state. Labels are derived from that evidence when
+scoring (`benchlib.classify`), so a definition change never needs a new
+collection.
 
-| Label | Definition | Why |
-| --- | --- | --- |
-| positive | Closed as completed inside the window, by a PR in the same repository that was merged inside the window and within 24 hours of the close. The PR's author association must not be OWNER, MEMBER or COLLABORATOR, and its author must not be a bot. | Work an outside contributor demonstrably landed: what agent-contrib tries to find. |
-| negative | Still open at the horizon (including closed, then reopened), or closed as `not_planned` or `duplicate`. | Nobody landed it in the window, or the project declined it. |
-| excluded | Closed as completed without such a PR: a maintainer's PR, a direct commit, a bot, or an unlinked close. Also excluded at scoring time: a positive whose fixing PR was **already open at T**. | Ambiguous: maintainers may reserve work, or an outsider might have succeeded. A fix already in flight at T was not an available task, and discover deliberately demotes overlapping issues. Counting either way would bias the score. |
+The window is (T, T + horizon]. Every positive needs explicit evidence;
+anything unknown is excluded, never assumed.
 
-Snapshots store the outcome as collected. `benchlib.labels()` applies the
-claimed-at-T exclusion when scoring; `--raw-labels` on `score.py` and
-`experiment.py` keeps it as positive.
+| Label | Definition |
+| --- | --- |
+| positive | Closed at the horizon, by a PR in the same repository that was merged inside the window within 24 hours of the close and referenced from the issue **by the horizon**. Its author association must be one of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, `FIRST_TIMER` or `NONE`, and its user type must be `User`. The PR must not already be linked or open at T. The close reason must be `completed` or unknown, and is reported as `reason_known`. |
+| negative | Still open at the horizon (including closed then reopened), or closed with an explicit `not_planned` or `duplicate` reason. |
+| excluded | Every other close: a maintainer's or bot's fix, unknown authorship, an unlinked close, an unknown reason without a qualifying PR, and a fix already in flight at T (an available task for nobody new). |
 
-Excluded issues are removed before scoring. Precision@k counts positives among
-the first k decidable issues; recall@k is the share of all positives found in
-those k.
+A close event's reason is often missing. It is taken from the issue's current
+`state_reason` only when the issue is still closed and its `closed_at` is that
+same close event; otherwise it is unknown. `--raw-labels` keeps fixes already in
+flight at T as positive, as a sensitivity check.
 
-The pooled value is the mean over repositories. A repository with no positives
-is listed but left out of the pool, because no ordering can score there.
+## Metrics
 
-The random-order reference is the mean positive rate. The 95% interval
-resamples decidable issues within each repository (2000 replicates) while
-keeping their rank positions. It captures label noise only, not the variance
-from choosing repositories.
+The primary metric is top-k precision over the first k recommendations the agent
+would actually see, the full ranking with no slots removed:
+
+- **precision** counts an unjudged (excluded) slot as a miss, so it is a lower
+  bound;
+- **upper bound** counts an unjudged slot as a hit;
+- **coverage** is the judged share of the top k.
+
+Two secondary metrics are reported:
+
+- **condensed P@k** is the older conditional metric: the first k *judged*
+  issues. It uses outcomes to choose the slots and is not what an agent sees.
+- **recall@k** is the share of a snapshot's positives found in its top k.
+
+Pooled values are macro means over snapshots. Top-k precision, upper bound and
+coverage use **every** snapshot, including those with no positives (precision
+0). Condensed P@k and recall use only snapshots with positives, a support fixed
+from the original labels.
+
+**Intervals.** The interval is a *conditional issue-population bootstrap*. Each
+snapshot's issues are resampled with replacement, keeping their rank positions
+and labels, with the snapshot support fixed (2000 replicates, seeded). It shows
+sensitivity to which issues happened to be open. It does **not** model label
+noise or repository-to-repository variation.
+
+**Random reference.** A seeded permutation null: uniformly random orderings of
+each snapshot's full issue set, scored the same way. A ranking is said to beat
+random only when its bootstrap 2.5th percentile exceeds the null's 97.5th
+percentile. Overlapping intervals do not show equivalence to random.
+
+**Fail loudly.** The scorer refuses:
+- an unknown snapshot format;
+- duplicate issues, or a body field;
+- an outcome window that had not ended at collection time;
+- an incomplete `discover` replay;
+- a replay that does not return exactly the snapshot's issues;
+- a ranking that is not a permutation of the labelled issues.
 
 ## What the snapshot can and cannot reconstruct at T
 
@@ -80,9 +115,9 @@ never stores information from after T, except as recorded below.
 | Title | yes | Current title with `renamed` events after T reversed. |
 | Labels | yes | Current labels with `labeled`/`unlabeled` events after T reversed. This matters because exclusion labels such as `wontfix` are often added after T. |
 | Comment count, last activity | yes | `commented` and other timeline events at or before T. |
-| Default-branch tree | yes | The tree of the last commit at or before T (`commits?until=T`). |
-| Open PRs at T | partly | Membership is exact, from search. Titles are current; PR renames are not reversed. Branch names and bodies are not stored, so overlap replay uses PR titles only. |
-| Author association | no | The current value; an author may have joined the project since T. |
+| Default-branch tree | approximately | The tree of the last commit at or before T on the **current** default branch (`commits?until=T`). Branch renames, rewritten history or backdated commits can differ from what the branch held at T. |
+| Open PRs at T | partly | Candidates come from search: created at or before T, and open now or closed after T. Every candidate whose title can create an overlap with a kept issue has its events read, which drops PRs closed at T (reopened later) and reverses later renames (`membership_verified: true`). The other candidates cannot change the ranking and stay unverified. Branch names and bodies are not stored, so overlap replay uses PR titles only. |
+| Author association | no | The current value, for both issue authors (affects `--signals` by one point) and PR authors (affects positives); a person may have joined the project since T. |
 | Reactions, assignees | no | Not stored. Neither affects ranking order. |
 | Issue body | no | REST has no edit history, and bodies are not committed. See below. |
 | Instruction files, policy | no | Served empty. They do not affect ranking order. |
@@ -94,9 +129,10 @@ characters). Default ranking then reduces to exclusions, overlaps and issue
 number, and `--signals` clarity is always low.
 
 `collect.py --bodies-out` saves the current bodies to a local file outside the
-checkout, and `score.py --bodies DIR` uses them. That gives a full-fidelity
-replay, at the price of the leakage risk above. The two numbers are reported
-separately.
+checkout, and `score.py --bodies DIR` uses them. That is closer to real
+discover, but not full fidelity: PR bodies and branch names are still missing,
+and the current bodies may leak post-T edits. It is not reproducible from
+committed artifacts.
 
 ## Other limitations
 
@@ -120,19 +156,23 @@ Per repository, the collector makes:
 - 1 metadata read, 1 commit read and 1 tree read;
 - at most 4 search queries × `--max-search-pages` pages (spaced 2.2 s apart, to
   stay within the search limit);
-- one timeline read (at most 5 pages) per kept issue.
+- one timeline read (at most 5 pages) per kept issue;
+- one events read (at most 2 pages) per candidate PR whose title can create an
+  overlap.
 
-The baseline run used 134, 104, 280 and 307 reads for click, ripgrep, hono and
-black.
-
-## Data and licence
+## Data and provenance
 
 `data/*.json` holds public GitHub metadata: issue and PR titles, label names,
-timestamps, author associations, file paths. Each record keeps its source URL
-for attribution. No bodies are stored, and the total stays under 2 MB.
-Snapshot format: `agent-contrib-benchmark/1`. A test checks that the data has no
-bodies, has the expected outcome values and URLs, and stays under the size
-limit.
+timestamps, author associations, file paths and outcome evidence. Each record
+keeps its source URL for attribution. No bodies or logins are stored as
+structured data, though titles and paths are public text and can mention
+people.
+
+The content belongs to its authors under GitHub's Terms of Service. It is not
+covered by this project's MIT licence, and no licence grant is implied. The
+snapshots are kept in the repository for reproducibility but are not
+redistributed in the source or wheel distributions. Format:
+`agent-contrib-benchmark/2`.
 
 The fresh-agent trial protocol requested in #28 (blind prompts, recorded
 interventions) is not part of this harness; agent trials run externally.

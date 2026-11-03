@@ -22,8 +22,11 @@ channel or runtime model provider is added.
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,
   bounded collector of issues open at a past cutoff with post-cutoff outcome
   labels, an offline replay of `discover` and `--signals` ranking, and
-  precision/recall@k with seeded bootstrap intervals. Four body-free snapshots
-  and the [baseline](docs/benchmark.md) are committed.
+  top-k precision with explicit bounds for unjudged slots, a conditional
+  bootstrap and a seeded random-permutation null. Labels come from stored
+  outcome evidence and never assume unknown reasons or authorship; replays
+  refuse incomplete results. Results and the pre-registered protocol are in
+  [docs/benchmark.md](docs/benchmark.md).
 
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
   sections are unchanged, plus an optional host-issued `overlap_dispositions`
