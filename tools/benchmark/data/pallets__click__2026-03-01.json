@@ -1,0 +1,5184 @@
+{
+ "collected_at": "2026-11-03T01:18:31+00:00",
+ "commit_at_cutoff": "ae46cfd6bc997804893adc799589248eadcdbc29",
+ "cutoff": "2026-03-01T00:00:00Z",
+ "default_branch": "main",
+ "format": "agent-contrib-benchmark/2",
+ "horizon_days": 90,
+ "issues": [
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 10,
+   "created_at": "2014-06-26T11:47:53Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-01T21:53:59Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-01T21:53:58Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2014-07-01T21:38:31Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 181,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2020-08-06T13:44:40Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2020-10-03T20:52:18Z",
+      "pr": 1622,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2021-05-23T08:48:06Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2021-05-26T14:09:54Z",
+      "pr": 81,
+      "repository": "32blit/32blit-tools",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-01T10:29:56Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-09-01T21:32:54Z",
+      "pr": 3826,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/173",
+   "labels": [
+    "prompt",
+    "shell completion"
+   ],
+   "number": 173,
+   "title": "tab completion during interactive prompts",
+   "updated_at": "2021-05-23T08:48:06Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2015-03-05T02:41:25Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/304",
+   "labels": [
+    "bug",
+    "prompt"
+   ],
+   "number": 304,
+   "title": "Should prompts work when the input file is stdin?",
+   "updated_at": "2020-08-13T20:44:42Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 28,
+   "created_at": "2015-07-12T17:03:07Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/373",
+   "labels": [
+    "help output"
+   ],
+   "number": 373,
+   "title": "Equivalent of argparse's add_argument_group, help sections",
+   "updated_at": "2025-06-12T09:37:39Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 28,
+   "created_at": "2015-12-01T15:23:48Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2019-05-07T17:55:09Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2019-05-08T02:50:08Z",
+      "kind": "reopened",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2020-08-13T17:29:12Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-11-03T19:56:42Z",
+      "pr": 1489,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/473",
+   "labels": [
+    "bug"
+   ],
+   "number": 473,
+   "title": "The leftover arguments are empty in Click 6.0 Context",
+   "updated_at": "2022-03-02T13:30:09Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2016-03-07T11:38:29Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/531",
+   "labels": [],
+   "number": 531,
+   "title": "customizable augment_usage_errors",
+   "updated_at": "2020-07-03T23:57:11Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2016-04-15T14:19:37Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2016-04-15T21:38:34Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 560,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2019-01-21T14:08:02Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2020-08-09T03:01:17Z",
+      "pr": 938,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2020-08-07T19:44:01Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 1037,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2021-04-12T14:09:59Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 1843,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/561",
+   "labels": [],
+   "number": 561,
+   "title": "[Feature] Add Custom Formatter System",
+   "updated_at": "2025-09-06T19:47:39Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2016-05-26T09:58:11Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2016-05-26T18:55:18Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2016-05-26T19:05:46Z",
+      "pr": 1820,
+      "repository": "pallets/flask",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/590",
+   "labels": [
+    "f:chain"
+   ],
+   "number": 590,
+   "title": "Click Processing Pipeline Rewrite",
+   "updated_at": "2025-11-18T07:48:59Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2016-09-14T16:55:20Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-11T08:32:36Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-11T08:32:36Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2018-03-31T17:54:16Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 951,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-28T09:40:32Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-02-28T22:21:58Z",
+      "pr": 3139,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-28T12:47:28Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-11T08:32:02Z",
+      "pr": 3235,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/654",
+   "labels": [
+    "test runner"
+   ],
+   "number": 654,
+   "title": "`click.testing` is not properly proxying `stdout`",
+   "updated_at": "2026-02-28T12:49:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2016-11-02T15:09:11Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/680",
+   "labels": [
+    "bug"
+   ],
+   "number": 680,
+   "title": "Subcommand path from a top/root context",
+   "updated_at": "2025-08-26T06:45:07Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2017-02-10T21:54:16Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/730",
+   "labels": [
+    "parsing"
+   ],
+   "number": 730,
+   "title": "[Feature] Allow client to specify declaration order for parameter-handling precedence",
+   "updated_at": "2025-05-29T06:59:35Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2017-02-16T15:56:44Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-16T04:57:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-16T04:57:47Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2019-12-09T12:32:06Z",
+      "author_association": "MEMBER",
+      "merged_at": "2019-12-12T10:22:42Z",
+      "pr": 69,
+      "repository": "inveniosoftware/invenio-cli",
+      "user_type": "User"
+     },
+     {
+      "at": "2022-08-24T20:07:08Z",
+      "author_association": "MEMBER",
+      "merged_at": "2022-09-07T20:28:52Z",
+      "pr": 378,
+      "repository": "open2c/cooltools",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-29T10:51:45Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-16T04:57:46Z",
+      "pr": 3391,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/737",
+   "labels": [
+    "test runner"
+   ],
+   "number": 737,
+   "title": "Enable CliRunner to echo output to stdout/stderr",
+   "updated_at": "2025-04-12T10:58:18Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 8,
+   "created_at": "2017-02-22T22:55:40Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/742",
+   "labels": [
+    "parsing"
+   ],
+   "number": 742,
+   "title": "Allow for prohibiting the no-blank way of specifying short option with option argument",
+   "updated_at": "2025-01-06T08:21:57Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 23,
+   "created_at": "2017-07-09T22:47:56Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-01T16:19:07Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-01T16:19:07Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2018-03-26T18:02:39Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 951,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2020-04-14T20:34:31Z",
+      "author_association": "MEMBER",
+      "merged_at": "2020-04-14T22:59:33Z",
+      "pr": 414,
+      "repository": "anchore/anchore-engine",
+      "user_type": "User"
+     },
+     {
+      "at": "2020-09-01T16:47:29Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2020-09-02T16:31:31Z",
+      "pr": 2132,
+      "repository": "aws/aws-sam-cli",
+      "user_type": "User"
+     },
+     {
+      "at": "2022-01-18T01:44:57Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2022-01-18T03:31:18Z",
+      "pr": 92,
+      "repository": "gigalixir/gigalixir-cli",
+      "user_type": "User"
+     },
+     {
+      "at": "2023-02-17T21:22:22Z",
+      "author_association": "MEMBER",
+      "merged_at": "2023-02-21T15:34:39Z",
+      "pr": 790,
+      "repository": "lsst/daf_butler",
+      "user_type": "User"
+     },
+     {
+      "at": "2023-03-10T23:50:23Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2023-03-10T23:52:44Z",
+      "pr": 243,
+      "repository": "proxystore/proxystore",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-05-06T12:29:46Z",
+      "author_association": "MEMBER",
+      "merged_at": "2024-05-07T13:44:23Z",
+      "pr": 10761,
+      "repository": "localstack/localstack",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-11-05T21:45:01Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2024-11-06T01:48:48Z",
+      "pr": 2905,
+      "repository": "flyteorg/flytekit",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-01-27T13:01:51Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-01-27T13:41:44Z",
+      "pr": 202,
+      "repository": "opossum-tool/opossum-file",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-14T00:01:14Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-05-14T00:12:08Z",
+      "pr": 309,
+      "repository": "Perfexionists/perun",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-07-04T10:13:28Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-07-22T08:28:36Z",
+      "pr": 2991,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-08-21T21:19:15Z",
+      "author_association": "MEMBER",
+      "merged_at": "2025-08-22T00:16:27Z",
+      "pr": 4557,
+      "repository": "catalyst-cooperative/pudl",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-10-03T22:35:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 876,
+      "repository": "aws-deadline/deadline-cloud",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-10-20T10:28:43Z",
+      "author_association": "MEMBER",
+      "merged_at": "2025-11-01T14:05:10Z",
+      "pr": 9124,
+      "repository": "ckan/ckan",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-10-28T12:55:07Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-10-29T22:52:19Z",
+      "pr": 456446,
+      "repository": "NixOS/nixpkgs",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-11-13T10:50:16Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-02-28T22:21:58Z",
+      "pr": 3139,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-11-19T06:16:05Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-12T03:00:13Z",
+      "pr": 3151,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-28T12:47:28Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-11T08:32:02Z",
+      "pr": 3235,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/824",
+   "labels": [
+    "test runner"
+   ],
+   "number": 824,
+   "title": "ValueError: I/O operation on closed file in testing",
+   "updated_at": "2026-02-28T12:47:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2017-08-27T23:39:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-11T09:47:00Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-11T09:47:00Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-02T15:33:14Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-11T08:32:02Z",
+      "pr": 3235,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/843",
+   "labels": [
+    "test runner"
+   ],
+   "number": 843,
+   "title": "click.testing.CliRunner.invoke prevents use of pdb",
+   "updated_at": "2022-06-09T14:55:19Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2018-02-10T16:47:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/928",
+   "labels": [
+    "parsing"
+   ],
+   "number": 928,
+   "title": "dynamic choice options",
+   "updated_at": "2025-01-06T08:32:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2018-03-05T12:57:30Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2018-10-14T16:45:28Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2020-08-08T02:30:23Z",
+      "pr": 1146,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/944",
+   "labels": [],
+   "number": 944,
+   "title": "[Feature] Color support for Exceptions",
+   "updated_at": "2025-01-06T08:18:19Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2018-06-23T12:33:27Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2018-06-23T14:11:55Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2025-05-16T20:52:47Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-09-02T00:24:34Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-02T00:24:34Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/1054",
+   "labels": [
+    "docs"
+   ],
+   "number": 1054,
+   "title": "Use function both as API and click function?",
+   "updated_at": "2025-05-16T20:52:47Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2019-03-31T17:31:51Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2019-05-07T16:09:32Z",
+      "author_association": "NONE",
+      "merged_at": "2020-02-16T22:49:08Z",
+      "pr": 1310,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-07T21:49:28Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3056,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/1269",
+   "labels": [
+    "f:chain"
+   ],
+   "number": 1269,
+   "title": "Chained command with argument and option results in \"No such command\"",
+   "updated_at": "2025-09-07T21:49:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2019-04-18T09:15:22Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/1279",
+   "labels": [
+    "f:context"
+   ],
+   "number": 1279,
+   "title": "provide access to a normalized list of args that will result in the same params",
+   "updated_at": "2025-01-06T08:32:21Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2019-05-25T19:11:22Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/1322",
+   "labels": [
+    "f:chain"
+   ],
+   "number": 1322,
+   "title": "Subcommands prefixed with a forward slash are seemingly ignored",
+   "updated_at": "2022-07-05T12:28:17Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2019-08-15T19:01:09Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2019-08-20T19:16:19Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 1372,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-07-04T23:24:58Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-07-04T23:24:13Z",
+      "pr": 2543,
+      "repository": "Sinity/polylogue",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/1370",
+   "labels": [
+    "prompt"
+   ],
+   "number": 1370,
+   "title": "click.confirm fails when piping input",
+   "updated_at": "2024-04-23T17:30:45Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2019-08-25T16:45:25Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/1378",
+   "labels": [],
+   "number": 1378,
+   "title": "Feature to only update atomic file when changed",
+   "updated_at": "2023-09-16T16:23:20Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2019-10-20T10:46:13Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-09-02T13:03:33Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-02T13:03:32Z",
+     "state": "closed",
+     "state_reason": "not_planned"
+    },
+    "references": [
+     {
+      "at": "2021-03-05T16:04:43Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 1280,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-01T10:36:39Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-09-01T21:32:54Z",
+      "pr": 3826,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/1411",
+   "labels": [
+    "prompt"
+   ],
+   "number": 1411,
+   "title": "Allow a type to customize the prompt",
+   "updated_at": "2021-03-15T23:44:35Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2019-11-21T18:10:24Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/1428",
+   "labels": [
+    "f:parameters"
+   ],
+   "number": 1428,
+   "title": "allow checking for path non-existance",
+   "updated_at": "2025-01-06T19:45:28Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2020-06-07T09:29:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/1574",
+   "labels": [
+    "f:chain"
+   ],
+   "number": 1574,
+   "title": "Context.params isn't setup in the MultiCommand.list_commands method",
+   "updated_at": "2022-02-23T15:52:19Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2021-01-15T17:52:03Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-29T06:31:15Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-05-29T06:34:19Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-29T06:34:56Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-29T06:34:56Z",
+     "state": "closed",
+     "state_reason": "not_planned"
+    },
+    "references": [
+     {
+      "at": "2024-02-27T17:48:57Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 2681,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/1756",
+   "labels": [],
+   "number": 1756,
+   "title": "[Feature] path and python version values for version message formatting",
+   "updated_at": "2025-01-05T07:15:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2021-07-07T19:07:52Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2021-07-07T19:09:05Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2021-07-15T14:36:13Z",
+      "pr": 170,
+      "repository": "aboutcode-org/deltacode",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-20T05:20:29Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-08-20T08:53:02Z",
+      "pr": 80,
+      "repository": "TJZine/frame-compare",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/1997",
+   "labels": [
+    "bug"
+   ],
+   "number": 1997,
+   "title": "Testing output is dependent on terminal width",
+   "updated_at": "2026-01-21T16:30:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2021-07-16T17:22:25Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2025-08-24T06:56:15Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2025-08-25T06:30:24Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-04-29T06:47:37Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T06:47:37Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-08-06T08:33:08Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-08-24T06:56:13Z",
+      "pr": 3030,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-10-06T12:07:54Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-10-06T12:08:04Z",
+      "pr": 171,
+      "repository": "guibranco/progressbar",
+      "user_type": "Bot"
+     },
+     {
+      "at": "2025-11-24T12:05:50Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-11-24T12:06:17Z",
+      "pr": 180,
+      "repository": "guibranco/progressbar",
+      "user_type": "Bot"
+     },
+     {
+      "at": "2026-02-13T07:18:03Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 17,
+      "repository": "Dustin4444/luci-py",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-06T11:56:12Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-06T11:57:04Z",
+      "pr": 202,
+      "repository": "guibranco/progressbar",
+      "user_type": "Bot"
+     },
+     {
+      "at": "2026-04-21T11:02:49Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-29T06:47:36Z",
+      "pr": 3363,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2012",
+   "labels": [
+    "typing"
+   ],
+   "number": 2012,
+   "title": "`flag_value` is passed through `ParamType.convert`",
+   "updated_at": "2026-02-13T07:18:03Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 23,
+   "created_at": "2021-08-04T18:00:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2033",
+   "labels": [],
+   "number": 2033,
+   "title": "[Feature] Basic `async` support",
+   "updated_at": "2026-02-08T23:08:56Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 20,
+   "created_at": "2021-11-01T16:46:16Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-08-20T16:12:13Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-08-20T16:12:12Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2021-11-02T05:15:58Z",
+      "author_association": "OWNER",
+      "merged_at": "2021-11-02T05:23:30Z",
+      "pr": 12,
+      "repository": "leouieda/nene",
+      "user_type": "User"
+     },
+     {
+      "at": "2023-11-14T05:49:50Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2023-11-13T17:07:58Z",
+      "pr": 128,
+      "repository": "ddelange/pipgrip",
+      "user_type": "User"
+     },
+     {
+      "at": "2024-06-14T15:45:39Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-06-15T14:20:20Z",
+      "pr": 518,
+      "repository": "algorandfoundation/algokit-cli",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-19T04:44:53Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-08-20T16:12:11Z",
+      "pr": 3778,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2121",
+   "labels": [
+    "bug"
+   ],
+   "number": 2121,
+   "title": "UnicodeEncodeError on Windows when there are Unicode chars in the help message ",
+   "updated_at": "2026-02-23T18:19:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2021-12-16T10:17:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2154",
+   "labels": [
+    "bug"
+   ],
+   "number": 2154,
+   "title": "xdg-open zombie process remains by default in WSL2 after click.launch()",
+   "updated_at": "2025-01-05T06:59:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2022-02-04T09:28:31Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2184",
+   "labels": [
+    "bug",
+    "typing"
+   ],
+   "number": 2184,
+   "title": "Click option completion callback doesn't have access to context.params for parsed values of already typed arguments.",
+   "updated_at": "2025-01-05T06:55:24Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 5,
+   "created_at": "2022-02-23T15:52:19Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-08-20T16:15:24Z",
+      "author_association": "MEMBER",
+      "merged_at": "2023-08-20T16:16:55Z",
+      "pr": 2592,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2205",
+   "labels": [
+    "parsing"
+   ],
+   "number": 2205,
+   "title": "rewrite the parser",
+   "updated_at": "2025-09-22T18:27:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2022-05-28T11:36:21Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-09-06T06:54:15Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3853,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2299",
+   "labels": [
+    "docs"
+   ],
+   "number": 2299,
+   "title": "missing documentation: testing of shell completion",
+   "updated_at": "2024-11-04T03:33:53Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2022-06-03T05:11:11Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2022-06-08T13:28:31Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2022-06-16T04:06:37Z",
+      "pr": 644,
+      "repository": "koordinates/kart",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2303",
+   "labels": [],
+   "number": 2303,
+   "title": "Context different in `click.pass_context`  and `shell_complete`",
+   "updated_at": "2025-02-26T19:34:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2022-07-18T22:20:49Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-29T06:33:38Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-29T06:33:38Z",
+     "state": "closed",
+     "state_reason": "not_planned"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2324",
+   "labels": [],
+   "number": 2324,
+   "title": "[Feature] Pass `version_option()` to `Command(params=)`",
+   "updated_at": "2025-01-05T06:50:18Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2022-08-02T06:38:39Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-29T06:35:35Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2026-06-11T06:16:33Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-06-14T20:30:53Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-06-14T20:30:52Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-06-11T06:09:39Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-06-14T20:30:14Z",
+      "pr": 3582,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2331",
+   "labels": [],
+   "number": 2331,
+   "title": "version_option module name and package name are not equivalent",
+   "updated_at": "2025-01-05T06:47:47Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2022-09-24T08:36:05Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2360",
+   "labels": [],
+   "number": 2360,
+   "title": "[Feature] embedding Click inside asyncio-based apps",
+   "updated_at": "2025-01-05T06:38:57Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2022-09-24T09:07:10Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2361",
+   "labels": [],
+   "number": 2361,
+   "title": "[Feature] for embedding Click with custom stdout/stderr instances",
+   "updated_at": "2025-01-05T06:36:53Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2022-11-09T13:07:57Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-02-28T07:22:13Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3234,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2402",
+   "labels": [
+    "bug"
+   ],
+   "number": 2402,
+   "title": "resolve_command fails if cmd is None",
+   "updated_at": "2026-02-28T07:22:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2022-12-20T17:41:51Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-29T09:17:01Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-10-29T09:42:36Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     }
+    ],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": "reopened"
+    },
+    "references": [
+     {
+      "at": "2026-10-29T09:41:42Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-11-01T17:57:56Z",
+      "pr": 3899,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2419",
+   "labels": [],
+   "number": 2419,
+   "title": "[Feature] `ClickException` message without color would be helpful",
+   "updated_at": "2025-02-28T14:18:23Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2023-01-08T16:25:49Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2429",
+   "labels": [
+    "bug"
+   ],
+   "number": 2429,
+   "title": "for argument type File, `lazy` does not work on Windows",
+   "updated_at": "2025-01-05T06:31:51Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2023-04-16T16:44:52Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-01-06T12:13:58Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 2663,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2493",
+   "labels": [
+    "typing"
+   ],
+   "number": 2493,
+   "title": "Make `click.Context` generic for `obj`",
+   "updated_at": "2026-01-15T20:16:00Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2023-08-09T04:28:53Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-08-29T04:46:37Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-08-29T04:46:36Z",
+     "state": "closed",
+     "state_reason": "not_planned"
+    },
+    "references": [
+     {
+      "at": "2026-08-19T05:38:03Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-08-29T04:45:56Z",
+      "pr": 3780,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2582",
+   "labels": [
+    "bug"
+   ],
+   "number": 2582,
+   "title": "The `edit` utility does not work on Windows for Visual Studio Code",
+   "updated_at": "2025-01-05T06:27:27Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2023-09-28T14:47:24Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-09-28T14:48:31Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2023-10-11T09:43:55Z",
+      "pr": 6140,
+      "repository": "aiidateam/aiida-core",
+      "user_type": "User"
+     },
+     {
+      "at": "2023-10-11T16:14:22Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2023-10-15T11:29:44Z",
+      "pr": 6144,
+      "repository": "aiidateam/aiida-core",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-13T07:45:10Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-10-13T16:22:34Z",
+      "pr": 1,
+      "repository": "josephwibowo/click-handler-a30",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2614",
+   "labels": [
+    "bug"
+   ],
+   "number": 2614,
+   "title": "Click evaluates default callbacks during tab-completion",
+   "updated_at": "2025-01-05T06:25:21Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2023-10-19T23:26:53Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-08-19T06:22:03Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-08-19T06:22:21Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-08-19T06:22:52Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-08-19T06:22:52Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2024-10-16T22:45:27Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2024-10-17T17:01:14Z",
+      "pr": 8645,
+      "repository": "wandb/wandb",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2626",
+   "labels": [
+    "typing"
+   ],
+   "number": 2626,
+   "title": "Make ProgressBar type available in public interface",
+   "updated_at": "2025-01-05T06:24:11Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 9,
+   "created_at": "2023-11-23T22:50:47Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2024-05-21T19:24:29Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2024-05-21T19:25:03Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-29T03:42:41Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-29T03:42:40Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-28T12:28:25Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-29T03:42:14Z",
+      "pr": 3526,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-29T11:53:52Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-06-29T12:11:46Z",
+      "pr": 238,
+      "repository": "guibranco/progressbar",
+      "user_type": "Bot"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2634",
+   "labels": [],
+   "number": 2634,
+   "title": "`tests/test_types.py::test_file_surrogates` test is missing the `skipif not _non_utf8_filenames_supported` marker",
+   "updated_at": "2025-01-13T05:47:12Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2023-12-04T00:56:10Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2023-12-05T23:40:20Z",
+      "author_association": "MEMBER",
+      "merged_at": "2023-12-06T02:20:45Z",
+      "pr": 363,
+      "repository": "python-jsonschema/check-jsonschema",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-04T22:20:12Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3554,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2645",
+   "labels": [
+    "bug"
+   ],
+   "number": 2645,
+   "title": "Eager open/close of a LazyFile for error handling can make fifo reading fail",
+   "updated_at": "2025-01-05T06:19:59Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-02-13T10:19:42Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-04T06:36:09Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": null,
+      "pr": 5875,
+      "repository": "RedHatQE/openshift-virtualization-tests",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2676",
+   "labels": [
+    "f:parser"
+   ],
+   "number": 2676,
+   "title": "Support for Automatically Parsing Negative Number Arguments",
+   "updated_at": "2025-03-23T14:37:51Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 4,
+   "created_at": "2024-02-22T04:32:10Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2679",
+   "labels": [
+    "help output"
+   ],
+   "number": 2679,
+   "title": "Allow Hiding of Range Values for IntRange Option in --help",
+   "updated_at": "2025-01-09T15:20:14Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-02-29T08:05:49Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2683",
+   "labels": [
+    "help output"
+   ],
+   "number": 2683,
+   "title": "feature: allow substituting command_path in command help and epilog text ",
+   "updated_at": "2025-01-05T06:13:02Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 3,
+   "created_at": "2024-04-16T08:33:31Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-03-01T16:52:16Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 2864,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-02T06:23:55Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 2890,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-12T02:44:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-08T04:42:09Z",
+      "pr": 2902,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2706",
+   "labels": [],
+   "number": 2706,
+   "title": "Better i18n with gettext: use class-based API",
+   "updated_at": "2025-05-12T02:44:04Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2024-06-05T15:39:52Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-06-12T17:57:06Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3589,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-26T13:44:14Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 3,
+      "repository": "yoda77777/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2740",
+   "labels": [],
+   "number": 2740,
+   "title": "Display exception notes when raising `ClickException`",
+   "updated_at": "2024-06-05T16:25:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-06-20T14:10:51Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-29T06:41:20Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T06:41:20Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-21T15:07:16Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-29T06:41:19Z",
+      "pr": 3364,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2745",
+   "labels": [],
+   "number": 2745,
+   "title": "Modifying default_map in callback behaves differently between click 7.1.2 and 8.0.0",
+   "updated_at": "2024-06-20T14:34:37Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-07-15T17:06:08Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-02-27T14:58:34Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-03-05T13:45:19Z",
+      "pr": 59,
+      "repository": "aneoconsulting/ArmoniK.CLI",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2753",
+   "labels": [],
+   "number": 2753,
+   "title": "get_parameter_source does not work with invoke or forward",
+   "updated_at": "2025-03-05T13:45:21Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 3,
+   "created_at": "2024-07-31T00:28:07Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-17T21:48:17Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-17T21:48:17Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-05T23:27:16Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-16T07:59:12Z",
+      "pr": 3315,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2757",
+   "labels": [
+    "docs"
+   ],
+   "number": 2757,
+   "title": "document how to create a standalone application",
+   "updated_at": "2024-09-29T03:59:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-08-12T09:22:28Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-30T07:05:53Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-30T07:05:53Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2764",
+   "labels": [
+    "TBD",
+    "help output"
+   ],
+   "number": 2764,
+   "title": "Provide suggestions for misspelled subcommands",
+   "updated_at": "2025-08-09T13:35:12Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-08-26T15:07:08Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-04T14:47:44Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 1946,
+      "repository": "ai-dynamo/nixl",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2768",
+   "labels": [
+    "parsing"
+   ],
+   "number": 2768,
+   "title": "Unexposed option name is `None` when the parameter name is not a python identifier",
+   "updated_at": "2025-04-06T00:38:32Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2024-09-02T22:00:06Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-08-29T10:45:41Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-09-01T18:21:58Z",
+      "pr": 3808,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-17T06:36:07Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 52,
+      "repository": "prgate/agent-skill-adapter",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2771",
+   "labels": [
+    "parsing"
+   ],
+   "number": 2771,
+   "title": "Allow nargs=-1 in options with a non-whitespace separator",
+   "updated_at": "2025-10-27T04:40:18Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2024-09-18T18:36:16Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2778",
+   "labels": [
+    "help output"
+   ],
+   "number": 2778,
+   "title": "Indicate multiple use options in help",
+   "updated_at": "2025-04-06T00:32:36Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 8,
+   "created_at": "2024-09-24T09:06:16Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2025-12-18T19:22:59Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2025-12-19T20:24:16Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-15T15:03:40Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-15T15:03:40Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-01-01T01:49:18Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3179,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-13T10:25:24Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3207,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-15T11:24:31Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-15T15:03:38Z",
+      "pr": 3431,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2779",
+   "labels": [
+    "docs",
+    "good first issue"
+   ],
+   "number": 2779,
+   "title": "Wrong error message when wrong multicharacter short option is passed",
+   "updated_at": "2026-02-13T10:25:24Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2024-09-27T01:48:13Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-10-29T09:49:03Z",
+      "kind": "closed",
+      "reason": "duplicate"
+     }
+    ],
+    "current": {
+     "closed_at": "2026-10-29T09:49:03Z",
+     "state": "closed",
+     "state_reason": "duplicate"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2781",
+   "labels": [],
+   "number": 2781,
+   "title": "[Feature Request] Allow to to emit colored click.secho() text to a pipeline.",
+   "updated_at": "2025-02-26T08:32:07Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2024-09-28T18:02:12Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2024-09-28T18:09:43Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 2784,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2783",
+   "labels": [
+    "parsing"
+   ],
+   "number": 2783,
+   "title": "Allow attaching dynamic parameters to contexts",
+   "updated_at": "2025-01-04T07:15:10Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-10-09T21:10:39Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-06-01T23:40:31Z",
+      "author_association": "NONE",
+      "merged_at": "2026-06-05T05:26:46Z",
+      "pr": 2,
+      "repository": "viraatdas/click",
+      "user_type": "Bot"
+     },
+     {
+      "at": "2026-06-07T17:13:51Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3567,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2786",
+   "labels": [
+    "bug"
+   ],
+   "number": 2786,
+   "title": "Multi-value options override the value returned from `callback` when not all specified",
+   "updated_at": "2025-04-06T00:25:12Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 7,
+   "created_at": "2024-10-21T16:46:04Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-29T07:01:43Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T07:01:42Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-02-14T03:27:27Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-29T07:01:41Z",
+      "pr": 3208,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-16T11:56:28Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3344,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2790",
+   "labels": [
+    "help output"
+   ],
+   "number": 2790,
+   "title": "Nested command option shadowing -h prints wrong suggestion",
+   "updated_at": "2026-02-14T03:27:32Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2024-11-07T13:14:40Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2801",
+   "labels": [
+    "docs"
+   ],
+   "number": 2801,
+   "title": "Invoking a command does not fail on missing arguments",
+   "updated_at": "2025-04-06T00:12:00Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2024-11-08T08:56:57Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-18T18:35:32Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-18T18:35:31Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2024-11-08T08:58:46Z",
+      "author_association": "MEMBER",
+      "merged_at": "2024-11-11T01:30:28Z",
+      "pr": 1015,
+      "repository": "koordinates/kart",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2802",
+   "labels": [
+    "bug"
+   ],
+   "number": 2802,
+   "title": "No typing info for `click.argument(...,  shell_complete=callable)`",
+   "updated_at": "2025-04-06T00:02:05Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2024-11-20T10:36:32Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-14T05:01:11Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-14T05:01:11Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-10T17:11:52Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-14T05:01:10Z",
+      "pr": 3256,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-14T16:56:53Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-20T17:27:35Z",
+      "pr": 424,
+      "repository": "plastic-labs/honcho",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-25T17:43:11Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-25T17:43:59Z",
+      "pr": 225,
+      "repository": "guibranco/progressbar",
+      "user_type": "Bot"
+     },
+     {
+      "at": "2026-06-29T11:53:52Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-06-29T12:11:46Z",
+      "pr": 238,
+      "repository": "guibranco/progressbar",
+      "user_type": "Bot"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2809",
+   "labels": [
+    "prompt"
+   ],
+   "number": 2809,
+   "title": "@click.Option with 'hide_input' = True (used for password) and custom 'type' parameter doesn't show custom error message.",
+   "updated_at": "2025-04-24T13:24:58Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 3,
+   "created_at": "2024-12-15T02:14:28Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-07-10T03:24:10Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-07-10T03:24:09Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-02-17T11:31:51Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 2859,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-03-24T06:11:40Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 1,
+      "repository": "whiterose911911911/click-auto-clones",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-03-24T06:11:43Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 2,
+      "repository": "whiterose911911911/click-auto-clones",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-03-24T06:11:46Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 3,
+      "repository": "whiterose911911911/click-auto-clones",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-03-24T06:11:49Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 4,
+      "repository": "whiterose911911911/click-auto-clones",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-03-24T06:11:52Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 5,
+      "repository": "whiterose911911911/click-auto-clones",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-07-08T12:19:11Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-07-10T03:24:09Z",
+      "pr": 3678,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2819",
+   "labels": [
+    "help output"
+   ],
+   "number": 2819,
+   "title": "help not resolving automatically",
+   "updated_at": "2025-08-03T05:18:21Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2024-12-15T06:49:16Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2823",
+   "labels": [],
+   "number": 2823,
+   "title": "Meta Issue for Project Opinions",
+   "updated_at": "2025-06-19T22:08:05Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 1,
+   "created_at": "2024-12-15T06:51:28Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2824",
+   "labels": [],
+   "number": 2824,
+   "title": "Opinion: Arguments should not be required for Variadics",
+   "updated_at": "2025-06-19T22:11:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2024-12-20T10:34:26Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-16T04:57:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-16T04:57:47Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2827",
+   "labels": [
+    "test runner"
+   ],
+   "number": 2827,
+   "title": "No stdout/stderr is captured with `invoke` during tests in combination with structlog",
+   "updated_at": "2025-06-08T22:11:34Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 15,
+   "created_at": "2025-01-04T06:55:05Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2834",
+   "labels": [
+    "docs",
+    "parsing"
+   ],
+   "number": 2834,
+   "title": "Meta Issue for Future Parser Changes",
+   "updated_at": "2025-11-20T05:17:10Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2025-01-06T08:03:54Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2835",
+   "labels": [
+    "docs",
+    "parsing"
+   ],
+   "number": 2835,
+   "title": "Document existing parser fully",
+   "updated_at": "2025-10-05T03:18:59Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2025-01-06T22:07:25Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-16T08:30:02Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-16T08:30:02Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-01-06T22:09:03Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 2837,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-13T18:18:01Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3262,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-09T09:45:58Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-16T08:23:20Z",
+      "pr": 3328,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2836",
+   "labels": [
+    "prompt"
+   ],
+   "number": 2836,
+   "title": "`show_default` as a string isn't used in prompts as the default shown",
+   "updated_at": "2025-04-05T23:56:42Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 1,
+   "created_at": "2025-01-08T07:42:03Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-31T22:39:43Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-31T22:39:42Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2839",
+   "labels": [
+    "docs"
+   ],
+   "number": 2839,
+   "title": "Docs Rewrite",
+   "updated_at": "2025-09-24T17:19:53Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-01-23T00:22:07Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-04-05T19:42:35Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3314,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-09T14:36:48Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3574,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-11T16:51:41Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3583,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-28T01:36:18Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 1,
+      "repository": "Dmao233/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-10-13T07:45:10Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-10-13T16:22:34Z",
+      "pr": 1,
+      "repository": "josephwibowo/click-handler-a30",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2847",
+   "labels": [
+    "bug"
+   ],
+   "number": 2847,
+   "title": "Long option completion with = broken",
+   "updated_at": "2025-08-03T05:18:15Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-02-05T08:57:03Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2853",
+   "labels": [],
+   "number": 2853,
+   "title": "The call stack is displayed when an exception is returned when an invalid parameter is displayed during command line association.",
+   "updated_at": "2025-02-07T06:49:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-03-04T05:59:19Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-16T08:19:55Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-16T08:19:55Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-04T10:53:30Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-16T08:06:04Z",
+      "pr": 3244,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-29T10:41:56Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-16T04:57:46Z",
+      "pr": 3391,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2865",
+   "labels": [
+    "test runner"
+   ],
+   "number": 2865,
+   "title": "CliRunner terminates with io.UnsupportedOperation when using faulthandler",
+   "updated_at": "2025-08-03T05:17:53Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 5,
+   "created_at": "2025-03-10T17:21:56Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T18:58:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T18:58:46Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-05-13T17:34:13Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-05-14T16:07:32Z",
+      "pr": 640,
+      "repository": "algorandfoundation/algokit-cli",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2868",
+   "labels": [],
+   "number": 2868,
+   "title": "Regression: `click.launch()` broken on Windows in version 8.1.8",
+   "updated_at": "2025-10-24T11:28:13Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-03-10T20:15:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-08-20T02:50:21Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-08-20T02:50:21Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-07-12T11:20:07Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3684,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-19T06:10:24Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-08-20T02:50:20Z",
+      "pr": 3781,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2869",
+   "labels": [
+    "typing"
+   ],
+   "number": 2869,
+   "title": "Support pathlib.Path in edit filename",
+   "updated_at": "2025-03-10T20:18:42Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-03-27T17:33:20Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-04-08T07:36:48Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 2880,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2875",
+   "labels": [
+    "TBD"
+   ],
+   "number": 2875,
+   "title": "Method used to build prompts under the hood does not allow for full format customization",
+   "updated_at": "2025-08-23T08:03:59Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 2,
+   "created_at": "2025-04-03T02:00:53Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-07-03T01:11:49Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-07-03T01:11:49Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-06T02:34:25Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3249,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2877",
+   "labels": [],
+   "number": 2877,
+   "title": "[Python forward compat] click.types.Path.covert: BytesWarning: Comparison between bytes and string",
+   "updated_at": "2026-01-16T18:42:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-04-05T16:27:00Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-16T08:28:39Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-16T08:28:39Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-05T18:53:01Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-16T08:28:18Z",
+      "pr": 3248,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2879",
+   "labels": [],
+   "number": 2879,
+   "title": "Reorder ParameterSource",
+   "updated_at": "2025-08-09T13:32:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-04-09T23:09:49Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-03-20T05:49:55Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-03-20T15:40:32Z",
+      "pr": 2351,
+      "repository": "pypa/pip-tools",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2881",
+   "labels": [
+    "TBD"
+   ],
+   "number": 2881,
+   "title": "Allow epilog without indentation.",
+   "updated_at": "2025-07-31T21:30:48Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-04-09T23:21:07Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2882",
+   "labels": [
+    "TBD"
+   ],
+   "number": 2882,
+   "title": "Add help string formatters that don't use escaped characters.",
+   "updated_at": "2025-04-11T06:26:19Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 28,
+   "created_at": "2025-04-16T06:02:12Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-22T03:46:39Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-22T03:46:39Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-04-23T05:40:26Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-04-24T18:14:11Z",
+      "pr": 2873,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-26T00:24:28Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 2947,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-26T05:18:50Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 2948,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-26T08:14:15Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-05-27T06:04:41Z",
+      "pr": 2949,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-05-28T08:44:49Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-06-02T03:32:38Z",
+      "pr": 2954,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-06-02T07:16:37Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-06-21T05:28:13Z",
+      "pr": 2960,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-06-17T10:56:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-06-22T05:28:38Z",
+      "pr": 2979,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-06-17T11:17:17Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-06-30T03:10:36Z",
+      "pr": 2980,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-06-27T05:52:21Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-07-31T06:08:57Z",
+      "pr": 2987,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-08-02T22:07:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-08-05T05:32:11Z",
+      "pr": 3026,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-08-10T04:31:23Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 3033,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-08-10T04:38:13Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-08-14T07:29:17Z",
+      "pr": 3034,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-08-16T08:29:24Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-09-13T06:03:38Z",
+      "pr": 3041,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-15T14:45:33Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-09-22T16:21:08Z",
+      "pr": 3061,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-15T23:45:27Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 3062,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-15T23:54:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-09-22T16:19:02Z",
+      "pr": 3063,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-26T02:23:27Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 3091,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-26T12:08:20Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-09-30T04:34:43Z",
+      "pr": 3092,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-09-26T21:45:29Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-09-30T05:00:36Z",
+      "pr": 3093,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-10-12T23:49:26Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-10-23T00:41:46Z",
+      "pr": 3106,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-11-13T11:58:48Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-11-18T07:08:26Z",
+      "pr": 3142,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-12-20T05:01:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-12-24T22:18:30Z",
+      "pr": 3171,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-17T18:37:10Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3214,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-03T06:19:18Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3241,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-04T03:46:20Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-16T08:12:44Z",
+      "pr": 3243,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-11T23:09:08Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-16T08:04:46Z",
+      "pr": 3259,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-12T00:16:29Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-13T02:42:47Z",
+      "pr": 3260,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-15T08:13:40Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-13T02:41:38Z",
+      "pr": 3267,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2886",
+   "labels": [
+    "docs",
+    "good first issue"
+   ],
+   "number": 2886,
+   "title": "Move current docs to myst",
+   "updated_at": "2026-02-20T01:23:26Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 4,
+   "created_at": "2025-05-11T13:11:03Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-22T03:43:45Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-05-22T03:47:24Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-29T06:16:59Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-29T06:16:59Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-10-02T16:04:33Z",
+      "author_association": "MEMBER",
+      "merged_at": "2025-08-05T01:29:56Z",
+      "pr": 425929,
+      "repository": "NixOS/nixpkgs",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-01-21T02:18:52Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3190,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-18T20:05:42Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-18T21:02:53Z",
+      "pr": 3470,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-22T09:46:48Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-29T06:26:27Z",
+      "pr": 3499,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-22T11:06:01Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-23T08:49:00Z",
+      "pr": 3500,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2899",
+   "labels": [
+    "test runner"
+   ],
+   "number": 2899,
+   "title": "running tests in parallel with `tox p` fails",
+   "updated_at": "2026-01-21T02:18:52Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 4,
+   "created_at": "2025-05-14T21:52:00Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/2917",
+   "labels": [
+    "github_actions",
+    "shell completion"
+   ],
+   "number": 2917,
+   "title": "Add e2e completion testing",
+   "updated_at": "2025-10-06T20:55:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-05-25T21:18:49Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-08-18T07:11:40Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-08-18T07:11:40Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-05-25T21:19:16Z",
+      "author_association": "NONE",
+      "merged_at": "2025-10-02T05:54:15Z",
+      "pr": 2944,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2943",
+   "labels": [],
+   "number": 2943,
+   "title": "_pipepager() fails with mutli-call binaries",
+   "updated_at": "2025-11-01T20:16:33Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 4,
+   "created_at": "2025-06-07T09:17:59Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-29T23:20:24Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T23:20:24Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-06-07T09:19:42Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-29T23:20:22Z",
+      "pr": 2969,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2968",
+   "labels": [
+    "prompt"
+   ],
+   "number": 2968,
+   "title": "backspace and line-wrapping acting strange on Linux",
+   "updated_at": "2025-06-19T22:48:19Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2025-06-21T05:05:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-28T07:30:47Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-28T07:30:46Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-19T00:21:25Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-28T07:30:45Z",
+      "pr": 3473,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2983",
+   "labels": [
+    "help output"
+   ],
+   "number": 2983,
+   "title": "Add help kwarg to argument parameter",
+   "updated_at": "2025-06-26T23:00:38Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 0,
+   "created_at": "2025-06-26T00:26:16Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-24T14:30:07Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-24T14:30:07Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-23T04:45:44Z",
+      "author_association": "MEMBER",
+      "merged_at": "2026-05-24T14:30:06Z",
+      "pr": 3505,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-07-08T10:35:45Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-07-08T10:40:43Z",
+      "pr": 3027,
+      "repository": "Kludex/uvicorn",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2986",
+   "labels": [
+    "help output",
+    "test runner"
+   ],
+   "number": 2986,
+   "title": "drop colorama",
+   "updated_at": "2025-09-26T16:47:50Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-07-04T10:50:30Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-01-01T13:52:24Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3180,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-19T23:55:27Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3276,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2992",
+   "labels": [],
+   "number": 2992,
+   "title": "Add output of get_usage() to get_info_dict()",
+   "updated_at": "2026-01-01T13:52:24Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-07-04T23:31:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2025-10-03T02:18:43Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2025-10-03T02:37:17Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-19T16:47:11Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T16:47:11Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-02-19T09:00:09Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3216,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-23T03:06:01Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3281,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-18T17:43:51Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-04-18T17:49:37Z",
+      "pr": 187,
+      "repository": "wireddown/qtpy-datalogger",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-20T08:19:59Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-04-24T10:41:55Z",
+      "pr": 1,
+      "repository": "OfekDanny/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-19T16:39:10Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-19T16:46:31Z",
+      "pr": 3478,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/2994",
+   "labels": [
+    "windows"
+   ],
+   "number": 2994,
+   "title": "`launch()` cannot locate files with spaces in the name on Windows",
+   "updated_at": "2026-02-19T09:00:09Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 9,
+   "created_at": "2025-07-22T16:18:36Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2025-07-25T08:32:08Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2025-07-26T01:48:27Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     }
+    ],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": "reopened"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3010",
+   "labels": [],
+   "number": 3010,
+   "title": "Impossible to get single newlines in help text",
+   "updated_at": "2025-09-06T19:48:54Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 0,
+   "created_at": "2025-07-25T10:03:55Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-22T03:40:49Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-22T03:40:49Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-07-25T12:24:26Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3017,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-19T23:41:00Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3275,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-18T21:26:13Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-19T00:03:26Z",
+      "pr": 3471,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3015",
+   "labels": [
+    "shell completion"
+   ],
+   "number": 3015,
+   "title": "Choice autocomplete incorrect for enums",
+   "updated_at": "2025-11-18T11:36:22Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2025-07-25T11:40:30Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3016",
+   "labels": [],
+   "number": 3016,
+   "title": "Improve text wrapping",
+   "updated_at": "2025-09-06T19:48:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-07-30T08:30:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-06-07T20:27:15Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3568,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-06-26T17:50:35Z",
+      "author_association": "OWNER",
+      "merged_at": "2026-06-26T20:58:17Z",
+      "pr": 312,
+      "repository": "stuagano/apx-agent",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3022",
+   "labels": [],
+   "number": 3022,
+   "title": "Support `FORCE_COLOR` and `NO_COLOR` environment variables",
+   "updated_at": "2026-02-19T01:43:45Z"
+  },
+  {
+   "author_association": "COLLABORATOR",
+   "comments": 5,
+   "created_at": "2025-08-13T12:01:19Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-08-13T12:02:37Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2025-08-24T06:56:13Z",
+      "pr": 3030,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-29T10:30:29Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-09-01T18:21:58Z",
+      "pr": 3808,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3036",
+   "labels": [],
+   "number": 3036,
+   "title": "Add support for `set` and `frozenset` (and `dict`?) as native Click types",
+   "updated_at": "2025-10-08T09:33:00Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-08-19T05:35:06Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-29T23:37:33Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T23:37:33Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-10-26T16:10:04Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-29T23:37:32Z",
+      "pr": 3126,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3043",
+   "labels": [
+    "shell completion"
+   ],
+   "number": 3043,
+   "title": "Multi-line help text is not handled correctly in fish",
+   "updated_at": "2025-10-26T16:10:04Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-08-21T03:44:29Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T23:55:04Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T23:55:04Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-01-14T03:56:31Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-01-14T03:56:41Z",
+      "pr": 319,
+      "repository": "ewels/rich-click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3044",
+   "labels": [
+    "TBD"
+   ],
+   "number": 3044,
+   "title": "`decorators.pyi` interface file?",
+   "updated_at": "2026-01-14T03:56:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 2,
+   "created_at": "2025-08-21T18:21:47Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T23:59:28Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T23:59:28Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3045",
+   "labels": [
+    "TBD",
+    "parsing"
+   ],
+   "number": 3045,
+   "title": "Allow optional argument(s) to precede mandatory argument(s)",
+   "updated_at": "2025-08-24T07:18:12Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-09-12T08:46:28Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T23:57:51Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-05-22T14:24:50Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-05-27T19:23:21Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-27T19:23:21Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-19T00:38:35Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3271,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-23T05:31:01Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-27T16:23:34Z",
+      "pr": 3507,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3059",
+   "labels": [
+    "help output"
+   ],
+   "number": 3059,
+   "title": "With invoke_without_command set commands are not marked as optional",
+   "updated_at": "2025-09-14T03:07:42Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-09-19T04:56:42Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-18T17:35:20Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-18T17:35:20Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-09-19T15:04:12Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2025-10-30T02:11:51Z",
+      "pr": 3072,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3067",
+   "labels": [
+    "typing"
+   ],
+   "number": 3067,
+   "title": "`pyright --verifytypes` reports incomplete coverage",
+   "updated_at": "2025-09-19T21:44:50Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 13,
+   "created_at": "2025-09-21T18:40:56Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2025-10-19T05:20:10Z",
+      "author_association": "MEMBER",
+      "merged_at": "2025-10-20T18:46:20Z",
+      "pr": 3112,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-11-27T17:21:38Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": null,
+      "pr": 3160,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-12-19T18:48:39Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3170,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-12-20T15:00:50Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3173,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3076",
+   "labels": [
+    "docs",
+    "good first issue"
+   ],
+   "number": 3076,
+   "title": "Introduction to the command line tutorial",
+   "updated_at": "2025-12-20T15:00:50Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 3,
+   "created_at": "2025-09-21T18:48:41Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-02-17T08:24:46Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3210,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-17T22:38:57Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3269,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-15T12:07:40Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3432,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-18T00:04:47Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3448,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-09-17T07:00:57Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 1,
+      "repository": "rohitbarhate111-commits/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3077",
+   "labels": [
+    "docs",
+    "good first issue"
+   ],
+   "number": 3077,
+   "title": "Add glossary of terms to click reference docs",
+   "updated_at": "2026-02-17T08:24:46Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 10,
+   "created_at": "2025-09-22T20:35:24Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-05-18T23:46:46Z",
+      "author_association": "NONE",
+      "merged_at": "2026-05-23T05:25:38Z",
+      "pr": 3472,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3081",
+   "labels": [
+    "docs",
+    "good first issue"
+   ],
+   "number": 3081,
+   "title": "Add Screenshot workflow",
+   "updated_at": "2026-02-25T12:51:49Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 2,
+   "created_at": "2025-09-24T20:51:05Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3089",
+   "labels": [
+    "help output"
+   ],
+   "number": 3089,
+   "title": "Help (--help) page customization high level design",
+   "updated_at": "2025-10-26T22:04:56Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 0,
+   "created_at": "2025-09-27T03:57:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": [
+     {
+      "at": "2026-04-07T18:28:35Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3326,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3094",
+   "labels": [],
+   "number": 3094,
+   "title": "Document help page generation for maintainers",
+   "updated_at": "2025-09-27T03:57:02Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 0,
+   "created_at": "2025-09-28T20:35:35Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3097",
+   "labels": [],
+   "number": 3097,
+   "title": "WIP: Help page customization low level api",
+   "updated_at": "2025-10-26T21:59:29Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 9,
+   "created_at": "2025-09-30T05:07:18Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-07-17T19:24:59Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-07-17T19:24:59Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-07-17T12:46:30Z",
+      "author_association": "MEMBER",
+      "merged_at": "2026-07-17T19:24:58Z",
+      "pr": 3695,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3099",
+   "labels": [],
+   "number": 3099,
+   "title": "Are unimported utilities intentional",
+   "updated_at": "2025-12-16T00:02:31Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 1,
+   "created_at": "2025-10-11T22:14:26Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-08T13:47:49Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-08T13:47:49Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-02-17T09:06:27Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-08T13:47:48Z",
+      "pr": 3211,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3105",
+   "labels": [
+    "help output"
+   ],
+   "number": 3105,
+   "title": "FuncParamType should use ValueError for self.fail(message)",
+   "updated_at": "2026-02-17T09:06:27Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 11,
+   "created_at": "2025-10-13T12:17:36Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-29T23:53:16Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T23:53:16Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-02-01T15:59:08Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 4058,
+      "repository": "mkdocs/mkdocs",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-23T16:10:38Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-04-29T23:53:15Z",
+      "pr": 3228,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-30T07:08:08Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 525,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3107",
+   "labels": [
+    "docs",
+    "f:completion",
+    "help output"
+   ],
+   "number": 3107,
+   "title": "Suggest \"Did you mean\" for misspelled commands",
+   "updated_at": "2026-02-23T16:10:38Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 19,
+   "created_at": "2025-10-16T17:08:16Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-01T16:20:13Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-01T16:20:13Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2025-11-12T23:21:04Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3140,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2025-11-19T06:16:05Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-12T03:00:13Z",
+      "pr": 3151,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-01-13T17:59:57Z",
+      "author_association": "MEMBER",
+      "merged_at": "2026-01-14T01:52:56Z",
+      "pr": 4931,
+      "repository": "catalyst-cooperative/pudl",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-28T08:45:59Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-02-28T22:21:58Z",
+      "pr": 3139,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3110",
+   "labels": [
+    "test runner"
+   ],
+   "number": 3110,
+   "title": "CliRunner.invoke raises a \"ValueError: I/O operation on closed file\"",
+   "updated_at": "2026-02-28T09:24:25Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 6,
+   "created_at": "2025-10-16T18:12:54Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-16T08:19:56Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-16T08:19:55Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-03-02T07:53:51Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-16T08:19:35Z",
+      "pr": 3239,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-04-05T02:12:51Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3308,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-05-07T07:53:55Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-05-16T04:44:49Z",
+      "pr": 3404,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3111",
+   "labels": [
+    "docs"
+   ],
+   "number": 3111,
+   "title": "New \"default\" behaviour in Click 8.3.x is broken for negative boolean flags",
+   "updated_at": "2026-01-18T07:19:28Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 5,
+   "created_at": "2025-10-22T14:11:39Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-02T04:48:52Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-02T04:48:52Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-01-24T12:02:08Z",
+      "author_association": "OWNER",
+      "merged_at": null,
+      "pr": 1,
+      "repository": "daniell-olaitan/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-17T12:39:59Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3213,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-21T14:13:41Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-03-01T23:41:05Z",
+      "pr": 3225,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-03-02T07:53:51Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-04-16T08:19:35Z",
+      "pr": 3239,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3121",
+   "labels": [
+    "f:parameters"
+   ],
+   "number": 3121,
+   "title": "Using a class as a `flag_value` causes the default to be instantiated in click 8.3.0",
+   "updated_at": "2026-02-28T19:47:46Z"
+  },
+  {
+   "author_association": "NONE",
+   "comments": 3,
+   "created_at": "2025-11-04T10:56:19Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2025-11-04T16:12:56Z",
+      "kind": "closed",
+      "reason": "not_planned"
+     },
+     {
+      "at": "2025-11-08T04:08:57Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-09-01T10:12:57Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-09-01T10:12:56Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-06-07T22:01:12Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3569,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-08-31T20:01:50Z",
+      "author_association": "COLLABORATOR",
+      "merged_at": "2026-08-31T23:39:08Z",
+      "pr": 3819,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3135",
+   "labels": [
+    "docs"
+   ],
+   "number": 3135,
+   "title": "Add support for partial shell completion options like in Path",
+   "updated_at": "2025-11-08T04:13:17Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 7,
+   "created_at": "2025-11-22T18:57:01Z",
+   "evidence": {
+    "closes": [],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": null
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3154",
+   "labels": [],
+   "number": 3154,
+   "title": "Click 9.0",
+   "updated_at": "2026-01-14T09:12:18Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 0,
+   "created_at": "2025-11-22T19:08:51Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T23:49:56Z",
+      "kind": "closed",
+      "reason": null
+     },
+     {
+      "at": "2026-05-22T15:01:31Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     }
+    ],
+    "current": {
+     "closed_at": null,
+     "state": "open",
+     "state_reason": "reopened"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3156",
+   "labels": [],
+   "number": 3156,
+   "title": "Remove previously deprecated code",
+   "updated_at": "2025-11-22T19:08:52Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 0,
+   "created_at": "2025-11-22T19:15:31Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-04-19T09:04:01Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-19T09:04:01Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-04-19T10:14:54Z",
+      "author_association": "MEMBER",
+      "merged_at": "2025-12-31T06:49:31Z",
+      "pr": 3177,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3157",
+   "labels": [
+    "test runner"
+   ],
+   "number": 3157,
+   "title": "Add flask test to click",
+   "updated_at": "2025-11-22T19:15:32Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 0,
+   "created_at": "2025-11-28T02:01:51Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-05-19T23:16:44Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-05-19T23:16:44Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-05-19T22:44:35Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-05-19T23:16:11Z",
+      "pr": 3483,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3161",
+   "labels": [],
+   "number": 3161,
+   "title": "[maintenance] Lint `import typing as t`",
+   "updated_at": "2025-11-28T02:01:51Z"
+  },
+  {
+   "author_association": "CONTRIBUTOR",
+   "comments": 1,
+   "created_at": "2025-12-03T21:14:20Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-01-27T10:51:16Z",
+      "kind": "closed",
+      "reason": "duplicate"
+     },
+     {
+      "at": "2026-01-27T14:53:29Z",
+      "kind": "reopened",
+      "reason": "reopened"
+     },
+     {
+      "at": "2026-04-29T23:25:40Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-04-29T23:25:39Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": []
+   },
+   "html_url": "https://github.com/pallets/click/issues/3164",
+   "labels": [],
+   "number": 3164,
+   "title": "click.launch() does not work for (non local) urls on Windows.",
+   "updated_at": "2026-01-27T15:32:55Z"
+  },
+  {
+   "author_association": "MEMBER",
+   "comments": 11,
+   "created_at": "2025-12-25T21:42:24Z",
+   "evidence": {
+    "closes": [
+     {
+      "at": "2026-03-12T01:59:49Z",
+      "kind": "closed",
+      "reason": null
+     }
+    ],
+    "current": {
+     "closed_at": "2026-03-12T01:59:49Z",
+     "state": "closed",
+     "state_reason": "completed"
+    },
+    "references": [
+     {
+      "at": "2026-01-12T18:40:06Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3184,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-01-22T00:54:04Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3191,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-01-22T15:09:30Z",
+      "author_association": "CONTRIBUTOR",
+      "merged_at": "2026-03-15T05:01:45Z",
+      "pr": 3192,
+      "repository": "pallets/click",
+      "user_type": "User"
+     },
+     {
+      "at": "2026-02-25T11:55:24Z",
+      "author_association": "NONE",
+      "merged_at": null,
+      "pr": 3230,
+      "repository": "pallets/click",
+      "user_type": "User"
+     }
+    ]
+   },
+   "html_url": "https://github.com/pallets/click/issues/3175",
+   "labels": [
+    "docs"
+   ],
+   "number": 3175,
+   "title": "Improve documentation",
+   "updated_at": "2026-02-25T13:43:06Z"
+  }
+ ],
+ "notes": [
+  "2 issues were closed at the cutoff (reopened only after it) and were dropped"
+ ],
+ "open_prs_at_cutoff": [
+  {
+   "created_at": "2020-06-02T02:12:53Z",
+   "html_url": "https://github.com/pallets/click/pull/1572",
+   "membership_verified": false,
+   "number": 1572,
+   "title": "Add file-like pager: `click.get_pager_file()`"
+  },
+  {
+   "created_at": "2024-02-27T17:48:56Z",
+   "html_url": "https://github.com/pallets/click/pull/2681",
+   "membership_verified": true,
+   "number": 2681,
+   "title": "Draft: add python_version to version_option available message formats"
+  },
+  {
+   "created_at": "2024-05-21T20:49:52Z",
+   "html_url": "https://github.com/pallets/click/pull/2731",
+   "membership_verified": false,
+   "number": 2731,
+   "title": "Add parametrized tests for `should_strip_ansi`"
+  },
+  {
+   "created_at": "2024-09-28T18:09:42Z",
+   "html_url": "https://github.com/pallets/click/pull/2784",
+   "membership_verified": true,
+   "number": 2784,
+   "title": "Allow adding dynamic parameters to every Context"
+  },
+  {
+   "created_at": "2024-11-09T17:05:10Z",
+   "html_url": "https://github.com/pallets/click/pull/2805",
+   "membership_verified": false,
+   "number": 2805,
+   "title": "`Parameter` typing improvements"
+  },
+  {
+   "created_at": "2025-03-01T16:52:15Z",
+   "html_url": "https://github.com/pallets/click/pull/2864",
+   "membership_verified": false,
+   "number": 2864,
+   "title": "Improve internationalization"
+  },
+  {
+   "created_at": "2025-04-08T07:36:47Z",
+   "html_url": "https://github.com/pallets/click/pull/2880",
+   "membership_verified": true,
+   "number": 2880,
+   "title": "Add format customization flow to `click.prompt` and `click.confirm` via `PromptBuilder` class"
+  },
+  {
+   "created_at": "2025-05-12T02:44:03Z",
+   "html_url": "https://github.com/pallets/click/pull/2902",
+   "membership_verified": false,
+   "number": 2902,
+   "title": "Localisation of more strings"
+  },
+  {
+   "created_at": "2025-05-24T21:11:43Z",
+   "html_url": "https://github.com/pallets/click/pull/2942",
+   "membership_verified": false,
+   "number": 2942,
+   "title": "Add workflow to automatically close pull requests from organizations forks"
+  },
+  {
+   "created_at": "2025-06-07T09:19:41Z",
+   "html_url": "https://github.com/pallets/click/pull/2969",
+   "membership_verified": true,
+   "number": 2969,
+   "title": "Fix readline backspace/line-wrapping on linux"
+  },
+  {
+   "created_at": "2025-08-27T06:41:59Z",
+   "html_url": "https://github.com/pallets/click/pull/3051",
+   "membership_verified": false,
+   "number": 3051,
+   "title": "WIP: Rough out the idea of reference tables for kwargs and situations"
+  },
+  {
+   "created_at": "2025-10-26T16:10:03Z",
+   "html_url": "https://github.com/pallets/click/pull/3126",
+   "membership_verified": true,
+   "number": 3126,
+   "title": "Fix: Ensure fish completion handles multiline help strings correctly"
+  },
+  {
+   "created_at": "2025-11-19T06:12:04Z",
+   "html_url": "https://github.com/pallets/click/pull/3151",
+   "membership_verified": true,
+   "number": 3151,
+   "title": "Randomized and parallel tests + fix leaky `test_echo_via_pager`"
+  },
+  {
+   "created_at": "2025-11-27T17:21:37Z",
+   "html_url": "https://github.com/pallets/click/pull/3160",
+   "membership_verified": true,
+   "number": 3160,
+   "title": "Add Intro to command line turotial"
+  },
+  {
+   "created_at": "2025-11-29T09:26:51Z",
+   "html_url": "https://github.com/pallets/click/pull/3162",
+   "membership_verified": false,
+   "number": 3162,
+   "title": "Fix the indentation size in code snippets"
+  },
+  {
+   "created_at": "2025-12-07T16:22:32Z",
+   "html_url": "https://github.com/pallets/click/pull/3165",
+   "membership_verified": true,
+   "number": 3165,
+   "title": "Support show_default string in prompts"
+  },
+  {
+   "created_at": "2025-12-20T15:00:49Z",
+   "html_url": "https://github.com/pallets/click/pull/3173",
+   "membership_verified": false,
+   "number": 3173,
+   "title": "Docs cli update improvement"
+  },
+  {
+   "created_at": "2026-01-01T01:49:17Z",
+   "html_url": "https://github.com/pallets/click/pull/3179",
+   "membership_verified": false,
+   "number": 3179,
+   "title": "docs: add section on combining short options"
+  },
+  {
+   "created_at": "2026-01-15T10:00:55Z",
+   "html_url": "https://github.com/pallets/click/pull/3186",
+   "membership_verified": false,
+   "number": 3186,
+   "title": "fix: `_termui_impl.open_url()` \u2014 'start' on Windows is a cmd built-in, not an executable"
+  },
+  {
+   "created_at": "2026-01-22T00:54:02Z",
+   "html_url": "https://github.com/pallets/click/pull/3191",
+   "membership_verified": true,
+   "number": 3191,
+   "title": "Clarify option decorator argument wording"
+  },
+  {
+   "created_at": "2026-01-22T15:09:28Z",
+   "html_url": "https://github.com/pallets/click/pull/3192",
+   "membership_verified": false,
+   "number": 3192,
+   "title": "revise 'Options' documentation"
+  },
+  {
+   "created_at": "2026-02-14T03:27:26Z",
+   "html_url": "https://github.com/pallets/click/pull/3208",
+   "membership_verified": true,
+   "number": 3208,
+   "title": "fix help hint showing shadowed option name"
+  },
+  {
+   "created_at": "2026-02-17T08:24:44Z",
+   "html_url": "https://github.com/pallets/click/pull/3210",
+   "membership_verified": true,
+   "number": 3210,
+   "title": "Add glossary of terms to documentation"
+  },
+  {
+   "created_at": "2026-02-17T09:06:26Z",
+   "html_url": "https://github.com/pallets/click/pull/3211",
+   "membership_verified": true,
+   "number": 3211,
+   "title": "FuncParamType should use ValueError message in self.fail()"
+  },
+  {
+   "created_at": "2026-02-21T14:13:40Z",
+   "html_url": "https://github.com/pallets/click/pull/3225",
+   "membership_verified": true,
+   "number": 3225,
+   "title": "Fix callable ``flag_value`` being instantiated when used as a default"
+  },
+  {
+   "created_at": "2026-02-23T16:10:36Z",
+   "html_url": "https://github.com/pallets/click/pull/3228",
+   "membership_verified": true,
+   "number": 3228,
+   "title": "Add NoSuchCommand exception with suggestions for misspelled commands"
+  },
+  {
+   "created_at": "2026-02-28T12:47:26Z",
+   "html_url": "https://github.com/pallets/click/pull/3235",
+   "membership_verified": false,
+   "number": 3235,
+   "title": "Allow debugger interactions in tests"
+  }
+ ],
+ "provenance": "Public GitHub metadata (issue and PR titles, label names, timestamps, author associations, file paths) with source URLs for attribution; no bodies or logins. Content rights remain with their authors (GitHub Terms of Service); this is not a licence grant and the harness MIT licence does not cover it.",
+ "reads": 148,
+ "repository": "pallets/click",
+ "source": {
+  "api": "https://api.github.com",
+  "repository_url": "https://github.com/pallets/click"
+ },
+ "tree_paths": [
+  ".devcontainer/devcontainer.json",
+  ".devcontainer/on-create-command.sh",
+  ".editorconfig",
+  ".github/ISSUE_TEMPLATE/bug-report.md",
+  ".github/ISSUE_TEMPLATE/config.yml",
+  ".github/ISSUE_TEMPLATE/feature-request.md",
+  ".github/pull_request_template.md",
+  ".github/workflows/lock.yaml",
+  ".github/workflows/pre-commit.yaml",
+  ".github/workflows/publish.yaml",
+  ".github/workflows/test-flask.yaml",
+  ".github/workflows/tests.yaml",
+  ".gitignore",
+  ".pre-commit-config.yaml",
+  ".readthedocs.yaml",
+  "CHANGES.rst",
+  "LICENSE.txt",
+  "README.md",
+  "docs/_static/click-icon.svg",
+  "docs/_static/click-logo.svg",
+  "docs/_static/click-name.svg",
+  "docs/advanced.md",
+  "docs/api.md",
+  "docs/arguments.rst",
+  "docs/changes.rst",
+  "docs/click-concepts.rst",
+  "docs/command-line-reference.md",
+  "docs/commands-and-groups.rst",
+  "docs/commands.rst",
+  "docs/complex.md",
+  "docs/conf.py",
+  "docs/contrib.md",
+  "docs/design-opinions.md",
+  "docs/documentation.md",
+  "docs/entry-points.md",
+  "docs/exceptions.md",
+  "docs/extending-click.md",
+  "docs/faqs.md",
+  "docs/handling-files.md",
+  "docs/index.rst",
+  "docs/license.md",
+  "docs/option-decorators.md",
+  "docs/options.md",
+  "docs/parameter-types.md",
+  "docs/parameters.md",
+  "docs/prompts.md",
+  "docs/quickstart.md",
+  "docs/setuptools.md",
+  "docs/shell-completion.md",
+  "docs/support-multiple-versions.md",
+  "docs/testing.md",
+  "docs/unicode-support.md",
+  "docs/upgrade-guides.md",
+  "docs/utils.md",
+  "docs/virtualenv.md",
+  "docs/why.md",
+  "docs/wincmd.md",
+  "examples/README",
+  "examples/aliases/README",
+  "examples/aliases/aliases.ini",
+  "examples/aliases/aliases.py",
+  "examples/aliases/pyproject.toml",
+  "examples/colors/README",
+  "examples/colors/colors.py",
+  "examples/colors/pyproject.toml",
+  "examples/completion/README",
+  "examples/completion/completion.py",
+  "examples/completion/pyproject.toml",
+  "examples/complex/README",
+  "examples/complex/complex/__init__.py",
+  "examples/complex/complex/cli.py",
+  "examples/complex/complex/commands/__init__.py",
+  "examples/complex/complex/commands/cmd_init.py",
+  "examples/complex/complex/commands/cmd_status.py",
+  "examples/complex/pyproject.toml",
+  "examples/imagepipe/.gitignore",
+  "examples/imagepipe/README",
+  "examples/imagepipe/example01.jpg",
+  "examples/imagepipe/example02.jpg",
+  "examples/imagepipe/imagepipe.py",
+  "examples/imagepipe/pyproject.toml",
+  "examples/inout/README",
+  "examples/inout/inout.py",
+  "examples/inout/pyproject.toml",
+  "examples/naval/README",
+  "examples/naval/naval.py",
+  "examples/naval/pyproject.toml",
+  "examples/repo/README",
+  "examples/repo/pyproject.toml",
+  "examples/repo/repo.py",
+  "examples/termui/README",
+  "examples/termui/pyproject.toml",
+  "examples/termui/termui.py",
+  "examples/validation/README",
+  "examples/validation/pyproject.toml",
+  "examples/validation/validation.py",
+  "pyproject.toml",
+  "src/click/__init__.py",
+  "src/click/_compat.py",
+  "src/click/_termui_impl.py",
+  "src/click/_textwrap.py",
+  "src/click/_utils.py",
+  "src/click/_winconsole.py",
+  "src/click/core.py",
+  "src/click/decorators.py",
+  "src/click/exceptions.py",
+  "src/click/formatting.py",
+  "src/click/globals.py",
+  "src/click/parser.py",
+  "src/click/py.typed",
+  "src/click/shell_completion.py",
+  "src/click/termui.py",
+  "src/click/testing.py",
+  "src/click/types.py",
+  "src/click/utils.py",
+  "tests/conftest.py",
+  "tests/test_arguments.py",
+  "tests/test_basic.py",
+  "tests/test_chain.py",
+  "tests/test_command_decorators.py",
+  "tests/test_commands.py",
+  "tests/test_compat.py",
+  "tests/test_context.py",
+  "tests/test_custom_classes.py",
+  "tests/test_defaults.py",
+  "tests/test_formatting.py",
+  "tests/test_imports.py",
+  "tests/test_info_dict.py",
+  "tests/test_normalization.py",
+  "tests/test_options.py",
+  "tests/test_parser.py",
+  "tests/test_shell_completion.py",
+  "tests/test_stream_lifecycle.py",
+  "tests/test_termui.py",
+  "tests/test_testing.py",
+  "tests/test_types.py",
+  "tests/test_utils.py",
+  "tests/typing/typing_aliased_group.py",
+  "tests/typing/typing_confirmation_option.py",
+  "tests/typing/typing_group_kw_options.py",
+  "tests/typing/typing_help_option.py",
+  "tests/typing/typing_options.py",
+  "tests/typing/typing_password_option.py",
+  "tests/typing/typing_progressbar.py",
+  "tests/typing/typing_simple_example.py",
+  "tests/typing/typing_version_option.py",
+  "uv.lock"
+ ],
+ "tree_truncated": false
+}
