@@ -165,11 +165,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
                 errors.append('Source changed; refresh and review contract: ' + key)
         if source['policy_sha256'] != authorization.policy_hash(current['provenance']):
             errors.append('Source policy state/content changed; refresh and review contract')
-        comparison = core.require(client.request('repos/' + source['repository'] + '/compare/' +
-                                  current['source']['commit'] + '...' + source['commit']), dict, 'reviewed base comparison')
-        if comparison.get('status') not in ('behind', 'identical'):
+        status = core.compare_relation(client, source['repository'], current['source']['commit'], source['commit'])
+        if status not in ('behind', 'identical'):
             errors.append('Reviewed source commit is not in current source default-branch history: ' +
-                          core.base_relation(task, source['commit'], current['source']['commit'], comparison.get('status')))
+                          core.base_relation(task, source['commit'], current['source']['commit'], status))
         live_duplicates = [dict(item, repository=source['repository']) for item in current['duplicates']]
     except core.ProtocolError as exc:
         errors.append('Live GitHub refresh failed: ' + str(exc))

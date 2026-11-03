@@ -1072,6 +1072,33 @@ def scope_violations(scope, paths):
     return violations
 
 
+_COMPARE_SHAPES = {  # status: (ahead_by > 0, behind_by > 0, merge base); GitHub compares base...head
+    'identical': (False, False, 'base'), 'ahead': (True, False, 'base'),
+    'behind': (False, True, 'head'), 'diverged': (True, True, None)}
+
+
+def compare_relation(client, repository, base, head):
+    """The status of compare/{base}...{head}, accepted only when the response proves it (FR1-01): the echoed base
+    commit, a merge base consistent with the status, and non-negative counters that agree with it."""
+    data = client.request(f'repos/{repository}/compare/{base}...{head}')
+    shape = _COMPARE_SHAPES.get(data.get('status')) if isinstance(data, dict) else None
+    counters = [data.get(key) for key in ('ahead_by', 'behind_by', 'total_commits')] if shape else []
+    merge = data.get('merge_base_commit') if shape else None
+    echoed = data.get('base_commit') if shape else None
+    if (shape is None or any(type(value) is not int or value < 0 for value in counters) or
+            not isinstance(merge, dict) or not isinstance(echoed, dict) or echoed.get('sha') != base or
+            not (isinstance(merge.get('sha'), str) and SHA.fullmatch(merge['sha']))):
+        raise ProtocolError('api_shape', 'Inconsistent or partial GitHub commit comparison')
+    ahead, behind, total = counters
+    expected_merge = {'base': base, 'head': head, None: None}[shape[2]]
+    if ((ahead > 0) != shape[0] or (behind > 0) != shape[1] or total != ahead or
+            (expected_merge is not None and merge['sha'] != expected_merge) or
+            (shape[2] is None and merge['sha'] in (base, head)) or
+            (data['status'] == 'identical' and base != head)):
+        raise ProtocolError('api_shape', 'Inconsistent or partial GitHub commit comparison')
+    return data['status']
+
+
 def base_relation(task, base, tip, status=None):
     """Names the offending base and what it was compared with; the SHAs are schema/API-validated, the rest sanitized."""
     where = f'{safe_text(task["source"]["repository"], 200)} default branch {safe_text(task["source"]["default_branch"], 200)} at {tip}'
@@ -1213,13 +1240,12 @@ def check_evidence(task, evidence, directory, digest, *, current_commit=None, cl
         errors.append('Evidence base requires a current authenticated source snapshot')
     else:
         try:
-            comparison = require(client.request('repos/' + task['source']['repository'] + '/compare/' +
-                                                 current_commit + '...' + evidence['base_commit']), dict, 'base comparison')
+            status = compare_relation(client, task['source']['repository'], current_commit, evidence['base_commit'])
             # GitHub compares HEAD (evidence base) against BASE (observed upstream tip).
             # Only behind/identical proves the evidence base belongs to upstream history.
-            if comparison.get('status') not in ('behind', 'identical'):
+            if status not in ('behind', 'identical'):
                 errors.append('Evidence base is not in current source default-branch history: ' +
-                              base_relation(task, evidence['base_commit'], current_commit, comparison.get('status')))
+                              base_relation(task, evidence['base_commit'], current_commit, status))
         except ProtocolError as exc:
             errors.append('Could not authenticate evidence base against source default-branch history: ' +
                           base_relation(task, evidence['base_commit'], current_commit) + ': ' + str(exc))

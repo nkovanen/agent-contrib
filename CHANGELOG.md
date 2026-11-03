@@ -222,6 +222,11 @@ channel or runtime model provider is added.
 
 ### Security
 
+- A GitHub comparison counts as a history proof only when its response proves
+  the status: the echoed base commit, a merge base consistent with the status,
+  and non-negative `ahead_by`/`behind_by`/`total_commits` that agree with it.
+  A bare or contradictory `status` used to authenticate the reviewed source
+  commit and the evidence base (FR1-01).
 - Scope judges each changed symlink by where it points (G-08), in `verify`
   evidence checks and `scope-check`. The committed (or staged, or worktree)
   target is read without following it and resolved lexically from the link's
@@ -357,6 +362,8 @@ channel or runtime model provider is added.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.
   - An index with assume-unchanged or skip-worktree entries, including a sparse
     checkout, now fails with `index_flags`.
+  - A partial or contradictory GitHub comparison of the evidence base now
+    fails as unauthenticated instead of passing on its `status` alone.
   - A checkout with the Git config keys listed under Security fails with
     `unsafe_git_config`.
   - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
