@@ -1,6 +1,6 @@
 # Policy awareness v2: design (rev3)
 
-- Status: S1 implemented on `rsi/policy-v2` (see §8); later slices proposed
+- Status: S1 and S3 implemented in the v0.3.0 candidate (see §8); S2 and later slices proposed
 - Date: 2026-11-02
 - Base: `rsi/policy-v2` off 47c80a1
 - Revision history:
