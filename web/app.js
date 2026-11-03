@@ -73,7 +73,7 @@ $('close-detail').addEventListener('click',() => $('jar-detail').close());
 $('jar-detail').addEventListener('close',() => lastOpener?.focus());
 $('search').addEventListener('input',render); $('state').addEventListener('change',render);
 $('clear-filters').addEventListener('click',() => { $('search').value=''; $('state').value='all'; render(); $('search').focus(); });
-function restoreDemo() { ++importSequence; reports=demo(); isDemo=true; $('dataset-label').textContent='FICTIONAL DEMO'; $('dataset-description').textContent='Sample projects to explore the flow. No real invitations or endorsements.'; $('reset-demo').hidden=true; $('snapshot').value=''; $('import-status').textContent='Demo restored. No imported data retained.'; $('import-status').classList.remove('error'); render(); }
+function restoreDemo() { $('import-errors').textContent=''; ++importSequence; reports=demo(); isDemo=true; $('dataset-label').textContent='FICTIONAL DEMO'; $('dataset-description').textContent='Sample projects to explore the flow. No real invitations or endorsements.'; $('reset-demo').hidden=true; $('snapshot').value=''; $('import-status').textContent='Demo restored. No imported data retained.'; $('import-status').classList.remove('error'); render(); }
 $('reset-demo').addEventListener('click',restoreDemo);
 let importSequence = 0;
 async function importFile(file) {
@@ -83,8 +83,10 @@ async function importFile(file) {
     if (!file || file.size > model.MAX_BYTES || !/\.json$/i.test(file.name)) throw new Error('Choose one .json file of at most 1 MiB.');
     const text = new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer());
     const snapshot = model.parseSnapshot(text), next = snapshot.reports; if (sequence !== importSequence) return;
-    reports=next; isDemo=false; $('dataset-label').textContent='LOCAL SNAPSHOT'; $('dataset-description').textContent=(snapshot.complete ? 'Discovery coverage reported complete. ' : 'Discovery incomplete — this collection may omit repositories. ')+'Unverified observations, never live approval.'; $('reset-demo').hidden=false;
-    $('search').value=''; $('state').value='all'; render(); $('import-status').textContent=`Loaded ${next.length} repositories locally. Nothing uploaded.`;
+    reports=next; isDemo=false; $('dataset-label').textContent='LOCAL SNAPSHOT'; $('dataset-description').textContent='Partial indexed batch; never an exhaustive directory. '+(snapshot.complete ? 'Batch reads reported complete. ' : 'Batch reported incomplete. ')+'Unverified observations, never live approval.'; $('reset-demo').hidden=false;
+    $('search').value=''; $('state').value='all'; render(); $('import-status').textContent=`Loaded ${next.length} repositories locally; ${snapshot.skippedUnidentifiable} unidentifiable observations skipped. Nothing uploaded.`;
+    const searchErrors = {search_failed:'Search failed',search_incomplete:'Search reported incomplete results',short_page:'Search returned a short page'};
+    $('import-errors').textContent=snapshot.errors.length ? `Search diagnostics (${snapshot.errors.length}): `+snapshot.errors.map(code => searchErrors[code] || 'Unrecognized search diagnostic').join('; ')+'.' : '';
   } catch (error) { if (sequence !== importSequence) return; $('import-status').textContent=`Could not import: ${error.message} Your current collection is unchanged.`; $('import-status').classList.add('error'); }
 }
 $('snapshot').addEventListener('change',event => importFile(event.target.files[0]));
