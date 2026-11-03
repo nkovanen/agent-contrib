@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
-               prbody, remote, signals, signatures, textfmt, workspace, __version__)
+               prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -113,7 +113,7 @@ def prevalidate(args):
         core.parse_issue(args.reference)
         if args.command == 'feedback' and args.expected_head is not None and not remote.SHA.fullmatch(args.expected_head):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
-    elif args.command == 'audit':
+    elif args.command in ('audit', 'jar'):
         core.parse_repository(args.repository)
     elif args.command == 'authorization-request':
         args.task = core.read_json(args.contract)  # read once; dispatch builds from this object
@@ -185,6 +185,9 @@ def main(argv=None):
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
+    sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
+                              description='Pinned root invitation inspection only; grants no approval or authority.')
+    sub.add_argument('repository', help='GitHub owner/repo to inspect directly, without parent tracker resolution')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -259,7 +262,7 @@ def main(argv=None):
             for flag, given in (('--report-budget', args.report_budget), ('--cache', args.cache)):
                 if given:
                     raise core.ProtocolError('usage', flag + ' applies only to commands that read GitHub')
-        cache.configure(args.cache)
+        cache.configure(args.cache and args.command != 'jar')
         if getattr(args, 'ai_policy', False):
             notice()
         prevalidate(args)
@@ -318,6 +321,9 @@ def main(argv=None):
         elif args.command == 'authorization-request':
             result = authrequest.build(args.task)
             code = 0 if result.get('ready_for_issuance') is True else 1
+        elif args.command == 'jar':
+            result = tipjar.read_jar(args.repository)
+            code = 0 if result['complete'] else 1
         elif args.command == 'audit':
             result = audit.audit(args.repository, print_policy=args.print_policy)
             code = 0 if result['complete'] else 1

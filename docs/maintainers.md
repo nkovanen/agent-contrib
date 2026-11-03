@@ -120,3 +120,36 @@ Review the scope and retain your actual approval event and mandate hash outside
 the worker. Do not let the worker fill an approval field on your behalf. Pending
 final human sign-off need not prevent an authorized tested draft; it always
 prevents final completion. See [the host handoff](host-authorization.md).
+
+
+## Repository jars (candidate, inspection only)
+
+A root `.tipjar.json` can declare an invitation for useful **agent work**.
+It does not accept money, approve issues, execute commands or grant publication
+authority. The candidate's `agent-contrib jar owner/repo` inspects this file;
+normal discover/prepare/verify do not yet read or enforce it. Old clients do not
+enforce it either: state refusals plainly in ordinary contribution documentation.
+
+```json
+{
+  "schema_version": "0.1",
+  "status": "welcome",
+  "wanted": ["Documentation examples", "Small fixes with regressions"],
+  "boundaries": ["Read CONTRIBUTING.md before choosing work"]
+}
+```
+
+For an opt-out use `{"schema_version":"0.1","status":"closed"}`. Both optional
+arrays may be omitted. Only the four illustrated fields are allowed. Each array
+has at most 16 distinct, nonblank strings of 1–500 Unicode code points without
+C0 or DEL controls. The entire file is at most 16,384 bytes of strict UTF-8 JSON;
+duplicate keys, nonfinite numbers and unsupported schemas fail closed.
+
+There are no includes, hooks, executable configuration or owner inheritance.
+The source root alone declares its invitation. A missing file is undeclared,
+not a refusal or approval. A welcome cannot waive any repository or applicable
+owner policy. Wanted text is a preference, never an eligibility score; boundaries
+must be reviewed with the existing source-linked requirements ledger. Links and
+commands in text remain data and are never automatically followed or executed.
+See [jar inspection](cli.md#jar-inspection-candidate-inspection-only) for states,
+provenance, fresh-read limits and current no-jar route limitations.

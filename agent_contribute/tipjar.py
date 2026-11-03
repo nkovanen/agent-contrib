@@ -48,7 +48,7 @@ def read_jar(repository: str, client=None, *, commit: str | None = None, metadat
     """
     repository = core.parse_repository(repository)
     client = client or core.GitHub()
-    result = {'format': 'tipjar-report/1', 'repository': repository, 'default_branch': None,
+    result = {'repository': repository, 'default_branch': None,
               'commit': None, 'path': PATH, 'blob_sha': None, 'sha256': None,
               'fetched_at': dt.datetime.now(dt.timezone.utc).isoformat(),
               'state': 'unknown', 'complete': False, 'manifest': None, 'errors': [], 'notice': NOTICE}

@@ -11,6 +11,11 @@ channel or runtime model provider is added.
 
 ### Highlights
 
+- Inspection-only `jar owner/repo` reads a strict, pinned root `.tipjar.json`
+  invitation and exports `schema jar` (output version stays 1). Existing command
+  shapes and task/evidence schemas are unchanged. Normal discover/prepare/verify
+  do not yet enforce jars; welcome/absence grants no new route or authority.
+
 - Schema 0.2: one candidate issue in a repository you own or maintain, with a
   host-issued mandate and separate `implementation`, `draft` and `completion`
   gates; `authorization-request` prepares the unsigned request.
