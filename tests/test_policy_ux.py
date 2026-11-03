@@ -244,6 +244,16 @@ class EligibilityTierTests(unittest.TestCase):
         self.assertTrue(kinds[1][1].startswith(('## Issues instead of Pull', 'Pull requests are limited to')), kinds[1])
         self.assertEqual(kinds[3][0], 'possible_ai_restriction')
 
+    def test_each_eligibility_word_lifts_a_pr_rule(self):
+        for rule in ('Pull requests are limited to the core team.', 'Pull requests are restricted to the core team.',
+                     'Pull requests are by invitation from the core team.', 'Open issues instead of pull requests.',
+                     'Pull requests come only from project members.'):
+            with self.subTest(rule):
+                text = ''.join(f'You may use AI to contribute, but never waste time, case {n}.\n\n' for n in range(6)) + rule
+                rp, _ = report({'CONTRIBUTING.md': text}, {})
+                self.assertEqual(rp['hints'][0]['kind'], 'possible_pr_restriction')
+                self.assertIn(rule[:20], rp['hints'][0]['untrusted_excerpt'])
+
     def test_a_singular_maintainer_mention_is_not_an_eligibility_rule(self):
         rp, _ = report({'CONTRIBUTING.md': "You may contribute, but never waste a maintainer's time.\n\n"
                                            'Pull requests are limited to maintainers.'}, {})
