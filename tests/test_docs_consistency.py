@@ -68,6 +68,30 @@ class DocsConsistencyTests(unittest.TestCase):
                 with self.subTest(path=path.name, target=target):
                     self.assertTrue((path.parent / target).exists())
 
+    def test_markdown_anchors_resolve(self):
+        # The regrouped docs/cli.md relies on heading anchors; a renamed heading must not leave a dead link.
+        def anchors(path):
+            seen, found, fenced = {}, set(), False
+            for text_line in path.read_text('utf-8').split('\n'):
+                if text_line.startswith('```'):
+                    fenced = not fenced
+                heading = None if fenced else re.match(r'#{1,6} (.+)', text_line)
+                if heading:
+                    slug = re.sub(r'[^\w\- ]', '', heading.group(1).strip().lower()).replace(' ', '-')
+                    found.add(slug if slug not in seen else f'{slug}-{seen[slug]}')
+                    seen[slug] = seen.get(slug, 0) + 1
+            return found
+        for path in DOCS:
+            for target, fragment in re.findall(r'\]\(([^)#\s]*)#([^)\s]+)\)', path.read_text('utf-8')):
+                if '://' in target:
+                    continue
+                destination = path.parent / target if target else path
+                if destination.suffix != '.md':
+                    continue
+                with self.subTest(path=path.name, link=target + '#' + fragment):
+                    self.assertIn(fragment, anchors(destination))
+        self.assertIn('command-index', anchors(ROOT / 'docs' / 'cli.md'))
+
     def test_product_map_lists_shipped_output_schemas_as_implemented(self):
         # Dogfood 3 F45: the map still listed the shipped output schemas as missing.
         from agent_contribute import outputs
