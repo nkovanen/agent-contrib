@@ -71,8 +71,10 @@ Worktree content is compared with a commit through a fresh temporary index
 outside the checkout, so the checkout's stat cache is never trusted; every
 tracked file is hashed on each run. Each file's bytes must equal either the
 committed blob or exactly what checkout writes for it (`cat-file --filters`,
-using the committed `.gitattributes` with `core.autocrlf=false` and
-`core.eol=lf`). So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
+with `core.autocrlf=false` and `core.eol=lf`). Git takes those attributes from
+the checkout's `.gitattributes` files; a changed tracked one is reported as a
+change, and an untracked one is always reported (even when a committed
+`.gitignore` would ignore it) and is never within `scope-check` scope. So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
 an edit, and an untouched checkout with those conversions stays clean. A CRLF
 copy produced only by a local `core.autocrlf` reports as changed. A non-empty
 `.git/info/attributes` is refused with `unsafe_git_attributes`;

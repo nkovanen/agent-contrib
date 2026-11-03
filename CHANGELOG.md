@@ -222,6 +222,11 @@ channel or runtime model provider is added.
 
 ### Security
 
+- Untracked `.gitattributes` files are always reported, even when a committed
+  `.gitignore` ignores them, because they change how Git compares checkout
+  content; `scope-check` treats one as out of scope. Previously an ignored
+  `src/.gitattributes` with `eol=crlf` made CRLF bytes that differ from HEAD
+  pass `verify` (FR2-01).
 - A claimed draft whose GitHub creation time is still in the future is not
   recognized, even inside the mandate interval (FR1-03).
 - Schema 0.2 exempts the own draft from overlap only when the open-PR scan lists

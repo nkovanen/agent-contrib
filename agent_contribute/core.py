@@ -893,13 +893,19 @@ def require_plain_index(directory):
                             'checkout); use a full checkout without these flags')
 
 
+def untracked_git_behaviour_files(directory):
+    """Untracked .gitignore and .gitattributes files, listed with no ignore rules at all: one could ignore itself
+    away, and an ignored .gitattributes would still change how Git compares checkout content (FR2-01)."""
+    listed = git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore', ':(glob)**/.gitattributes')
+    return {path for path in listed.split('\0') if path}
+
+
 def untracked_paths(directory):
     """Untracked files under only the per-directory .gitignore rules a commit can carry. .git/info/exclude and
-    core.excludesFile are local and never hide a file. Untracked .gitignore files are listed unfiltered, so one
-    cannot ignore itself away."""
+    core.excludesFile are local and never hide a file, and untracked .gitignore/.gitattributes files are always
+    listed."""
     listed = git_read(directory, 'ls-files', '-z', '--others', '--exclude-per-directory=.gitignore')
-    listed += git_read(directory, 'ls-files', '-z', '--others', '--', ':(glob)**/.gitignore')
-    return {path for path in listed.split('\0') if path}
+    return {path for path in listed.split('\0') if path} | untracked_git_behaviour_files(directory)
 
 
 def shallow_or(directory, error):
@@ -961,7 +967,8 @@ def worktree_changes(directory, commit):
     working-tree-encoding can use to hide an edit, so every other regular file is also hashed raw
     (hash-object --no-filters). A raw mismatch counts only if the bytes also differ from the commit's checkout
     output (cat-file --filters), so a legitimately converted checkout stays clean. Attributes come only from the
-    checkout's .gitattributes files (a changed one is itself reported): info/attributes is refused,
+    checkout's .gitattributes files, and any changed or untracked one (ignored or not) is itself reported by the
+    callers' status and untracked_paths checks: info/attributes is refused,
     core.attributesFile and system attributes are ignored, and autocrlf/eol are forced."""
     blobs = []
     for entry in git_read(directory, 'ls-tree', '-r', '-l', '-z', commit).split('\0'):

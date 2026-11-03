@@ -635,7 +635,8 @@ the actual diff and logs. Required evidence includes:
   and empty prohibited-path lists cannot pass. Renames check both old and new paths. Submodule/gitlink evidence is unsupported:
   any gitlink in HEAD, the implementation base or index fails verification. Git
   checks do not traverse submodules or run their local commands/configuration. Both tracked and untracked changes invalidate
-  evidence; store evidence outside the checkout.
+  evidence, including an untracked `.gitignore` or `.gitattributes` that a committed
+  `.gitignore` would hide; store evidence outside the checkout.
 - Exactly one result per validation ID, with exact argv, explicit status,
   exit code, skipped-check count, output, timezone-bearing start/end timestamps
   tool version, per-validation `git_head`, and `tests_run`. Contract validation
