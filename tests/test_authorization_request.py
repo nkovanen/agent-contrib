@@ -16,7 +16,8 @@ from tests.test_lifecycle import Clock
 
 REQUEST_KEYS = {'kind', 'request_version', 'issued', 'notice', 'target_host_context_schema_version',
                 'ready_for_issuance', 'preflight_errors', 'preflight_errors_trust', 'unresolved_fields',
-                'contract_sha256', 'exact_head_pr_history', 'mandate_fields', 'human_only_fields', 'provenance'}
+                'contract_sha256', 'exact_head_pr_history', 'mandate_fields', 'human_only_fields', 'requested_actions',
+                'provenance'}
 
 
 def build(task, client):
@@ -72,6 +73,11 @@ class RoundTripTests(RequestFixture):
         request = build(self.task, self.client)
         self.assertEqual(sorted(null_leaves(request['mandate_fields'])), sorted(request['human_only_fields']))
         self.assertEqual(request['unresolved_fields'], [])
+        # The contract's requested actions are shown for the host; the mandate's actions stay a human-only choice.
+        self.assertEqual(request['requested_actions'], self.task['execution']['requested_actions'])
+        self.assertIsNot(request['requested_actions'], self.task['execution']['requested_actions'])
+        self.assertIsNone(request['mandate_fields']['actions'])
+        self.assertIn('actions', request['human_only_fields'])
         mandate_schema = core.bundled_schema('host-context')['properties']['mandate']
         self.assertEqual(sorted(schema_leaves(mandate_schema)),
                          sorted(schema_leaves({'type': 'object', 'properties': {

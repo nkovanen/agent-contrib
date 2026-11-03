@@ -137,8 +137,12 @@ def _authorization_request(result):
     out = ['Ready for issuance: ' + _flag(result.get('ready_for_issuance')),
            'Issued: no (unsigned request; not a mandate; grants nothing)',
            'Contract SHA-256: ' + line(result.get('contract_sha256', ''), 64)]
+    out.append('Requested actions (the host chooses the mandate actions): ' +
+               (', '.join(line(action, 50) for action in result.get('requested_actions', [])) or 'none'))
+    # Derived fields only fresh reads resolve; the human-only fields always await the host, even when ready.
     return (out + _list('Preflight errors', result.get('preflight_errors', [])) +
-            _list('Unresolved fields', result.get('unresolved_fields', [])))
+            _list('Unresolved derived fields', result.get('unresolved_fields', [])) +
+            _list('Human-only fields, filled only by the host', result.get('human_only_fields', [])))
 
 
 def _scope_check(result):

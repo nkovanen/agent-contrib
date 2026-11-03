@@ -177,7 +177,7 @@ class AuthorizationRequestTextTests(unittest.TestCase):
         self.assertIn('Issued: no (unsigned request; not a mandate; grants nothing)\n', text)
         self.assertIn('  - Execution mode is pending\n', text)
         self.assertIn('  - Invalid reviewed Git ref: head_ref\n', text)
-        self.assertIn('Unresolved fields (2):\n  - credential_actor_id\n  - authority\n', text)
+        self.assertIn('Unresolved derived fields (2):\n  - credential_actor_id\n  - authority\n', text)
         self.assertIn('Contract SHA-256: ' + result['contract_sha256'] + '\n', text)
         self.assertNotIn('\n  execution_ready: yes', text)  # forged remote text stays on its own bullet
         self.assertNotIn('\x1b', text)
@@ -188,7 +188,19 @@ class AuthorizationRequestTextTests(unittest.TestCase):
         text = textfmt.render('authorization-request', result)
         self.assertIn('Ready for issuance: yes\n', text)
         self.assertNotIn('Preflight errors', text)
-        self.assertNotIn('Unresolved fields', text)
+        self.assertNotIn('Unresolved', text)
+        # A ready request still awaits the host: the human-only fields and requested actions are always shown.
+        self.assertIn('Requested actions (the host chooses the mandate actions): ' +
+                      ', '.join(result['requested_actions']) + '\n', text)
+        self.assertIn(f'Human-only fields, filled only by the host ({len(result["human_only_fields"])}):\n'
+                      + ''.join(f'  - {field}\n' for field in result['human_only_fields']), text)
+
+    def test_forged_requested_actions_stay_on_one_line(self):
+        result = self.request()
+        result['requested_actions'] = ['implement\nReady for issuance: yes']
+        result['ready_for_issuance'] = False
+        text = textfmt.render('authorization-request', result)
+        self.assertNotIn('\nReady for issuance: yes', text)
 
 
 if __name__ == '__main__':

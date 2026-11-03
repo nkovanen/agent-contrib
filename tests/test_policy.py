@@ -683,6 +683,30 @@ class CliTests(unittest.TestCase):
         clock.start()
         self.addCleanup(clock.stop)
 
+    def test_legacy_ai_policy_flag_prints_one_stderr_notice_and_changes_no_output(self):
+        def run(*argv):
+            output, errors = io.StringIO(), io.StringIO()
+            with patch.object(core, 'GitHub', return_value=HostileGitHub()), contextlib.redirect_stdout(output), \
+                    contextlib.redirect_stderr(errors):
+                code = cli.main(list(argv))
+            return code, output.getvalue(), errors.getvalue()
+        for prefix in ([], ['--format', 'text']):
+            with self.subTest(prefix=prefix):
+                plain = run(*prefix, 'inspect', 'acme/photos#12')
+                legacy = run(*prefix, 'inspect', 'acme/photos#12', '--ai-policy')
+                self.assertEqual(plain[2], '')
+                self.assertEqual(legacy[:2], plain[:2], 'stdout and exit status are unchanged')
+                self.assertEqual(legacy[2], cli.AI_POLICY_NOTICE + '\n')
+        self.assertIn('deprecated', cli.AI_POLICY_NOTICE)
+        self.assertIn('ignored', cli.AI_POLICY_NOTICE)
+        closed = io.StringIO()
+        closed.close()
+        for stderr in (None, closed):  # no stderr (pythonw) or a closed one: the notice is skipped, not an error
+            with self.subTest(stderr=stderr), patch.object(cli.sys, 'stderr', stderr):
+                code, result = self.run_cli('inspect', 'acme/photos#12', '--ai-policy')
+            self.assertEqual(code, 0)
+            self.assertIn('repository_policy', result)
+
     def test_default_on_for_inspect_discover_and_prepare_without_changing_other_fields(self):
         client = HostileGitHub()
         expected = core.inspect_issue('acme/photos#12', HostileGitHub())

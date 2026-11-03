@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from agent_contribute import cli
 from agent_contribute.cli import main
 from tests import output_contract
 
@@ -38,6 +39,65 @@ class BrokenWriteOnly:
 
 
 class OutputTests(unittest.TestCase):
+    def test_failed_stderr_descriptor_never_changes_the_process_exit(self):
+        """The --ai-policy notice is the CLI's only stderr write. A closed fd 2 or a pipe without a reader must
+        not leave a failed buffered write for interpreter shutdown to retry, which would exit 120."""
+        child = ('import os, sys\n'
+                 'from unittest.mock import patch\n'
+                 'from agent_contribute import cli, core\n'
+                 'from tests.test_policy import FrozenClock, HostileGitHub\n'
+                 'mode = sys.argv[1]\n'
+                 'if mode == "closed":\n'
+                 '    os.close(2)\n'
+                 'elif mode in ("readerless", "block-buffered"):\n'
+                 '    read, write = os.pipe(); os.close(read); os.dup2(write, 2); os.close(write)\n'
+                 'if mode == "block-buffered":  # a host-installed stream that defers writes to its flush\n'
+                 '    import io; sys.stderr = io.TextIOWrapper(io.BufferedWriter(io.FileIO(2, "w", closefd=False)))\n'
+                 'with patch.object(core, "GitHub", return_value=HostileGitHub()), '
+                 'patch.object(core.dt, "datetime", FrozenClock):\n'
+                 '    code = cli.main(sys.argv[2:])\n'
+                 'raise SystemExit(code)\n')
+        root = Path(__file__).resolve().parents[1]
+
+        def run(mode, *flags):
+            return subprocess.run([sys.executable, '-c', child, mode, 'inspect', 'acme/photos#12', *flags],
+                                  cwd=root, capture_output=True, timeout=30)
+        reference = run('working')
+        self.assertEqual((reference.returncode, reference.stderr), (0, b''), reference.stderr)
+        self.assertTrue(json.loads(reference.stdout)['complete'])
+        working = run('working', '--ai-policy')
+        self.assertEqual(working.returncode, 0, working.stderr)
+        self.assertEqual(working.stderr.decode(), cli.AI_POLICY_NOTICE + '\n')
+        for mode in ('closed', 'readerless', 'block-buffered'):
+            for flags in ((), ('--ai-policy',)):
+                with self.subTest(mode=mode, flags=flags):
+                    result = run(mode, *flags)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(json.loads(result.stdout), json.loads(reference.stdout))
+
+    @output_contract.unchecked()
+    def test_stderr_cleanup_failure_is_contained(self):
+        class Unusable:
+            closed = 0
+
+            def write(self, value):
+                raise OSError('stderr is gone')
+
+            def close(self):
+                self.closed += 1
+                raise ValueError('I/O operation on closed file')
+        for stream in (Unusable(), BrokenFlush(), object()):
+            with self.subTest(stream=type(stream).__name__), patch('sys.stderr', stream), \
+                    patch('agent_contribute.core.inspect_issue', return_value={'complete': False}):
+                output = io.StringIO()
+                with patch('sys.stdout', output):
+                    self.assertEqual(main(['inspect', 'acme/photos#12', '--ai-policy']), 1)
+                self.assertEqual(json.loads(output.getvalue()), {'complete': False})
+                if isinstance(stream, Unusable):
+                    self.assertEqual(stream.closed, 1)
+                if isinstance(stream, BrokenFlush):
+                    self.assertTrue(stream.closed, 'a stream whose flush failed is closed')
+
     def test_closed_stdout_descriptor_at_startup_is_quiet(self):
         bootstrap = ('import os, sys; os.close(1); '
                      'os.execv(sys.executable, '
