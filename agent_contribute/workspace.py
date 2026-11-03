@@ -1,6 +1,8 @@
 """Offline local-checkout helpers. No GitHub reads, no argv execution, never evidence."""
 import bisect
+import os
 import re
+import stat
 from pathlib import Path
 
 from . import core
@@ -157,9 +159,11 @@ def local_issue_references(directory, repository, base):
               'issues': [], 'errors': [], 'notice': LOCAL_NOTICE}
     shown = core.safe_text(str(directory), 500)
     try:
-        try:
-            is_directory = Path(directory).is_dir()
-        except OSError:  # for example a path component longer than the filesystem allows (review R12-03)
+        try:  # os.stat, not Path.is_dir, whose error handling differs across Python versions
+            is_directory = stat.S_ISDIR(os.stat(directory).st_mode)
+        except (FileNotFoundError, NotADirectoryError):
+            is_directory = False
+        except (OSError, ValueError):  # for example a component longer than the filesystem allows (review R12-03)
             raise core.ProtocolError('unreadable_path', f'--repo-dir {shown} could not be inspected') from None
         if not is_directory:
             raise core.ProtocolError('not_directory', f'--repo-dir {shown} is not a directory')
