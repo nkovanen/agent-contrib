@@ -120,3 +120,15 @@ class OwnerLookupTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class OmittedBlobTests(unittest.TestCase):
+    def test_an_edited_omitted_candidate_changes_the_inventory(self):
+        base = {f'AI_POLICY_{n:02d}.md': 'x' for n in range(12)}
+        one = policy.report('acme/photos', SOURCE_COMMIT, [], PolicyGitHub({**base, 'AI_POLICY_12.md': 'AI welcome.'}),
+                            default_branch='main')
+        two = policy.report('acme/photos', SOURCE_COMMIT, [], PolicyGitHub({**base, 'AI_POLICY_12.md': 'No AI.'}),
+                            default_branch='main')
+        self.assertEqual([o['path'] for o in one['omitted_sources']], ['AI_POLICY_12.md'])
+        self.assertNotEqual(one['omitted_sources'][0]['blob_sha'], two['omitted_sources'][0]['blob_sha'])
+        self.assertNotEqual(one['inventory_sha256'], two['inventory_sha256'])
