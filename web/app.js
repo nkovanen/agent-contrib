@@ -83,7 +83,7 @@ async function importFile(file) {
     if (!file || file.size > model.MAX_BYTES || !/\.json$/i.test(file.name)) throw new Error('Choose one .json file of at most 1 MiB.');
     const text = new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer());
     const snapshot = model.parseSnapshot(text), next = snapshot.reports; if (sequence !== importSequence) return;
-    reports=next; isDemo=false; $('dataset-label').textContent='LOCAL SNAPSHOT'; $('dataset-description').textContent='Partial indexed batch; never an exhaustive directory. '+(snapshot.complete ? 'Batch reads reported complete. ' : 'Batch reads incomplete; some observations unresolved. ')+'Unverified observations, never live approval.'; $('reset-demo').hidden=false;
+    reports=next; isDemo=false; $('dataset-label').textContent='LOCAL SNAPSHOT'; $('dataset-description').textContent='Partial indexed batch; never an exhaustive directory. '+(snapshot.complete ? 'Batch reads reported complete. ' : 'Batch reported incomplete. ')+'Unverified observations, never live approval.'; $('reset-demo').hidden=false;
     $('search').value=''; $('state').value='all'; render(); $('import-status').textContent=`Loaded ${next.length} repositories locally; ${snapshot.skippedUnidentifiable} unidentifiable observations skipped. Nothing uploaded.`;
     const searchErrors = {search_failed:'Search failed',search_incomplete:'Search reported incomplete results',short_page:'Search returned a short page'};
     $('import-errors').textContent=snapshot.errors.length ? `Search diagnostics (${snapshot.errors.length}): `+snapshot.errors.map(code => searchErrors[code] || 'Unrecognized search diagnostic').join('; ')+'.' : '';

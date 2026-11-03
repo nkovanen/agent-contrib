@@ -28,7 +28,7 @@ frame.addEventListener('load',async () => {
       await importValue(canonical);
       check(doc.querySelectorAll('.card').length===1 && doc.querySelector('.card h3').textContent==='acme/project','canonical '+name+' retains identified repository');
       check($('dataset-description').textContent.includes('Partial indexed batch') && !$('dataset-description').textContent.includes('coverage reported complete'),'canonical '+name+' never claims exhaustive coverage');
-      check($('dataset-description').textContent.includes(complete ? 'Batch reads reported complete' : 'Batch reads incomplete'),'canonical '+name+' distinguishes read completeness');
+      check($('dataset-description').textContent.includes(complete ? 'Batch reads reported complete' : 'Batch reported incomplete'),'canonical '+name+' distinguishes read completeness');
       check($('import-status').textContent.includes(skipped+' unidentifiable'),'canonical '+name+' counts suppressed identities');
       check(Boolean($('import-errors').textContent)===error,'canonical '+name+' separates search errors');
     }
