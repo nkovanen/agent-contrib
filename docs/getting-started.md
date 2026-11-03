@@ -13,8 +13,10 @@ does not or a read is incomplete, and 2 for usage errors. An exit code is never
 permission.
 
 You need the CLI and the Skill installed (see the [README](../README.md#install))
-and an authenticated `gh`. Every command below only reads GitHub or your local
-checkout.
+and an authenticated `gh`. The CLI only reads GitHub. Locally it reads the
+checkout and writes only files you name (the `prepare` contract, the `evidence
+init` skeleton, a `pr-body` description, the exported Skill) and, with `--cache`,
+its cache directory; it never overwrites an existing output file.
 
 ## 1. Record the version and the request
 
@@ -143,6 +145,10 @@ Human-only fields, filled only by the host (11):
 drifted: False
 ```
 
+**Stop** if `drift` reports `drifted: True` (re-review and re-prepare the
+contract), or if it exits 1 with `complete: False` or a `policy_drifted` of
+`null`: an unknown change is not a pass.
+
 This is where a bare "help" request ends. The agent reports the contract, its
 hash and the blockers. **Stop:** nothing is implemented until a human, through
 the agent's host, issues a mandate for this exact contract hash. The agent never
@@ -168,6 +174,12 @@ Gates:
 ...
 ```
 
+Before editing, the agent repeats the policy check: a fresh `inspect`, a re-read
+of every manually reviewed policy source and exception, and `drift task.json
+--policy-sha256 INVENTORY_SHA256`. **Stop** if anything changed or cannot be read
+again: repeat the dispositions, update `ai-policy-review` and the ledger, and
+(schema 0.2) show the change to the human before continuing.
+
 Only with `implementation_ready: yes` does the agent edit, on an isolated branch
 named by the contract's `head_ref`. While working it uses offline helpers:
 
@@ -188,6 +200,10 @@ agent-contrib drift task.json --policy-sha256 INVENTORY_SHA256
 agent-contrib --format text verify task.json --evidence ../evidence.json --repo-dir . \
   --stage draft --host-context-stdin < /host-controlled/context.json
 ```
+
+Before publishing, the agent repeats the same policy check (fresh `inspect`,
+re-read, `drift`). **Stop** on any drift, incomplete read or changed policy, as in
+step 7.
 
 **Stop** unless the mandate includes `create_draft` and the draft gate passes
 (`draft_create_ready: yes`). The host performs the push and opens one **draft**

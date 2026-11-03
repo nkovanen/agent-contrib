@@ -42,8 +42,11 @@ report. Then set the prerequisite to `satisfied`, with evidence naming the
 source commit, the report's `inventory_sha256` and your dispositions, or to
 `blocked` if the project refuses the work. Before any authorization, run
 `agent-contrib drift task.json --policy-sha256 HASH` to catch policy changes.
-Contracts prepared before the upgrade, and their verification decisions, are
-unchanged.
+Contracts prepared before the upgrade keep their format, and the new
+prerequisite is not added to them. Their verification can still change where the
+hardening below now refuses or flags a checkout or input; see
+[checkout and evidence refusals](#checkout-and-evidence-refusals) and
+[JSON input and messages](#json-input-and-messages).
 
 If you recorded hashes or hint IDs with an earlier 0.3.0 candidate build, review
 the policy again. The inventory hash format changed (`drift` reports it as a

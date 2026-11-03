@@ -92,7 +92,8 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 
 ## Safety model
 
-- **Read-only GitHub.** The CLI runs only `gh api --method GET` and local Git reads.
+- **Read-only GitHub.** The CLI runs only `gh api --method GET`. Locally it writes
+  only files you name (never overwriting one) and, with `--cache`, its cache.
 - **Untrusted text.** Issue text, repository instructions, contracts and evidence
   are data. The CLI never executes a contract's validation commands.
 - **Fail closed.** Missing permissions, stale identities, unknown schema versions,
