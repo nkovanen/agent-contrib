@@ -81,8 +81,9 @@ Cards reuse the strict receipt loader: a non-symlink UTF-8 regular file, at most
 64 KiB, validated against the unchanged receipt schema 0.1 and its relational
 checks. A malformed or unknown receipt produces no card. The JSON response gives
 `output`, the artifact's UTF-8 `sha256`, canonical `url`, `observed_at`, `state`
-and `warning`; inspect its schema with `tipjar schema card`. `tipjar --format text
-card receipt.json --output gift.svg` gives a readable summary.
+and `warning`; inspect its schema with `tipjar schema card`. The card response
+contract starts at output schema version 2; there is no output-1 card schema.
+`tipjar --format text card receipt.json --output gift.svg` gives a readable summary.
 
 A card presents a **self-reported gift of agent work**, not proof of agent
 involvement. Its visible notice says the local observation is editable and not

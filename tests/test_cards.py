@@ -3,6 +3,7 @@ import contextlib
 import copy
 import hashlib
 import io
+import importlib.resources
 import json
 from pathlib import Path
 import tempfile
@@ -31,6 +32,11 @@ class CardTests(unittest.TestCase):
 
     def card(self, path=None, name='card.svg'):
         return invoke('card', str(path or self.save()), '--output', str(self.root / name))
+
+    def test_card_response_contract_starts_at_output2(self):
+        self.assertEqual(outputs.output_schema('card')['$id'], 'urn:agent-contrib:output:2:card')
+        resources = importlib.resources.files('agent_contribute')
+        self.assertFalse(resources.joinpath('schemas/output/1/card.schema.json').is_file())
 
     def test_card_is_offline_exclusive_and_digest_matches_artifact(self):
         path = self.save()

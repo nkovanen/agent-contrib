@@ -30,7 +30,6 @@ RESOURCE_PATHS = (
     "schemas/host-context/0.2.schema.json",
     "instructions.md",
     "adapters/agent-contribute/SKILL.md",
-    "schemas/output/1/card.schema.json",
     "schemas/output/1/audit.schema.json",
     "schemas/output/1/authorization-request.schema.json",
     "schemas/output/1/dependencies.schema.json",
@@ -120,6 +119,7 @@ def installed_check(source):
     resources = importlib.resources.files("agent_contribute")
     for name in RESOURCE_PATHS:
         assert resources.joinpath(name).read_bytes() == (source / "agent_contribute" / name).read_bytes(), name
+    assert not resources.joinpath("schemas/output/1/card.schema.json").is_file(), "Card starts at output2"
     # Development tools such as the task-selection benchmark never ship in the wheel.
     assert not [str(file) for file in dist.files if str(file).startswith("web/") or str(file).startswith("tests/web/")]
     assert not [str(file) for file in dist.files if str(file).startswith("tools/") or "benchmark" in str(file)]
