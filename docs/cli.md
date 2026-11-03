@@ -55,6 +55,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 
 | Command | Purpose | Reads GitHub? | Exit codes |
 | --- | --- | --- | --- |
+| `session` | Offline proposed shortlist with stopping caps | No | 0 proposal created (possibly empty); 1 invalid input or output |
 | `jar` | Inspect a pinned root invitation directly, without parent tracker resolution | Yes | 0 welcome/closed/undeclared; 1 unknown |
 | `discover` | Rank open issues of one repository, or 2-20, with policy and overlap context | Yes | 0 complete; 1 incomplete (also an incomplete `--responsiveness`, `--check-top` or `--repo-dir` report) |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs | Yes | 0 complete; 1 incomplete (also incomplete `--ownership` signals) |
@@ -1211,7 +1212,7 @@ option before the subcommand.
 
 #### Global options on offline commands
 
-`instructions`, `schema`, `skill`, `lint`, `scope-check` and `evidence init`
+`instructions`, `schema`, `skill`, `lint`, `scope-check`, `evidence init` and `session`
 never read GitHub. On them `--report-budget` and `--cache` are both usage errors
 (exit 2, "`--cache` applies only to commands that read GitHub", and likewise for
 `--report-budget`), checked before any file is read; `--min-remaining` already
@@ -1279,3 +1280,11 @@ local execution authorization, and fork completion grants no upstream authority.
 Schema 0.2 still requires actual admin/maintain authority and host mandates.
 An arbitrary no-jar repository has no new outside-contributor upstream route
 in this slice.
+
+## Offline session planning
+
+`agent-contrib session DISCOVERY_JSON --max-tasks N --minutes M --output FILE` creates
+a proposed shortlist with per-task stopping caps. N is 1–20, M is 1–1440.
+Input is bounded to 8 MiB; no network or execution occurs, and actions remain
+unauthorized. The output file must not exist. `--format text` precedes `session`.
+See [the 60-minute example and host workflow](planning-sessions.md).

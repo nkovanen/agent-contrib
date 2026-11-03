@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
-               prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
+               prbody, remote, sessions, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -44,7 +44,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'session')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -188,6 +188,11 @@ def main(argv=None):
     sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
                               description='Pinned root invitation inspection only; grants no approval or authority.')
     sub.add_argument('repository', help='GitHub owner/repo to inspect directly, without parent tracker resolution')
+    sub = commands.add_parser('session', help='Plan an offline proposed gift-work session from discovery JSON')
+    sub.add_argument('discovery', help='Bounded canonical discovery JSON file (8 MiB maximum)')
+    sub.add_argument('--max-tasks', type=int, required=True, help='Maximum shortlisted tasks (1–20)')
+    sub.add_argument('--minutes', type=int, required=True, help='Total stopping budget, not an estimate (1–1440)')
+    sub.add_argument('--output', required=True, help='New file for the proposed session; never overwritten')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -285,6 +290,10 @@ def main(argv=None):
                                     'output_schemas': 'agent_contribute/' + outputs.DIRECTORY},
                       'output_schema_version': outputs.VERSION,
                       'automatic_updates': False}
+            code = 0
+        elif args.command == 'session':
+            result = sessions.plan(args.discovery, max_tasks=args.max_tasks, minutes=args.minutes)
+            write_new_json(args.output, result)
             code = 0
         elif args.command == 'schema':
             result = outputs.output_schema(args.name)

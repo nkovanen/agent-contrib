@@ -299,6 +299,36 @@ One of `prepared`, `issue_unresolved`.
 | `warnings` | string[] |  |
 | `evidence` | string |  |
 
+### `session`
+
+`agent-contrib schema session` · Offline proposed gift-work shortlist; source snapshot remains untrusted and actions are never authorized.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | "0.1" |  |
+| `status` | "proposed" |  |
+| `actions_authorized` | false |  |
+| `minutes` | integer |  |
+| `max_tasks` | integer |  |
+| `allocated_minutes` | integer |  |
+| `source_file_sha256` | string |  |
+| `source_report` | `discover_result` or `discover_unresolved` or `discover_multi` |  |
+| `source_complete` | boolean |  |
+| `candidates` | object[] |  |
+| `candidates[].reference` | string |  |
+| `candidates[].source_repository_index` | integer |  |
+| `candidates[].source_issue_index` | integer |  |
+| `candidates[].selected` | boolean |  |
+| `candidates[].reasons` | string[] |  |
+| `tasks` | object[] |  |
+| `tasks[].reference` | string |  |
+| `tasks[].issue_url` | string |  |
+| `tasks[].source_repository_index` | integer |  |
+| `tasks[].source_issue_index` | integer |  |
+| `tasks[].stop_after_minutes` | integer |  |
+| `tasks[].required_follow_up` | string[] |  |
+| `notice` | string |  |
+
 ### `skill`
 
 `agent-contrib schema skill` · Result of exporting the canonical agent Skill.

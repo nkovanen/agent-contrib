@@ -142,6 +142,7 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 
 | Command | Purpose |
 | --- | --- |
+| `session` | [Plan an offline gift-work shortlist](docs/planning-sessions.md) with explicit stopping caps |
 | `jar` | Inspect one pinned root invitation; inspection only, no authority |
 | `discover` | Rank issues of one repository, or 2–20 repositories |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs |
