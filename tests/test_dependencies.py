@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import cli, core
+from agent_contribute import cli, core, dependencies
 
 FIXTURES = Path(__file__).parent / 'fixtures' / 'dependencies'
 
@@ -142,6 +142,29 @@ class DependenciesTests(unittest.TestCase):
         code, text = invoke('dependencies', str(self.root))
         self.assertEqual(code, 1, text)
         self.assertEqual(set(json.loads(text)), {'error'})
+
+    def test_requirements_comment_lexer_preserves_quoted_hashes_and_url_fragments(self):
+        values = {
+            'pkg @ https://github.com/o/r#egg=pkg # note': 'pkg @ https://github.com/o/r#egg=pkg',
+            'pkg @ URL#subdirectory=src # note': 'pkg @ URL#subdirectory=src',
+            'pkg ; value == " # text" # note': 'pkg ; value == " # text"',
+            "pkg ; value == ' # text' # note": "pkg ; value == ' # text'",
+            'pkg ; value == " # text"': 'pkg ; value == " # text"',
+        }
+        for value, expected in values.items():
+            with self.subTest(value=value):
+                self.assertEqual(dependencies._without_requirement_comment(value), expected)
+
+    def test_requirements_trailing_comments_keep_url_fragments_and_markers(self):
+        self.write('requirements.txt',
+                   'foo @ git+https://github.com/o/r.git@v1 # pinned upstream\n'
+                   'bar @ git+https://github.com/o/s.git@v2#subdirectory=python # monorepo\n'
+                   'baz @ https://github.com/o/t.git@v3 ; platform_release == " # literal" # note\n')
+        result = self.report()
+        self.assertEqual(result['repositories'], ['o/r', 'o/s', 'o/t'])
+        self.assertEqual([(d['revision'], d['subdirectory']) for d in result['dependencies']],
+                         [('v1', None), ('v2', 'python'), ('v3', None)])
+        self.assertTrue(result['resolution_complete'])
 
     def test_exclusive_output_text_and_offline_options(self):
         self.write('package.json', '{"dependencies":{"x":"https://github.com/a/b"}}')

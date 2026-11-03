@@ -13,6 +13,8 @@ UNSUPPORTED = ('Cargo.toml', 'Cargo.lock', 'pyproject.toml')
 GROUPS = ('dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies')
 MAX_ENTRIES = 10000
 MAX_STRING = 4096
+MAX_INSTALLED = 100
+INSTALLED_BYTES = 64 * 1024
 NOTICE = ('Dependency candidates only; this report grants no approval, execution or publication authority. '
           'Review repository policy and any jar before choosing work. No network requests were made.')
 
@@ -102,13 +104,13 @@ def _open_path(path):
         raise
 
 
-def _read_at(directory, name):
+def _read_at(directory, name, limit=core.MAX_BYTES):
     descriptor = os.open(name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=directory)
     with os.fdopen(descriptor, 'rb') as handle:
         if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
             raise OSError('Expected regular manifest')
-        data = handle.read(core.MAX_BYTES + 1)
-    if len(data) > core.MAX_BYTES:
+        data = handle.read(limit + 1)
+    if len(data) > limit:
         raise OSError('Manifest exceeds size bound')
     return data
 
@@ -151,9 +153,28 @@ def _lock(data):
                     pending.append((_mapping(record['dependencies']), prefix + package + '.dependencies.'))
 
 
+def _without_requirement_comment(line):
+    """A whitespace-prefixed # starts a comment only outside quoted marker text."""
+    quote = None
+    escaped = False
+    for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+        elif char == '\\' and quote is not None:
+            escaped = True
+        elif quote is not None:
+            if char == quote:
+                quote = None
+        elif char in ('"', "'"):
+            quote = char
+        elif char == '#' and (index == 0 or line[index - 1].isspace()):
+            return line[:index].rstrip()
+    return line
+
+
 def _requirements(text):
     for number, line in enumerate(text.splitlines(), 1):
-        line = line.strip()
+        line = _without_requirement_comment(line).strip()
         if not line or line.startswith('#'):
             continue
         match = re.fullmatch(r'([A-Za-z0-9][A-Za-z0-9._-]*(?:\[[A-Za-z0-9,._-]+\])?)\s*@\s*(\S+)(?:\s+;.*)?', line)
@@ -165,7 +186,77 @@ def _requirements(text):
             yield (name[0] if name else f'(unparsed line {number})'), ('registry' if registry else None), f'line:{number}'
 
 
-def report(path):
+def _registry_spec(value):
+    # Only ordinary version/range/tag declarations; aliases and local/git specs need a resolver.
+    return bool(re.fullmatch(r'(?:[A-Za-z][A-Za-z0-9._-]*|[0-9~^<>=*xXv][0-9A-Za-z.*+^~<>=| -]*)', value))
+
+
+def _installed_metadata(directory, package):
+    observed = {'status': 'unsupported', 'reason': 'unsafe_package_name', 'source_file': None,
+                'sha256': None, 'name': None, 'version': None, 'field': None,
+                'repository': None, 'revision': None, 'subdirectory': None}
+    if len(package) > 214 or not re.fullmatch(r'(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*', package):
+        return observed
+    observed['source_file'] = f'node_modules/{package}/package.json'
+    handle = os.dup(directory)
+    try:
+        for component in ('node_modules', *package.split('/')):
+            child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                            dir_fd=handle)
+            os.close(handle)
+            handle = child
+        raw = _read_at(handle, 'package.json', INSTALLED_BYTES)
+        observed['sha256'] = hashlib.sha256(raw).hexdigest()
+        data = _mapping(core.strict_json(raw.decode('utf-8')))
+        observed['name'] = _string(data.get('name'))
+        version = _string(data.get('version'))
+        if len(version) > 200 or not re.fullmatch(r'v?[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?', version):
+            _invalid()
+        observed['version'] = version
+        if observed['name'] != package:
+            observed['reason'] = 'installed_name_mismatch'
+            return observed
+        repository = data.get('repository')
+        if repository is None:
+            observed.update(status='unresolved', reason='missing_repository_metadata')
+            return observed
+        subdirectory = None
+        if isinstance(repository, dict):
+            if repository.get('type', 'git') != 'git':
+                _invalid()
+            subdirectory = repository.get('directory')
+            if subdirectory in ('', '.'):
+                subdirectory = None
+            if subdirectory is not None and (not isinstance(subdirectory, str) or
+                                            not _safe_relative(subdirectory) or ':' in subdirectory):
+                _invalid()
+            repository = _string(repository.get('url'))
+            observed['field'] = 'repository.url'
+        else:
+            repository = _string(repository)
+            observed['field'] = 'repository'
+        target = github_url(repository)
+        if target is None:
+            observed.update(status='unsupported', reason='non_github_or_unsafe_repository')
+            return observed
+        name, revision, url_subdirectory = target
+        if subdirectory is not None and url_subdirectory is not None and subdirectory != url_subdirectory:
+            observed['reason'] = 'ambiguous_repository_directory'
+            return observed
+        observed.update(status='github', reason='installed_repository_metadata', repository=name,
+                        revision=revision, subdirectory=subdirectory or url_subdirectory)
+    except FileNotFoundError:
+        observed.update(status='unresolved', reason='missing_installed_metadata')
+    except OSError:
+        observed['reason'] = 'unsafe_or_unreadable_installed_metadata'
+    except (core.ProtocolError, UnicodeError, ValueError, RecursionError):
+        observed['reason'] = 'invalid_installed_metadata'
+    finally:
+        os.close(handle)
+    return observed
+
+
+def report(path, *, installed=False):
     """Read only the fixed supported filenames, or one explicitly selected supported file."""
     directory = None
     try:
@@ -183,6 +274,9 @@ def report(path):
                 raise core.ProtocolError('dependency_input', 'Select a project directory or a supported manifest filename')
             directory = _open_path(Path(path).parent)
             names, unsupported = (name,), []
+        if installed and ('package.json' not in names or not _exists(directory, 'package.json')):
+            raise core.ProtocolError('usage', '--installed requires a project directory with package.json or that file')
+        installed_cache = {}
         sources, dependencies, repositories = [], [], []
         seen = set()
         for name in names:
@@ -193,6 +287,11 @@ def report(path):
             if name.endswith('.json'):
                 data = _mapping(core.strict_json(text))
                 declarations = _npm_groups(data) if name == 'package.json' else _lock(data)
+                if installed and name == 'package.json':
+                    declarations = list(declarations)
+                    eligible = {package for package, value, _ in declarations if _registry_spec(value)}
+                    if len(eligible) > MAX_INSTALLED:
+                        raise core.ProtocolError('dependency_input', '--installed supports at most 100 unique direct registry packages')
                 ecosystem = 'npm'
             else:
                 declarations, ecosystem = _requirements(text), 'python'
@@ -202,12 +301,21 @@ def report(path):
                 if len(dependencies) >= MAX_ENTRIES or len(field) > MAX_STRING:
                     _invalid()
                 target = github_url(value) if value else None
+                metadata = None
+                if installed and name == 'package.json' and _registry_spec(value):
+                    if package not in installed_cache:
+                        installed_cache[package] = _installed_metadata(directory, package)
+                    metadata = installed_cache[package]
+                    if metadata['status'] == 'github':
+                        target = tuple(metadata[k] for k in ('repository', 'revision', 'subdirectory'))
                 repository, revision, subdirectory = target or (None, None, None)
                 if target:
-                    status, reason = 'github', 'explicit_github_url'
+                    status, reason = 'github', ('installed_repository_metadata' if metadata else 'explicit_github_url')
                     if repository.casefold() not in seen:
                         repositories.append(repository)
                         seen.add(repository.casefold())
+                elif metadata is not None:
+                    status, reason = metadata['status'], metadata['reason']
                 elif value is None:
                     status, reason = 'unsupported', 'unsupported_requirement_syntax'
                 elif 'github.com' in value.lower():
@@ -219,12 +327,20 @@ def report(path):
                 dependencies.append({'package': package, 'ecosystem': ecosystem, 'source_file': name,
                                      'field': field, 'status': status, 'reason': reason,
                                      'repository': repository, 'revision': revision, 'subdirectory': subdirectory})
+                if metadata is not None:
+                    dependencies[-1]['installed'] = metadata
         if not sources and not unsupported:
             raise core.ProtocolError('dependency_input', 'No supported manifests found; no recursive scan was performed')
-        return {'schema_version': '0.1', 'complete': not unsupported,
-                'resolution_complete': not unsupported and all(d['status'] == 'github' for d in dependencies),
+        installed_complete = all(m['status'] == 'github' for m in installed_cache.values())
+        complete = not unsupported and (not installed or installed_complete)
+        result = {'schema_version': '0.1', 'complete': complete,
+                'resolution_complete': complete and all(d['status'] == 'github' for d in dependencies),
                 'sources': sources, 'unsupported_files': unsupported, 'repositories': repositories,
                 'dependencies': dependencies, 'warning': NOTICE}
+        if installed:
+            result['installed'] = {'max_packages': MAX_INSTALLED, 'examined': len(installed_cache),
+                                   'complete': installed_complete}
+        return result
     except (OSError, UnicodeError) as exc:
         raise core.ProtocolError('dependency_input', 'Cannot read bounded UTF-8 regular manifests without symlinks') from exc
     finally:

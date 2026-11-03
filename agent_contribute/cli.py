@@ -192,6 +192,8 @@ def main(argv=None):
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
     sub = commands.add_parser('dependencies', help='Offline GitHub give-back candidates from explicit dependency URLs')
     sub.add_argument('path', help='Project directory or package.json, package-lock.json or requirements.txt')
+    sub.add_argument('--installed', action='store_true',
+                     help='Also read up to 100 direct registry packages from existing node_modules metadata; no links or installs')
     sub.add_argument('--output', help='Optional new JSON report file; never overwritten')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
@@ -276,7 +278,7 @@ def main(argv=None):
             if args.min_remaining is not None:
                 budget.require_remaining(before, args.min_remaining)
         if args.command == 'dependencies':
-            result = dependencies.report(args.path)
+            result = dependencies.report(args.path, installed=args.installed)
             if args.output:
                 write_new_json(args.output, result)
             code = 0

@@ -92,7 +92,22 @@ One of `audit_report`, `audit_unread`.
 | `dependencies[].repository` | string or null |  |
 | `dependencies[].revision` | string or null |  |
 | `dependencies[].subdirectory` | string or null |  |
+| `dependencies[].installed` | object (optional) |  |
+| `dependencies[].installed.status` | "github" \| "unresolved" \| "unsupported" |  |
+| `dependencies[].installed.reason` | string |  |
+| `dependencies[].installed.source_file` | string or null |  |
+| `dependencies[].installed.sha256` | string or null |  |
+| `dependencies[].installed.name` | string or null |  |
+| `dependencies[].installed.version` | string or null |  |
+| `dependencies[].installed.field` | string or null |  |
+| `dependencies[].installed.repository` | string or null |  |
+| `dependencies[].installed.revision` | string or null |  |
+| `dependencies[].installed.subdirectory` | string or null |  |
 | `warning` | string |  |
+| `installed` | object (optional) |  |
+| `installed.max_packages` | 100 |  |
+| `installed.examined` | integer |  |
+| `installed.complete` | boolean |  |
 
 ### `discover`
 

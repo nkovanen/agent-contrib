@@ -1223,9 +1223,12 @@ quietly; writable output retains the command's normal exit status.
 
 ## Offline dependency targets
 
-`tipjar dependencies PATH [--output NEW_JSON_FILE]` (also available as
+`tipjar dependencies PATH [--installed] [--output NEW_JSON_FILE]` (also available as
 `agent-contrib dependencies`) reads explicit GitHub
-dependency URLs from local npm manifests/lockfiles and Python requirements. It
+dependency URLs from local npm manifests/lockfiles and Python requirements.
+Explicit `--installed` also reads bounded existing node_modules repository
+metadata for at most 100 direct registry packages, preserving observed versions
+and refusing symlinks. It
 never runs project code or requests registry metadata. `--format text` goes
 before the command. Malformed input, duplicate JSON keys, unsafe filesystem
 paths and unknown npm lock versions fail closed. Successful partial resolution

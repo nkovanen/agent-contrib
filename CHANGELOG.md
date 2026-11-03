@@ -31,7 +31,9 @@ channel or runtime model provider is added.
 
 - `tipjar dependencies PATH`: offline GitHub give-back candidates from npm
   manifests/lockfiles and Python requirements direct references, with source
-  hashes and declaration provenance. No registry lookup or project execution;
+  hashes and declaration provenance. Explicit `--installed` resolves ordinary
+  direct npm registry dependencies from bounded existing node_modules repository
+  metadata with observed versions; symlinks are refused. No registry lookup or project execution;
   unsupported sources stay visible and candidates grant no authority. See the
   [give-back workflow](docs/dependencies.md).
 

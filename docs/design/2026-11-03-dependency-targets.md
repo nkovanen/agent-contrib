@@ -35,3 +35,37 @@ other candidates. No candidate grants approval or execution/publication authorit
 4. Document the report-to-discover/jar-review workflow and limits. Generate the
    output reference; run the full suite and build/install checks.
 5. Merge latest origin/main without rebasing, reverify, commit for independent review.
+
+## Installed npm metadata extension
+
+The explicit `--installed` option additionally inspects already-present
+`node_modules/NAME/package.json` for up to 100 unique project direct registry
+dependencies (all supported package.json groups). It requires a project directory
+with package.json, or that file explicitly. No installation, import, resolver,
+network request, directory enumeration or symlink following is added. Direct
+project candidates are resolved before lockfile observations.
+
+Read each package through descriptor-relative, no-follow directory opens and a
+64 KiB regular-file bound; refuse symlinks including pnpm layouts. Read failures
+remain visible per declaration. Strict JSON, expected package name and a version
+are required. Use only repository string/object metadata, never homepage or a
+package-name guess. Repository directory metadata is retained; conflicting URL
+and directory subpaths are ambiguous and unresolved. No semver evaluation or
+lockfile-version matching is claimed. Identity/version/repository metadata is
+untrusted local evidence, not proof of ownership or installation integrity.
+
+Keep original declaration provenance and attach optional installed metadata
+provenance (relative file, hash, observed name/version, repository field,
+status/reason). Successful lookup may resolve that declaration's candidate.
+Expose installed coverage separately; missing/unsafe/ambiguous metadata cannot
+claim complete resolution. Preserve the default command's output unchanged.
+
+Plan: red tests for ordinary registry packages, scoped names, opt-in read
+isolation, provenance, symlink/nonregular/size refusal, malicious names, missing
+and conflicting metadata, and the 100-package cap; implement; update schemas,
+worked example and installed smoke; full suite, reference and packaging checks;
+commit separately for controller review.
+
+Review correction: requirements comments are stripped only at whitespace/#
+boundaries outside quoted marker text. URL fragments (#egg/#subdirectory) stay
+intact; no requirements are executed or marker expressions evaluated.

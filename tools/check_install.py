@@ -141,6 +141,16 @@ def installed_check(source):
         assert dependency_report["repositories"] == ["example/library"]
         assert dependency_report["dependencies"][0]["revision"] == "v1"
         assert dependency_report["resolution_complete"] is True
+        manifest.write_text('{"dependencies":{"ordinary":"^1"}}', encoding="utf-8")
+        metadata = Path.cwd() / "node_modules" / "ordinary" / "package.json"
+        metadata.parent.mkdir(parents=True)
+        metadata.write_text('{"name":"ordinary","version":"1.2.3",'
+                            '"repository":{"url":"https://github.com/example/library.git"}}', encoding="utf-8")
+        installed_report = json.loads(run([tipjar, "dependencies", manifest, "--installed"],
+                                          cwd=Path.cwd(), env=env))
+        assert installed_report["repositories"] == ["example/library"]
+        observed = installed_report["dependencies"][0]["installed"]
+        assert (observed["name"], observed["version"]) == ("ordinary", "1.2.3")
     else:
         refused = json.loads(run([tipjar, "dependencies", manifest], cwd=Path.cwd(), env=env, expected=1))
         assert refused["error"]["code"] == "dependency_input"
