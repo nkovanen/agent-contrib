@@ -64,7 +64,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [3] Task-scoped owner/maintainer authorization: schema 0.2, host-context mandate, exact-head draft recognition, `implementation`/`draft`/`completion` gates ([#3](https://github.com/nkovanen/agent-contrib/issues/3))
 - [3] Closed or missing stdout without traceback ([#4](https://github.com/nkovanen/agent-contrib/issues/4))
 - [3] A1 Ranking signals: code location (paths, file and module names), clarity, activity, author association, and an opt-in one-read responsiveness sample ([#12](https://github.com/nkovanen/agent-contrib/issues/12))
-- [3] Ranking aids, report only: `discover --check-top N` ownership re-check of the top N and `discover --repo-dir` local work (issues referenced by local commits off the default branch rank lower)
+- [3] Ranking aids, report only: `discover --signals --check-top N` (N 1–5, one repository) re-checks ownership of the top N and re-ranks only those; `discover --repo-dir` (one repository) reports issues referenced by local commits off the default branch and ranks them lower only with `--signals`
 - [3] `lint`: offline check of a contract against its schema and the reviewed-contract rules
 - [3] A2 Multi-repository discovery, 2–20 repositories, isolated results ([#13](https://github.com/nkovanen/agent-contrib/issues/13))
 - [3] C3 `audit`: read-only maintainer report ([#10](https://github.com/nkovanen/agent-contrib/issues/10))
