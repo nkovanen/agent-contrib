@@ -458,7 +458,8 @@ checks each commit object's size before reading any message, and reads only
 whole messages: a commit larger than 64 KiB is skipped, and reading stops once
 messages would exceed 4 MiB in total. Reads use the hardened Git reader after the
 worktree-root and checkout-config checks. A missing base commit (the CLI never
-fetches), a shallow checkout (a shallow boundary can hide commits), an unsafe
+fetches), a missing or non-Git `--repo-dir`, a shallow checkout (a shallow
+boundary can hide commits), an unsafe
 config, a subdirectory, more than 500 commits, a skipped message or a message
 containing a NUL byte make it incomplete, which exits 1. Messages are read from
 the raw commit objects (`git cat-file --batch`), never reformatted, and commit

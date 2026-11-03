@@ -147,12 +147,23 @@ LOCAL_NOTICE = ('Report only. Issues closed with fixes, closes or resolves (#N, 
                 'done, and none is not proof that it is not.')
 
 
+LOCAL_UNREAD = 'Local work was not read, so the local_work report is incomplete (discover exits 1): '
+
+
 def local_issue_references(directory, repository, base):
     """F12: unpublished local work that may already implement an issue. Hardened reads only; nothing is fetched."""
     report = {'complete': False, 'head': None, 'base': base, 'commits_scanned': 0, 'commit_limit': MAX_LOCAL_COMMITS,
               'issues': [], 'errors': [], 'notice': LOCAL_NOTICE}
+    shown = core.safe_text(str(directory), 500)
     try:
-        core.require_worktree_root(directory)
+        if not Path(directory).is_dir():
+            raise core.ProtocolError('not_directory', f'--repo-dir {shown} is not a directory')
+        try:
+            core.require_worktree_root(directory)
+        except core.ProtocolError as exc:
+            if exc.code != 'git_error':
+                raise
+            raise core.ProtocolError('not_checkout', f'--repo-dir {shown} is not a Git checkout Git could read') from None
         core.require_safe_config(directory)
         head = report['head'] = core.current_head(directory)
         try:
@@ -200,8 +211,8 @@ def local_issue_references(directory, repository, base):
                     commits.append(sha)
         report.update(commits_scanned=len(entries),
                       issues=[{'number': number, 'commits': commits} for number, commits in sorted(referenced.items())])
-    except core.ProtocolError as exc:
-        report['errors'].append(str(exc))
+    except core.ProtocolError as exc:  # fatal: the history was not read (dogfood 4 N8)
+        report['errors'].append(LOCAL_UNREAD + str(exc))
     report['complete'] = not report['errors']
     return report
 

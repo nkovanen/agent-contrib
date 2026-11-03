@@ -120,12 +120,12 @@ class LocalWorkTests(unittest.TestCase):
             self.assertEqual(len(report['issues'][0]['commits']), 3)
             missing = workspace.local_issue_references(tmp, 'acme/photos', 'f' * 40)
             self.assertFalse(missing['complete'])
-            self.assertEqual(missing['errors'], ['Source default-branch commit ' + 'f' * 40 + ' is not in this checkout; '
+            self.assertEqual(missing['errors'], [workspace.LOCAL_UNREAD + 'Source default-branch commit ' + 'f' * 40 + ' is not in this checkout; '
                                                  'fetch it with your own tools (the CLI never fetches)'])
             git('config', 'gpg.program', 'touch /tmp/agent-contrib-pwned')
             unsafe = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(unsafe['complete'])
-            self.assertTrue(unsafe['errors'][0].startswith('Checkout Git config sets gpg.program'))
+            self.assertIn('Checkout Git config sets gpg.program', unsafe['errors'][0])
             git('config', '--unset', 'gpg.program')
             sub = pathlib.Path(tmp, 'sub')
             sub.mkdir()
@@ -232,13 +232,37 @@ class LocalWorkTests(unittest.TestCase):
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
             self.assertEqual(report['issues'], [])
-            self.assertEqual(report['errors'], ['Checkout is shallow, so local history may be missing; deepen it with '
+            self.assertEqual(report['errors'], [workspace.LOCAL_UNREAD + 'Checkout is shallow, so local history may be missing; deepen it with '
                                                 'your own tools (git fetch --unshallow) and retry'])
             client = SignalGitHub()
             client.commit = base
             code, result = run(client, 'discover', 'acme/photos', '--signals', '--repo-dir', tmp)
             self.assertEqual(code, 1)
             self.assertEqual({item['signals']['local_work']['value'] for item in result['issues']}, {'unknown'})
+
+    def test_unusable_repo_dir_says_the_local_report_is_incomplete(self):
+        # Dogfood 4 N8: '/nonexistent' reported the evidence wording 'Git evidence checkout read failed'.
+        prefix = 'Local work was not read, so the local_work report is incomplete (discover exits 1): '
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            missing = str(pathlib.Path(tmp, 'nonexistent'))
+            plain = pathlib.Path(tmp, 'README.md')
+            sub = pathlib.Path(tmp, 'sub')
+            sub.mkdir()
+            cases = [(missing, f'--repo-dir {missing} is not a directory'),
+                     (str(plain), f'--repo-dir {plain} is not a directory'),
+                     (str(sub), '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')]
+            with tempfile.TemporaryDirectory() as empty:
+                cases.append((empty, f'--repo-dir {empty} is not a Git checkout Git could read'))
+                for directory, reason in cases:
+                    with self.subTest(directory=directory):
+                        report = workspace.local_issue_references(directory, 'acme/photos', base)
+                        self.assertEqual((report['complete'], report['errors']), (False, [prefix + reason]))
+            client = SignalGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--repo-dir', missing)
+            self.assertEqual(code, 1)
+            self.assertEqual(result['local_work']['errors'], [prefix + f'--repo-dir {missing} is not a directory'])
 
     def test_cli_exit_usage_and_no_gate_change(self):
         with tempfile.TemporaryDirectory() as tmp:

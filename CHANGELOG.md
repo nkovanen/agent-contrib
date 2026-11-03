@@ -177,6 +177,9 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- `discover --repo-dir` errors say the local-work report is incomplete and that
+  discover exits 1, and name a missing directory or a non-Git directory instead
+  of the evidence wording (dogfood 4 N8).
 - `--observe-ci` and `--observe-signatures` share one target/head prelude.
   With an evidence head but an invalid target repository,
   `ci_observation.head_sha` is now `null`, like `signature_observation`, since
