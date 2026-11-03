@@ -446,16 +446,18 @@ tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
 
 `discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
-`local_work` object for unpublished local work. It lists the issue numbers that
-a closing keyword references: `fixes`, `fixed`, `fix`, `closes`, `closed`, `close`,
-`resolves`, `resolved` or `resolve` (any case, optionally with a colon), followed by
-`#N` or `owner/repo#N` for the source repository. As in GitHub's syntax, each
-reference needs its own keyword: in `Fixes #1 and #2` only #1 counts. `Refs #N`
-(partial work), PR numbers, other projects' `#N`, qualified references to other
-repositories and examples of the syntax do not count: a keyword right after a
-quote or backtick, text in inline code spans, fenced code (``` or ~~~), indented
-code and `>` blockquote lines are ignored. They are taken from the messages of commits reachable from the checkout's HEAD but not from the
-snapshot's source default-branch commit. It lists the newest 500 commits at most,
+`local_work` object for unpublished local work. A commit closes issue N only when
+one line of its message, after stripping surrounding ASCII whitespace, is exactly
+`<keyword> #N` or `<keyword> owner/repo#N` for the source repository (owner and
+name in any case). The keyword is one of `fix`, `fixes`, `fixed`, `close`,
+`closes`, `closed`, `resolve`, `resolves` or `resolved`, in any case, optionally
+followed by a colon, then one space. Nothing else may be on the line, so lists
+(`Fixes #1, #2`), inline mentions, `Refs #N`, PR numbers, other repositories and
+quoted examples never count, and Markdown is not interpreted (a line that is
+exactly `Fixes #12` counts even inside a code block). The rule is conservative by
+design: under-counting only means an issue is not demoted. Only commits
+reachable from the checkout's HEAD but not from the snapshot's source
+default-branch commit are read. It lists the newest 500 commits at most,
 checks each commit object's size before reading any message, and reads only
 whole messages: a commit larger than 64 KiB is skipped, and reading stops once
 messages would exceed 4 MiB in total. Reads use the hardened Git reader after the

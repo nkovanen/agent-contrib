@@ -1,5 +1,4 @@
 """Offline local-checkout helpers. No GitHub reads, no argv execution, never evidence."""
-import bisect
 import os
 import re
 import stat
@@ -144,9 +143,9 @@ def require_outside_checkout(directory, output):
 MAX_LOCAL_COMMITS = 500
 MAX_COMMIT_BYTES = 65536
 MAX_LOCAL_BYTES = 4 * 1024 * 1024
-LOCAL_NOTICE = ('Report only. Issues closed with fixes, closes or resolves (#N, or owner/repo#N for the source '
-                'repository) by commits reachable from the checkout HEAD but not from the source default-branch '
-                'commit. Refs and other mentions do not count. A closing reference is not proof that the work is '
+LOCAL_NOTICE = ('Report only. Issues closed by a whole message line such as "Fixes #N" (or owner/repo#N for the '
+                'source repository) in commits reachable from the checkout HEAD but not from the source '
+                'default-branch commit. Other mentions do not count. A closing line is not proof that the work is '
                 'done, and none is not proof that it is not.')
 
 
@@ -244,61 +243,18 @@ def _raw_messages(directory, shas):
         yield expected, body.partition(b'\n\n')[2]
 
 
-# Dogfood 4 N4 and review R12: only GitHub's closing syntax marks finished work, one keyword per reference
-# ('Fixes #1, fixes #2'). 'Refs #N', other projects' '#N', PR numbers, list continuations and examples of the syntax
-# (quoted, in code spans, fenced or indented code, or blockquotes) do not count.
-CLOSING = re.compile(r'(?i)(?<![A-Za-z0-9_\-"\'`\u2018\u201c])(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?[ \t]{1,3}')
-# Matched only right after a keyword, so no lookbehind is needed.
-REFERENCE = re.compile(r'(?:([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}))?#([1-9][0-9]{0,9})(?![0-9A-Za-z_])')
-FENCE = re.compile(r'(`{3,}|~{3,})')
-BACKTICKS = re.compile(r'`+|[^`]+')
-
-
-def _prose(text):
-    """Commit-message lines outside fenced code, indented code and blockquotes, with inline code spans removed."""
-    fence, lines = None, []
-    for line in text.split('\n'):
-        stripped = line.lstrip(' ')
-        marker = FENCE.match(stripped) if len(line) - len(stripped) <= 3 else None
-        if marker and not fence and marker.group(1)[0] == '`' and '`' in stripped[marker.end():]:
-            marker = None  # as in CommonMark, a backtick fence's info string has no backticks: this is inline code
-        if fence:
-            if marker and marker.group(1)[0] == fence[0] and len(marker.group(1)) >= len(fence):
-                fence = None
-            continue
-        if marker:
-            fence = marker.group(1)
-        elif not (line.startswith('\t') or len(line) - len(stripped) >= 4 or stripped.startswith('>')):
-            lines.append(_without_code_spans(line))
-    return '\n'.join(lines)
-
-
-def _without_code_spans(line):
-    """A run of N backticks opens a span closed by the next run of exactly N; unmatched runs stay text. O(n log n)."""
-    tokens = BACKTICKS.findall(line)
-    runs = {}
-    for index, token in enumerate(tokens):
-        if token[0] == '`':
-            runs.setdefault(len(token), []).append(index)
-    kept, index = [], 0
-    while index < len(tokens):
-        token = tokens[index]
-        if token[0] == '`':
-            positions = runs[len(token)]
-            later = bisect.bisect_right(positions, index)
-            if later < len(positions):
-                kept.append(' ')
-                index = positions[later] + 1
-                continue
-        kept.append(token)
-        index += 1
-    return ''.join(kept)
+# Dogfood 4 N4 and review R12: a commit closes issue N only through a whole message line that is exactly
+# '<keyword> #N' or '<keyword> owner/repo#N' for the source repository: a GitHub closing keyword (any case, optional
+# colon) and one space. Lists, inline mentions, quotes and Markdown are never interpreted; conservative by design,
+# since under-counting only means an issue is not demoted.
+TRAILER = re.compile(r'(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):? '
+                     r'(?:([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}))?#([1-9][0-9]{0,9})')
 
 
 def _issue_refs(text, repository):
-    numbers, prose = set(), _prose(text)
-    for keyword in CLOSING.finditer(prose):
-        reference = REFERENCE.match(prose, keyword.end())
-        if reference and (reference.group(1) is None or reference.group(1).casefold() == repository.casefold()):
-            numbers.add(int(reference.group(2)))  # other repositories never count
+    numbers = set()
+    for line in text.split('\n'):
+        trailer = TRAILER.fullmatch(line.strip(' \t\r\f\v'))  # ASCII whitespace only
+        if trailer and (trailer.group(1) is None or trailer.group(1).casefold() == repository.casefold()):
+            numbers.add(int(trailer.group(2)))
     return numbers
