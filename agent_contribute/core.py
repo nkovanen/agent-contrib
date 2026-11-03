@@ -522,7 +522,8 @@ def inspect_from_snapshot(snapshot, issue):
 
 
 def inspect_issue(reference, client=None, *, pr_ids=None):
-    """pr_ids, when a dict, receives {number: numeric ID or None} for every open source PR the scan read."""
+    """pr_ids, when a dict, receives {number: numeric ID or None} for every open source PR the scan read; a number
+    the scan repeated maps to None, so conflicting identities never resolve by order (FR1-05)."""
     repository, number = parse_issue(reference)
     client = client or GitHub()
     context, meta = resolve_repository(repository, client)
@@ -533,7 +534,10 @@ def inspect_issue(reference, client=None, *, pr_ids=None):
         source = context['issue_source_repository']
         snapshot = repository_snapshot(source, client, meta)
         if pr_ids is not None:
-            pr_ids.update({entry['number']: entry['id'] for entry in snapshot['pr_index']})
+            seen = set()
+            for entry in snapshot['pr_index']:
+                pr_ids[entry['number']] = None if entry['number'] in seen else entry['id']
+                seen.add(entry['number'])
         issue = issue_data(client.request(f'repos/{source}/issues/{number}'), number)
         result = inspect_from_snapshot(snapshot, issue)
         if source.casefold() != repository.casefold():
