@@ -8,7 +8,7 @@
   function requireValue(condition, message) { if (!condition) throw new Error(message); }
   function texts(value) {
     requireValue(Array.isArray(value) && value.length <= 16, 'Use at most 16 lines per field.');
-    requireValue(value.every(x => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 500 && ![...x].some(c => c.length === 1 && /[\ud800-\udfff]/u.test(c)) && /\S/u.test(x) && !/[\u0000-\u001f\u007f]/u.test(x)), 'Each line needs 1–500 characters, without control characters.');
+    requireValue(value.every(x => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 500 && ![...x].some(c => c.length === 1 && /[\ud800-\udfff]/u.test(c)) && !/^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$/u.test(x) && !/[\u0000-\u001f\u007f]/u.test(x)), 'Each line needs 1–500 characters, without control characters.');
     requireValue(new Set(value).size === value.length, 'Each line must be distinct.');
     return value.slice();
   }
@@ -60,7 +60,7 @@
     return rows.filter(row => (state === 'all' || state === row.state) && [row.repository,...(row.manifest?.wanted || []),...(row.manifest?.boundaries || [])].join(' ').toLowerCase().includes(query));
   }
   function makeManifest(status, wanted, boundaries) {
-    const lines = text => text.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    const lines = text => text.split(/\r?\n/).filter(x => x.length > 0);
     const result = validateManifest({schema_version:'0.1',status,wanted:lines(wanted),boundaries:lines(boundaries)});
     requireValue(bytes(JSON.stringify(result,null,2)+'\n') <= 16384, 'Downloaded manifest exceeds 16 KiB. Shorten the lists.');
     return result;

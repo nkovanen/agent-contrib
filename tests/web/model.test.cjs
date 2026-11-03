@@ -36,4 +36,13 @@ assert.throws(()=>m.parseSnapshot(fs.readFileSync(__dirname+'/fixtures/invalid.j
 const longLines = Array.from({length:16},(_,i)=>String(i).padStart(2,'0')+'éé'+'x'.repeat(496)).join('\n');
 assert.throws(()=>m.makeManifest('welcome',longLines,longLines));
 assert.equal(m.parseSnapshot(JSON.stringify({...snapshot([]),complete:false})).complete,false);
+// Unicode White_Space matches the manifest contract, not ECMAScript trim.
+assert.throws(()=>load({...report,manifest:{...report.manifest,wanted:['\u0085']}}));
+assert.equal(load({...report,manifest:{...report.manifest,wanted:['\ufeff']}})[0].manifest.wanted[0],'\ufeff');
+assert.throws(()=>m.makeManifest('welcome','\u0085',''));
+assert.deepEqual(m.makeManifest('welcome','\ufeff','').wanted,['\ufeff']);
+assert.deepEqual(m.makeManifest('welcome','  Docs  ','').wanted,['  Docs  ']);
+assert.equal(m.makeManifest('welcome','😀'.repeat(500),'').wanted[0],'😀'.repeat(500));
+assert.throws(()=>m.makeManifest('welcome','😀'.repeat(501),''));
+for (const text of ['\u0000','\u001f','\u007f']) assert.throws(()=>m.makeManifest('welcome',text,''));
 console.log('Tipjar model regressions passed');
