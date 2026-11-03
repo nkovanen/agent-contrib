@@ -11,6 +11,13 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `drift task.json --policy-sha256 HASH` (N1, dogfood 4): re-reads the
+  repository policy inventory and reports `repository_policy_drift`, with
+  `policy_drifted` and, when a baseline can be rebuilt at the pinned commit,
+  added, removed and changed source identities. A policy-only edit (for example
+  to `SECURITY.md`) after the review used to be invisible to `drift`. Drift or
+  an incomplete policy read exits 1. The Quick path and the policy step now run
+  it before any authorization or publication.
 - A report-only maintainer GitHub Action, slice 1 (#11):
   `actions/verify/` with an example workflow
   (`docs/examples/agent-contrib-verify.yml`). It reads only the
@@ -200,6 +207,40 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- The Quick path names the "Repository policy review" section explicitly instead
+  of "the repository policy step below" (N3, dogfood 4).
+- The repository policy report adds `hinted_lines` (N2, dogfood 4), one
+  reading entry per hinted line with all its hint kinds. It also adds
+  `project_vocabulary`, which summarizes mentions made only of the project's own
+  name. Restriction hints are never summarized. The text view groups by line and
+  counts the summarized mentions, and the review obligation now says to read
+  every hinted line.
+- Installed workflow Quick path (N-02): the stop rule now matches the policy
+  section ("a relevant rule that is prohibited or unresolved" instead of "a
+  refusal or restriction"), the policy step comes before ranking and selection,
+  and a constrained policy (a human must review, submit or write every comment)
+  requires asking the user to commit to that mode first. Disposition (c) is
+  valid only after that commitment.
+- Text output of `discover`, `inspect` and `prepare` lists up to five policy
+  restriction hints (kind, `repository:path:line`, sanitized excerpt) under the
+  Policy line, plus a count of the rest. Before, only counts were shown, so
+  text-mode agents never saw the sentence that justifies a stop (N-01).
+  HTML comment markers are left out of these text excerpts; JSON is unchanged.
+  Shortened excerpts end with `...` and hints carry `excerpt_truncated`. An
+  excerpt keeps its restriction word near the start. Text output counts dropped
+  restriction hints, and says "No restriction hints retained" when limits
+  caused losses (RP-26).
+- Repository policy hints (N-04, external evaluation 2): hints are ordered
+  agent, PR eligibility, AI, then PR restrictions with AI context, PR
+  restrictions in policy files, other PR restrictions, restrictions from nested
+  security, support, governance or conduct files (such as
+  `doc/source/reference/security.rst`), and mentions. Nested files rank lower
+  but are never skipped (RP-25). Bounds drop mentions first. A dropped restriction hint is reported
+  as a source-hiding limit (`restriction hints`).
+  PR submitter-eligibility rules ("Pull requests are limited to maintainers",
+  "issues instead of pull requests", "Only a maintainer may submit") rank just
+  below agent restrictions; review requirements such as "PRs must be reviewed by
+  maintainers" do not (RP-27).
 - `authorization-request` JSON adds `requested_actions` (the contract's actions;
   the host still chooses the mandate actions). Text output now lists the
   requested actions and the human-only fields, and labels `unresolved_fields`
@@ -402,6 +443,25 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- `repository_policy.inventory_sha256` now also covers the pinned blob id of
+  every unread policy candidate (RP-28) and the owner `.github` lookup outcome
+  (`owner_lookup`, RP-29), so it differs from earlier 0.3.0 candidate builds.
+  An owner lookup that fails other than with an HTTP 404 on the repository
+  metadata (a later commit or tree 404 included) is now a hiding limit,
+  so it is unknown rather than "absent". Linked local files carry their pinned
+  blob id: relative links, and github.com blob/tree links into the source or
+  the owner `.github` repository (in either direction) at that repository's
+  default branch or pinned commit. A known file without a valid blob id, or an
+  unresolvable blob/tree link into either repository, is a hiding limit. Only newly
+  recorded review hashes are affected. The policy hash is not part of
+  `instructions_sha256`, so existing contracts and their verification decisions
+  are unchanged.
+- Schema 0.1 `verify` on a draft whose execution mode is `pending` and whose
+  target is blank now reports "Execution target not yet chosen (execution mode
+  is pending)" instead of "Execution target repository is invalid". The
+  decision is unchanged; a non-blank invalid target keeps the old message
+  (N-05). The installed workflow's requirements ledger also names CLA and DCO
+  sign-offs as human-submitter obligations.
 - `prepare` (task schemas 0.1 and 0.2) now writes the prerequisite
   `ai-policy-review` with status `pending` into every new contract, so a policy
   review must be recorded (`satisfied` with evidence, or `blocked`) or visibly

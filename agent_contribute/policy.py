@@ -29,7 +29,10 @@ MAX_OMITTED = 50
 # Limits after which a policy candidate or reference may be unread or unlisted; hint limits hide no source.
 HIDING_LIMITS = {'requests', 'policy files', 'owner policy files', 'scanned bytes', 'unassessed entries',
                  'omitted sources not listed', 'report size: unassessed entries', 'report size: omitted sources',
-                 'report size: sources not listed'}
+                 'report size: sources not listed', 'restriction hints', 'report size: restriction hints',
+                 'owner lookup', 'unfingerprinted files'}
+STOP_HINTS = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction')
+POLICY_KINDS = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template')
 EXCERPT_CHARS = 300
 IDENTIFIER_CHARS = 500
 MAX_REPORT_BYTES = 256 * 1024
@@ -38,13 +41,13 @@ SCANNED_FORMATS = {'', '.md', '.markdown', '.rst', '.txt'}
 # Other document formats a policy may use; listed as unsupported. Code, data and image files are not candidates.
 DOCUMENT_FORMATS = {'.adoc', '.asciidoc', '.pdf', '.html', '.htm', '.docx', '.odt', '.org', '.textile', '.rtf', '.mdx'}
 KIND_ORDER = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template', 'community', 'readme')
-HINT_ORDER = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction', 'ai_mention')
 NEVER_INSPECTED = ['GitHub wiki', 'websites outside the GitHub REST API', 'images and PDFs',
                    'issue, pull request and discussion comments',
                    "files in repositories other than the source and its owner's .github repository",
                    'non-Latin-script text (see per-source notes)']
 OBLIGATION = ('This report is not a verdict and never shows that contributions are permitted. Read every scanned '
-              'source in full, every hint in context and every unassessed reference before ranking or preparing '
+              'source in full, every hinted line in context (hinted_lines; project-name vocabulary mentions are '
+              'summarized in project_vocabulary) and every unassessed reference before ranking or preparing '
               'work. Record each relevant source with its revision or content digest. A policy-relevant source you '
               'cannot read, or unknown contributor eligibility under a maintainers-only rule, is unresolved: '
               'unresolved policy blocks upstream preparation, implementation and publication. So does any limit with '
@@ -58,6 +61,12 @@ RESTRICT_TERMS = {'not', 'no', 'never', 'nor', 'only', 'limited', 'restricted', 
                   'reject', 'rejected', 'rejects', 'refuse', 'refused', 'refuses', 'forbid', 'forbidden', 'forbids',
                   'prohibit', 'prohibited', 'prohibits', 'ban', 'banned', 'bans', 'disallow', 'disallowed',
                   'invitation', 'invite', 'invited', 'maintainers', 'members', 'instead', 'must'}
+# Who may submit pull requests (RP-27): a PR term near "limited", "restricted", "invitation" or "instead"
+# ("limited to maintainers", "issues instead of pull requests"), or near both "only" and an actor ("Only a
+# maintainer may submit"). Review requirements ("PRs must be reviewed by maintainers") are not eligibility.
+ELIGIBILITY_TERMS = {'limited', 'restricted', 'invitation', 'invite', 'invited', 'instead'}
+ELIGIBILITY_ACTORS = {'maintainer', 'maintainers', 'member', 'members', 'collaborator', 'collaborators', 'team',
+                      'owner', 'owners', 'committer', 'committers'}
 PHRASES = {'artificial': [(('artificial', 'intelligence'), 'ai')],
            'large': [(('large', 'language', 'model'), 'ai'), (('large', 'language', 'models'), 'ai')],
            'machine': [(('machine', 'generated'), 'ai')],
@@ -129,7 +138,7 @@ def _non_latin(text):
 
 
 def _groups(tokens):
-    found = {'ai': [], 'agent': [], 'pr': [], 'restrict': []}
+    found = {'ai': [], 'agent': [], 'pr': [], 'restrict': [], 'elig': [], 'only': [], 'actor': []}
     for index, (_, token) in enumerate(tokens):
         if token in AI_TERMS or token.startswith('gpt'):
             found['ai'].append(index)
@@ -139,26 +148,89 @@ def _groups(tokens):
             found['pr'].append(index)
         if token in RESTRICT_TERMS:
             found['restrict'].append(index)
+        if token in ELIGIBILITY_TERMS:
+            found['elig'].append(index)
+        if token == 'only':
+            found['only'].append(index)
+        if token in ELIGIBILITY_ACTORS:
+            found['actor'].append(index)
         for words, group in PHRASES.get(token, ()):
             if tuple(t for _, t in tokens[index:index + len(words)]) == words:
                 found[group].append(index)
     return found
 
 
-def _near(anchors, restrict):
+def _eligibility(found):
+    """A pull-request rule about who may submit (RP-27); see ELIGIBILITY_TERMS."""
+    if _near(found['pr'], found['elig']) is not None:
+        return True
+    return any(_near([anchor], found['only']) is not None and _near([anchor], found['actor']) is not None
+               for anchor in found['pr'])
+
+
+def _project_terms(repository):
+    """AI/agent vocabulary that is the project's own name, such as 'agent' in acme/agent-kit (N2)."""
+    words = set(re.findall('[a-z0-9]+', repository.split('/')[-1].casefold()))
+    return {word for word in words if word in AI_TERMS | AGENT_TERMS or word + 's' in AGENT_TERMS}
+
+
+def _is_project_term(term, vocabulary):
+    return term in vocabulary or term.endswith('s') and term[:-1] in vocabulary
+
+
+def _group(hints, terms, vocabulary):
+    """(hinted_lines, project_vocabulary): one reading entry per (source, line) in attention order. A line whose only
+    hints are mentions made solely of project-name vocabulary is summarized instead; restrictions never are."""
+    lines, order = {}, []
+    for hint, matched in zip(hints, terms):
+        key = (hint['source'], hint['line'])
+        if key not in lines:
+            order.append(key)
+            lines[key] = {'source': hint['source'], 'line': hint['line'], 'kinds': [], 'heading': hint['heading'],
+                          'untrusted_excerpt': hint['untrusted_excerpt'], 'excerpt_truncated': hint['excerpt_truncated'],
+                          'vocabulary_only': True}
+        entry = lines[key]
+        entry['kinds'].append(hint['kind'])
+        if hint['kind'] != 'ai_mention' or not matched or not all(_is_project_term(t, vocabulary) for t in matched):
+            entry['vocabulary_only'] = False
+    collapsed = [lines[key] for key in order if lines[key]['vocabulary_only']]
+    hinted = [{k: v for k, v in lines[key].items() if k != 'vocabulary_only'} for key in order
+              if not lines[key]['vocabulary_only']]
+    summary = {'terms': sorted(vocabulary), 'mentions_collapsed': len(collapsed),
+               'lines': [{'source': e['source'], 'line': e['line']} for e in collapsed[:MAX_UNASSESSED]],
+               'lines_not_listed': max(0, len(collapsed) - MAX_UNASSESSED)}
+    return hinted, summary
+
+
+def _pair(anchors, restrict):
+    """(anchor, nearest-window restriction index) for the first anchor with a restriction in range, or None."""
     for anchor in anchors:
         at = bisect.bisect_left(restrict, anchor - WINDOW)
         if at < len(restrict) and restrict[at] <= anchor + WINDOW:
-            return anchor
+            return anchor, restrict[at]
     return None
 
 
-def _excerpt(text, offset):
+def _near(anchors, restrict):
+    pair = _pair(anchors, restrict)
+    return pair and pair[0]
+
+
+PREDICATE_WITHIN = 170  # characters from the excerpt start within which the restriction word must end (RP-26)
+
+
+def _excerpt(text, offset, focus_end=None):
+    """(excerpt, truncated). Starts about 100 characters before the anchor, but late enough that the restriction
+    word (ending at focus_end) lies within the first PREDICATE_WITHIN characters, so a short view keeps it."""
     start = max(0, offset - 100)
-    if start and not text[start - 1].isspace():  # begin at the next word, never mid-word
-        space = text.find(' ', start, offset)
-        start = offset if space < 0 else space + 1
-    return ' '.join(text[start:start + EXCERPT_CHARS * 4].split())[:EXCERPT_CHARS]
+    if focus_end is not None and focus_end - start > PREDICATE_WITHIN:
+        start = max(0, focus_end - PREDICATE_WITHIN)
+    limit = min(offset, focus_end) if focus_end is not None else offset
+    if start and not text[start - 1].isspace() and start < limit:  # begin at the next word, never mid-word
+        space = text.find(' ', start, limit)
+        start = limit if space < 0 else space + 1
+    collapsed = ' '.join(text[start:start + EXCERPT_CHARS * 4].split())
+    return collapsed[:EXCERPT_CHARS], bool(text[:start].strip()) or len(collapsed) > EXCERPT_CHARS
 
 
 def _paragraphs(text):
@@ -216,16 +288,24 @@ def scan(text, path):
         normalized = normalize(block)
         if _non_latin(normalized):
             non_latin += 1
-        tokens = [(m.start(), m.group().casefold()) for m in TOKEN.finditer(normalized)]
+        matches = list(TOKEN.finditer(normalized))
+        tokens = [(m.start(), m.group().casefold()) for m in matches]
         found = _groups(tokens)
-        candidates = [('possible_agent_restriction', _near(found['agent'], found['restrict'])),
-                      ('possible_ai_restriction', _near(found['ai'], found['restrict'])),
-                      ('possible_pr_restriction', _near(found['pr'], found['restrict'])),
-                      ('ai_mention', min(found['ai'] + found['agent']) if found['ai'] or found['agent'] else None)]
-        for kind, anchor in candidates:
-            if anchor is not None:
+        mention = min(found['ai'] + found['agent']) if found['ai'] or found['agent'] else None
+        candidates = [('possible_agent_restriction', _pair(found['agent'], found['restrict'])),
+                      ('possible_ai_restriction', _pair(found['ai'], found['restrict'])),
+                      ('possible_pr_restriction', _pair(found['pr'], found['restrict'])),
+                      ('ai_mention', None if mention is None else (mention, None))]
+        for kind, pair in candidates:
+            if pair is not None:
+                anchor, restriction = pair
+                excerpt, truncated = _excerpt(normalized, matches[anchor].start(),
+                                              None if restriction is None else matches[restriction].end())
                 hints.append({'kind': kind, 'line': line, 'heading': core.safe_text(heading, 120),
-                              'untrusted_excerpt': _excerpt(normalized, tokens[anchor][0])})
+                              'untrusted_excerpt': excerpt, 'excerpt_truncated': truncated,
+                              'terms': sorted({tokens[i][1] for i in found['ai'] + found['agent']}),
+                              'ai_context': bool(found['ai'] or found['agent']),
+                              'eligibility': kind == 'possible_pr_restriction' and _eligibility(found)})
     return {'hints': hints, 'links': _links(text), 'non_latin_paragraphs': non_latin}
 
 
@@ -235,6 +315,8 @@ class _Report:
         self.sources, self.texts, self.unassessed, self.limits = [], [], [], {}
         self.seen, self.keys = set(), []  # every identity noted; identities of retained entries (aligned)
         self.omitted, self.scanned = [], set()  # scanned: original (repository, path) identities
+        self.owner_lookup = None
+        self.trees = {}  # repository -> {path: pinned blob id}, for fingerprints of linked local files (RP-28)
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -244,7 +326,7 @@ class _Report:
         self.requests += 1
         return self.client.request(endpoint)
 
-    def note(self, what, reason, origin=None, line=None, link_text=None, key=None):
+    def note(self, what, reason, origin=None, line=None, link_text=None, key=None, blob=None, file=False):
         """key is the original identity (repository and path, or URL); what is display text, possibly altered."""
         raw = str(what)
         what = core.safe_text(raw, len(raw))
@@ -255,19 +337,25 @@ class _Report:
         if len(self.unassessed) >= MAX_UNASSESSED:  # count, do not retain: bounded memory and linear time (RP-16)
             self.limit('unassessed entries')
             return
-        self.keys.append(key)
+        blob = _blob_id(blob)
+        if file and blob is None:  # a known file without a valid pinned fingerprint: its edits are invisible (RP-28)
+            self.limit('unfingerprinted files')
+        self.keys.append((key, blob))
         self.unassessed.append({'what': what[:IDENTIFIER_CHARS], 'reason': reason, 'from': origin, 'line': line,
                                 'link_text': core.safe_text(link_text, EXCERPT_CHARS) if link_text else None,
                                 'what_truncated': len(what) > IDENTIFIER_CHARS, 'what_sanitized': what != raw,
-                                'identity_sha256': _identity(key)})
+                                'identity_sha256': _identity(key), 'blob_sha': blob})
 
-    def omit(self, repository, path, kind, reason):
+    def omit(self, repository, path, kind, reason, blob=None, file=False):
         """A policy candidate a limit kept unread: named (bounded), never only counted (RP-19)."""
         if len(self.omitted) >= MAX_OMITTED:
             self.limit('omitted sources not listed')
             return
+        if file and _blob_id(blob) is None:
+            self.limit('unfingerprinted files')
         self.omitted.append({'repository': repository, **_display(path), 'kind': kind or 'instruction',
-                             'reason': reason, 'identity_sha256': _identity((repository.casefold(), path))})
+                             'reason': reason, 'identity_sha256': _identity((repository.casefold(), path)),
+                             'blob_sha': _blob_id(blob)})
 
     def limit(self, name, count=1):
         self.limits[name] = self.limits.get(name, 0) + count
@@ -282,13 +370,14 @@ class _Report:
             core.require(entry, dict, 'tree entry')
             if entry.get('type') == 'blob':
                 blobs[core.require(entry.get('path'), str, 'tree path')] = entry.get('sha')
+        self.trees[repository.casefold()] = blobs
         return blobs
 
-    def add(self, origin, repository, path, commit, digest, kind, text, size):
+    def add(self, origin, repository, path, commit, digest, kind, text, size, blob=None):
         """size is the source's UTF-8 byte count, the unit of the 1 MB scan bound (RP-18)."""
         if self.scanned_bytes + size > MAX_SCANNED_BYTES:
             self.limit('scanned bytes')
-            self.omit(repository, path, kind, 'scan byte limit')
+            self.omit(repository, path, kind, 'scan byte limit', blob, file=blob is not None)
             return
         self.scanned_bytes += size
         result = scan(text, path)
@@ -309,22 +398,22 @@ class _Report:
                 raise core.ProtocolError('file_encoding', 'not base64')
             data = base64.b64decode(''.join(core.require(value.get('content'), str, 'content').split()), validate=True)
         except _Limit:
-            self.omit(repository, path, kind, 'request limit')
+            self.omit(repository, path, kind, 'request limit', blob, file=True)
             return
         except (core.ProtocolError, ValueError, binascii.Error):
-            self.note(label, 'read failed', key=key)
+            self.note(label, 'read failed', key=key, blob=blob, file=True)
             return
         if len(data) > MAX_FILE_BYTES:
-            self.note(label, 'exceeds 200 kB', key=key)
+            self.note(label, 'exceeds 200 kB', key=key, blob=blob, file=True)
         elif not _pinned(blob, value.get('sha'), data):
-            self.note(label, 'content did not match the pinned tree entry', key=key)
+            self.note(label, 'content did not match the pinned tree entry', key=key, blob=blob, file=True)
         else:
             try:
                 text = data.decode('utf-8')
             except UnicodeError:
-                self.note(label, 'not UTF-8 text', key=key)
+                self.note(label, 'not UTF-8 text', key=key, blob=blob, file=True)
                 return
-            self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data))
+            self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data), blob)
 
     def read_candidates(self, origin, repository, commit, blobs, skip, cap, limit_name, allowed=lambda path: True):
         found = []
@@ -335,16 +424,22 @@ class _Report:
                 continue
             if _format(path) not in SCANNED_FORMATS:
                 self.note(path if origin == 'repository' else f'{repository}:{path}', 'unsupported format',
-                          key=(repository.casefold(), path))
+                          key=(repository.casefold(), path), blob=blob, file=True)
                 continue
-            found.append((KIND_ORDER.index(kind), path, blob, kind))
+            # Nested security/governance files are read after top-level ones and rank lower; never skipped (RP-25).
+            found.append((KIND_ORDER.index(kind), kind == 'community' and not _top_level(path), path, blob, kind))
         found.sort()
-        for _, path, blob, kind in found[:cap]:
+        for _, _, path, blob, kind in found[:cap]:
             self.fetch(origin, repository, commit, path, blob, kind)
-        for _, path, _, kind in found[cap:]:
-            self.omit(repository, path, kind, 'file limit')
+        for _, _, path, blob, kind in found[cap:]:
+            self.omit(repository, path, kind, 'file limit', blob, file=True)
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
+
+
+def _blob_id(blob):
+    """A tree entry's Git blob id when well formed, else None."""
+    return blob if isinstance(blob, str) and re.fullmatch('[0-9a-f]{40}', blob) else None
 
 
 def _identity(key):
@@ -359,6 +454,27 @@ def _display(path):
             'path_sanitized': shown != path}
 
 
+def _top_level(path):
+    """Root, .github/ or docs/: where security, support, governance and conduct files are usually policy (N-04)."""
+    parts = path.split('/')
+    return len(parts) == 1 or len(parts) == 2 and parts[0].casefold() in ('.github', 'docs')
+
+
+def _tier(hint, source):
+    """Attention order: agent, PR eligibility rules, AI, PR hints with AI context, PR hints in policy files, other PR
+    hints, restrictions from nested security/governance files (RP-25: lower, never dropped), mentions."""
+    source_kind = source['kind']
+    if hint['kind'] not in STOP_HINTS:
+        return 7
+    if source_kind == 'community' and not _top_level(source['path']):
+        return 6
+    if hint['kind'] != 'possible_pr_restriction':
+        return {'possible_agent_restriction': 0, 'possible_ai_restriction': 2}[hint['kind']]
+    if hint['eligibility']:
+        return 1
+    return 3 if hint['ai_context'] else 4 if source_kind in POLICY_KINDS else 5
+
+
 def _pinned(blob, reported, data):
     """The returned bytes are the tree's blob: both SHA fields agree and the Git blob SHA-1 of the bytes matches."""
     if not isinstance(blob, str) or reported != blob:
@@ -371,12 +487,30 @@ class _Limit(Exception):
 
 
 def _owner(state, repository):
+    """Read the owner .github repository. The lookup outcome is part of the inventory (RP-29): 'read',
+    'not_found_or_inaccessible' (HTTP 404), 'unavailable' (any other failure: unknown, so a hiding limit),
+    'not_read_request_limit' or 'not_applicable' (the source is itself the owner .github repository)."""
     owner = repository.split('/')[0]
     name = f'{owner}/.github'
     if repository.casefold() == name.casefold():
+        state.owner_lookup = {'repository': name, 'status': 'not_applicable'}
         return None
     try:
         meta = core.require(state.get(f'repos/{name}'), dict, 'owner .github metadata')
+    except _Limit:
+        state.owner_lookup = {'repository': name, 'status': 'not_read_request_limit'}
+        state.note(name, 'not read: request limit')
+        return None
+    except core.ProtocolError as exc:
+        found_nothing = getattr(exc, 'http_status', None) == 404  # only here does a 404 mean "no such repository"
+        state.owner_lookup = {'repository': name, 'status': 'not_found_or_inaccessible' if found_nothing else 'unavailable'}
+        if found_nothing:
+            state.note(name, 'owner .github repository not found or inaccessible')
+        else:
+            state.note(name, 'owner .github lookup failed (not a 404); its policy files are unknown')
+            state.limit('owner lookup')
+        return None
+    try:
         branch = core.require(meta.get('default_branch'), str, 'owner default branch')
         commit = core.require(core.require(state.get(f'repos/{name}/commits/{quote(branch, safe="")}'), dict,
                                            'owner commit').get('sha'), str, 'owner commit sha')
@@ -384,11 +518,15 @@ def _owner(state, repository):
             raise core.ProtocolError('api_shape', 'Invalid owner commit')
         blobs = state.tree(name, commit)
     except _Limit:
+        state.owner_lookup = {'repository': name, 'status': 'not_read_request_limit'}
         state.note(name, 'not read: request limit')
         return None
-    except core.ProtocolError:
-        state.note(name, 'owner .github repository not found or inaccessible')
+    except core.ProtocolError:  # the repository exists, so any later failure (even a 404) is unknown (RP-29)
+        state.owner_lookup = {'repository': name, 'status': 'unavailable'}
+        state.note(name, 'owner .github lookup failed after metadata; its policy files are unknown')
+        state.limit('owner lookup')
         return None
+    state.owner_lookup = {'repository': name, 'status': 'read'}
     located = lambda path: '/' not in path or path.split('/')[0] in ('.github', 'docs')
     state.read_candidates('owner-github', name, commit, blobs, set(), MAX_OWNER_FILES, 'owner policy files', located)
     return name, commit, branch
@@ -416,6 +554,32 @@ def _assessed(url, base_repository, base_path, refs, scanned):
     path = unquote(target)
     path = posixpath.normpath(path.lstrip('/') if path.startswith('/') else posixpath.join(posixpath.dirname(base_path), path))
     return (base_repository.casefold(), path) in scanned
+
+
+def _github_target(url, scope):
+    """For a github.com blob/tree URL into an inventoried repository (scope: casefolded name -> (refs, pinned tree);
+    the source and the owner .github repository), the pinned blob id of its file, or '' when the URL cannot be
+    resolved to that pinned tree (another branch, a tag, an unknown ref, a missing path or a directory), so the
+    caller treats it as unfingerprinted (RP-28). None for other repositories, other URL kinds and other sites."""
+    target = url.split('#', 1)[0].split('?', 1)[0]
+    parts = urlsplit(target)
+    host = parts.netloc.casefold()
+    if host.startswith('www.'):
+        host = host[4:]
+    if host != 'github.com':
+        return None
+    segments = unquote(parts.path).strip('/').split('/')
+    if len(segments) < 3 or '/'.join(segments[:2]).casefold() not in scope or \
+            segments[2].casefold() not in ('blob', 'tree'):
+        return None
+    refs, tree = scope['/'.join(segments[:2]).casefold()]
+    rest = '/'.join(segments[3:])
+    for ref in refs:
+        fold = re.fullmatch('[0-9a-f]{40}', ref) is not None  # commit SHAs compare case-insensitively, branches exactly
+        head = rest[:len(ref)].casefold() if fold else rest[:len(ref)]
+        if head == (ref.casefold() if fold else ref) and rest[len(ref):len(ref) + 1] == '/':
+            return _blob_id(tree.get(rest[len(ref) + 1:])) or ''
+    return ''
 
 
 def _relative_what(url, base_path):
@@ -456,29 +620,45 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     scanned = state.scanned
     hints = []
     for index, (source, (path, result)) in enumerate(zip(state.sources, state.texts)):
-        hints += [dict(hint, source=index) for hint in result['hints']]
+        hints += [dict(hint, source=index, tier=_tier(hint, source)) for hint in result['hints']]
         for link in result['links']:
             origin = f'{source["repository"]}:{source["path"]}'
             try:
                 if not _assessed(link['url'], source['repository'], path, refs, scanned):
                     target, relative = _relative_what(link['url'], path)
                     shown = target if not relative or source['repository'] == repository else f'{source["repository"]}:{target}'
+                    tree = state.trees.get(source['repository'].casefold(), {})
+                    local = relative and target in tree  # a linked file in the pinned tree: fingerprint it, no fetch
+                    blob = tree.get(target) if local else None
+                    if not relative:  # same-repository github.com blob/tree URLs resolve against the pinned tree
+                        # Resolve against the TARGET's pinned tree: the source or the owner .github repository.
+                        resolved = _github_target(link['url'], {name: (names, state.trees.get(name, {}))
+                                                                for name, names in refs.items()})
+                        if resolved is not None:
+                            local, blob = True, resolved
                     state.note(shown, 'referenced, not assessed', origin, link['line'], link['link_text'],
-                               key=(source['repository'].casefold(), target) if relative else link['url'])
+                               key=(source['repository'].casefold(), target) if relative else link['url'],
+                               blob=blob, file=local)
             except ValueError:  # e.g. 'https://[' or a netloc that NFKC-normalizes to a delimiter
                 state.note(link['url'], 'malformed reference, not assessed', origin, link['line'], link['link_text'])
     if state.skipped:
         state.limit('requests', state.skipped)
-    hints.sort(key=lambda hint: (HINT_ORDER.index(hint['kind']), hint['source'], hint['line']))
-    if len(hints) > MAX_HINTS:
-        state.limit('hints', len(hints) - MAX_HINTS)
+    hints.sort(key=lambda hint: (hint['tier'], hint['source'], hint['line']))
+    for hint in hints[MAX_HINTS:]:  # mentions go first; a dropped stop-class hint is a hiding limit (N-04)
+        state.limit('restriction hints' if hint['kind'] in STOP_HINTS else 'hints')
+    terms = [hint['terms'] for hint in hints[:MAX_HINTS]]  # aligned with the retained hints, for grouping (N2)
+    hints = [{k: v for k, v in hint.items() if k not in ('tier', 'ai_context', 'eligibility', 'terms')}
+             for hint in hints[:MAX_HINTS]]
+    vocabulary = _project_terms(repository)
     result = {'report': 'policy-report/1', 'review_obligation': OBLIGATION, 'sources_scanned': state.sources,
               'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
               'limits_hide_sources': False,
               'never_inspected': list(NEVER_INSPECTED),
-              'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints[:MAX_HINTS], 1)],
+              'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints, 1)],
+              'owner_lookup': state.owner_lookup,
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:
+        result['hinted_lines'], result['project_vocabulary'] = _group(result['hints'], terms, vocabulary)
         result['limits_reached'] = [{'limit': name, 'not_reported': count, 'hides_sources': name in HIDING_LIMITS}
                                     for name, count in sorted(state.limits.items())]
         result['limits_hide_sources'] = bool(result['omitted_sources']) or any(
@@ -487,16 +667,17 @@ def report(repository, commit, instructions, client, *, default_branch=None):
             # Original identities, never display text, which may be shortened or sanitized (RP-23).
             'sources': sorted([s['origin'], s['identity_sha256'], s['sha256']] for s in result['sources_scanned']),
             # Full identities, not the shortened display text (RP-20); state.keys is aligned with retained entries.
+            # Unread candidates count with their pinned blob, so an edit to an unread file changes the hash (RP-28).
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
-            'omitted_sources': sorted([o['identity_sha256'], o['reason']] for o in result['omitted_sources']),
-            'limits_reached': result['limits_reached']})
+            'omitted_sources': sorted([o['identity_sha256'], o['reason'], o['blob_sha']] for o in result['omitted_sources']),
+            'limits_reached': result['limits_reached'], 'owner_lookup': result['owner_lookup']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
         # Shrink until the serialized report fits, recording every reduction (RP-18).
         long_paths = [s for s in result['sources_scanned'] if len(s['path']) > 80]
         if result['hints']:
-            result['hints'].pop()
-            state.limit('report size: hints')
+            dropped = result['hints'].pop()
+            state.limit('report size: restriction hints' if dropped['kind'] in STOP_HINTS else 'report size: hints')
         elif result['unassessed']:
             result['unassessed'].pop()
             state.limit('report size: unassessed entries')

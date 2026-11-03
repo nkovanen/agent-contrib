@@ -41,7 +41,10 @@ class PolicyGitHub:
         self.calls.append(endpoint)
         path, _, query = endpoint.partition('?')
         if path == 'repos/acme/.github' and self.owner_error:
-            raise core.ProtocolError('api_error', self.owner_error)
+            failure = core.ProtocolError('api_error', self.owner_error)
+            if '404' in self.owner_error:
+                failure.http_status = 404
+            raise failure
         for name, repo in self.repos.items():
             if path == f'repos/{name}':
                 return {'full_name': name, 'default_branch': repo['branch'], 'fork': False, 'has_issues': True}
@@ -62,7 +65,9 @@ class PolicyGitHub:
                 return {'encoding': 'base64', 'content': base64.b64encode(text.encode()).decode(),
                         'sha': blob_sha(repo['files'][file_path]) if (name, file_path) not in self.served else blob_sha(text)}
         if path.startswith('repos/acme/'):
-            raise core.ProtocolError('api_error', 'GitHub GET failed')
+            missing = core.ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404)')
+            missing.http_status = 404
+            raise missing
         raise AssertionError(endpoint)
 
 
@@ -282,7 +287,10 @@ class InventoryTests(unittest.TestCase):
             with self.subTest(error):
                 result, _ = report({'README.md': 'x'}, owner_error=error)
                 owner = [u for u in result['unassessed'] if u['what'] == 'acme/.github']
-                self.assertEqual(owner[0]['reason'], 'owner .github repository not found or inaccessible')
+                expected = ('owner .github repository not found or inaccessible' if '404' in error else
+                            'owner .github lookup failed (not a 404); its policy files are unknown')
+                self.assertEqual(owner[0]['reason'], expected)
+                self.assertIs(result['limits_hide_sources'], '404' not in error, 'an operational failure is unknown')
                 self.assertNotIn('absent', json.dumps(result))
 
     def test_unsupported_formats_and_policy_links_are_unassessed(self):
@@ -448,7 +456,8 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(result['unassessed'][0], {'what': 'acme/photos', 'reason': 'repository tree not read',
                                                    'from': None, 'line': None, 'link_text': None,
                                                    'what_truncated': False, 'what_sanitized': False,
-                                                   'identity_sha256': core.canonical_hash('acme/photos')})
+                                                   'identity_sha256': core.canonical_hash('acme/photos'),
+                                                   'blob_sha': None})
 
 
 class BoundTests(unittest.TestCase):
@@ -459,9 +468,12 @@ class BoundTests(unittest.TestCase):
         self.assertEqual(len(result['hints']), policy.MAX_HINTS)
         self.assertEqual(len(result['unassessed']), policy.MAX_UNASSESSED)
         limits = {item['limit']: item['not_reported'] for item in result['limits_reached']}
-        discovered = len(policy.scan(text + '\n\n' + links, 'CONTRIBUTING.md')['hints'])
-        self.assertGreater(discovered, policy.MAX_HINTS)
-        self.assertEqual(limits['hints'], discovered - policy.MAX_HINTS)
+        discovered = policy.scan(text + '\n\n' + links, 'CONTRIBUTING.md')['hints']
+        stop = sum(h['kind'] in policy.STOP_HINTS for h in discovered)
+        self.assertGreater(stop, policy.MAX_HINTS)
+        # Mentions are dropped first; dropped restriction hints are counted separately as hiding (N-04).
+        self.assertEqual(limits['hints'], len(discovered) - stop)
+        self.assertEqual(limits['restriction hints'], stop - policy.MAX_HINTS)
         self.assertEqual(limits['unassessed entries'], 61 - policy.MAX_UNASSESSED)
         self.assertLessEqual(len(json.dumps(result, ensure_ascii=True).encode()), policy.MAX_REPORT_BYTES)
 
@@ -627,7 +639,7 @@ class HiddenSourceTests(unittest.TestCase):
         self.assertTrue(result['limits_hide_sources'])
 
     def test_hint_overflow_alone_hides_no_source(self):
-        text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(101))
+        text = '\n\n'.join('We welcome AI tools, case %d.' % n for n in range(101))  # mentions only
         result, _ = report({'CONTRIBUTING.md': text}, {})
         self.assertEqual(result['omitted_sources'], [])
         self.assertEqual({i['limit']: i['hides_sources'] for i in result['limits_reached']}, {'hints': False})
@@ -804,7 +816,8 @@ class WorkflowTests(unittest.TestCase):
         'publication are blocked until every omitted candidate is read manually at the pinned revision or shown '
         'inapplicable with evidence. A successful CLI run does not resolve it.',
         # read first, even with no hints
-        '1. Before ranking or preparing any task, read in full every scanned source, every hint in context, and every '
+        '1. Before ranking or preparing any task, read in full every scanned source, every hinted line in context '
+        '(`hinted_lines`; project-name vocabulary mentions are summarized in `project_vocabulary`), and every '
         'unassessed reference you can reach with your own read-only tools. Repeat this even when every count is zero.',
     ]
     WEAKENING = ('optionally', 'if convenient', 'may skip', 'may mark', 'or the local user',

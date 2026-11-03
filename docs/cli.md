@@ -610,7 +610,9 @@ the `agent_contribute.aipolicy` module no longer exist.
   after `.`, `-`, `_` or a space, case-insensitively: `contributing`,
   `contribute`, `ai`, `llm`, `agents`, `claude`, `gemini`,
   `copilot-instructions`, `pull_request_template`, `code_of_conduct`,
-  `code-of-conduct`, `security`, `support`, `governance`, and a root `readme`.
+  `code-of-conduct`, `security`, `support`, `governance` (nested copies of these
+  five are read after top-level ones and their hints rank lower, but they are
+  never skipped), and a root `readme`.
   So `CONTRIBUTING.en.md`, `AI_USAGE_RULES.md`, `SECURITY-POLICY.md` and
   `README.development.md` all match. Also matched: `.cursorrules`,
   `.cursor/rules/*`, `llms.txt`, `.github/PULL_REQUEST_TEMPLATE/*`, and files
@@ -648,7 +650,22 @@ the `agent_contribute.aipolicy` module no longer exist.
   passage never removes its hint kinds. Inserting words between the matched
   terms can move them out of the 12-word window, and so can added text that
   turns an existing line into a heading. Excerpts are sanitized and at most 300
-  characters.
+  characters, start late enough that the restriction word lies within their
+  first 170 characters, and carry `excerpt_truncated` when text before or after
+  was left out.
+
+  Hints are ordered for attention: agent, then PR submitter-eligibility rules (a
+  PR term near "limited", "restricted", "invitation" or "instead", or near both
+  "only" and an actor such as "maintainer" or "members": "Pull requests are
+  limited to maintainers", "Only a maintainer may submit"; not review
+  requirements), then AI restrictions, then PR restrictions whose paragraph also
+  names AI or agents, then PR restrictions in
+  policy files (AI policy, agent instructions, contributing, PR templates), then
+  other PR restrictions, then restrictions from nested security, support,
+  governance or conduct files, and mentions last. When the 100-hint bound or the
+  report-size bound applies, mentions are dropped first. A dropped restriction
+  hint is counted as `restriction hints` or `report size: restriction hints`,
+  which `hides_sources`.
 - **`limits_reached` and `reads`.** At most 25 logical GitHub requests per
   report (each with the client's usual three attempts), 12 source and 8 owner
   policy files, 200 kB per file and 1 MB scanned, all counted in UTF-8 bytes. The report keeps 100 hints,
@@ -664,6 +681,13 @@ the `agent_contribute.aipolicy` module no longer exist.
   (`path_sanitized`, `what_sanitized`), so two entries can look alike. The
   identity, not the display text, is what deduplication and `inventory_sha256`
   use.
+- **`hinted_lines` and `project_vocabulary`.** `hinted_lines` is the reading
+  list: one entry per hinted source line in attention order, with every hint
+  kind on that line. Lines whose only hints are mentions made of the project's
+  own name (for example "agent" in a repository named `agent-kit`) are
+  summarized in `project_vocabulary` with a count and bounded line list.
+  Restriction hints are never summarized, and `hints` still lists every
+  retained hint.
 - **`omitted_sources` and `hides_sources`.** A policy candidate that a file,
   byte or request limit left unread is named in `omitted_sources` (at most 50,
   with its repository, path, kind and reason; overflow is counted). Each
@@ -673,10 +697,38 @@ the `agent_contribute.aipolicy` module no longer exist.
   candidate is read manually or shown inapplicable.
 - **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
   comments, other repositories, non-Latin text.
+- **`owner_lookup`.** The owner `.github` lookup outcome: `read`,
+  `not_found_or_inaccessible` (HTTP 404 from the repository metadata lookup
+  only), `unavailable` (any other failure, including a 404 on the commit or tree
+  after the repository was found,
+  recorded as the hiding limit `owner lookup` because its policy files are
+  unknown), `not_read_request_limit` or `not_applicable`. It is part of
+  `inventory_sha256`, so a change such as readable to not found is drift, and
+  `drift --policy-sha256` treats an `unavailable` lookup as incomplete.
+- **Unread candidates.** Unassessed and omitted file entries carry `blob_sha`,
+  the pinned Git blob id from the tree, so an edit to an unread policy file
+  (such as `AI_POLICY.adoc` or an oversized `AI_POLICY.md`) changes the
+  inventory hash. Policy-like links to files in the pinned tree (such as
+  `docs/rules.md`) carry that file's blob id too, without a new read, as do
+  `github.com/OWNER/REPO/blob|tree/REF/PATH` links into either inventoried
+  repository (the source or the owner `.github`, in both directions) whose REF
+  is that repository's default branch or pinned commit (host and owner case, `www.`,
+  `http://`, protocol-relative forms, fragments and queries are accepted). A
+  known file without a valid blob id, or a blob/tree link into an inventoried
+  repository that cannot be resolved to its pinned tree (another branch, a tag, an unknown ref,
+  a missing path or a directory), is the hiding limit `unfingerprinted files`.
 - **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained
   unassessed identifiers and the limits. It excludes commit SHAs, so unrelated
   pushes do not change it. No verifier checks it; the workflow records it in
   prerequisite `ai-policy-review`.
+
+With `--format text`, the Policy line is followed by up to five restriction
+hints in attention order, for example `! possible_ai_restriction
+pallets/.github:CONTRIBUTING.md:22 -- AI-generated PRs and issues are closed on
+sight...`, and a count of the rest. Shortened excerpts end with `...`. Restriction
+hints that limits dropped are counted separately. With none it says "No
+restriction hints; this is not permission.", or "No restriction hints retained"
+when limits dropped hints or hid sources.
 
 There is deliberately no `coverage`, `complete` or `clear` field. Hints are
 noisy on purpose. The installed workflow's mandatory policy review decides what
@@ -710,6 +762,28 @@ only when every read completed and nothing drifted. Any failed read,
 including an unverifiable baseline, gives `complete: false`. The pinned re-read
 costs another snapshot's worth of reads. After drift, review and prepare the
 contract again.
+
+
+`drift task.json --policy-sha256 HASH` also re-reads the repository policy
+inventory at the current default-branch commit and adds
+`repository_policy_drift`. HASH is the `inventory_sha256` recorded in the
+`ai-policy-review` prerequisite evidence; a malformed value is a usage error
+before any read.
+
+- `policy_drifted` is `true` when the current inventory hash differs (it then
+  counts as drift, exit 1), and `null` when the current read is incomplete or a
+  limit hides sources (incomplete, exit 1).
+- When the inventory rebuilt at the contract's pinned commit reproduces HASH
+  (`baseline_verified`), `added`, `removed` and `changed` list every inventoried
+  candidate by `identity_sha256` and `what`, with its `state` (`scanned`,
+  `unassessed: <reason>` or `omitted: <reason>`) and `fingerprint` (content
+  SHA-256 when scanned, pinned blob id when unread). Otherwise they are `null`:
+  the owner `.github` repository is read at its current tip, so a baseline cannot
+  always be rebuilt, and no deltas are invented.
+
+This catches an edit to a policy-only file such as `SECURITY.md` or a new
+`AI_POLICY.md`, which `instructions_sha256` does not cover. It costs up to two
+policy reports (at most 25 requests each).
 
 ## CI observation (opt-in, report only)
 
@@ -1104,6 +1178,32 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 | `overlap.removed` | string[] |  |
 | `overlap.scope` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `repository_policy_drift` | object (optional) | Added by --policy-sha256: the reviewed policy inventory hash compared with the current inventory |
+| `repository_policy_drift.expected_sha256` | string |  |
+| `repository_policy_drift.current_sha256` | string |  |
+| `repository_policy_drift.policy_drifted` | boolean or null | null when the current policy inventory read is incomplete or limited |
+| `repository_policy_drift.limits_hide_sources` | boolean |  |
+| `repository_policy_drift.baseline_verified` | boolean |  |
+| `repository_policy_drift.added` | object[] or null |  |
+| `repository_policy_drift.added[].identity_sha256` | string |  |
+| `repository_policy_drift.added[].what` | string |  |
+| `repository_policy_drift.added[].state` | string |  |
+| `repository_policy_drift.added[].fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
+| `repository_policy_drift.removed` | object[] or null |  |
+| `repository_policy_drift.removed[].identity_sha256` | string |  |
+| `repository_policy_drift.removed[].what` | string |  |
+| `repository_policy_drift.removed[].state` | string |  |
+| `repository_policy_drift.removed[].fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
+| `repository_policy_drift.changed` | object[] or null |  |
+| `repository_policy_drift.changed[].identity_sha256` | string |  |
+| `repository_policy_drift.changed[].what` | string |  |
+| `repository_policy_drift.changed[].stored` | object |  |
+| `repository_policy_drift.changed[].stored.state` | string |  |
+| `repository_policy_drift.changed[].stored.fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
+| `repository_policy_drift.changed[].current` | object |  |
+| `repository_policy_drift.changed[].current.state` | string |  |
+| `repository_policy_drift.changed[].current.fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
+| `repository_policy_drift.note` | string |  |
 
 ### `error`
 
@@ -1918,6 +2018,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `unassessed[].what_truncated` | boolean |  |
 | `unassessed[].what_sanitized` | boolean |  |
 | `unassessed[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `unassessed[].blob_sha` | string or null | The pinned Git blob id of an unread file; null for references |
 | `omitted_sources` | object[] |  |
 | `omitted_sources[].repository` | string |  |
 | `omitted_sources[].path` | string |  |
@@ -1926,6 +2027,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `omitted_sources[].reason` | "file limit" \| "scan byte limit" \| "request limit" |  |
 | `omitted_sources[].path_sanitized` | boolean |  |
 | `omitted_sources[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `omitted_sources[].blob_sha` | string or null | The pinned Git blob id of an unread file; null for references |
 | `limits_reached` | object[] |  |
 | `limits_reached[].limit` | string |  |
 | `limits_reached[].not_reported` | integer |  |
@@ -1939,10 +2041,28 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `hints[].untrusted_excerpt` | string |  |
 | `hints[].source` | integer |  |
 | `hints[].id` | string | H1, H2, ... in report order |
+| `hints[].excerpt_truncated` | boolean | The excerpt omits text before or after it |
 | `reads` | object |  |
 | `reads.requests` | integer |  |
 | `reads.limit` | integer |  |
 | `inventory_sha256` | string |  |
+| `hinted_lines` | object[] | One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line |
+| `hinted_lines[].source` | integer |  |
+| `hinted_lines[].line` | integer |  |
+| `hinted_lines[].kinds` | "possible_agent_restriction" \| "possible_ai_restriction" \| "possible_pr_restriction" \| "ai_mention"[] |  |
+| `hinted_lines[].heading` | string |  |
+| `hinted_lines[].untrusted_excerpt` | string |  |
+| `hinted_lines[].excerpt_truncated` | boolean |  |
+| `project_vocabulary` | object | Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions |
+| `project_vocabulary.terms` | string[] |  |
+| `project_vocabulary.mentions_collapsed` | integer |  |
+| `project_vocabulary.lines` | object[] |  |
+| `project_vocabulary.lines[].source` | integer |  |
+| `project_vocabulary.lines[].line` | integer |  |
+| `project_vocabulary.lines_not_listed` | integer |  |
+| `owner_lookup` | object or null | Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted. |
+| `owner_lookup.repository` | string |  |
+| `owner_lookup.status` | "read" \| "not_found_or_inaccessible" \| "unavailable" \| "not_read_request_limit" \| "not_applicable" |  |
 
 #### `resolution_provenance`
 

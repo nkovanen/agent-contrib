@@ -164,8 +164,10 @@ class GitHub:
                     continue
                 # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
                 if re.search(r'\bHTTP 404\b', error):
-                    raise ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or path '
-                                        'does not exist or is not visible to this gh account')
+                    missing = ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or '
+                                            'path does not exist or is not visible to this gh account')
+                    missing.http_status = 404  # lets report-only callers tell absence from an operational failure
+                    raise missing
                 if re.search(r'\bHTTP 401\b', error):
                     raise ProtocolError('api_error', 'GitHub GET was not authenticated (HTTP 401); check gh auth status')
                 raise ProtocolError('api_error', 'GitHub GET failed; check gh auth, access and rate limits')
@@ -1568,7 +1570,10 @@ def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None
         else:
             errors.append('Execution mode is pending')
     except ProtocolError:
-        errors.append('Execution target repository is invalid')
+        # A fresh draft has mode pending and no target: say so rather than calling it invalid (message only).
+        errors.append('Execution target not yet chosen (execution mode is pending)'
+                      if execution['mode'] == 'pending' and not execution['target_repository'].strip()
+                      else 'Execution target repository is invalid')
     result['execution_ready'] = not errors
     if evidence is not None:
         result['evidence_errors'] = check_evidence(task, evidence, repo_dir, digest,

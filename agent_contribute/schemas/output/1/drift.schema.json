@@ -388,6 +388,208 @@
     },
     "api_budget": {
       "$ref": "#/$defs/api_budget"
+    },
+    "repository_policy_drift": {
+      "type": "object",
+      "properties": {
+        "expected_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "current_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "policy_drifted": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "null when the current policy inventory read is incomplete or limited"
+        },
+        "limits_hide_sources": {
+          "type": "boolean"
+        },
+        "baseline_verified": {
+          "type": "boolean"
+        },
+        "added": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "what": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "state": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64,
+                "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "identity_sha256",
+              "what",
+              "state",
+              "fingerprint"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "removed": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "what": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "state": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64,
+                "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "identity_sha256",
+              "what",
+              "state",
+              "fingerprint"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "changed": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "what": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "stored": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 64,
+                    "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+                  }
+                },
+                "required": [
+                  "state",
+                  "fingerprint"
+                ],
+                "additionalProperties": false
+              },
+              "current": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 64,
+                    "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+                  }
+                },
+                "required": [
+                  "state",
+                  "fingerprint"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "identity_sha256",
+              "what",
+              "stored",
+              "current"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "expected_sha256",
+        "current_sha256",
+        "policy_drifted",
+        "limits_hide_sources",
+        "baseline_verified",
+        "added",
+        "removed",
+        "changed",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --policy-sha256: the reviewed policy inventory hash compared with the current inventory"
     }
   },
   "required": [

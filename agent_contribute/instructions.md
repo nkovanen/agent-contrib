@@ -16,19 +16,19 @@ A summary of the sections below; it never overrides them. Global options such as
 `--report-budget` and `--format` go before the subcommand.
 
 1. Record `agent-contrib --version` and the user's exact request.
-2. `agent-contrib --report-budget discover owner/repo --signals` ranks issues
-   (`--signals` re-ranks heuristically, never approves); add `--responsiveness` to see
-   whether outside PRs get merged. Drop excluded or overlapping issues.
-3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
-   (claims, linked PRs, prior fixes; the policy report is always added), then do the
-   repository policy step: `ai-policy-review` in "Start with discovery" item 3 and the
-   inventory in "Repository requirements".
+2. Run `agent-contrib --report-budget discover owner/repo --signals` (re-ranks, never
+   approves; `--responsiveness` samples outside merges). Before ranking or selecting,
+   complete the "Repository policy review" section below, `ai-policy-review` ("Start
+   with discovery" item 3) and "Repository requirements"; for a constrained policy,
+   first ask the user to commit to that mode. Drop excluded or overlapping issues.
+3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership` (claims,
+   linked PRs, prior fixes; the policy report is always added).
 4. `agent-contrib prepare 'owner/repo#N' --output task.json` (0.1, or `--schema-version
    0.2` for the same-repository owner/maintainer route); fill contract and ledger.
 5. `agent-contrib verify task.json` (0.1) or `agent-contrib verify task.json --stage
    implementation` (0.2) shows the hash and blockers; for 0.2, `agent-contrib
    authorization-request task.json` prepares the host request. Run `agent-contrib
-   drift task.json` before asking for any authorization.
+   drift task.json` before asking for any authorization, with `--policy-sha256 HASH`.
 6. Edit only with the user's actual authorization and a passing gate. 0.1:
    `execution_ready: true`. 0.2: `agent-contrib verify task.json --stage
    implementation --host-context-stdin`, host-issued context unchanged on stdin, with
@@ -44,9 +44,9 @@ A summary of the sections below; it never overrides them. Global options such as
    final head and `--stage completion` with `completion_ready: true`. Until then
    report the draft as pending acceptance. Never mark the PR ready, merge or release.
 
-**Stop and report** (contract, hash, blockers) when: the user made a bare help
-request; the repository policy step finds a refusal or restriction, or is unresolved;
-a PR, claim or prior fix overlaps the task, or a read is incomplete; schema 0.2 has no
+**Stop and report** (contract, hash, blockers) when: the user made a bare help request;
+the repository policy step finds a relevant rule that is prohibited or unresolved; a PR,
+claim or prior fix overlaps the task, or a read is incomplete; schema 0.2 has no
 human/host-issued mandate (never write one) or schema 0.1 lacks the user's explicit
 execution authorization; a gate in steps 6-8 is false; publication needs its own user
 authorization; final sign-off is pending.
@@ -63,7 +63,8 @@ chose a workflow-only design to keep existing contracts and verifiers unchanged,
 so the host agent, the user and the independent reviewer are responsible for it.
 
 1. Before ranking or preparing any task, read in full every scanned source,
-   every hint in context, and every unassessed reference you can reach with your
+   every hinted line in context (`hinted_lines`; project-name vocabulary mentions
+   are summarized in `project_vocabulary`), and every unassessed reference you can reach with your
    own read-only tools. Repeat this even when every count is zero. Record one
    requirements-ledger row per relevant source: repository, path or URL, the
    revision or content digest you read, retrieval time, and what it says about
@@ -74,7 +75,8 @@ so the host agent, the user and the independent reviewer are responsible for it.
    media only), shown by its actual context;
    (c) **compliant constrained workflow**: the policy permits a mode you will
    really follow, such as a human who understands the work and writes every
-   comment and the PR description; valid only where the policy permits that mode;
+   comment and the PR description; valid only where the policy permits that mode
+   and after the user commits to it;
    (d) **source-authorized exception**: written permission from the source
    project's authority, with link and provenance;
    (e) **prohibited**.
@@ -94,9 +96,10 @@ so the host agent, the user and the independent reviewer are responsible for it.
    `gh api 'repos/OWNER/REPO/contents/PATH?ref=COMMIT'`; a limit that names no
    file (such as `unassessed entries`) requires listing the pinned tree
    yourself. A hint-only limit (`hides_sources: false`) hides no source, but
-   every listed source must still be read. A generic
-   `never_inspected` category or an owner `.github` lookup that failed does not
-   block on its own; dispose of an unrelated link as inapplicable only from its
+   every listed source must still be read. A generic `never_inspected` category
+   or an owner `.github` lookup that found nothing (`owner_lookup.status`
+   `not_found_or_inaccessible`) does not block on its own, but an `unavailable`
+   lookup is a hiding limit; dispose of an unrelated link as inapplicable only from its
    actual context.
 4. **STOP** upstream work when any relevant rule is prohibited or unresolved.
    Report the excerpts and the reason to the user. The user's local
@@ -123,7 +126,10 @@ so the host agent, the user and the independent reviewer are responsible for it.
    `inventory_sha256`, the unassessed list or any recorded digest differs,
    repeat the dispositions, update `ai-policy-review` and the ledger, and under schema 0.2
    present the change to the human before continuing. If you cannot establish a
-   source's contents again, it is unresolved.
+   source's contents again, it is unresolved. `agent-contrib drift task.json
+   --policy-sha256 HASH`, with the `inventory_sha256` recorded in
+   `ai-policy-review`, re-reads the inventory: `policy_drifted` must be `false`;
+   `true` means re-review, and `null` (an incomplete read) is unresolved.
 
 ## Start with discovery, then choose a contract version
 
@@ -204,7 +210,8 @@ Use one row per applicable rule, not one blanket 'instructions read' checkbox:
 Cover required gates and their order; dependencies, pinned fixtures, licenses
 and build prerequisites; scoped coding/security rules; regression tests;
 required documentation, changelog and gap/parity trackers; visual or performance
-evidence; attribution and contributor agreements; branch/base conventions; and
+evidence; attribution and contributor agreements such as a CLA or DCO
+sign-off, which the human submitter must complete; branch/base conventions; and
 every applicable PR-template item. Record a reason for each not-applicable item.
 Do not invent a requirement when the repository has none. Missing resources are
 not permission to substitute a smaller check. Select another feasible task or

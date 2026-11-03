@@ -1,5 +1,5 @@
 """Concise text summaries of command results. JSON stays canonical; remote prose is one sanitized line."""
-from . import core
+from . import core, policy
 
 
 def line(value, limit=300):
@@ -183,6 +183,13 @@ def _drift(result):
                        f'{line(policy.get("current_approval"), 40)}' if policy.get('stored_approval') !=
                        policy.get('current_approval') else 'Policy state/content changed')
     reasons += ['Overlapping PR added: ' + line(url, 200) for url in overlap.get('added', [])]
+    policy_drift = result.get('repository_policy_drift') or {}
+    if policy_drift.get('policy_drifted') is True:
+        named = [item.get('what', '') for kind in ('changed', 'added', 'removed') for item in policy_drift.get(kind) or []]
+        reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
+                                                        'recorded inventory_sha256 differs (no per-source baseline)'))
+    elif policy_drift and policy_drift.get('policy_drifted') is None:
+        info.append('Policy inventory could not be compared: the current read is incomplete or limited')
     if branch.get('advanced'):
         info.append('Default branch advanced since preparation')
     info += ['Overlapping PR no longer open: ' + line(url, 200) for url in overlap.get('removed', [])]
@@ -197,11 +204,62 @@ def _policy(result):
     return [f'Policy: {len(report.get("sources_scanned", []))} sources scanned, {len(report.get("unassessed", []))} '
             f'unassessed, {len(report.get("hints", []))} hints, {len(report.get("limits_reached", []))} limits reached '
             '(repository_policy; not a verdict)',
-            "  Read every source, hint and unassessed reference before choosing work; unresolved policy blocks "
+            "  Read every source, hinted line and unassessed reference before choosing work; unresolved policy blocks "
             "upstream work. This is a host obligation even when every count is zero. 'Complete' above concerns "
             "GitHub reads, not policy."] + (
         [f'  Limits hide policy sources ({len(report.get("omitted_sources", []))} omitted candidates listed): repository '
-         'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else [])
+         'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else []
+    ) + _policy_hints(report)
+
+
+POLICY_HINT_LINES = 5
+POLICY_EXCERPT_CHARS = 200
+
+
+def _uncomment(text):
+    """Drop HTML comment markers from a text-view excerpt (cosmetic; JSON keeps the excerpt unchanged)."""
+    return str(text).replace('<!--', ' ').replace('-->', ' ')
+
+
+def _policy_hints(report):
+    """The restriction sentences that may justify a stop, in the report's attention order (N-01)."""
+    sources = report.get('sources_scanned', [])
+    lines = report.get('hinted_lines')
+    if lines is None:  # a report without grouping: one entry per hint
+        lines = [dict(hint, kinds=[hint.get('kind')]) for hint in report.get('hints', [])]
+    stop = [entry for entry in lines if set(entry.get('kinds', [])) & set(policy.STOP_HINTS)]
+    dropped = sum(item.get('not_reported', 0) for item in report.get('limits_reached', [])
+                  if item.get('limit') in ('restriction hints', 'report size: restriction hints'))
+    lost = [f'  ({dropped} restriction hints not retained because of limits; see limits_reached)'] if dropped else []
+    if not stop:
+        if dropped or report.get('limits_hide_sources'):
+            return ['  No restriction hints retained: limits hid sources or hints (see limits_reached and '
+                    'omitted_sources); this is not permission.'] + lost + _vocabulary(report)
+        return ['  No restriction hints; this is not permission.'] + _vocabulary(report)
+    out = []
+    for hint in stop[:POLICY_HINT_LINES]:
+        source = sources[hint['source']] if isinstance(hint.get('source'), int) and hint['source'] < len(sources) else {}
+        path = line(source.get('path', '?'), 500)
+        path = path if len(path) <= 100 else '...' + path[-97:]
+        text = ' '.join(line(_uncomment(hint.get('untrusted_excerpt', '')), 1000).split())
+        cut = len(text) > POLICY_EXCERPT_CHARS or hint.get('excerpt_truncated') is True
+        kinds = ', '.join(line(kind, 40) for kind in hint['kinds'] if kind in policy.STOP_HINTS)
+        out.append(f'  ! {kinds} {line(source.get("repository", "?"), 100)}:{path}:'
+                   f'{line(hint.get("line", "?"), 10)} -- {text[:POLICY_EXCERPT_CHARS]}' + ('...' if cut else ''))
+    if len(stop) > POLICY_HINT_LINES:
+        out.append(f'  (+{len(stop) - POLICY_HINT_LINES} more hinted lines with restrictions in JSON '
+                   'repository_policy.hinted_lines)')
+    return out + lost + _vocabulary(report)
+
+
+def _vocabulary(report):
+    vocabulary = report.get('project_vocabulary') or {}
+    count = vocabulary.get('mentions_collapsed') or 0
+    if not count:
+        return []
+    terms = ', '.join(repr(line(term, 40)) for term in vocabulary.get('terms', []))
+    return [f'  {count} mention{"s" if count != 1 else ""} of project-name vocabulary ({terms}) summarized in JSON '
+            'project_vocabulary']
 
 
 def render(command, result, stage=None):

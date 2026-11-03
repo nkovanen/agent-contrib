@@ -4,6 +4,7 @@ import json
 import hashlib
 import importlib.resources
 import os
+import re
 import select
 import sys
 import time
@@ -121,6 +122,8 @@ def prevalidate(args):
         args.evidence_data = None
         if args.command == 'pr-body' and args.evidence:
             args.evidence_data = core.read_json(args.evidence)
+        if args.command == 'drift' and args.policy_sha256 is not None and not re.fullmatch('[0-9a-f]{64}', args.policy_sha256):
+            raise core.ProtocolError('usage', '--policy-sha256 must be a lowercase 64-character SHA-256 hex digest')
         task = args.task = core.read_json(args.contract)
         if args.command in ('drift', 'pr-body') and core.validate_contract(task):
             raise core.ProtocolError('invalid_contract', 'Contract does not match its bundled schema')
@@ -228,6 +231,9 @@ def main(argv=None):
     sub.add_argument('reference', help="Issue reference such as 'owner/repo#123'")
     sub = commands.add_parser('drift', help='Report what changed since the contract was prepared; never rewrites it')
     sub.add_argument('contract', help='Task contract JSON file')
+    sub.add_argument('--policy-sha256', metavar='HASH',
+                     help='The reviewed repository_policy inventory_sha256 (from the ai-policy-review evidence); '
+                          're-reads the policy inventory and reports repository_policy_drift')
     sub = commands.add_parser('feedback', help='Latest reviews, comments and checks for one pull request')
     sub.add_argument('reference', help="Pull request reference such as 'owner/repo#45'")
     sub.add_argument('--expected-head', metavar='SHA',
@@ -315,7 +321,7 @@ def main(argv=None):
             result = ownership.ownership(args.reference)
             code = 0 if result['complete'] else 1
         elif args.command == 'drift':
-            result = drift.drift(args.task)
+            result = drift.drift(args.task, policy_sha256=args.policy_sha256)
             code = 0 if result['complete'] and result['drifted'] is False else 1
         elif args.command == 'feedback':
             result = feedback.feedback(args.reference, expected_head=args.expected_head)

@@ -1524,6 +1524,16 @@
                 "minLength": 64,
                 "maxLength": 64,
                 "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
               }
             },
             "required": [
@@ -1534,7 +1544,8 @@
               "link_text",
               "what_truncated",
               "what_sanitized",
-              "identity_sha256"
+              "identity_sha256",
+              "blob_sha"
             ],
             "additionalProperties": false
           }
@@ -1585,6 +1596,16 @@
                 "minLength": 64,
                 "maxLength": 64,
                 "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
               }
             },
             "required": [
@@ -1594,7 +1615,8 @@
               "kind",
               "reason",
               "path_sanitized",
-              "identity_sha256"
+              "identity_sha256",
+              "blob_sha"
             ],
             "additionalProperties": false
           }
@@ -1672,6 +1694,10 @@
                 "type": "string",
                 "maxLength": 4,
                 "description": "H1, H2, ... in report order"
+              },
+              "excerpt_truncated": {
+                "type": "boolean",
+                "description": "The excerpt omits text before or after it"
               }
             },
             "required": [
@@ -1680,7 +1706,8 @@
               "heading",
               "untrusted_excerpt",
               "source",
-              "id"
+              "id",
+              "excerpt_truncated"
             ],
             "additionalProperties": false
           }
@@ -1708,6 +1735,136 @@
           "pattern": "^[0-9a-f]{64}$",
           "minLength": 64,
           "maxLength": 64
+        },
+        "hinted_lines": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "kinds": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "possible_agent_restriction",
+                    "possible_ai_restriction",
+                    "possible_pr_restriction",
+                    "ai_mention"
+                  ]
+                }
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "excerpt_truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source",
+              "line",
+              "kinds",
+              "heading",
+              "untrusted_excerpt",
+              "excerpt_truncated"
+            ],
+            "additionalProperties": false
+          },
+          "description": "One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line"
+        },
+        "project_vocabulary": {
+          "type": "object",
+          "properties": {
+            "terms": {
+              "type": "array",
+              "maxItems": 2147483647,
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              }
+            },
+            "mentions_collapsed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lines": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "source",
+                  "line"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lines_not_listed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "terms",
+            "mentions_collapsed",
+            "lines",
+            "lines_not_listed"
+          ],
+          "additionalProperties": false,
+          "description": "Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions"
+        },
+        "owner_lookup": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "read",
+                "not_found_or_inaccessible",
+                "unavailable",
+                "not_read_request_limit",
+                "not_applicable"
+              ]
+            }
+          },
+          "required": [
+            "repository",
+            "status"
+          ],
+          "additionalProperties": false,
+          "description": "Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted."
         }
       },
       "required": [
@@ -1721,7 +1878,10 @@
         "never_inspected",
         "hints",
         "reads",
-        "inventory_sha256"
+        "inventory_sha256",
+        "hinted_lines",
+        "project_vocabulary",
+        "owner_lookup"
       ],
       "additionalProperties": false,
       "description": "Default-on, report-only policy inventory and hints; never a verdict"
