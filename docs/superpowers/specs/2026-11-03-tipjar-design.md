@@ -1,6 +1,7 @@
 # Tipjar: repository invitations for useful agent work
 
-Status: proposed for controller and independent review; **not implemented**.
+Status: controller accepted manifest filename, vocabulary, limits, no inheritance,
+pinned source and inspection-first staging; independent review pending; **not implemented**.
 Baseline: `6d4aee1`. This document chooses a small manifest and a staged build,
 not a new consent system. No product code changes belong to this design task.
 
@@ -232,8 +233,23 @@ cannot pass schema 0.1 upstream mode merely because an outside user chose it;
 has no verified 0.1 fork route. Discovery, assessment and pending preparation
 work; unrestricted external upstream execution/publication does not. A welcome
 jar alone does not close either gap. Do not advertise a complete arbitrary-repo
-upstream pipeline. A future outside-contributor/local-only route needs its own
-reviewed schema and scope, rather than a hidden reinterpretation here.
+upstream pipeline. The full no-jar manual-tip vision includes ordinary,
+policy-compliant upstream PRs; local/fork completion is only a partial path.
+
+**Next separate design assignment:** a compatibility-safe outside-contributor
+route, likely a new task schema with explicit human-selected source and pinned
+source-policy review. Its source-policy basis must distinguish a valid welcome
+invitation from an undeclared jar with reviewed ordinary contribution policies;
+neither absence nor a host assertion becomes maintainer approval. Preserve
+`approval.status: candidate` where no label approval exists. A welcome supplies
+an actual source invitation for that future route, subject to all boundaries;
+it is not merely a decorative discovery signal. Closed, unreadable or unresolved
+policy still blocks either basis. Scoped implementation authorization and exact
+publication authorization remain separate host decisions. Do not remove the
+0.1 approved-label check, relax 0.2 admin/maintain requirements, or let a task's
+self-asserted policy review grant authority. Define the new schema/host assertion
+binding in that separate assignment; no new issuer system is proposed here.
+This route is central follow-up work, not permanently deferred.
 
 ## Compatibility and shipping boundaries
 
@@ -251,9 +267,12 @@ but do not rewrite or invalidate the contract's schema. Missing jar alone leaves
 old route behavior intact. Old installed clients do not enforce this manifest;
 maintainers should also state refusals plainly in existing contribution docs.
 
-Adding output fields must bump `outputs.VERSION` from 1 to 2 and publish complete
-packaged command schemas under `schemas/output/2`, preserving version-1 resource
-files. Do not put jar fields into old contract objects or silently widen old
+Inspection alone adds `schemas/output/1/jar.schema.json` and registers the new
+command; it keeps `outputs.VERSION` at `1` because no existing command shape
+changes. Do not clone the schema set for this slice. Later integration adds
+fields to existing outputs: then bump `outputs.VERSION` from 1 to 2, publish the
+complete command schema set under `schemas/output/2` and preserve version-1
+resource files. Do not put jar fields into old contract objects or silently widen old
 schemas. Format-3 policy review remains the existing host ledger obligation;
 old digests remain recognizable as historical, not proof of new review. Existing
 validators cannot prove the prose in that ledger is true.
@@ -264,18 +283,18 @@ spec does not change release version statements or create a release.
 
 ## Controller decisions and acceptance
 
-Recommended calls needing review: `.tipjar.json`; welcome/closed vocabulary;
-16 KiB/16 items/500 characters; prose boundaries rather than a path DSL; no
-owner-jar inheritance; supplied-repository discovery only; defer a new external
-upstream route. The plan uses a small `jar` command for a runnable first slice;
-it can be deferred if the controller wants only integrated discovery exposed.
+Controller accepted `.tipjar.json`, welcome/closed vocabulary, the
+16 KiB/16 items/500 characters bounds, no owner-jar inheritance, pinned source
+and inspection-first staging. Inspection-only output stays at version 1; later
+existing-shape changes can bump it. Supplied-repository discovery and prose
+boundaries keep this proposal small.
 
-Independent review should especially check whether the current fork route plus
-explicit discovery meets this run's no-adoption goal. If full outside-contributor
-upstream readiness is required now, expand scope explicitly before implementation.
-Acceptance is: missing is visibly undeclared and manually targetable; welcome
-is discoverable among named repositories without granting any authority; closed
-and uncertain data never become welcome; source/fork/owner conflicts retain the
-correct provenance; old contracts retain format and route meaning; no remote
-writes or execution paths are added. Implementation requires approval/review of
-this proposal; the present deliverable ends at committed design and plan.
+The controller will assign the no-jar upstream route design separately next;
+review must not mistake fork completion for full delivery of that product goal.
+Acceptance for this manifest work is: missing is visibly undeclared and manually
+targetable for assessment; welcome is discoverable among named repositories
+without granting execution/publication authority; closed and uncertain data
+never become welcome; source/fork/owner conflicts retain the correct provenance;
+old contracts retain format and route meaning; no remote writes or execution
+paths are added. The present deliverable ends at committed design and plan;
+implementation and the separate upstream-route design require their own tasks.
