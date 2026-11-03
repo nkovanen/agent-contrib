@@ -155,12 +155,12 @@ channel or runtime model provider is added.
   Policy line, plus a count of the rest. Before, only counts were shown, so
   text-mode agents never saw the sentence that justifies a stop (N-01).
   HTML comment markers are left out of these text excerpts; JSON is unchanged.
-- Repository policy hints (N-04, external evaluation 2): security, support,
-  governance and code-of-conduct files count only in the root, `.github/` or
-  `docs/`, so API reference pages such as `doc/source/reference/security.rst` no
-  longer add noise. Hints are ordered agent, AI, then PR restrictions with AI
-  context, then PR restrictions in policy files, other PR restrictions and
-  mentions. Bounds drop mentions first. A dropped restriction hint is reported
+- Repository policy hints (N-04, external evaluation 2): hints are ordered
+  agent, PR eligibility, AI, then PR restrictions with AI context, PR
+  restrictions in policy files, other PR restrictions, restrictions from nested
+  security, support, governance or conduct files (such as
+  `doc/source/reference/security.rst`), and mentions. Nested files rank lower
+  but are never skipped (RP-25). Bounds drop mentions first. A dropped restriction hint is reported
   as a source-hiding limit (`restriction hints`).
   PR eligibility rules ("Pull requests are limited to maintainers", "issues
   instead of pull requests") rank just below agent restrictions, so a

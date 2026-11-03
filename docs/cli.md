@@ -457,8 +457,9 @@ the `agent_contribute.aipolicy` module no longer exist.
   after `.`, `-`, `_` or a space, case-insensitively: `contributing`,
   `contribute`, `ai`, `llm`, `agents`, `claude`, `gemini`,
   `copilot-instructions`, `pull_request_template`, `code_of_conduct`,
-  `code-of-conduct`, `security`, `support`, `governance` (these five only in the
-  root, `.github/` or `docs/`), and a root `readme`.
+  `code-of-conduct`, `security`, `support`, `governance` (nested copies of these
+  five are read after top-level ones and their hints rank lower, but they are
+  never skipped), and a root `readme`.
   So `CONTRIBUTING.en.md`, `AI_USAGE_RULES.md`, `SECURITY-POLICY.md` and
   `README.development.md` all match. Also matched: `.cursorrules`,
   `.cursor/rules/*`, `llms.txt`, `.github/PULL_REQUEST_TEMPLATE/*`, and files
@@ -504,7 +505,8 @@ the `agent_contribute.aipolicy` module no longer exist.
   maintainers"), then AI restrictions, then PR restrictions whose paragraph also
   names AI or agents, then PR restrictions in
   policy files (AI policy, agent instructions, contributing, PR templates), then
-  other PR restrictions, and mentions last. When the 100-hint bound or the
+  other PR restrictions, then restrictions from nested security, support,
+  governance or conduct files, and mentions last. When the 100-hint bound or the
   report-size bound applies, mentions are dropped first. A dropped restriction
   hint is counted as `restriction hints` or `report size: restriction hints`,
   which `hides_sources`.

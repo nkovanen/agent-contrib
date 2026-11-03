@@ -341,17 +341,18 @@ class _Report:
         for path, blob in blobs.items():
             kind = kind_of(core.safe_text(path, len(path)))  # classify the full path, display it shortened (RP-17)
             if (kind is None or path in skip or not allowed(path) or origin != 'repository' and kind == 'readme' or
-                    kind == 'community' and not _top_level(path) or _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
+                    _format(path) not in SCANNED_FORMATS | DOCUMENT_FORMATS):
                 continue
             if _format(path) not in SCANNED_FORMATS:
                 self.note(path if origin == 'repository' else f'{repository}:{path}', 'unsupported format',
                           key=(repository.casefold(), path))
                 continue
-            found.append((KIND_ORDER.index(kind), path, blob, kind))
+            # Nested security/governance files are read after top-level ones and rank lower; never skipped (RP-25).
+            found.append((KIND_ORDER.index(kind), kind == 'community' and not _top_level(path), path, blob, kind))
         found.sort()
-        for _, path, blob, kind in found[:cap]:
+        for _, _, path, blob, kind in found[:cap]:
             self.fetch(origin, repository, commit, path, blob, kind)
-        for _, path, _, kind in found[cap:]:
+        for _, _, path, _, kind in found[cap:]:
             self.omit(repository, path, kind, 'file limit')
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
@@ -370,16 +371,21 @@ def _display(path):
 
 
 def _top_level(path):
-    """Root, .github/ or docs/: where security, support, governance and conduct files are policy (N-04)."""
+    """Root, .github/ or docs/: where security, support, governance and conduct files are usually policy (N-04)."""
     parts = path.split('/')
     return len(parts) == 1 or len(parts) == 2 and parts[0].casefold() in ('.github', 'docs')
 
 
-def _tier(hint, source_kind):
+def _tier(hint, source):
     """Attention order: agent, PR eligibility rules, AI, PR hints with AI context, PR hints in policy files, other PR
-    hints, mentions. Eligibility ranks high so a maintainers-only rule always reaches the text view (hono)."""
+    hints, restrictions from nested security/governance files (RP-25: lower, never dropped), mentions."""
+    source_kind = source['kind']
+    if hint['kind'] not in STOP_HINTS:
+        return 7
+    if source_kind == 'community' and not _top_level(source['path']):
+        return 6
     if hint['kind'] != 'possible_pr_restriction':
-        return {'possible_agent_restriction': 0, 'possible_ai_restriction': 2}.get(hint['kind'], 6)
+        return {'possible_agent_restriction': 0, 'possible_ai_restriction': 2}[hint['kind']]
     if hint['eligibility']:
         return 1
     return 3 if hint['ai_context'] else 4 if source_kind in POLICY_KINDS else 5
@@ -482,7 +488,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     scanned = state.scanned
     hints = []
     for index, (source, (path, result)) in enumerate(zip(state.sources, state.texts)):
-        hints += [dict(hint, source=index, tier=_tier(hint, source['kind'])) for hint in result['hints']]
+        hints += [dict(hint, source=index, tier=_tier(hint, source)) for hint in result['hints']]
         for link in result['links']:
             origin = f'{source["repository"]}:{source["path"]}'
             try:

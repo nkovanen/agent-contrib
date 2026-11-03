@@ -19,19 +19,6 @@ def installed_workflow():
 
 class HintNoiseTests(unittest.TestCase):
     """N-04: less noise, never fewer stop-class hints."""
-    def test_community_files_count_only_at_root_github_or_docs(self):
-        files = {'SECURITY.md': 'x', '.github/SECURITY.md': 'x', 'docs/SECURITY.md': 'x', 'docs/governance.md': 'x',
-                 'doc/source/reference/security.rst': 'x', 'docs/dev/governance/governance.rst': 'x',
-                 'docs/support-multiple-versions.md': 'x', 'pkg/support.md': 'x', 'src/CODE_OF_CONDUCT.rst': 'x',
-                 'deep/dir/CONTRIBUTING.md': 'x', 'deep/dir/AI_POLICY.md': 'x'}
-        result, _ = report(files)
-        scanned = {s['path'] for s in result['sources_scanned']}
-        self.assertEqual(scanned, {'SECURITY.md', '.github/SECURITY.md', 'docs/SECURITY.md', 'docs/governance.md',
-                                   'docs/support-multiple-versions.md', 'deep/dir/CONTRIBUTING.md',
-                                   'deep/dir/AI_POLICY.md'})
-        owner, _ = report({}, {'docs/x/SECURITY.md': 'x', 'docs/SUPPORT.md': 'x'})
-        self.assertEqual({s['path'] for s in owner['sources_scanned']}, {'docs/SUPPORT.md'})
-
     def test_ai_and_agent_hints_rank_above_pr_only_hints(self):
         files = {'README.md': 'Pull requests are only reviewed on Fridays.',
                  'CONTRIBUTING.md': 'Contributions must include tests.\n\nNo AI-generated pull requests.\n\n'
@@ -268,3 +255,24 @@ class CommentExcerptTests(unittest.TestCase):
         self.assertTrue(line.endswith('-- AI-generated pull requests are closed.'), line)
         self.assertNotIn('<!--', line)
         self.assertEqual(rp['hints'][0]['untrusted_excerpt'][:4], '<!--', 'JSON keeps the sanitized excerpt as is')
+
+
+class NestedCommunityTests(unittest.TestCase):
+    """RP-25: nested security/governance files are lower priority, never invisible."""
+    def test_a_nested_governance_ban_is_scanned_and_shown(self):
+        rp, _ = report({'docs/dev/GOVERNANCE.md': 'AI-generated contributions are forbidden.'}, {})
+        self.assertEqual([s['path'] for s in rp['sources_scanned']], ['docs/dev/GOVERNANCE.md'])
+        self.assertIn('possible_ai_restriction', {h['kind'] for h in rp['hints']})
+        text = textfmt.render('inspect', {'repository_policy': rp})
+        self.assertIn('acme/photos:docs/dev/GOVERNANCE.md:1 -- AI-generated contributions are forbidden.', text)
+        self.assertNotIn('No restriction hints', text)
+
+    def test_nested_community_hints_rank_after_top_level_policy(self):
+        rp, _ = report({'doc/source/reference/security.rst': 'AI tools must not be used for vulnerability reports.',
+                        'CONTRIBUTING.md': 'Pull requests must include tests.'}, {})
+        paths = [rp['sources_scanned'][h['source']]['path'] for h in rp['hints'] if h['kind'] in STOP_KINDS]
+        self.assertEqual(paths[-1], 'doc/source/reference/security.rst')
+
+    def test_owner_nested_community_files_are_scanned(self):
+        rp, _ = report({}, {'docs/x/SECURITY.md': 'No AI reports.', 'docs/SUPPORT.md': 'x'})
+        self.assertEqual({s['path'] for s in rp['sources_scanned']}, {'docs/x/SECURITY.md', 'docs/SUPPORT.md'})
