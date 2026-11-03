@@ -191,8 +191,14 @@ def _drift(result):
     policy_drift = result.get('repository_policy_drift') or {}
     if policy_drift.get('policy_drifted') is True:
         named = [item.get('what', '') for kind in ('changed', 'added', 'removed') for item in policy_drift.get(kind) or []]
-        reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
-                                                        'recorded inventory_sha256 differs (no per-source baseline)'))
+        recorded, current = policy_drift.get('recorded_inventory_format'), policy_drift.get('current_inventory_format')
+        if recorded is not None and recorded != current:
+            reasons.append(f'Policy inventory changed: recorded inventory_sha256 is inventory format {line(recorded, 10)}, '
+                           f'current format is {line(current, 10)}; re-review and record the new hash' +
+                           (' (' + ', '.join(line(path, 200) for path in named[:10]) + ')' if named else ''))
+        else:
+            reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
+                                                            'recorded inventory_sha256 differs (no per-source baseline)'))
     elif policy_drift and policy_drift.get('policy_drifted') is None:
         info.append('Policy inventory could not be compared: the current read is incomplete or limited')
     if branch.get('advanced'):

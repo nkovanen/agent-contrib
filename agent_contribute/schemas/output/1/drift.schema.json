@@ -417,6 +417,19 @@
         "baseline_verified": {
           "type": "boolean"
         },
+        "current_inventory_format": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "inventory_format of the current report"
+        },
+        "recorded_inventory_format": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "Format of the recorded hash when the current report or the pinned baseline reproduces it under a known format; null when unknown"
+        },
         "added": {
           "type": [
             "array",
@@ -583,6 +596,8 @@
         "policy_drifted",
         "limits_hide_sources",
         "baseline_verified",
+        "current_inventory_format",
+        "recorded_inventory_format",
         "added",
         "removed",
         "changed",

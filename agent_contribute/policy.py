@@ -36,6 +36,9 @@ POLICY_KINDS = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template'
 EXCERPT_CHARS = 300
 IDENTIFIER_CHARS = 500
 MAX_REPORT_BYTES = 256 * 1024
+# Version of the inventory_sha256 input (N11). 1 is the unversioned hash of earlier 0.3.0 candidates; bump this
+# whenever the hashed material changes, so a recorded hash from another format is recognizable as such.
+INVENTORY_FORMAT = 2
 WINDOW = 12
 SCANNED_FORMATS = {'', '.md', '.markdown', '.rst', '.txt'}
 # Other document formats a policy may use; listed as unsupported. Code, data and image files are not candidates.
@@ -591,8 +594,9 @@ def _relative_what(url, base_path):
                               posixpath.join(posixpath.dirname(base_path), target)), True
 
 
-def report(repository, commit, instructions, client, *, default_branch=None):
-    """Read-only policy report for the issue source repository at its observed commit; never raises on reads."""
+def report(repository, commit, instructions, client, *, default_branch=None, hashes=None):
+    """Read-only policy report for the issue source repository at its observed commit; never raises on reads.
+    A dict passed as hashes receives the inventory hash under each known format (1 and INVENTORY_FORMAT)."""
     state = _Report(client)
     if default_branch is None:
         try:
@@ -663,14 +667,19 @@ def report(repository, commit, instructions, client, *, default_branch=None):
                                     for name, count in sorted(state.limits.items())]
         result['limits_hide_sources'] = bool(result['omitted_sources']) or any(
             item['hides_sources'] for item in result['limits_reached'])
-        result['inventory_sha256'] = core.canonical_hash({
+        result['inventory_format'] = INVENTORY_FORMAT
+        material = {
             # Original identities, never display text, which may be shortened or sanitized (RP-23).
             'sources': sorted([s['origin'], s['identity_sha256'], s['sha256']] for s in result['sources_scanned']),
             # Full identities, not the shortened display text (RP-20); state.keys is aligned with retained entries.
             # Unread candidates count with their pinned blob, so an edit to an unread file changes the hash (RP-28).
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
             'omitted_sources': sorted([o['identity_sha256'], o['reason'], o['blob_sha']] for o in result['omitted_sources']),
-            'limits_reached': result['limits_reached'], 'owner_lookup': result['owner_lookup']})
+            'limits_reached': result['limits_reached'], 'owner_lookup': result['owner_lookup']}
+        result['inventory_sha256'] = _inventory_hash(material, INVENTORY_FORMAT)
+        if hashes is not None:
+            hashes.clear()
+            hashes.update({fmt: _inventory_hash(material, fmt) for fmt in (1, INVENTORY_FORMAT)})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
         # Shrink until the serialized report fits, recording every reduction (RP-18).
@@ -693,6 +702,11 @@ def report(repository, commit, instructions, client, *, default_branch=None):
             state.limit('report size: sources not listed')
         else:
             return result
+
+
+def _inventory_hash(material, fmt):
+    """Format 1 hashed the material alone; later formats hash their version with it."""
+    return core.canonical_hash(material if fmt == 1 else dict(material, inventory_format=fmt))
 
 
 def for_inspected(inspected, client):

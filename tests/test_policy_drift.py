@@ -202,6 +202,76 @@ class PolicyDriftTests(unittest.TestCase):
         self.assertIn('Policy inventory changed: SECURITY.md', output.getvalue())
 
 
+class InventoryFormatTests(unittest.TestCase):
+    """N11: the inventory hash carries an explicit format version, and a mismatch names format differences."""
+    def setUp(self):
+        self.client = VersionedGitHub()
+
+    def drift(self, recorded):
+        task, _ = reviewed(self.client)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        return run(self.client, 'drift', path, '--policy-sha256', recorded)
+
+    def test_the_report_states_its_format_and_the_hash_covers_it(self):
+        task, recorded = reviewed(self.client)
+        inspected = core.inspect_issue('acme/photos#12', self.client)
+        self.assertEqual(policy.for_inspected(inspected, self.client)['inventory_format'], policy.INVENTORY_FORMAT)
+        self.assertEqual(policy.INVENTORY_FORMAT, 2)
+        with patch.object(policy, 'INVENTORY_FORMAT', 3):
+            self.assertNotEqual(policy.for_inspected(inspected, self.client)['inventory_sha256'], recorded)
+
+    def test_a_format_1_hash_of_the_same_snapshot_is_named_not_blamed_on_the_owner(self):
+        with patch.object(policy, 'INVENTORY_FORMAT', 1):
+            _, legacy = reviewed(self.client)
+        code, result = self.drift(legacy)
+        self.assertEqual(code, 1, 'a format change still fails closed')
+        report = result['repository_policy_drift']
+        self.assertIs(report['policy_drifted'], True)
+        self.assertEqual((report['current_inventory_format'], report['recorded_inventory_format']), (2, 1))
+        self.assertIn('inventory format 1', report['note'])
+        self.assertNotIn('owner .github repository may have moved', report['note'])
+        self.assertEqual((report['added'], report['removed'], report['changed']), ([], [], []))
+
+    def test_an_unknown_hash_may_come_from_another_format(self):
+        code, result = self.drift('f' * 64)
+        self.assertEqual(code, 1)
+        report = result['repository_policy_drift']
+        self.assertEqual(report['current_inventory_format'], 2)
+        self.assertIsNone(report['recorded_inventory_format'])
+        self.assertIn('may come from a different inventory format', report['note'])
+
+    def test_a_matching_hash_reports_the_same_format(self):
+        _, recorded = reviewed(self.client)
+        code, result = self.drift(recorded)
+        self.assertEqual(code, 0, result)
+        report = result['repository_policy_drift']
+        self.assertEqual((report['current_inventory_format'], report['recorded_inventory_format']), (2, 2))
+
+    def test_a_matching_current_hash_names_its_format_without_a_baseline(self):
+        task, recorded = reviewed(self.client)
+        self.client.advance(dict(self.client.versions[PINNED]))
+        self.client.failed.add('/git/trees/' + PINNED)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        code, result = run(self.client, 'drift', path, '--policy-sha256', recorded)
+        report = result['repository_policy_drift']
+        self.assertIs(report['policy_drifted'], False)
+        self.assertFalse(report['baseline_verified'])
+        self.assertEqual((report['current_inventory_format'], report['recorded_inventory_format']), (2, 2))
+
+    def test_text_output_names_the_format_mismatch(self):
+        with patch.object(policy, 'INVENTORY_FORMAT', 1):
+            task, legacy = reviewed(self.client)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        output = io.StringIO()
+        with patch.object(core, 'GitHub', return_value=self.client), contextlib.redirect_stdout(output):
+            cli.main(['--format', 'text', 'drift', path, '--policy-sha256', legacy])
+        self.assertIn('Policy inventory changed: recorded inventory_sha256 is inventory format 1, current format is 2',
+                      output.getvalue())
+
+
 if __name__ == '__main__':
     unittest.main()
 

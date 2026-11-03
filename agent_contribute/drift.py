@@ -118,19 +118,32 @@ def _policy_drift(expected, current, baseline, source, client, errors):
     result = {'expected_sha256': expected, 'current_sha256': now['inventory_sha256'],
               'policy_drifted': None if incomplete else now['inventory_sha256'] != expected,
               'limits_hide_sources': now['limits_hide_sources'], 'baseline_verified': False,
+              'current_inventory_format': now['inventory_format'],
+              'recorded_inventory_format': now['inventory_format'] if now['inventory_sha256'] == expected else None,
               'added': None, 'removed': None, 'changed': None,
               'note': 'The hash covers policy source bytes, unassessed references and limits. Re-read every changed '
                       'source and repeat the policy review before any authorization or publication.'}
     if incomplete:
         errors.append('Policy inventory read is incomplete or limited; policy drift is unknown')
     if baseline is not None and not baseline['errors']:
+        hashes = {}
         then = policy_report.report(source['repository'], source['commit'], baseline['instructions'], client,
-                                    default_branch=source['default_branch'])
-        result['baseline_verified'] = then['inventory_sha256'] == expected
+                                    default_branch=source['default_branch'], hashes=hashes)
+        # The same pinned snapshot hashed under another known format identifies the recorded hash's format.
+        fmt = next((fmt for fmt, digest in sorted(hashes.items(), reverse=True) if digest == expected), None)
+        result['baseline_verified'] = fmt is not None
+        if fmt is not None:
+            result['recorded_inventory_format'] = fmt
+    current = result['current_inventory_format']
+    if result['recorded_inventory_format'] not in (None, current):
+        result['note'] += (f' The recorded hash is inventory format {result["recorded_inventory_format"]} of the same '
+                           f'pinned snapshot; the current report is format {current}, so the hashes cannot match. '
+                           'Re-review and record the new inventory_sha256.')
     if not result['baseline_verified']:
-        result['note'] += (' No per-source deltas: the baseline rebuilt at the pinned commit does not reproduce the '
-                           'recorded hash (the owner .github repository may have moved, or the review used another '
-                           'snapshot).')
+        result['note'] += (f' No per-source deltas: the baseline rebuilt at the pinned commit (inventory format '
+                           f'{current}) does not reproduce the recorded hash. It may come from a different inventory '
+                           'format (another agent-contrib version), the owner .github repository may have moved, or '
+                           'the review used another snapshot.')
         return result
     old, new = _inventory_entries(then), _inventory_entries(now)
     result['added'] = [dict(new[i], identity_sha256=i) for i in sorted(set(new) - set(old))]

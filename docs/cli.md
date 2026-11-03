@@ -730,6 +730,10 @@ the `agent_contribute.aipolicy` module no longer exist.
   unassessed identifiers and the limits. It excludes commit SHAs, so unrelated
   pushes do not change it. No verifier checks it; the workflow records it in
   prerequisite `ai-policy-review`.
+- **`inventory_format`.** The version of the material that `inventory_sha256`
+  hashes, itself part of the hash (currently 2). Format 1 is the unversioned
+  hash of earlier 0.3.0 candidate builds. Any change to the hashed material
+  bumps it, so a hash recorded under another format is recognizable.
 
 With `--format text`, the Policy line is followed by up to five restriction
 hints in attention order, for example `! possible_ai_restriction
@@ -793,6 +797,14 @@ before any read.
   SHA-256 when scanned, pinned blob id when unread). Otherwise they are `null`:
   the owner `.github` repository is read at its current tip, so a baseline cannot
   always be rebuilt, and no deltas are invented.
+- `current_inventory_format` is the current report's `inventory_format`.
+  `recorded_inventory_format` is the format under which the current report or the
+  pinned baseline reproduces HASH, or `null` when neither does. When the pinned
+  baseline reproduces HASH only under another known format (a hash recorded by an
+  earlier build), the note says so instead of suggesting a moved owner
+  repository; it is still drift (exit 1): re-review and record the new hash.
+  When nothing reproduces HASH, the note says it may come from a different
+  inventory format, a moved owner `.github` repository or another snapshot.
 
 This catches an edit to a policy-only file such as `SECURITY.md` or a new
 `AI_POLICY.md`, which `instructions_sha256` does not cover. It costs up to two
@@ -1197,6 +1209,8 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 | `repository_policy_drift.policy_drifted` | boolean or null | null when the current policy inventory read is incomplete or limited |
 | `repository_policy_drift.limits_hide_sources` | boolean |  |
 | `repository_policy_drift.baseline_verified` | boolean |  |
+| `repository_policy_drift.current_inventory_format` | integer | inventory_format of the current report |
+| `repository_policy_drift.recorded_inventory_format` | integer or null | Format of the recorded hash when the current report or the pinned baseline reproduces it under a known format; null when unknown |
 | `repository_policy_drift.added` | object[] or null |  |
 | `repository_policy_drift.added[].identity_sha256` | string |  |
 | `repository_policy_drift.added[].what` | string |  |
@@ -2058,6 +2072,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `reads` | object |  |
 | `reads.requests` | integer |  |
 | `reads.limit` | integer |  |
+| `inventory_format` | integer | Version of the inventory_sha256 input; 1 was the unversioned hash of earlier 0.3.0 candidates |
 | `inventory_sha256` | string |  |
 | `hinted_lines` | object[] | One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line |
 | `hinted_lines[].source` | integer |  |

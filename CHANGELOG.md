@@ -460,6 +460,15 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- `repository_policy` adds `inventory_format` (currently 2), and the format is
+  part of the `inventory_sha256` input, so every inventory hash differs from
+  earlier 0.3.0 candidate builds (format 1, unversioned). `drift
+  --policy-sha256` reports `current_inventory_format` and
+  `recorded_inventory_format`. A format-1 hash of the same pinned snapshot is
+  recognized and reported as a format change rather than blamed on a moved
+  owner `.github` repository; an unknown hash's note names a different
+  inventory format as one possible cause. Both still count as drift (exit 1)
+  (N11).
 - `repository_policy.inventory_sha256` now also covers the pinned blob id of
   every unread policy candidate (RP-28) and the owner `.github` lookup outcome
   (`owner_lookup`, RP-29), so it differs from earlier 0.3.0 candidate builds.
