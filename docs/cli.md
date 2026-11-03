@@ -1,20 +1,70 @@
 # Command reference
 
-Commands emit JSON by default except help/version. Exit codes: **0** for a complete read,
-successful export/draft write or a passed verification gate (completion
-readiness for schema 0.1, the selected `--stage` for 0.2); **1** for an
-expected error, incomplete read or unresolved verification; **2** for usage
-errors. An exit code is not authorization.
+Every `agent-contrib` command, its options, exit codes and limits. Commands print JSON
+by default (see [text output](#text-output-unreleased)); the field-by-field JSON reference is in
+[output-reference.md](output-reference.md). Start with the [command index](#command-index);
+sections are grouped by task.
 
-JSON results are flushed before returning. If the stdout pipe's consumer has
-closed, the command closes the failed stream and exits **1** without a traceback
-or a second error during interpreter shutdown. This also overrides an otherwise
-successful result or usage-error status when its JSON cannot be delivered.
-A missing stdout stream (for example, fd 1 closed before Python starts) also
-returns **1** quietly. Caller-provided replacement streams need only support
-`write()`; their `flush()` and cleanup `close()` methods are used when available.
-Writable stdout, including a redirected output file, retains the normal JSON
-format and command exit status. Help/version output is unchanged.
+## Contents
+
+- [Discovery and ranking](#discovery-and-ranking)
+  - [Discovery results and references](#discovery-results-and-references)
+  - [Opt-in ranking signals](#opt-in-ranking-signals)
+  - [Repository responsiveness](#repository-responsiveness)
+  - [Several repositories](#several-repositories)
+  - [Repository policy report (default-on, report only)](#repository-policy-report-default-on-report-only)
+  - [Ownership and resolution signals (report only)](#ownership-and-resolution-signals-report-only)
+- [Contracts and verification](#contracts-and-verification)
+  - [Contracts and verification gates](#contracts-and-verification-gates)
+  - [Schema 0.2 lifecycle (CLI 0.3.0 candidate)](#schema-02-lifecycle-cli-030-candidate)
+  - [Offline contract lint](#offline-contract-lint)
+  - [Drift since preparation](#drift-since-preparation)
+  - [Required CI checks (schema 0.2 completion, opt-in)](#required-ci-checks-schema-02-completion-opt-in)
+- [Local checkout tools](#local-checkout-tools)
+  - [Checkout requirements](#checkout-requirements)
+  - [Offline scope check](#offline-scope-check)
+  - [Evidence skeleton](#evidence-skeleton)
+- [Host authorization](#host-authorization)
+  - [Authorization request](#authorization-request)
+- [Reports and integration](#reports-and-integration)
+  - [PR description](#pr-description)
+  - [PR feedback](#pr-feedback)
+  - [CI observation (opt-in, report only)](#ci-observation-opt-in-report-only)
+  - [Signature observation (opt-in, report only)](#signature-observation-opt-in-report-only)
+  - [Output schemas](#output-schemas)
+- [Global options and output](#global-options-and-output)
+  - [Exit codes and output streams](#exit-codes-and-output-streams)
+  - [Help](#help)
+  - [API budget (opt-in)](#api-budget-opt-in)
+  - [Content cache (opt-in)](#content-cache-opt-in)
+  - [Text output (unreleased)](#text-output-unreleased)
+- [Command index](#command-index)
+
+## Command index
+
+Every command exits **2** for a usage error and **1** for an input, protocol or read error. "Reads
+GitHub" means fixed `gh api --method GET` reads; nothing is ever written.
+
+| Command | Purpose | Reads GitHub? | Exit codes |
+| --- | --- | --- | --- |
+| `discover` | Rank open issues of one repository, or 2-20, with policy and overlap context | Yes | 0 complete; 1 incomplete (also an incomplete `--responsiveness`, `--check-top` or `--repo-dir` report) |
+| `inspect` | One issue: approval, instructions, exclusions, overlapping PRs | Yes | 0 complete; 1 incomplete (also incomplete `--ownership` signals) |
+| `prepare` | Write a draft task contract; grants nothing | Yes | 0 complete read and draft written; 1 otherwise |
+| `verify` | Contract, evidence and live gates; never runs validation commands | Yes | 0 when the gate passes (0.1: completion readiness; 0.2: the selected `--stage`); 1 otherwise |
+| `authorization-request` | Schema 0.2: unsigned request with every mandate binding pre-filled | Yes | 0 ready for issuance; 1 otherwise |
+| `lint` | Offline contract schema and reviewed-contract check | No | 0 schema-valid reviewed contract; 1 otherwise |
+| `scope-check` | Offline check of local changes against the contract scope | No | 0 no violation; 1 violation or error |
+| `evidence init` | Unfilled evidence skeleton from observed Git facts | No | 0 file written; 1 error |
+| `pr-body` | Markdown PR description from the contract, evidence and a fresh `verify` | Yes | 0 file written; 1 error |
+| `feedback` | Reviews, comments and exact-head checks of a published PR | Yes | 0 complete; 1 incomplete |
+| `ownership` | Report-only claims, linked PRs and possible prior fixes for one issue | Yes | 0 complete; 1 incomplete |
+| `drift` | What changed since the contract was prepared | Yes | 0 complete and not drifted; 1 drifted or incomplete |
+| `audit` | Maintainer view of what agents see in a repository | Yes | 0 complete; 1 incomplete |
+| `instructions` | Installed workflow, CLI version and supported schemas | No | 0 |
+| `skill` | Export the canonical Skill file | No | 0 written; 1 error (an existing file is never overwritten) |
+| `schema` | JSON Schema of a command's JSON output | No | 0 |
+
+### Invocation forms
 
 | Command | Result |
 | --- | --- |
@@ -45,45 +95,9 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib schema COMMAND` | The JSON Schema of COMMAND's JSON output; see [Output schemas](#output-schemas) |
 | `agent-contrib --version` | CLI/library semantic version |
 
-`--repo-dir` must be the Git worktree top level. `verify`, `scope-check` and
-`evidence init` refuse a subdirectory or Git directory, because tree, index and
-untracked-file reads there would omit the rest of the checkout. They also refuse an
-index with assume-unchanged or skip-worktree entries, including any sparse
-checkout, because Git status and diff would hide changes to those files. The
-index is only read, never changed; clear the flags or use a full checkout.
-A checkout whose effective Git config (including `include`/`includeIf` files)
-sets a key a read could run as a program or use to fetch is refused with
-`unsafe_git_config`: `filter.*`, `gpg.program` and `gpg.*.program`,
-`diff.external`, `diff.*.command`, `diff.*.textconv`,
-`extensions.partialClone`, `remote.*.promisor`, `remote.*.partialCloneFilter`
-and `protocol.*`. Git reads also force `log.showSignature=false` and
-`protocol.allow=never` and disable lazy fetching, so a missing object is a read
-error, never a fetch. Credential, SSH, askpass, pager, editor and merge-driver
-settings are not refused because none of the fixed read commands reaches them.
-Reads also force full stat and mode checks (`core.checkStat=default`,
-`core.trustctime=true`, `core.ignoreStat=false`, `core.fileMode=true`, and
-`core.symlinks=true` on POSIX), so
-relaxed checkout settings cannot hide an edit or an executable bit; on a
-filesystem without executable bits every file then looks changed, which fails
-closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where
-it would hide case twins, and accepted where the filesystem really ignores case.
-Worktree content is compared with a commit through a fresh temporary index
-outside the checkout, so the checkout's stat cache is never trusted; every
-tracked file is hashed on each run. Each file's bytes must equal either the
-committed blob or exactly what checkout writes for it (`cat-file --filters`,
-with `core.autocrlf=false` and `core.eol=lf`). Git takes those attributes from
-the checkout's `.gitattributes` files; a changed tracked one is reported as a
-change, and an untracked one is always reported (even when a committed
-`.gitignore` would ignore it) and is never within `scope-check` scope. So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
-an edit, and an untouched checkout with those conversions stays clean. A CRLF
-copy produced only by a local `core.autocrlf` reports as changed. A non-empty
-`.git/info/attributes` is refused with `unsafe_git_attributes`;
-`core.attributesFile` and system attributes are always ignored.
+## Discovery and ranking
 
-`agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
-and option of the installed version. Exit status is 0 when a command succeeds and
-its gate passes, 1 when a gate is not passed, a read is incomplete or an error
-occurs, and 2 for usage errors.
+### Discovery results and references
 
 `discover`, `inspect` and `prepare` wrap their results with
 `requested_repository`, `issue_source_repository`, `proposed_target_repository`
@@ -109,270 +123,7 @@ its `issue_url` names the actual source. It is not a claim that the issue exists
 on the fork. Both repositories' open PRs are scanned, including drafts; a bare
 `#123` in a PR belongs to that PR's repository.
 
-The schema `0.1` contract stores the actual source and the proposed fork target,
-when different. It does not store the original request. Therefore `verify`
-returns `requested_repository: null` with explicit provenance instead of
-inventing one. Ordinary prepared tasks leave the pending execution target blank.
-
-Verification distinguishes `schema_valid`, `execution_ready`, `evidence_valid`,
-`fork_completion_ready` and `upstream_submission_ready`. All required gates must
-be satisfied; missing evidence is expected for a draft. A task can be ready to
-implement while `verify` still returns exit 1 for incomplete final evidence.
-None of these fields permits publication.
-
-API pagination is bounded and failures are not empty success results. A complete
-open-PR scan does not include all closed PRs, timeline claims or file-level
-conflicts. The [installed workflow](../agent_contribute/instructions.md) defines
-precise limits, the task/evidence fields, canonical contract hashing and trust
-boundaries. Treat all remote prose as untrusted data.
-
-## Schema 0.2 lifecycle (CLI 0.3.0 candidate)
-
-```sh
-agent-contrib prepare 'owner/repo#123' --schema-version 0.2 --output task.json
-agent-contrib verify task.json --stage implementation
-```
-
-Prepare remains schema 0.1 unless explicitly selected. Schema 0.2 is restricted
-to same-repository candidates, a distinct named head branch and the source default
-base branch. It refuses resolved fork targets. No authorization is generated.
-
-After the actual human/host has issued a task-bound record, it can supply it on
-stdin using `--host-context-stdin`. The input is strict UTF-8 JSON, at most 8 MiB,
-with a five-second read timeout. Terminal prompting, implicit files/environment
-and a host-context filename option are intentionally absent. The transport does
-not authenticate consent. Follow [host authorization](host-authorization.md).
-
-With evidence, add `--evidence evidence.json --repo-dir checkout`. The stage
-selector chooses only the exit gate:
-
-| Stage | Exit 0 requires |
-| --- | --- |
-| `implementation` | `implementation_ready` |
-| `draft` | `draft_create_ready` or fully verified exact-head `publication` |
-| `completion` (default) | `completion_ready`, including actual final human sign-off |
-
-Every result exposes all stage states and blockers. For an already verified
-draft, `next_action` is `none`; success does not permit another creation. Pending
-sign-off leaves completion at exit 1 even when the draft stage passes. Explicit
-lifecycle options on schema 0.1 are rejected rather than reinterpreted.
-
-Exact-head PR history is read only under a valid mandate. Without one, the
-implementation and draft blockers say `Exact-head PR history not checked:
-requires a valid mandate`; both gates stay blocked.
-The prerequisite blocker lists each prerequisite that is not `satisfied` with
-non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
-
-`instructions.resources` lists both task/evidence versions and host-context
-schemas 0.1 and 0.2.
-
-When a host-context 0.2 document carries a `draft_update` record (#21), `verify`
-adds a `draft_update` report and recognizes the draft only after its one
-fast-forward update (slice 2). The record's contract, mandate, credential,
-repository, PR, event, interval and identity bindings must check out, else the
-status is `invalid` and no publication is read. With a record present, the
-draft at its creation head is never recognized. The status is then:
-
-- `recognized`: the live PR head `P` equals the validated evidence HEAD `E`,
-  `P != from_head`, and `compare from_head...P` is `ahead`. The creation head
-  precedes both `from_head` and `P`, and the PR is still the one claimed open,
-  unmerged draft by the bound actor, created inside the mandate interval and
-  not in the future. Its complete timeline has no force-push, head-ref
-  deletion or restore, close, reopen, merge, ready-for-review or
-  convert-to-draft event. A final re-read equals the first and keeps the
-  route. The evidence is based on the reviewed source commit exactly, has no
-  merge commit in `from_head..E` and only validations started after the
-  round's `issued_at`. `publication.verified` is true at `E`; completion also
-  needs a final sign-off for `E` issued after the round.
-- `not_evaluated`: the PR is still at `from_head`, so no update was pushed.
-- `blocked`: anything else, with the reasons in `errors`.
-
-Every comparison must be internally consistent (status, commits and counters),
-or it blocks. `candidate_head` is `E` exactly when the status is `recognized`,
-else `null`; `live_head` is the PR head of the first complete read, or `null`.
-The record may have expired after the push; `current` reports whether its
-interval contains the verification time, judged after every read. Pre-push
-readiness is not evaluated: no `next_action` asks for an update or a push, and
-nothing here authorizes a push. Without the section the output is unchanged.
-See [host authorization](host-authorization.md#draft-update-rounds-host-context-02).
-
-With a host-context 0.2 document, `verify` adds `overlap_dispositions` and
-`waived_duplicates`. The status is:
-- `absent`: no record;
-- `invalid`: a schema, binding or expiry error. Nothing is waived. A record
-  rejected on its own checks makes no extra read, but one that expires during
-  the reads becomes `invalid` only after them;
-- `evaluated`: the record's contract, mandate, credential, event, interval and
-  entry bindings check out.
-
-For an `evaluated` record, `verify` reads each disposed PR (`pulls/{n}`) and each
-distinct base-branch tip (`git/ref/heads/{ref}`): at most 20 PRs and 20 refs. It
-recomputes the match and reconciles it with the open-PR scan. It removes a PR
-from the blocking lists only when all of these hold:
-- the scan was complete;
-- the match is the same topical one (never a direct reference);
-- the author is not the credential actor;
-- every bound observation is equal (ID, URL, repository, author, state, draft,
-  head repository and SHA, `updated_at`, title/body/ref hash and base tip);
-- the record is still unexpired after all reads.
-
-A direct reference, contradiction or failed read seen in that read blocks. A
-direct reference first seen there is also added to `duplicates` with
-`observed_in: "disposition_read"`; a failed read is a blocker only, never a
-claimed overlap. A waived PR stays in `duplicates`. Waivers never remove any other blocker; text
-output names them. A record that expires during the reads fails every stage
-closed. Library callers may pass host context explicitly to `core.verify`;
-that is the same host-asserted boundary as the CLI, not a privileged API.
-
-## Authorization request
-
-`authorization-request task.json` makes the same GitHub reads as `verify
-task.json` without host context, writes no file and reads no stdin. It first
-validates the full task 0.2 schema: a schema 0.1 or unknown version is a usage
-error (exit 2), and an invalid contract returns `error.code: invalid_contract`
-with `schema_errors` and no template (exit 1), before any read; the payload is
-identical with `--report-budget`, which takes no budget snapshot in that case.
-
-The output has `issued: false`, `contract_sha256`, `mandate_fields`,
-`human_only_fields`, `requested_actions`, `unresolved_fields`, `preflight_errors` and
-`ready_for_issuance` (exit 0 only when true). In a ready request the `null`
-leaves of `mandate_fields` are exactly `human_only_fields`: a ready request
-still awaits the host for every one of them. `requested_actions` repeats the
-contract's actions; the host chooses `mandate_fields.actions`. When identity or
-permission reads fail, `credential_actor_id` and `authority` are also `null` and
-listed in `unresolved_fields`, which names only these derived fields; only fresh
-trusted reads resolve them. Text output shows the requested actions, any
-unresolved derived fields and the human-only fields.
-`preflight_errors` omit the blockers that exist only because no mandate exists
-yet. They are untrusted diagnostics and may contain repository-authored paths.
-
-The request deliberately contains no scope, path, objective, criteria or
-validation summary. The host renders the complete contract from the file it
-hashes, issues the record, and the worker relays it unchanged. The request is not
-host context: piping it to `verify --host-context-stdin` fails schema validation.
-
-## Offline contract lint
-
-`lint task.json` reads one contract and nothing else. It validates it against
-the bundled task schema for its `schema_version` (unknown versions fail), and
-for a schema-valid contract it applies the same reviewed-contract rules that
-`verify` checks: reviewed status with no open questions, required fields,
-concrete repository-relative scope, unique IDs, a definition of done covering
-every criterion and validation, complete prepared discovery and satisfied
-prerequisites. `reviewed` (and exit 0) means only that the contract is ready
-for `verify`. It says nothing about the live issue, approval, overlap,
-authorization or evidence, and it never runs validation argv.
-
-## Offline scope check
-
-`scope-check` evaluates the working diff against the contract's
-`scope.allowed_paths` and `scope.prohibited_paths` with the same function that
-`verify` uses for evidence. It reads only the local checkout: committed changes
-from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
-and untracked files that are not ignored. Only per-directory `.gitignore` files
-count as ignore rules; `.git/info/exclude` and `core.excludesFile` never hide a
-file, and an untracked `.gitignore` is always reported. Files ignored by a
-committed `.gitignore` are not reported (`verify` and `evidence init` apply the
-same rule). Renames report both paths. The base
-must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts exactly a
-full 40-character SHA, `HEAD`, or a full ref name such as `refs/heads/NAME` or
-`refs/tags/NAME`, each optionally followed by `~N` or `^N` (for example
-`HEAD~3` or `refs/heads/base~1`). Short branch or tag names, abbreviated SHAs
-(convert with `git rev-parse ABBREV`), pseudo-refs other than `HEAD` and other
-revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths, ranges) are refused.
-`HEAD` and `refs/...` names are looked up exactly with `git show-ref --verify`,
-never through Git's short-name lookup, so a same-named ref such as
-`refs/tags/HEAD` cannot stand in for them; an unborn `HEAD` is refused. The
-object ID is captured first, then the suffix and `^{commit}` are applied to it
-with `git rev-parse`.
-Every read uses the same hook, fsmonitor and replacement-object protections as
-other Git reads, and nothing under `.git` is opened directly. `base_commit`
-reports the full SHA. A value that is blank, starts with `-` or contains
-whitespace or control characters is refused. When the default base is not an ancestor of HEAD,
-`warnings` suggests passing `--base` for stacked or rebased work; the result
-still fails. When the default base is an ancestor but more than one commit
-behind HEAD and out-of-scope paths changed, `warnings` names the base, the
-commit count and suggests `--base`; the violations and exit status are
-unchanged. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
-means "no scope violation found", not evidence, readiness or authorization.
-Each violation names the path and either the first matching prohibited pattern
-or `not in allowed_paths`.
-
-A changed path that is a symlink is also judged by its target, the same way in
-`verify` and `scope-check`. The target comes from the commit, the index or the
-worktree that holds the link, read without following it. It is resolved
-lexically from the link's directory, expanding every link hop, including links
-to directories, up to 40 hops. The link is a violation, with the reason as its
-rule, when the target is absolute (`/x` or `C:/x`), contains a backslash,
-escapes the repository, points at the repository root, is longer than 4096
-bytes, contains a NUL byte, is not valid UTF-8, cannot be read (for example a
-permission error on a hop), loops, or resolves to a path outside `allowed_paths` or matching
-`prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
-A link that resolves to a directory of the same snapshot (the commit, the index
-or the worktree) exposes everything beneath it, so it is also a violation when
-any prohibited pattern can match some path beneath that directory, whether or
-not such a path exists (for example `symlink to docs/private/: prohibited_paths:
-docs/private/* can match beneath it` under `docs/*`). The check is conservative:
-a pattern counts when a prefix of it matches the directory plus `/`.
-A link to an allowed file passes; a scope pass does not prove the target exists.
-Git records no path beyond a symlink, so a
-file written through a linked directory appears at its real path and is judged
-there.
-
-## Evidence skeleton
-
-`evidence init` writes a draft evidence file for the contract's schema version.
-It fills only what the CLI observes locally: the canonical `contract_sha256`,
-`git_head`, `git_tree`, the given `base_commit` and the observed
-`worktree_clean`. Validation entries copy each contract `id` and `argv`;
-criteria copy their IDs. Every result field is left unfilled (`null` or empty),
-criteria and attestations are `pending`, and `implementer` is blank, so the
-skeleton deliberately fails evidence validation. It never runs argv and never
-writes `passed`.
-
-The base is resolved like `scope-check --base` and recorded as a full SHA. It
-must descend from `source.commit` and be an ancestor of HEAD. Gitlinks are
-refused. The output is created exclusively and
-must be outside the checkout's Git top level, because an untracked file there
-would invalidate the evidence. A dirty worktree is recorded as observed
-(`worktree_clean: false`), which `verify` rejects.
-
-## PR description
-
-`pr-body` runs the same read-only `verify` and renders Markdown: the issue
-reference (`Refs` by default, `Closes` only with `--closes`), objective, scope,
-criteria with their evidence status, each validation `argv` as an exact JSON
-code span with the recorded status, exit code, test and skip counts, review and
-sign-off status, the count and full neutralized text of every verify blocker,
-the open-PR scan provenance (completeness, pages, error count per scanned
-repository) with every overlapping PR, and an AI-assistance disclosure with the
-CLI version and contract hash. `--assistant` adds host-reported model text.
-
-When supplied evidence does not pass `verify`, its statuses are labelled
-`unverified claim`. Evidence that fails its schema is not quoted at all; its
-errors appear among the gates. For schema 0.2, review and sign-off states come
-from `verify`. `pr-body` takes no host context, so for 0.2 it shows only
-`technical_evidence_valid` with source (including repository, owner and issue
-identity), evidence and review blockers. It omits
-the implementation, draft and completion gates, `next_action`, final sign-off and
-authorization blockers, and says so, rather than misreporting authorized work as
-unauthorized. The host's `verify --host-context-stdin` run decides those.
-
-One extra bounded read of the tree at the contract's pinned `source.commit`
-finds pull request templates (`pull_request_template.md` or a
-`pull_request_template/` directory at the root, `.github/` or `docs/`,
-case-insensitive). The body names each path and blob SHA, or says that none
-exists, or that presence is unknown when the read fails or is truncated.
-Template contents are not read and the CLI does not fill the template.
-
-All quoted prose is neutralized: whitespace collapses to one line, HTML is
-escaped, Markdown link/image/emphasis/code characters are backslash-escaped,
-and zero-width space entities break `@` mentions, `#` references, `://` URLs
-and closing keywords (close, fix, resolve and their forms). Data shown in code
-spans (argv, template paths) is exact JSON. The output file is created
-exclusively. Rendering never writes to GitHub and is not publication authority.
-
-## Opt-in ranking signals
+### Opt-in ranking signals
 
 `discover --signals` adds deterministic, explained heuristics to each issue
 without extra API calls. Without the flag, output and ordering are unchanged.
@@ -505,7 +256,7 @@ other candidate that is not excluded or overlapping. Its score, gates and
 exclusions are unchanged. Without `--signals` the issue order is unchanged. A
 reference is not proof that the work is done.
 
-## Repository responsiveness
+### Repository responsiveness
 
 `discover --responsiveness` makes exactly one additional GET for the issue
 source repository, `repos/{source}/pulls?state=closed&sort=updated&direction=desc&per_page=100`,
@@ -532,78 +283,26 @@ approval, exclusions, overlaps, ordering or discovery `complete`. As with
 multi-repository run each repository carries its own report. Author association
 is not verified identity, and responsiveness is a heuristic, never approval.
 
-## PR feedback
+### Several repositories
 
-`feedback` reads one PR, its reviews, review comments, issue comments and the
-check runs for its current head, then rereads the PR. The PR must have the
-requested number, the canonical repository as its base and a valid head SHA. A
-head that moves during the read makes the result incomplete.
+`discover` accepts several repositories as arguments and/or
+`--repositories-file FILE` (UTF-8, at most 64 KiB, one `owner/repo` per line,
+blank lines and `#` comments ignored). With exactly one repository the output is
+the unchanged single-repository result. With 2 to 20 distinct repositories it
+returns `repositories` (each repository's complete single-repository result, in
+input order), `candidates` (every issue with its repository, reference and the
+ordering facts), `errors` prefixed with the repository name, and top-level
+`complete`, true only if every repository is complete. A failing repository
+never aborts the others or marks them complete. All identifiers are validated
+before any read. The merged order is exclusions, overlaps, low likelihood,
+higher signal score with `--signals`, then repository and issue number.
 
-Per reviewer it reports `latest_state` and `decision`: the latest APPROVED,
-CHANGES_REQUESTED or DISMISSED review (DISMISSED clears it; COMMENTED and
-PENDING never change it). Reviews are grouped by numeric user ID; `author` is
-the latest observation and `decision_author` the author of the decisive review.
-`changes_requested_by_trusted_association` is true when the decisive review of
-an outstanding change request has a non-bot author with association OWNER,
-MEMBER or COLLABORATOR. That association is a GitHub heuristic, not a
-verified maintainer role. Deleted accounts appear as `ghost`. Review comments
-include path, line and `outdated` (no diff position, or made on another
-commit). Failing (failure, timed out, cancelled, action required, startup
-failure, stale) and pending check runs are listed only for the exact head;
-`other_head_runs` counts runs for other heads. `--expected-head` (for example
-the evidence `git_head` of the recognized draft) adds `head_moved`. Logs are not
-read.
+Reads cost the sum of the single-repository runs; combine with
+`--report-budget --min-remaining N` on large lists. A display cap such as the
+proposed `discover --limit` (#1) would apply per repository. Deriving
+repositories from a dependency graph is out of scope.
 
-All text fields are `untrusted_*` data with terminal controls removed. Feedback
-never widens scope or grants authority; a requested change outside the reviewed
-contract needs contract re-review. Malformed reviews, comments or check runs
-are errors, not silently cleaned records: IDs and diff positions must be
-positive, author associations, review states, run statuses and conclusions must
-be known values, a run's conclusion must be set exactly when it is completed,
-and SHAs must be 40 hex characters. Null bodies, commit IDs and lines are
-accepted where GitHub documents them as nullable. Check-run pagination requires unique run IDs, a stable
-`total_count` and a matching final count. Any of these failures gives
-`complete: false` (exit 1).
-
-## Ownership and resolution signals (report only)
-
-`inspect --ownership` adds `ownership_signals` to the normal inspect result;
-`ownership 'owner/repo#123'` prints them with repository resolution. Without
-the flag, `inspect`, `prepare` and `verify` neither read nor report them, and no
-approval, overlap or readiness decision changes in any schema version.
-
-Reads: the issue timeline and comments (complete pagination; timeline events
-without IDs are deduplicated by content), then a fresh `pulls/{n}` read for
-each cross-referenced PR (at most 50, otherwise incomplete). Each PR reports
-repository, repository ID, number, sanitized `title`, `base_ref`, state, draft, merged,
-merge/close times and `exact_reference`: whether the PR text references this issue exactly (local
-`#N` only in the issue's own repository, `owner/repo#N` or the issue URL), with
-the same parser as overlap detection.
-
-- `resolution_signals.possibly_already_fixed`: merged PRs with an exact
-  reference whose base repository is the issue's own repository (any base
-  branch; check `base_ref`). `downstream_references`: merged PRs with an exact
-  reference in other repositories, such as downstream workarounds; they never
-  indicate a fix. `rejected_approaches`: closed, unmerged PRs with an exact reference.
-- `assignment_history`, `connected_events` and `referencing_commits` from the
-  timeline.
-- `claims`: comments matching a fixed set of claim patterns ("I'm working on",
-  "I'll take", "can I work on", `/assign`, "assign me"), with author
-  association, age, `stale` (older than 30 days or unknown) and a sanitized
-  `untrusted_excerpt`. Comment text never proves, grants or removes ownership.
-- `blocking_if_adopted` previews what a future versioned gate might block; it
-  blocks nothing now.
-
-Every consumed field is shape-checked: positive IDs and numbers, known
-enumerations, 40-character SHAs, and PR details whose number, canonical URL,
-base repository name and repository ID match the timeline reference. A deleted
-account (`null` user) appears as `ghost`, and timeline event kinds the reader
-does not use are ignored. Any wrong type, identity mismatch, failed or partial
-read makes the signals `complete: false` and `resolution_signals.status:
-unknown`; an unknown is never "not fixed". With
-`--ownership`, exit 1 also covers incomplete signals.
-
-## Repository policy report (default-on, report only)
+### Repository policy report (default-on, report only)
 
 `discover` (once per repository), `inspect` and `prepare` add `repository_policy`
 in the CLI output. The report changes no core result, contract field,
@@ -759,7 +458,176 @@ There is deliberately no `coverage`, `complete` or `clear` field. Hints are
 noisy on purpose. The installed workflow's mandatory policy review decides what
 they mean, and that review is not verifier-enforced.
 
-## Drift since preparation
+### Ownership and resolution signals (report only)
+
+`inspect --ownership` adds `ownership_signals` to the normal inspect result;
+`ownership 'owner/repo#123'` prints them with repository resolution. Without
+the flag, `inspect`, `prepare` and `verify` neither read nor report them, and no
+approval, overlap or readiness decision changes in any schema version.
+
+Reads: the issue timeline and comments (complete pagination; timeline events
+without IDs are deduplicated by content), then a fresh `pulls/{n}` read for
+each cross-referenced PR (at most 50, otherwise incomplete). Each PR reports
+repository, repository ID, number, sanitized `title`, `base_ref`, state, draft, merged,
+merge/close times and `exact_reference`: whether the PR text references this issue exactly (local
+`#N` only in the issue's own repository, `owner/repo#N` or the issue URL), with
+the same parser as overlap detection.
+
+- `resolution_signals.possibly_already_fixed`: merged PRs with an exact
+  reference whose base repository is the issue's own repository (any base
+  branch; check `base_ref`). `downstream_references`: merged PRs with an exact
+  reference in other repositories, such as downstream workarounds; they never
+  indicate a fix. `rejected_approaches`: closed, unmerged PRs with an exact reference.
+- `assignment_history`, `connected_events` and `referencing_commits` from the
+  timeline.
+- `claims`: comments matching a fixed set of claim patterns ("I'm working on",
+  "I'll take", "can I work on", `/assign`, "assign me"), with author
+  association, age, `stale` (older than 30 days or unknown) and a sanitized
+  `untrusted_excerpt`. Comment text never proves, grants or removes ownership.
+- `blocking_if_adopted` previews what a future versioned gate might block; it
+  blocks nothing now.
+
+Every consumed field is shape-checked: positive IDs and numbers, known
+enumerations, 40-character SHAs, and PR details whose number, canonical URL,
+base repository name and repository ID match the timeline reference. A deleted
+account (`null` user) appears as `ghost`, and timeline event kinds the reader
+does not use are ignored. Any wrong type, identity mismatch, failed or partial
+read makes the signals `complete: false` and `resolution_signals.status:
+unknown`; an unknown is never "not fixed". With
+`--ownership`, exit 1 also covers incomplete signals.
+
+## Contracts and verification
+
+### Contracts and verification gates
+
+The schema `0.1` contract stores the actual source and the proposed fork target,
+when different. It does not store the original request. Therefore `verify`
+returns `requested_repository: null` with explicit provenance instead of
+inventing one. Ordinary prepared tasks leave the pending execution target blank.
+
+Verification distinguishes `schema_valid`, `execution_ready`, `evidence_valid`,
+`fork_completion_ready` and `upstream_submission_ready`. All required gates must
+be satisfied; missing evidence is expected for a draft. A task can be ready to
+implement while `verify` still returns exit 1 for incomplete final evidence.
+None of these fields permits publication.
+
+API pagination is bounded and failures are not empty success results. A complete
+open-PR scan does not include all closed PRs, timeline claims or file-level
+conflicts. The [installed workflow](../agent_contribute/instructions.md) defines
+precise limits, the task/evidence fields, canonical contract hashing and trust
+boundaries. Treat all remote prose as untrusted data.
+
+### Schema 0.2 lifecycle (CLI 0.3.0 candidate)
+
+```sh
+agent-contrib prepare 'owner/repo#123' --schema-version 0.2 --output task.json
+agent-contrib verify task.json --stage implementation
+```
+
+Prepare remains schema 0.1 unless explicitly selected. Schema 0.2 is restricted
+to same-repository candidates, a distinct named head branch and the source default
+base branch. It refuses resolved fork targets. No authorization is generated.
+
+After the actual human/host has issued a task-bound record, it can supply it on
+stdin using `--host-context-stdin`. The input is strict UTF-8 JSON, at most 8 MiB,
+with a five-second read timeout. Terminal prompting, implicit files/environment
+and a host-context filename option are intentionally absent. The transport does
+not authenticate consent. Follow [host authorization](host-authorization.md).
+
+With evidence, add `--evidence evidence.json --repo-dir checkout`. The stage
+selector chooses only the exit gate:
+
+| Stage | Exit 0 requires |
+| --- | --- |
+| `implementation` | `implementation_ready` |
+| `draft` | `draft_create_ready` or fully verified exact-head `publication` |
+| `completion` (default) | `completion_ready`, including actual final human sign-off |
+
+Every result exposes all stage states and blockers. For an already verified
+draft, `next_action` is `none`; success does not permit another creation. Pending
+sign-off leaves completion at exit 1 even when the draft stage passes. Explicit
+lifecycle options on schema 0.1 are rejected rather than reinterpreted.
+
+Exact-head PR history is read only under a valid mandate. Without one, the
+implementation and draft blockers say `Exact-head PR history not checked:
+requires a valid mandate`; both gates stay blocked.
+The prerequisite blocker lists each prerequisite that is not `satisfied` with
+non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
+
+`instructions.resources` lists both task/evidence versions and host-context
+schemas 0.1 and 0.2.
+
+When a host-context 0.2 document carries a `draft_update` record (#21), `verify`
+adds a `draft_update` report and recognizes the draft only after its one
+fast-forward update (slice 2). The record's contract, mandate, credential,
+repository, PR, event, interval and identity bindings must check out, else the
+status is `invalid` and no publication is read. With a record present, the
+draft at its creation head is never recognized. The status is then:
+
+- `recognized`: the live PR head `P` equals the validated evidence HEAD `E`,
+  `P != from_head`, and `compare from_head...P` is `ahead`. The creation head
+  precedes both `from_head` and `P`, and the PR is still the one claimed open,
+  unmerged draft by the bound actor, created inside the mandate interval and
+  not in the future. Its complete timeline has no force-push, head-ref
+  deletion or restore, close, reopen, merge, ready-for-review or
+  convert-to-draft event. A final re-read equals the first and keeps the
+  route. The evidence is based on the reviewed source commit exactly, has no
+  merge commit in `from_head..E` and only validations started after the
+  round's `issued_at`. `publication.verified` is true at `E`; completion also
+  needs a final sign-off for `E` issued after the round.
+- `not_evaluated`: the PR is still at `from_head`, so no update was pushed.
+- `blocked`: anything else, with the reasons in `errors`.
+
+Every comparison must be internally consistent (status, commits and counters),
+or it blocks. `candidate_head` is `E` exactly when the status is `recognized`,
+else `null`; `live_head` is the PR head of the first complete read, or `null`.
+The record may have expired after the push; `current` reports whether its
+interval contains the verification time, judged after every read. Pre-push
+readiness is not evaluated: no `next_action` asks for an update or a push, and
+nothing here authorizes a push. Without the section the output is unchanged.
+See [host authorization](host-authorization.md#draft-update-rounds-host-context-02).
+
+With a host-context 0.2 document, `verify` adds `overlap_dispositions` and
+`waived_duplicates`. The status is:
+- `absent`: no record;
+- `invalid`: a schema, binding or expiry error. Nothing is waived. A record
+  rejected on its own checks makes no extra read, but one that expires during
+  the reads becomes `invalid` only after them;
+- `evaluated`: the record's contract, mandate, credential, event, interval and
+  entry bindings check out.
+
+For an `evaluated` record, `verify` reads each disposed PR (`pulls/{n}`) and each
+distinct base-branch tip (`git/ref/heads/{ref}`): at most 20 PRs and 20 refs. It
+recomputes the match and reconciles it with the open-PR scan. It removes a PR
+from the blocking lists only when all of these hold:
+- the scan was complete;
+- the match is the same topical one (never a direct reference);
+- the author is not the credential actor;
+- every bound observation is equal (ID, URL, repository, author, state, draft,
+  head repository and SHA, `updated_at`, title/body/ref hash and base tip);
+- the record is still unexpired after all reads.
+
+A direct reference, contradiction or failed read seen in that read blocks. A
+direct reference first seen there is also added to `duplicates` with
+`observed_in: "disposition_read"`; a failed read is a blocker only, never a
+claimed overlap. A waived PR stays in `duplicates`. Waivers never remove any other blocker; text
+output names them. A record that expires during the reads fails every stage
+closed. Library callers may pass host context explicitly to `core.verify`;
+that is the same host-asserted boundary as the CLI, not a privileged API.
+
+### Offline contract lint
+
+`lint task.json` reads one contract and nothing else. It validates it against
+the bundled task schema for its `schema_version` (unknown versions fail), and
+for a schema-valid contract it applies the same reviewed-contract rules that
+`verify` checks: reviewed status with no open questions, required fields,
+concrete repository-relative scope, unique IDs, a definition of done covering
+every criterion and validation, complete prepared discovery and satisfied
+prerequisites. `reviewed` (and exit 0) means only that the contract is ready
+for `verify`. It says nothing about the live issue, approval, overlap,
+authorization or evidence, and it never runs validation argv.
+
+### Drift since preparation
 
 `drift task.json` compares a schema-valid contract with the live source and
 never writes anything. It reports:
@@ -818,25 +686,7 @@ This catches an edit to a policy-only file such as `SECURITY.md` or a new
 `AI_POLICY.md`, which `instructions_sha256` does not cover. It costs up to two
 policy reports (at most 25 requests each).
 
-## CI observation (opt-in, report only)
-
-`verify ... --evidence evidence.json --observe-ci` adds `ci_observation` after
-the verify decision and exit code are fixed; it never changes any gate. For the
-evidence `git_head` in the contract's target repository (the source when the
-target is blank), it reads every check-run page and the paginated combined
-commit status. It reports check runs for that exact head (name, app slug and
-numeric app ID, status, conclusion, URL), the count of runs for other heads,
-and the combined state with each status context.
-
-Shapes are strict: positive IDs, documented statuses and conclusions (set
-exactly when a run is completed), and a combined status for the requested SHA.
-For both check runs and statuses, `total_count` must be a non-negative integer
-that stays stable across pages and equals the number of unique items read. Any failure, or a missing or
-invalid evidence head, gives `complete: false` with errors. Queued, pending,
-approval-required or missing runs are never success. This is an observation of
-what GitHub reports, not proof that the evidence checks equal the CI checks.
-
-## Required CI checks (schema 0.2 completion, opt-in)
+### Required CI checks (schema 0.2 completion, opt-in)
 
 A reviewed schema 0.2 contract may declare `ci_requirements`: 0 to 20 unique
 `{"check": NAME, "app_id": N}` pairs. `check` is 1 to 200 characters without
@@ -871,7 +721,240 @@ currently retains for that head. It does not prove which tree a job checked out,
 and it never replaces review or final sign-off. Design:
 [docs/design/2026-11-03-ci-gating.md](design/2026-11-03-ci-gating.md).
 
-## Signature observation (opt-in, report only)
+## Local checkout tools
+
+### Checkout requirements
+
+`--repo-dir` must be the Git worktree top level. `verify`, `scope-check` and
+`evidence init` refuse a subdirectory or Git directory, because tree, index and
+untracked-file reads there would omit the rest of the checkout. They also refuse an
+index with assume-unchanged or skip-worktree entries, including any sparse
+checkout, because Git status and diff would hide changes to those files. The
+index is only read, never changed; clear the flags or use a full checkout.
+A checkout whose effective Git config (including `include`/`includeIf` files)
+sets a key a read could run as a program or use to fetch is refused with
+`unsafe_git_config`: `filter.*`, `gpg.program` and `gpg.*.program`,
+`diff.external`, `diff.*.command`, `diff.*.textconv`,
+`extensions.partialClone`, `remote.*.promisor`, `remote.*.partialCloneFilter`
+and `protocol.*`. Git reads also force `log.showSignature=false` and
+`protocol.allow=never` and disable lazy fetching, so a missing object is a read
+error, never a fetch. Credential, SSH, askpass, pager, editor and merge-driver
+settings are not refused because none of the fixed read commands reaches them.
+Reads also force full stat and mode checks (`core.checkStat=default`,
+`core.trustctime=true`, `core.ignoreStat=false`, `core.fileMode=true`, and
+`core.symlinks=true` on POSIX), so
+relaxed checkout settings cannot hide an edit or an executable bit; on a
+filesystem without executable bits every file then looks changed, which fails
+closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where
+it would hide case twins, and accepted where the filesystem really ignores case.
+Worktree content is compared with a commit through a fresh temporary index
+outside the checkout, so the checkout's stat cache is never trusted; every
+tracked file is hashed on each run. Each file's bytes must equal either the
+committed blob or exactly what checkout writes for it (`cat-file --filters`,
+with `core.autocrlf=false` and `core.eol=lf`). Git takes those attributes from
+the checkout's `.gitattributes` files; a changed tracked one is reported as a
+change, and an untracked one is always reported (even when a committed
+`.gitignore` would ignore it) and is never within `scope-check` scope. So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
+an edit, and an untouched checkout with those conversions stays clean. A CRLF
+copy produced only by a local `core.autocrlf` reports as changed. A non-empty
+`.git/info/attributes` is refused with `unsafe_git_attributes`;
+`core.attributesFile` and system attributes are always ignored.
+
+### Offline scope check
+
+`scope-check` evaluates the working diff against the contract's
+`scope.allowed_paths` and `scope.prohibited_paths` with the same function that
+`verify` uses for evidence. It reads only the local checkout: committed changes
+from `--base` (default: `source.commit`) to HEAD, staged and unstaged changes,
+and untracked files that are not ignored. Only per-directory `.gitignore` files
+count as ignore rules; `.git/info/exclude` and `core.excludesFile` never hide a
+file, and an untracked `.gitignore` is always reported. Files ignored by a
+committed `.gitignore` are not reported (`verify` and `evidence init` apply the
+same rule). Renames report both paths. The base
+must be an ancestor of HEAD; gitlinks fail closed. `--base` accepts exactly a
+full 40-character SHA, `HEAD`, or a full ref name such as `refs/heads/NAME` or
+`refs/tags/NAME`, each optionally followed by `~N` or `^N` (for example
+`HEAD~3` or `refs/heads/base~1`). Short branch or tag names, abbreviated SHAs
+(convert with `git rev-parse ABBREV`), pseudo-refs other than `HEAD` and other
+revision syntax (`:/text`, `@{...}`, `REV^{type}`, paths, ranges) are refused.
+`HEAD` and `refs/...` names are looked up exactly with `git show-ref --verify`,
+never through Git's short-name lookup, so a same-named ref such as
+`refs/tags/HEAD` cannot stand in for them; an unborn `HEAD` is refused. The
+object ID is captured first, then the suffix and `^{commit}` are applied to it
+with `git rev-parse`.
+Every read uses the same hook, fsmonitor and replacement-object protections as
+other Git reads, and nothing under `.git` is opened directly. `base_commit`
+reports the full SHA. A value that is blank, starts with `-` or contains
+whitespace or control characters is refused. When the default base is not an ancestor of HEAD,
+`warnings` suggests passing `--base` for stacked or rebased work; the result
+still fails. When the default base is an ancestor but more than one commit
+behind HEAD and out-of-scope paths changed, `warnings` names the base, the
+commit count and suggests `--base`; the violations and exit status are
+unchanged. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
+means "no scope violation found", not evidence, readiness or authorization.
+Each violation names the path and either the first matching prohibited pattern
+or `not in allowed_paths`.
+
+A changed path that is a symlink is also judged by its target, the same way in
+`verify` and `scope-check`. The target comes from the commit, the index or the
+worktree that holds the link, read without following it. It is resolved
+lexically from the link's directory, expanding every link hop, including links
+to directories, up to 40 hops. The link is a violation, with the reason as its
+rule, when the target is absolute (`/x` or `C:/x`), contains a backslash,
+escapes the repository, points at the repository root, is longer than 4096
+bytes, contains a NUL byte, is not valid UTF-8, cannot be read (for example a
+permission error on a hop), loops, or resolves to a path outside `allowed_paths` or matching
+`prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
+A link that resolves to a directory of the same snapshot (the commit, the index
+or the worktree) exposes everything beneath it, so it is also a violation when
+any prohibited pattern can match some path beneath that directory, whether or
+not such a path exists (for example `symlink to docs/private/: prohibited_paths:
+docs/private/* can match beneath it` under `docs/*`). The check is conservative:
+a pattern counts when a prefix of it matches the directory plus `/`.
+A link to an allowed file passes; a scope pass does not prove the target exists.
+Git records no path beyond a symlink, so a
+file written through a linked directory appears at its real path and is judged
+there.
+
+### Evidence skeleton
+
+`evidence init` writes a draft evidence file for the contract's schema version.
+It fills only what the CLI observes locally: the canonical `contract_sha256`,
+`git_head`, `git_tree`, the given `base_commit` and the observed
+`worktree_clean`. Validation entries copy each contract `id` and `argv`;
+criteria copy their IDs. Every result field is left unfilled (`null` or empty),
+criteria and attestations are `pending`, and `implementer` is blank, so the
+skeleton deliberately fails evidence validation. It never runs argv and never
+writes `passed`.
+
+The base is resolved like `scope-check --base` and recorded as a full SHA. It
+must descend from `source.commit` and be an ancestor of HEAD. Gitlinks are
+refused. The output is created exclusively and
+must be outside the checkout's Git top level, because an untracked file there
+would invalidate the evidence. A dirty worktree is recorded as observed
+(`worktree_clean: false`), which `verify` rejects.
+
+## Host authorization
+
+Schema 0.2 mandates and final sign-off are issued by the human or host, never by the CLI; see
+[host authorization](host-authorization.md). The CLI only prepares the request.
+
+### Authorization request
+
+`authorization-request task.json` makes the same GitHub reads as `verify
+task.json` without host context, writes no file and reads no stdin. It first
+validates the full task 0.2 schema: a schema 0.1 or unknown version is a usage
+error (exit 2), and an invalid contract returns `error.code: invalid_contract`
+with `schema_errors` and no template (exit 1), before any read; the payload is
+identical with `--report-budget`, which takes no budget snapshot in that case.
+
+The output has `issued: false`, `contract_sha256`, `mandate_fields`,
+`human_only_fields`, `requested_actions`, `unresolved_fields`, `preflight_errors` and
+`ready_for_issuance` (exit 0 only when true). In a ready request the `null`
+leaves of `mandate_fields` are exactly `human_only_fields`: a ready request
+still awaits the host for every one of them. `requested_actions` repeats the
+contract's actions; the host chooses `mandate_fields.actions`. When identity or
+permission reads fail, `credential_actor_id` and `authority` are also `null` and
+listed in `unresolved_fields`, which names only these derived fields; only fresh
+trusted reads resolve them. Text output shows the requested actions, any
+unresolved derived fields and the human-only fields.
+`preflight_errors` omit the blockers that exist only because no mandate exists
+yet. They are untrusted diagnostics and may contain repository-authored paths.
+
+The request deliberately contains no scope, path, objective, criteria or
+validation summary. The host renders the complete contract from the file it
+hashes, issues the record, and the worker relays it unchanged. The request is not
+host context: piping it to `verify --host-context-stdin` fails schema validation.
+
+## Reports and integration
+
+### PR description
+
+`pr-body` runs the same read-only `verify` and renders Markdown: the issue
+reference (`Refs` by default, `Closes` only with `--closes`), objective, scope,
+criteria with their evidence status, each validation `argv` as an exact JSON
+code span with the recorded status, exit code, test and skip counts, review and
+sign-off status, the count and full neutralized text of every verify blocker,
+the open-PR scan provenance (completeness, pages, error count per scanned
+repository) with every overlapping PR, and an AI-assistance disclosure with the
+CLI version and contract hash. `--assistant` adds host-reported model text.
+
+When supplied evidence does not pass `verify`, its statuses are labelled
+`unverified claim`. Evidence that fails its schema is not quoted at all; its
+errors appear among the gates. For schema 0.2, review and sign-off states come
+from `verify`. `pr-body` takes no host context, so for 0.2 it shows only
+`technical_evidence_valid` with source (including repository, owner and issue
+identity), evidence and review blockers. It omits
+the implementation, draft and completion gates, `next_action`, final sign-off and
+authorization blockers, and says so, rather than misreporting authorized work as
+unauthorized. The host's `verify --host-context-stdin` run decides those.
+
+One extra bounded read of the tree at the contract's pinned `source.commit`
+finds pull request templates (`pull_request_template.md` or a
+`pull_request_template/` directory at the root, `.github/` or `docs/`,
+case-insensitive). The body names each path and blob SHA, or says that none
+exists, or that presence is unknown when the read fails or is truncated.
+Template contents are not read and the CLI does not fill the template.
+
+All quoted prose is neutralized: whitespace collapses to one line, HTML is
+escaped, Markdown link/image/emphasis/code characters are backslash-escaped,
+and zero-width space entities break `@` mentions, `#` references, `://` URLs
+and closing keywords (close, fix, resolve and their forms). Data shown in code
+spans (argv, template paths) is exact JSON. The output file is created
+exclusively. Rendering never writes to GitHub and is not publication authority.
+
+### PR feedback
+
+`feedback` reads one PR, its reviews, review comments, issue comments and the
+check runs for its current head, then rereads the PR. The PR must have the
+requested number, the canonical repository as its base and a valid head SHA. A
+head that moves during the read makes the result incomplete.
+
+Per reviewer it reports `latest_state` and `decision`: the latest APPROVED,
+CHANGES_REQUESTED or DISMISSED review (DISMISSED clears it; COMMENTED and
+PENDING never change it). Reviews are grouped by numeric user ID; `author` is
+the latest observation and `decision_author` the author of the decisive review.
+`changes_requested_by_trusted_association` is true when the decisive review of
+an outstanding change request has a non-bot author with association OWNER,
+MEMBER or COLLABORATOR. That association is a GitHub heuristic, not a
+verified maintainer role. Deleted accounts appear as `ghost`. Review comments
+include path, line and `outdated` (no diff position, or made on another
+commit). Failing (failure, timed out, cancelled, action required, startup
+failure, stale) and pending check runs are listed only for the exact head;
+`other_head_runs` counts runs for other heads. `--expected-head` (for example
+the evidence `git_head` of the recognized draft) adds `head_moved`. Logs are not
+read.
+
+All text fields are `untrusted_*` data with terminal controls removed. Feedback
+never widens scope or grants authority; a requested change outside the reviewed
+contract needs contract re-review. Malformed reviews, comments or check runs
+are errors, not silently cleaned records: IDs and diff positions must be
+positive, author associations, review states, run statuses and conclusions must
+be known values, a run's conclusion must be set exactly when it is completed,
+and SHAs must be 40 hex characters. Null bodies, commit IDs and lines are
+accepted where GitHub documents them as nullable. Check-run pagination requires unique run IDs, a stable
+`total_count` and a matching final count. Any of these failures gives
+`complete: false` (exit 1).
+
+### CI observation (opt-in, report only)
+
+`verify ... --evidence evidence.json --observe-ci` adds `ci_observation` after
+the verify decision and exit code are fixed; it never changes any gate. For the
+evidence `git_head` in the contract's target repository (the source when the
+target is blank), it reads every check-run page and the paginated combined
+commit status. It reports check runs for that exact head (name, app slug and
+numeric app ID, status, conclusion, URL), the count of runs for other heads,
+and the combined state with each status context.
+
+Shapes are strict: positive IDs, documented statuses and conclusions (set
+exactly when a run is completed), and a combined status for the requested SHA.
+For both check runs and statuses, `total_count` must be a non-negative integer
+that stays stable across pages and equals the number of unique items read. Any failure, or a missing or
+invalid evidence head, gives `complete: false` with errors. Queued, pending,
+approval-required or missing runs are never success. This is an observation of
+what GitHub reports, not proof that the evidence checks equal the CI checks.
+
+### Signature observation (opt-in, report only)
 
 `verify ... --evidence evidence.json [--repo-dir checkout] --observe-signatures`
 adds `signature_observation` after the verify decision and exit code are fixed.
@@ -918,7 +1001,50 @@ Any failed, partial or malformed read makes that part, and the observation,
 `complete: false` with fixed error strings. Contract-required verified heads and
 signed evidence attestations (the rest of #18) are not implemented.
 
-## API budget (opt-in)
+### Output schemas
+
+Every command's JSON output has a packaged JSON Schema (draft 2020-12 subset).
+`agent-contrib schema COMMAND` prints it; `error` is the error envelope that
+replaces any command's result on a usage, input or protocol error, and
+`evidence-init` is `evidence init`. `instructions` reports the
+`output_schema_version` (currently `1`) and the package directory. Objects are
+closed: a field is required unless marked optional, and fields not listed never
+appear. Output values do not carry the schema version; a shape change bumps the
+version together with the CLI's semantic version and changelog. Remote text in
+fields named `untrusted_*` and in instruction files stays untrusted data.
+
+The field-by-field reference for every command is in
+[output-reference.md](output-reference.md). It is generated from the schemas, and a
+test fails when it drifts.
+
+## Global options and output
+
+### Exit codes and output streams
+
+Commands emit JSON by default except help/version. Exit codes: **0** for a complete read,
+successful export/draft write or a passed verification gate (completion
+readiness for schema 0.1, the selected `--stage` for 0.2); **1** for an
+expected error, incomplete read or unresolved verification; **2** for usage
+errors. An exit code is not authorization.
+
+JSON results are flushed before returning. If the stdout pipe's consumer has
+closed, the command closes the failed stream and exits **1** without a traceback
+or a second error during interpreter shutdown. This also overrides an otherwise
+successful result or usage-error status when its JSON cannot be delivered.
+A missing stdout stream (for example, fd 1 closed before Python starts) also
+returns **1** quietly. Caller-provided replacement streams need only support
+`write()`; their `flush()` and cleanup `close()` methods are used when available.
+Writable stdout, including a redirected output file, retains the normal JSON
+format and command exit status. Help/version output is unchanged.
+
+### Help
+
+`agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
+and option of the installed version. Exit status is 0 when a command succeeds and
+its gate passes, 1 when a gate is not passed, a read is incomplete or an error
+occurs, and 2 for usage errors.
+
+### API budget (opt-in)
 
 `--report-budget` before a GitHub-reading command reads `GET rate_limit` (which
 does not consume the budget) before and after the command and adds
@@ -939,7 +1065,7 @@ estimate a command's cost; choose N yourself. Offline commands reject the flag
 (see "Global options on offline commands").
 Without the flag, no rate-limit read happens and output is unchanged.
 
-## Content cache (opt-in)
+### Content cache (opt-in)
 
 `--cache` before a command reuses file contents that GitHub returned for a
 pinned commit, so repeated `discover`, `inspect`, `prepare`, `verify` and
@@ -999,26 +1125,7 @@ status.
   for one invocation; library callers never inherit it.
 - Offline commands reject `--cache`, as they reject `--report-budget`.
 
-## Several repositories
-
-`discover` accepts several repositories as arguments and/or
-`--repositories-file FILE` (UTF-8, at most 64 KiB, one `owner/repo` per line,
-blank lines and `#` comments ignored). With exactly one repository the output is
-the unchanged single-repository result. With 2 to 20 distinct repositories it
-returns `repositories` (each repository's complete single-repository result, in
-input order), `candidates` (every issue with its repository, reference and the
-ordering facts), `errors` prefixed with the repository name, and top-level
-`complete`, true only if every repository is complete. A failing repository
-never aborts the others or marks them complete. All identifiers are validated
-before any read. The merged order is exclusions, overlaps, low likelihood,
-higher signal score with `--signals`, then repository and issue number.
-
-Reads cost the sum of the single-repository runs; combine with
-`--report-budget --min-remaining N` on large lists. A display cap such as the
-proposed `discover --limit` (#1) would apply per repository. Deriving
-repositories from a dependency graph is out of scope.
-
-## Text output (unreleased)
+### Text output (unreleased)
 
 Put the global option before the subcommand:
 
@@ -1058,7 +1165,7 @@ A global option (`--format`, `--report-budget`, `--min-remaining`, `--cache`) pl
 the subcommand is still a usage error (exit 2); its message says to move the
 option before the subcommand.
 
-### Global options on offline commands
+#### Global options on offline commands
 
 `instructions`, `schema`, `skill`, `lint`, `scope-check` and `evidence init`
 never read GitHub. On them `--report-budget` and `--cache` are both usage errors
@@ -1068,19 +1175,3 @@ requires `--report-budget`. `--format` applies to every command.
 
 The text option uses the same stdout handling as JSON. Closed output returns 1
 quietly; writable output retains the command's normal exit status.
-
-## Output schemas
-
-Every command's JSON output has a packaged JSON Schema (draft 2020-12 subset).
-`agent-contrib schema COMMAND` prints it; `error` is the error envelope that
-replaces any command's result on a usage, input or protocol error, and
-`evidence-init` is `evidence init`. `instructions` reports the
-`output_schema_version` (currently `1`) and the package directory. Objects are
-closed: a field is required unless marked optional, and fields not listed never
-appear. Output values do not carry the schema version; a shape change bumps the
-version together with the CLI's semantic version and changelog. Remote text in
-fields named `untrusted_*` and in instruction files stays untrusted data.
-
-The field-by-field reference for every command is in
-[output-reference.md](output-reference.md). It is generated from the schemas, and a
-test fails when it drifts.
