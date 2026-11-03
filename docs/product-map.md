@@ -58,7 +58,7 @@ separate source approval, execution authorization and publication authority.
 
 ## v0.3.0 candidate (unreleased)
 
-Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
+Details: [getting started](getting-started.md), [command reference](cli.md), [upgrading from 0.2](upgrading.md) and [CHANGELOG](../CHANGELOG.md).
 
 ### Implemented
 - [3] Task-scoped owner/maintainer authorization: schema 0.2, host-context mandate, exact-head draft recognition, `implementation`/`draft`/`completion` gates ([#3](https://github.com/nkovanen/agent-contrib/issues/3))
@@ -86,7 +86,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [~] B2 Possible prior fixes and rejected approaches, report only ([#6](https://github.com/nkovanen/agent-contrib/issues/6)). Missing: adoption into readiness gates
 - [~] C1 Default-on `repository_policy` report: bounded inventory of policy files incl. the owner `.github` repository, high-recall hints, unassessed and omitted sources, no verdict; mandatory workflow review recorded as `ai-policy-review` ([#8](https://github.com/nkovanen/agent-contrib/issues/8)). Missing: a versioned machine-readable opt-out policy and verifier enforcement
 - [~] D3 `drift` report with per-file instruction comparison ([#16](https://github.com/nkovanen/agent-contrib/issues/16)). Missing: per-component issue baselines in a new task schema
-- [~] E1 `verify --observe-ci`, report only ([#17](https://github.com/nkovanen/agent-contrib/issues/17)). Missing: required-check declarations and gating
+- [~] E1 `verify --observe-ci` (report only) and opt-in required CI checks for schema 0.2 completion: `ci_requirements` (check name plus app ID) gate `completion_ready` at the exact head ([#17](https://github.com/nkovanen/agent-contrib/issues/17), [design](design/2026-11-03-ci-gating.md)). Missing: pre-filling requirements and drift coverage (slice 3)
 - [~] E2 `verify --observe-signatures`, report only: GitHub verification of the evidence head, required-signature rulesets and local signature-header presence ([#18](https://github.com/nkovanen/agent-contrib/issues/18)). Missing: contract-required verified heads and SSH-signed evidence attestations
 - [~] F5 `authorization-request` and normative [host issuer requirements](host-authorization.md#host-issuer-requirements) ([#23](https://github.com/nkovanen/agent-contrib/issues/23)). Missing: a native issuer in Claude Code or Paseo
 - [~] G2 Literal POSIX path decisions pinned ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: Windows host-context input and Windows/macOS CI
@@ -107,7 +107,7 @@ prompt is not proof of human presence.
 2. Maintainer safety: C1 opt-out policy, a native issuer for F5, then gate adoption of B1/B2.
 3. Contributor ergonomics: #1.
 4. Lifecycle: F3, then F4; a native issuer for B3 alongside F5.
-5. Trust and adoption: E1 gating, C4 live checks, E2.
+5. Trust and adoption: E1 slice 3, C4 live checks, E2.
 6. Scale and reach: G2, activating G3; H1 to measure A1.
 
 ## Parked ideas
