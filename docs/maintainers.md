@@ -142,7 +142,10 @@ enforce it either: state refusals plainly in ordinary contribution documentation
 For an opt-out use `{"schema_version":"0.1","status":"closed"}`. Both optional
 arrays may be omitted. Only the four illustrated fields are allowed. Each array
 has at most 16 distinct, nonblank strings of 1–500 Unicode code points without
-C0 or DEL controls. The entire file is at most 16,384 bytes of strict UTF-8 JSON;
+C0 or DEL controls. Nonblank uses the explicit Unicode White_Space set in the
+[manifest contract](superpowers/specs/2026-11-03-tipjar-design.md#manifest-01),
+shared by parser and schema; U+0085 alone is blank and U+FEFF is nonblank.
+The entire file is at most 16,384 bytes of strict UTF-8 JSON;
 duplicate keys, nonfinite numbers and unsupported schemas fail closed.
 
 There are no includes, hooks, executable configuration or owner inheritance.
