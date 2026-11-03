@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:tipjar:0.1",
+  "description": "Repository invitation metadata, not approval or execution/publication authority. Raw input must be strict UTF-8 JSON of at most 16384 bytes without duplicate keys.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "welcome",
+        "closed"
+      ]
+    },
+    "wanted": {
+      "$ref": "#/$defs/texts"
+    },
+    "boundaries": {
+      "$ref": "#/$defs/texts"
+    }
+  },
+  "$defs": {
+    "texts": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500,
+        "pattern": "^(?=[^\\u0000-\\u001f\\u007f]*[^\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028-\\u2029\\u202f\\u205f\\u3000])[^\\u0000-\\u001f\\u007f]{1,500}$",
+        "description": "Nonblank means containing a character outside the fixed Unicode White_Space set: U+0009–000D, U+0020, U+0085, U+00A0, U+1680, U+2000–200A, U+2028–2029, U+202F, U+205F, U+3000. U+FEFF is not whitespace. C0 and DEL are forbidden."
+      }
+    }
+  }
+}

@@ -37,7 +37,7 @@ class HelpTests(unittest.TestCase):
                     missing.append(' '.join(path + [action.option_strings[0] if action.option_strings else action.dest]))
         walk(built_parser(), [])
         self.assertIn('evidence init', commands)
-        self.assertEqual(len(commands), 17)  # includes authorization-request, schema and lint
+        self.assertEqual(len(commands), 18)  # includes jar inspection
         self.assertEqual(missing, [])
 
     def test_top_level_help_lists_described_commands_and_exit_status(self):
