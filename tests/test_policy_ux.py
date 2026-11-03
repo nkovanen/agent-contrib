@@ -385,3 +385,19 @@ class GroupedHintTests(unittest.TestCase):
     def test_obligation_says_read_every_hinted_line(self):
         self.assertIn('every hinted line', policy.OBLIGATION)
         self.assertIn('every hinted line in context', ' '.join(installed_workflow().split()))
+
+
+class RoundSixGapTests(unittest.TestCase):
+    def test_nested_community_files_are_read_after_top_level_ones(self):
+        with patch.object(policy, 'MAX_SOURCE_FILES', 1):
+            rp, _ = report({'A/SECURITY.md': 'x', 'SECURITY.md': 'x'}, {})
+        self.assertEqual([s['path'] for s in rp['sources_scanned']], ['SECURITY.md'])
+        self.assertEqual([o['path'] for o in rp['omitted_sources']], ['A/SECURITY.md'])
+
+    def test_a_head_cut_excerpt_is_marked_in_text(self):
+        rp, _ = report({'CONTRIBUTING.md': 'w ' * 200 + 'AI-generated code is forbidden.'}, {})
+        hint = next(h for h in rp['hints'] if h['kind'] == 'possible_ai_restriction')
+        self.assertTrue(hint['excerpt_truncated'])
+        self.assertLessEqual(len(hint['untrusted_excerpt']), textfmt.POLICY_EXCERPT_CHARS)
+        line = next(l for l in textfmt.render('inspect', {'repository_policy': rp}).splitlines() if l.startswith('  ! '))
+        self.assertTrue(line.endswith('forbidden....') or line.endswith('...'), line)
