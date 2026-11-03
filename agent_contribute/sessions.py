@@ -6,7 +6,7 @@ from . import core, outputs
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 FOLLOW_UP = [
     'Read all repository policies, instructions and jar boundaries; stop on prohibitions or unresolved rules.',
-    'Refresh inspect --ownership; stop on incomplete reads, claims, prior fixes or overlapping pull requests.',
+    'Refresh inspect --ownership and review existing local work; unrequested checks remain unassessed. Stop on incomplete reads, claims, prior fixes or overlapping pull requests.',
     'Prepare and review a scoped task contract; review validation commands before any host execution.',
     'Stop for actual human/host implementation authorization; publication and completion require separate authority.',
 ]
@@ -28,6 +28,40 @@ def _display(report, count):
         _invalid('Discovery display counts conflict with retained entries')
 
 
+def _resolution(repository, requested, source):
+    """Check identities against the same one-parent resolver that produced discovery."""
+    target = core.parse_repository(repository.get('proposed_target_repository', requested))
+    if target.casefold() != requested.casefold():
+        _invalid('Proposed target conflicts with requested repository')
+    provenance = repository.get('resolution_provenance')
+    if provenance is None:  # A failed multi-repository entry has no resolved context.
+        return
+    if provenance['execution_authority'] != 'none':
+        _invalid('Repository resolution cannot grant authority')
+    if source is None:
+        return  # Unresolved reports remain visible but cannot supply issues.
+    reads = provenance['metadata_reads']
+    if not reads or reads[0]['endpoint'].casefold() != ('repos/' + requested).casefold():
+        _invalid('Missing or conflicting requested repository metadata')
+    observed = reads[0]['observed']
+    if core.parse_repository(observed['full_name']).casefold() != requested.casefold():
+        _invalid('Requested repository conflicts with observed metadata')
+    if observed['has_issues']:
+        if len(reads) != 1 or source.casefold() != requested.casefold():
+            _invalid('Issue source conflicts with requested tracker metadata')
+    else:
+        parent = observed.get('parent', {}).get('full_name')
+        if not observed['fork'] or parent is None or len(reads) != 2:
+            _invalid('Issue source requires an observed immediate fork parent')
+        parent = core.parse_repository(parent)
+        parent_read = reads[1]
+        if (parent.casefold() == requested.casefold() or source.casefold() != parent.casefold() or
+                parent_read['endpoint'].casefold() != ('repos/' + parent).casefold() or
+                core.parse_repository(parent_read['observed']['full_name']).casefold() != parent.casefold() or
+                parent_read['observed']['has_issues'] is not True):
+            _invalid('Issue source conflicts with immediate parent metadata')
+
+
 def _validate(report):
     if core.schema_errors(report, outputs.output_schema('discover')):
         _invalid('Discovery does not match the supported packaged output schema')
@@ -43,7 +77,7 @@ def _validate(report):
             core.parse_repository(source)
             if repository['issue_source_repository'] != source:
                 _invalid('Conflicting issue source repository')
-        core.parse_repository(repository.get('proposed_target_repository', requested))
+        _resolution(repository, requested, source)
         for issue_index, issue in enumerate(repository['issues']):
             reference = f'{requested}#{issue["number"]}'
             if source is None or issue['reference'] != reference or issue['issue_url'] != (
@@ -112,8 +146,22 @@ def plan(path, *, max_tasks, minutes):
             reasons.append('excluded')
         if issue['duplicates']:
             reasons.append('overlapping')
-        if issue.get('top_check', {}).get('complete') is False:
+        local = repository.get('local_work')
+        work_signal = issue.get('signals', {}).get('local_work', {})
+        if local is not None and (local['complete'] is not True or local['errors']):
+            reasons.append('local_work_incomplete')
+        if work_signal.get('value') == 'unknown':
+            reasons.append('local_work_unknown')
+        if (work_signal.get('value') == 'referenced' or work_signal.get('commits') or
+                local is not None and any(item['number'] == issue['number'] for item in local['issues'])):
+            reasons.append('local_work_referenced')
+        top_check = issue.get('top_check', {})
+        if top_check.get('complete') is False or top_check.get('errors'):
             reasons.append('ownership_check_incomplete')
+        if top_check.get('demotions'):
+            reasons.append('ownership_existing_work')
+        if issue.get('signals', {}).get('assignees'):
+            reasons.append('current_assignee')
         if not reasons and len(tasks) >= min(max_tasks, minutes):
             reasons.append('session_capacity')
         entry = {'reference': issue['reference'], 'source_repository_index': repository_index,

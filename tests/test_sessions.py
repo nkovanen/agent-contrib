@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import cli, core, multi, sessions
+from agent_contribute import cli, core, multi, outputs, sessions
 from tests.test_protocol import FakeGitHub
 
 
@@ -193,3 +193,78 @@ class SessionTests(unittest.TestCase):
         result = self.plan(source)
         self.assertEqual(result['tasks'], [])
         self.assertIn('repository_scans_incomplete', result['candidates'][0]['reasons'])
+
+    def test_incomplete_local_work_producer_blocks_with_or_without_signals(self):
+        for with_signals in (False, True):
+            with tempfile.TemporaryDirectory() as directory:
+                source = core.discover('acme/photos', FakeGitHub(), signals=with_signals,
+                                       repo_dir=str(pathlib.Path(directory) / 'missing'))
+            self.assertFalse(source['local_work']['complete'])
+            result = self.plan(source)
+            self.assertEqual(result['tasks'], [])
+            self.assertIn('local_work_incomplete', result['candidates'][0]['reasons'])
+
+    def test_unknown_local_work_signal_blocks_despite_complete_repository(self):
+        source = core.discover('acme/photos', FakeGitHub(), signals=True)
+        source['issues'][0]['signals']['local_work'] = {
+            'value': 'unknown', 'commits': [], 'explanation': 'Checkout was not fully read'}
+        self.assertEqual(core.schema_errors(source, outputs.output_schema('discover')), [])
+        result = self.plan(source)
+        self.assertEqual(result['tasks'], [])
+        self.assertIn('local_work_unknown', result['candidates'][0]['reasons'])
+
+    def test_completed_top_checks_exclude_known_assignees_and_merged_fixes(self):
+        from tests.test_check_top import CheckGitHub
+        source = core.discover('acme/photos', CheckGitHub(), signals=True, check_top=5)
+        result = self.plan(source, max_tasks=20)
+        decisions = {c['reference']: c for c in result['candidates']}
+        self.assertIn('ownership_existing_work', decisions['acme/photos#1']['reasons'])
+        self.assertIn('current_assignee', decisions['acme/photos#3']['reasons'])
+        self.assertTrue(decisions['acme/photos#2']['selected'])  # report-only claims still require manual review
+        # Assignees on issues below the checked range remain known signals.
+        source = core.discover('acme/photos', CheckGitHub(), signals=True, check_top=1)
+        result = self.plan(source, max_tasks=20)
+        assigned = next(c for c in result['candidates'] if c['reference'] == 'acme/photos#3')
+        self.assertIn('current_assignee', assigned['reasons'])
+
+    def test_local_reference_producer_blocks_with_or_without_signals(self):
+        from tests.test_local_work import checkout, commit
+        for with_signals in (False, True):
+            with tempfile.TemporaryDirectory() as directory:
+                git, base = checkout(directory)
+                commit(git, 'Fix #12')
+                client = FakeGitHub()
+                client.commit = base
+                source = core.discover('acme/photos', client, signals=with_signals, repo_dir=directory)
+            self.assertTrue(source['local_work']['complete'])
+            result = self.plan(source)
+            self.assertEqual(result['tasks'], [])
+            self.assertIn('local_work_referenced', result['candidates'][0]['reasons'])
+
+    def test_target_and_metadata_contradictions_fail_closed(self):
+        from tests.test_resolution import RepositoryGitHub
+        plain = report()
+        fork = core.discover('person/photos', RepositoryGitHub())
+        mutations = [
+            (plain, lambda r: r.update(proposed_target_repository='evil/other')),
+            (plain, lambda r: r['resolution_provenance']['metadata_reads'][0]['observed'].update(full_name='evil/other')),
+            (plain, lambda r: r['resolution_provenance']['metadata_reads'][0].update(endpoint='repos/evil/other')),
+            (plain, lambda r: r['resolution_provenance']['metadata_reads'].clear()),
+            (fork, lambda r: r['resolution_provenance']['metadata_reads'][0]['observed']['parent'].update(full_name='evil/other')),
+            (fork, lambda r: r['resolution_provenance']['metadata_reads'][0]['observed'].update(fork=False)),
+            (fork, lambda r: r['resolution_provenance']['metadata_reads'][1]['observed'].update(has_issues=False)),
+            (fork, lambda r: r['resolution_provenance'].update(execution_authority='granted')),
+        ]
+        for index, (original, mutate) in enumerate(mutations):
+            source = copy.deepcopy(original)
+            mutate(source)
+            with self.subTest(mutation=index), self.assertRaises(core.ProtocolError):
+                self.plan(source)
+
+    def test_unassessed_legacy_and_fork_still_require_manual_review(self):
+        from tests.test_resolution import RepositoryGitHub
+        for source in (report(), core.discover('person/photos', RepositoryGitHub())):
+            result = self.plan(source)
+            self.assertEqual(len(result['tasks']), 1)
+            self.assertIn('Refresh inspect --ownership', result['tasks'][0]['required_follow_up'][1])
+            self.assertIs(result['actions_authorized'], False)

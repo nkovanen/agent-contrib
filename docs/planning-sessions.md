@@ -28,7 +28,12 @@ maintainer consent, or human authorization.
 
 Selection preserves the existing discovery order. Only complete issues from
 complete repository reports with no exclusions, overlapping PRs or unknown source
-approval can enter the shortlist. Candidate source approval remains a candidate;
+approval can enter the shortlist. Known assignees, merged-fix/top-check demotions
+and references in local work are excluded with reasons, including local references
+reported without ranking signals. Incomplete local-work reports and unknown
+per-issue local-work observations also block selection. Target identities must
+agree with the requested repository and recorded tracker/parent metadata.
+Candidate source approval remains a candidate;
 it is never upgraded to approved. The limit is 1–20 tasks and 1–1440 minutes,
 with at least one minute per selected task. Minutes divide evenly (the earliest
 tasks receive any remainder). These are caps at which the host must stop, not
@@ -50,7 +55,9 @@ has no integrated jar observation: an absent observation is undeclared. An absen
 jar permits proposing manual review, never implies source approval; an explicit
 prohibition must stop work. Do not infer permission from labels or ranking.
 
-Refresh `tipjar inspect owner/repo#N --ownership` and resolve claims, prior fixes,
+Ownership and local-work checks that were not requested remain unassessed, not
+passed; review them manually. Refresh `tipjar inspect owner/repo#N --ownership`
+and review existing local work. Resolve claims, prior fixes,
 PR overlap and incomplete reads. Prepare and review a normal scoped contract;
 follow the installed workflow's applicable authorization route. Stop before
 implementation until actual human/host authority covers it. Review checkout and
