@@ -313,3 +313,27 @@ class RetainedHintTextTests(unittest.TestCase):
     def test_short_excerpts_are_not_marked(self):
         hint = policy.scan('No AI-generated code.', 'CONTRIBUTING.md')['hints'][0]
         self.assertFalse(hint['excerpt_truncated'])
+
+
+class SubmitterEligibilityTests(unittest.TestCase):
+    """RP-27: only rules about who may submit pull requests get the eligibility tier."""
+    def first_kind(self, rule):
+        rp, _ = report({'CONTRIBUTING.md': 'No AI-generated code.\n\n' + rule}, {})
+        return [(h['kind'], h['untrusted_excerpt'][:25]) for h in rp['hints'] if h['kind'] != 'ai_mention']
+
+    def test_review_requirements_are_not_eligibility_rules(self):
+        for rule in ('PRs must be reviewed by maintainers.', 'Pull requests need approval from two members.'):
+            with self.subTest(rule):
+                self.assertEqual(self.first_kind(rule)[0][0], 'possible_ai_restriction', 'not promoted above AI rules')
+
+    def test_singular_and_only_phrasings_are_eligibility_rules(self):
+        for rule in ('Only a maintainer may submit pull requests.', 'Pull requests are limited to maintainers.',
+                     'Only collaborators can open pull requests.'):
+            with self.subTest(rule):
+                self.assertEqual(self.first_kind(rule)[0], ('possible_pr_restriction', rule[:25]))
+
+    def test_docs_make_no_text_view_guarantee(self):
+        root = __import__('pathlib').Path(__file__).parents[1]
+        for name in ('CHANGELOG.md', 'docs/cli.md'):
+            with self.subTest(name):
+                self.assertNotIn('always reaches the text view', ' '.join((root / name).read_text('utf-8').split()))

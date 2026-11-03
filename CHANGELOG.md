@@ -166,9 +166,10 @@ channel or runtime model provider is added.
   `doc/source/reference/security.rst`), and mentions. Nested files rank lower
   but are never skipped (RP-25). Bounds drop mentions first. A dropped restriction hint is reported
   as a source-hiding limit (`restriction hints`).
-  PR eligibility rules ("Pull requests are limited to maintainers", "issues
-  instead of pull requests") rank just below agent restrictions, so a
-  maintainers-only rule always reaches the text view.
+  PR submitter-eligibility rules ("Pull requests are limited to maintainers",
+  "issues instead of pull requests", "Only a maintainer may submit") rank just
+  below agent restrictions; review requirements such as "PRs must be reviewed by
+  maintainers" do not (RP-27).
 - Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
   repository; merged PRs elsewhere move to `downstream_references` (E-11: a
   downstream workaround was reported as a possible fix). Cross-referenced PRs

@@ -59,10 +59,12 @@ RESTRICT_TERMS = {'not', 'no', 'never', 'nor', 'only', 'limited', 'restricted', 
                   'reject', 'rejected', 'rejects', 'refuse', 'refused', 'refuses', 'forbid', 'forbidden', 'forbids',
                   'prohibit', 'prohibited', 'prohibits', 'ban', 'banned', 'bans', 'disallow', 'disallowed',
                   'invitation', 'invite', 'invited', 'maintainers', 'members', 'instead', 'must'}
-# Who may open pull requests ("limited to maintainers", "issues instead of pull requests"); not the singular
-# "a maintainer's time", which is common in permissive AI wording.
-ELIGIBILITY_TERMS = {'maintainers', 'members', 'collaborators', 'limited', 'restricted', 'invitation', 'invite',
-                     'invited', 'instead'}
+# Who may submit pull requests (RP-27): a PR term near "limited", "restricted", "invitation" or "instead"
+# ("limited to maintainers", "issues instead of pull requests"), or near both "only" and an actor ("Only a
+# maintainer may submit"). Review requirements ("PRs must be reviewed by maintainers") are not eligibility.
+ELIGIBILITY_TERMS = {'limited', 'restricted', 'invitation', 'invite', 'invited', 'instead'}
+ELIGIBILITY_ACTORS = {'maintainer', 'maintainers', 'member', 'members', 'collaborator', 'collaborators', 'team',
+                      'owner', 'owners', 'committer', 'committers'}
 PHRASES = {'artificial': [(('artificial', 'intelligence'), 'ai')],
            'large': [(('large', 'language', 'model'), 'ai'), (('large', 'language', 'models'), 'ai')],
            'machine': [(('machine', 'generated'), 'ai')],
@@ -134,7 +136,7 @@ def _non_latin(text):
 
 
 def _groups(tokens):
-    found = {'ai': [], 'agent': [], 'pr': [], 'restrict': [], 'elig': []}
+    found = {'ai': [], 'agent': [], 'pr': [], 'restrict': [], 'elig': [], 'only': [], 'actor': []}
     for index, (_, token) in enumerate(tokens):
         if token in AI_TERMS or token.startswith('gpt'):
             found['ai'].append(index)
@@ -146,10 +148,22 @@ def _groups(tokens):
             found['restrict'].append(index)
         if token in ELIGIBILITY_TERMS:
             found['elig'].append(index)
+        if token == 'only':
+            found['only'].append(index)
+        if token in ELIGIBILITY_ACTORS:
+            found['actor'].append(index)
         for words, group in PHRASES.get(token, ()):
             if tuple(t for _, t in tokens[index:index + len(words)]) == words:
                 found[group].append(index)
     return found
+
+
+def _eligibility(found):
+    """A pull-request rule about who may submit (RP-27); see ELIGIBILITY_TERMS."""
+    if _near(found['pr'], found['elig']) is not None:
+        return True
+    return any(_near([anchor], found['only']) is not None and _near([anchor], found['actor']) is not None
+               for anchor in found['pr'])
 
 
 def _pair(anchors, restrict):
@@ -254,8 +268,7 @@ def scan(text, path):
                 hints.append({'kind': kind, 'line': line, 'heading': core.safe_text(heading, 120),
                               'untrusted_excerpt': excerpt, 'excerpt_truncated': truncated,
                               'ai_context': bool(found['ai'] or found['agent']),
-                              'eligibility': kind == 'possible_pr_restriction' and
-                              _near(found['pr'], found['elig']) is not None})
+                              'eligibility': kind == 'possible_pr_restriction' and _eligibility(found)})
     return {'hints': hints, 'links': _links(text), 'non_latin_paragraphs': non_latin}
 
 

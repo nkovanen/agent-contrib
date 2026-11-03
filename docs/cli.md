@@ -501,10 +501,11 @@ the `agent_contribute.aipolicy` module no longer exist.
   first 170 characters, and carry `excerpt_truncated` when text before or after
   was left out.
 
-  Hints are ordered for attention: agent, then PR eligibility rules (a PR term
-  near "maintainers", "members", "collaborators", "limited", "restricted",
-  "invitation" or "instead", such as "Pull requests are limited to
-  maintainers"), then AI restrictions, then PR restrictions whose paragraph also
+  Hints are ordered for attention: agent, then PR submitter-eligibility rules (a
+  PR term near "limited", "restricted", "invitation" or "instead", or near both
+  "only" and an actor such as "maintainer" or "members": "Pull requests are
+  limited to maintainers", "Only a maintainer may submit"; not review
+  requirements), then AI restrictions, then PR restrictions whose paragraph also
   names AI or agents, then PR restrictions in
   policy files (AI policy, agent instructions, contributing, PR templates), then
   other PR restrictions, then restrictions from nested security, support,
