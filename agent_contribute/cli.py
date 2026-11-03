@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+from . import (audit, authrequest, budget, cache, ci, core, dependencies, drift, feedback, multi, outputs, ownership, policy,
                prbody, remote, signals, signatures, textfmt, workspace, __version__)
 
 
@@ -49,7 +49,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'dependencies')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -190,6 +190,9 @@ def main(argv=None):
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
+    sub = commands.add_parser('dependencies', help='Offline GitHub give-back candidates from explicit dependency URLs')
+    sub.add_argument('path', help='Project directory or package.json, package-lock.json or requirements.txt')
+    sub.add_argument('--output', help='Optional new JSON report file; never overwritten')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -272,7 +275,12 @@ def main(argv=None):
             before = budget.snapshot()
             if args.min_remaining is not None:
                 budget.require_remaining(before, args.min_remaining)
-        if args.command == 'instructions':
+        if args.command == 'dependencies':
+            result = dependencies.report(args.path)
+            if args.output:
+                write_new_json(args.output, result)
+            code = 0
+        elif args.command == 'instructions':
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
                       'supported_host_context_versions': list(core.HOST_CONTEXT_VERSIONS),
                       'host_authorization': ('host-asserted; actual human event must be retained outside worker control; '

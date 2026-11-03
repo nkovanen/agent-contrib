@@ -29,6 +29,12 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `tipjar dependencies PATH`: offline GitHub give-back candidates from npm
+  manifests/lockfiles and Python requirements direct references, with source
+  hashes and declaration provenance. No registry lookup or project execution;
+  unsupported sources stay visible and candidates grant no authority. See the
+  [give-back workflow](docs/dependencies.md).
+
 - Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
   isolated Python child that is terminated and reaped on timeout. Strict UTF-8
   JSON, EOF, the 8 MiB bound and five-second deadline remain required. Narrow

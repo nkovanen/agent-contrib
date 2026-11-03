@@ -61,6 +61,7 @@ separate source approval, execution authorization and publication authority.
 Details: [getting started](getting-started.md), [command reference](cli.md), [upgrading from 0.2](upgrading.md) and [CHANGELOG](../CHANGELOG.md).
 
 ### Implemented
+- [3] Offline `tipjar dependencies PATH`: explicit GitHub candidates from npm manifests/locks and Python requirements, with provenance and unresolved-source reporting ([workflow](dependencies.md))
 - [3] Task-scoped owner/maintainer authorization: schema 0.2, host-context mandate, exact-head draft recognition, `implementation`/`draft`/`completion` gates ([#3](https://github.com/nkovanen/agent-contrib/issues/3))
 - [3] Closed or missing stdout without traceback ([#4](https://github.com/nkovanen/agent-contrib/issues/4))
 - [3] A1 Ranking signals: code location (paths, file and module names), clarity, activity, author association, and an opt-in one-read responsiveness sample ([#12](https://github.com/nkovanen/agent-contrib/issues/12))
@@ -119,6 +120,6 @@ Not yet issues; revisit when a real need appears.
 - GitHub Enterprise Server and other forges (hostname is fixed to github.com).
 - MCP server adapter exposing the read-only commands as typed tools.
 - Local contribution ledger to avoid re-suggesting abandoned or rejected tasks.
-- "Help what you use": candidate repositories from a project's dependency graph.
+- Broader "help what you use" dependency coverage: Cargo/pyproject and explicit opt-in registry metadata resolution (today: offline npm/requirements direct GitHub references).
 - Local-base mandates for stacked unpublished work (design preconditions in
   [docs/design](design/2026-11-02-owner-local-and-stacked-routes.md)).

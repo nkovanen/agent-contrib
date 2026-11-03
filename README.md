@@ -140,6 +140,7 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 
 | Command | Purpose |
 | --- | --- |
+| `dependencies` | Offline GitHub give-back candidates from local dependency declarations ([workflow](docs/dependencies.md)) |
 | `discover` | Rank issues of one repository, or 2–20 repositories |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs |
 | `prepare` | Write a draft contract (schema 0.1, or 0.2 when selected) |

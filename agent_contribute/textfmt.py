@@ -362,6 +362,16 @@ def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
         return f'error [{line(result["error"].get("code", ""), 60)}]: {line(result["error"].get("message", ""))}\n'
+    if command == 'dependencies':
+        out = ['Offline dependency candidates',
+               'Supported file coverage complete: ' + _flag(result['complete']),
+               'All declarations resolved: ' + _flag(result['resolution_complete'])]
+        out += _list('Repositories', result['repositories'])
+        out += _list('Unsupported files', result['unsupported_files'])
+        out += _list('Unresolved declarations',
+                     (d['package'] + ' [' + d['source_file'] + ':' + d['field'] + ']: ' + d['reason']
+                      for d in result['dependencies'] if d['status'] != 'github'))
+        return '\n'.join(out + [line(result['warning'])]) + '\n'
     if command == 'instructions':
         # The workflow is the packaged Markdown, not remote text: print it whole so agents need no JSON unwrapping.
         versions = ', '.join(result['supported_schema_versions'])
