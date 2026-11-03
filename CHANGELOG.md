@@ -234,6 +234,11 @@ channel or runtime model provider is added.
   excerpt keeps its restriction word near the start. Text output counts dropped
   restriction hints, and says "No restriction hints retained" when limits
   caused losses (RP-26).
+- Text output of `discover`, `inspect` and `prepare` also lists up to five
+  unassessed policy references and files (target, reason, `from` file and
+  line; sanitized, shortened to 150 characters) and points to JSON for the
+  rest. Before, it printed only their count, so a text-mode agent could not
+  see which pages the review obligation asks it to read (G3, evaluation 3).
 - Repository policy hints (N-04, external evaluation 2): hints are ordered
   agent, PR eligibility, AI, then PR restrictions with AI context, PR
   restrictions in policy files, other PR restrictions, restrictions from nested

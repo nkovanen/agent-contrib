@@ -214,7 +214,7 @@ def _policy(result):
             "GitHub reads, not policy."] + (
         [f'  Limits hide policy sources ({len(report.get("omitted_sources", []))} omitted candidates listed): repository '
          'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else []
-    ) + _policy_hints(report)
+    ) + _policy_hints(report) + _policy_unassessed(report)
 
 
 POLICY_HINT_LINES = 5
@@ -255,6 +255,27 @@ def _policy_hints(report):
         out.append(f'  (+{len(stop) - POLICY_HINT_LINES} more hinted lines with restrictions in JSON '
                    'repository_policy.hinted_lines)')
     return out + lost + _vocabulary(report)
+
+
+POLICY_UNASSESSED_LINES = 5
+POLICY_UNASSESSED_CHARS = 150
+
+
+def _policy_unassessed(report):
+    """The references and files the tool did not assess, which the host must read itself (G3)."""
+    entries = report.get('unassessed') or []
+    out = []
+    for entry in entries[:POLICY_UNASSESSED_LINES]:
+        what = line(entry.get('what', '?'), 1000)
+        cut = len(what) > POLICY_UNASSESSED_CHARS or entry.get('what_truncated') is True
+        origin = f' from {line(entry["from"], 100)}' if entry.get('from') else ''
+        at = f':{line(entry["line"], 10)}' if origin and entry.get('line') is not None else ''
+        out.append(f'  ? {what[:POLICY_UNASSESSED_CHARS]}{"..." if cut else ""} ({line(entry.get("reason", "?"), 60)})'
+                   f'{origin}{at}')
+    if len(entries) > POLICY_UNASSESSED_LINES:
+        out.append(f'  (+{len(entries) - POLICY_UNASSESSED_LINES} more unassessed references in JSON '
+                   'repository_policy.unassessed)')
+    return out
 
 
 def _vocabulary(report):

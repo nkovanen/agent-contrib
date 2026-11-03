@@ -401,3 +401,41 @@ class RoundSixGapTests(unittest.TestCase):
         self.assertLessEqual(len(hint['untrusted_excerpt']), textfmt.POLICY_EXCERPT_CHARS)
         line = next(l for l in textfmt.render('inspect', {'repository_policy': rp}).splitlines() if l.startswith('  ! '))
         self.assertTrue(line.endswith('forbidden....') or line.endswith('...'), line)
+
+
+class UnassessedTextTests(unittest.TestCase):
+    """G3 (evaluation 3): the text view lists unassessed references, bounded and sanitized, not just a count."""
+    def policy_report(self, links):
+        body = 'AI policy rules.\n\n' + '\n\n'.join(f'See the [contribution policy]({url}).' for url in links)
+        return report({'CONTRIBUTING.md': body}, {})[0]
+
+    def unassessed_lines(self, text):
+        return [line for line in text.splitlines() if line.startswith('  ? ')]
+
+    def test_each_unassessed_reference_is_listed_with_its_origin(self):
+        rp = self.policy_report(['https://example.org/contributing'])
+        shown = self.unassessed_lines(textfmt.render('inspect', {'repository_policy': rp}))
+        self.assertEqual(shown, ['  ? https://example.org/contributing (referenced, not assessed) from '
+                                 'acme/photos:CONTRIBUTING.md:3'])
+
+    def test_the_list_is_bounded_with_a_pointer_to_the_rest(self):
+        rp = self.policy_report([f'https://example.org/p{n}' for n in range(8)])
+        text = textfmt.render('discover', {'repository': 'acme/photos', 'issues': [], 'repository_policy': rp})
+        self.assertEqual(len(self.unassessed_lines(text)), textfmt.POLICY_UNASSESSED_LINES)
+        self.assertEqual(textfmt.POLICY_UNASSESSED_LINES, 5)
+        self.assertIn(f'(+{8 - textfmt.POLICY_UNASSESSED_LINES} more unassessed references in JSON '
+                      'repository_policy.unassessed)', text)
+
+    def test_remote_text_is_sanitized_and_shortened(self):
+        rp = self.policy_report(['https://example.org/' + 'a' * 400])
+        rp['unassessed'][0]['what'] = 'https://example.org/\x1b[2Kx‮' + 'a' * 400
+        line = self.unassessed_lines(textfmt.render('inspect', {'repository_policy': rp}))[0]
+        self.assertNotIn('\x1b', line)
+        self.assertNotIn('‮', line)
+        self.assertLessEqual(len(line), 260)
+        self.assertIn('...', line)
+
+    def test_no_unassessed_references_prints_no_list(self):
+        rp = report({'CONTRIBUTING.md': 'Agents must not open PRs.'}, {})[0]
+        self.assertEqual(rp['unassessed'], [])
+        self.assertEqual(self.unassessed_lines(textfmt.render('inspect', {'repository_policy': rp})), [])

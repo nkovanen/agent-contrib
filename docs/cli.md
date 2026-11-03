@@ -738,6 +738,10 @@ sight...`, and a count of the rest. Shortened excerpts end with `...`. Restricti
 hints that limits dropped are counted separately. With none it says "No
 restriction hints; this is not permission.", or "No restriction hints retained"
 when limits dropped hints or hid sources.
+Up to five unassessed references and files follow, one per line, sanitized and
+shortened to 150 characters, for example `? https://palletsprojects.com/contributing/
+(referenced, not assessed) from pallets/click:README.md:62`, and a pointer to
+`repository_policy.unassessed` for the rest.
 
 There is deliberately no `coverage`, `complete` or `clear` field. Hints are
 noisy on purpose. The installed workflow's mandatory policy review decides what
