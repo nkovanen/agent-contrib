@@ -33,7 +33,10 @@ def scope_check(task, directory, base=None):
         # Index, working tree and untracked files: everything a later commit could contain.
         # The index itself is the subject only for staged changes; worktree content is judged without its stat cache.
         staged = {path for path in core.git_read(directory, *DIFF, '--cached', base).split('\0') if path}
-        working = core.worktree_changes(directory, base) | core.untracked_paths(directory)
+        untracked = core.untracked_paths(directory)
+        if any(path.endswith('/') for path in untracked):  # an untracked nested repository: a future gitlink (FR2-03)
+            raise core.ProtocolError('gitlink', 'Submodule/gitlink evidence is unsupported; no submodule commands were run')
+        working = core.worktree_changes(directory, base) | untracked
         paths = committed | staged | working
         result['changed_paths'] = sorted(core.safe_text(path, 500) for path in paths)
         # G-08: each symlink is also judged by its resolved target, in the snapshot that holds it.

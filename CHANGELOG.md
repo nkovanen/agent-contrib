@@ -322,6 +322,8 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- `scope-check` refuses an untracked nested repository with the gitlink error,
+  since adding it would create a gitlink (FR2-03).
 - An unwritable temporary root is skipped in favour of `/tmp` or `/var/tmp`,
   and a temporary directory that still cannot be created reports
   `temp_dir_error` instead of an unstructured input error (G-20).
