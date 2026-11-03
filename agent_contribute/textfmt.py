@@ -150,13 +150,31 @@ def _ownership(report):
     assignments = [f'{line(item.get("event", ""), 20)} {line(item.get("assignee", ""), 100)} by '
                    f'{line(item.get("actor", ""), 100)} at {line(item.get("created_at", ""), 40)}'
                    for item in report.get('assignment_history') or [] if isinstance(item, dict)]
+    shown = {item.get('url') for key in ('possibly_already_fixed', 'downstream_references', 'rejected_approaches')
+             for item in resolution.get(key) or [] if isinstance(item, dict)}
+    other_prs = [line(pr.get('url', ''), 200) + f' ({line(pr.get("state", ""), 20)})'
+                 for pr in report.get('cross_referenced_prs') or []
+                 if isinstance(pr, dict) and pr.get('state') != 'open' and pr.get('url') not in shown]
+    connections = [f'{line(item.get("event", ""), 20)} by {line(item.get("actor", ""), 100)} at '
+                   f'{line(item.get("created_at", ""), 40)}' for item in report.get('connected_events') or []
+                   if isinstance(item, dict)]
+    commits = [line(item.get('commit_id', ''), 40) for item in report.get('referencing_commits') or []
+               if isinstance(item, dict)]
     sections = (_list('Possibly already fixed by a merged same-repository PR', urls(resolution.get('possibly_already_fixed'))) +
                 _list('Downstream references, merged elsewhere', urls(resolution.get('downstream_references'))) +
                 _list('Rejected approaches, closed unmerged', urls(resolution.get('rejected_approaches'))) +
-                _list('Open linked PRs', open_prs) + _list('Claims', claims) + _list('Assignments', assignments))
+                _list('Open linked PRs', open_prs) + _list('Other linked PRs', other_prs) + _list('Claims', claims) +
+                _list('Assignments', assignments) + _list('Connected or disconnected events', connections) +
+                _list('Referencing commits', commits))
     out = [f'Ownership signals: complete {_flag(report.get("complete"))} '
            '(report only; incomplete reads are unknown, never "not fixed")']
-    if not sections:
+    lists = [report.get(key) for key in ('cross_referenced_prs', 'claims', 'assignment_history', 'connected_events',
+                                         'referencing_commits')] + [resolution.get(key) for key in
+                                                                    ('possibly_already_fixed', 'downstream_references',
+                                                                     'rejected_approaches')]
+    if report.get('complete') is not True:
+        out.append('Ownership report incomplete; absence unknown')
+    elif not sections and not any(lists):  # absence only when every list in the report is empty (review TO-01)
         out.append('No linked PRs, prior fixes, claims or assignments found')
     return out + sections + _list('Ownership errors', report.get('errors', []))
 

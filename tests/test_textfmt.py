@@ -208,6 +208,30 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('Ownership signals: complete yes (report only; incomplete reads are unknown, never "not fixed")\n'
                       'No linked PRs, prior fixes, claims or assignments found\n', text)
 
+    def test_ownership_absence_only_for_a_complete_report_with_nothing_at_all(self):
+        # Review TO-01: a closed linked PR outside the displayed categories, or a failed empty read, printed absence.
+        absent = 'No linked PRs, prior fixes, claims or assignments found'
+        empty = {'complete': True, 'errors': [], 'cross_referenced_prs': [], 'claims': [], 'assignment_history': [],
+                 'connected_events': [], 'referencing_commits': [],
+                 'resolution_signals': {'possibly_already_fixed': [], 'downstream_references': [],
+                                        'rejected_approaches': [], 'status': 'complete'}}
+        render = lambda signals: textfmt.render('inspect', {'reference': 'acme/photos#12', 'complete': True,
+                                                            'ownership_signals': signals})
+        self.assertIn(absent, render(empty))
+        closed = {'repository': 'acme/photos', 'number': 40, 'url': 'https://github.com/acme/photos/pull/40',
+                  'state': 'closed', 'merged': False, 'draft': False, 'exact_reference': False}
+        text = render(dict(empty, cross_referenced_prs=[closed]))
+        self.assertNotIn(absent, text)
+        self.assertIn('Other linked PRs (1):\n  - https://github.com/acme/photos/pull/40 (closed)\n', text)
+        text = render(dict(empty, connected_events=[{'event': 'connected', 'actor': 'bob', 'created_at': 't'}],
+                           referencing_commits=[{'commit_id': 'c' * 40, 'url': ''}]))
+        self.assertNotIn(absent, text)
+        self.assertIn('Connected or disconnected events (1):\n  - connected by bob at t\n', text)
+        self.assertIn('Referencing commits (1):\n  - ' + 'c' * 40 + '\n', text)
+        text = render(dict(empty, complete=False, errors=['GitHub read failed']))
+        self.assertNotIn(absent, text)
+        self.assertIn('Ownership report incomplete; absence unknown\n', text)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
