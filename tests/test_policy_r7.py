@@ -132,3 +132,43 @@ class OmittedBlobTests(unittest.TestCase):
         self.assertEqual([o['path'] for o in one['omitted_sources']], ['AI_POLICY_12.md'])
         self.assertNotEqual(one['omitted_sources'][0]['blob_sha'], two['omitted_sources'][0]['blob_sha'])
         self.assertNotEqual(one['inventory_sha256'], two['inventory_sha256'])
+
+
+class FingerprintResidualTests(unittest.TestCase):
+    """RP-28 residual: known files need a valid pinned fingerprint; linked local files carry their tree blob."""
+    def test_a_missing_or_malformed_blob_id_is_a_hiding_limit(self):
+        for bad in (None, 'zz', 'A' * 40):
+            with self.subTest(bad):
+                client = PolicyGitHub({'AI_POLICY.adoc': 'x'})
+                original = client.request
+                def request(endpoint, original=original, bad=bad):
+                    value = original(endpoint)
+                    if '/git/trees/' in endpoint:
+                        for entry in value['tree']:
+                            entry['sha'] = bad
+                    return value
+                client.request = request
+                rp = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+                limits = {i['limit']: i for i in rp['limits_reached']}
+                self.assertTrue(limits['unfingerprinted files']['hides_sources'])
+                self.assertTrue(rp['limits_hide_sources'])
+
+    def test_linked_local_files_carry_their_tree_blob(self):
+        rp = policy.report('acme/photos', SOURCE_COMMIT, [],
+                           PolicyGitHub({'CONTRIBUTING.md': 'See [policy rules](docs/rules.md) and [AI policy](docs/missing.md).',
+                                         'docs/rules.md': 'No AI.'}), default_branch='main')
+        refs = {u['what']: u for u in rp['unassessed'] if u['reason'] == 'referenced, not assessed'}
+        self.assertRegex(refs['docs/rules.md']['blob_sha'], '^[0-9a-f]{40}$')
+        self.assertIsNone(refs['docs/missing.md']['blob_sha'])
+
+    def test_editing_a_linked_local_file_is_drift(self):
+        client = VersionedGitHub(files={'SECURITY.md': 'See [policy rules](docs/rules.md).', 'docs/rules.md': 'AI ok.'})
+        task, recorded = reviewed(client)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        client.advance({'SECURITY.md': 'See [policy rules](docs/rules.md).', 'docs/rules.md': 'No AI.'})
+        code, result = run(client, 'drift', path, '--policy-sha256', recorded)
+        self.assertEqual(code, 1)
+        self.assertIs(result['repository_policy_drift']['policy_drifted'], True)
+        self.assertEqual([c['what'] for c in result['repository_policy_drift']['changed']], ['docs/rules.md'])
+

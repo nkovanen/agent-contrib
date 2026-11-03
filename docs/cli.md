@@ -553,7 +553,9 @@ the `agent_contribute.aipolicy` module no longer exist.
 - **Unread candidates.** Unassessed and omitted file entries carry `blob_sha`,
   the pinned Git blob id from the tree, so an edit to an unread policy file
   (such as `AI_POLICY.adoc` or an oversized `AI_POLICY.md`) changes the
-  inventory hash.
+  inventory hash. Policy-like links to files in the pinned tree (such as
+  `docs/rules.md`) carry that file's blob id too, without a new read. A known
+  file without a valid blob id is the hiding limit `unfingerprinted files`.
 - **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained
   unassessed identifiers and the limits. It excludes commit SHAs, so unrelated
   pushes do not change it. No verifier checks it; the workflow records it in

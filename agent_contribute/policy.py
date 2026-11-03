@@ -30,7 +30,7 @@ MAX_OMITTED = 50
 HIDING_LIMITS = {'requests', 'policy files', 'owner policy files', 'scanned bytes', 'unassessed entries',
                  'omitted sources not listed', 'report size: unassessed entries', 'report size: omitted sources',
                  'report size: sources not listed', 'restriction hints', 'report size: restriction hints',
-                 'owner lookup'}
+                 'owner lookup', 'unfingerprinted files'}
 STOP_HINTS = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction')
 POLICY_KINDS = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template')
 EXCERPT_CHARS = 300
@@ -316,6 +316,7 @@ class _Report:
         self.seen, self.keys = set(), []  # every identity noted; identities of retained entries (aligned)
         self.omitted, self.scanned = [], set()  # scanned: original (repository, path) identities
         self.owner_lookup = None
+        self.trees = {}  # repository -> {path: pinned blob id}, for fingerprints of linked local files (RP-28)
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -325,7 +326,7 @@ class _Report:
         self.requests += 1
         return self.client.request(endpoint)
 
-    def note(self, what, reason, origin=None, line=None, link_text=None, key=None, blob=None):
+    def note(self, what, reason, origin=None, line=None, link_text=None, key=None, blob=None, file=False):
         """key is the original identity (repository and path, or URL); what is display text, possibly altered."""
         raw = str(what)
         what = core.safe_text(raw, len(raw))
@@ -337,17 +338,21 @@ class _Report:
             self.limit('unassessed entries')
             return
         blob = _blob_id(blob)
+        if file and blob is None:  # a known file without a valid pinned fingerprint: its edits are invisible (RP-28)
+            self.limit('unfingerprinted files')
         self.keys.append((key, blob))
         self.unassessed.append({'what': what[:IDENTIFIER_CHARS], 'reason': reason, 'from': origin, 'line': line,
                                 'link_text': core.safe_text(link_text, EXCERPT_CHARS) if link_text else None,
                                 'what_truncated': len(what) > IDENTIFIER_CHARS, 'what_sanitized': what != raw,
                                 'identity_sha256': _identity(key), 'blob_sha': blob})
 
-    def omit(self, repository, path, kind, reason, blob=None):
+    def omit(self, repository, path, kind, reason, blob=None, file=False):
         """A policy candidate a limit kept unread: named (bounded), never only counted (RP-19)."""
         if len(self.omitted) >= MAX_OMITTED:
             self.limit('omitted sources not listed')
             return
+        if file and _blob_id(blob) is None:
+            self.limit('unfingerprinted files')
         self.omitted.append({'repository': repository, **_display(path), 'kind': kind or 'instruction',
                              'reason': reason, 'identity_sha256': _identity((repository.casefold(), path)),
                              'blob_sha': _blob_id(blob)})
@@ -365,13 +370,14 @@ class _Report:
             core.require(entry, dict, 'tree entry')
             if entry.get('type') == 'blob':
                 blobs[core.require(entry.get('path'), str, 'tree path')] = entry.get('sha')
+        self.trees[repository.casefold()] = blobs
         return blobs
 
     def add(self, origin, repository, path, commit, digest, kind, text, size, blob=None):
         """size is the source's UTF-8 byte count, the unit of the 1 MB scan bound (RP-18)."""
         if self.scanned_bytes + size > MAX_SCANNED_BYTES:
             self.limit('scanned bytes')
-            self.omit(repository, path, kind, 'scan byte limit', blob)
+            self.omit(repository, path, kind, 'scan byte limit', blob, file=blob is not None)
             return
         self.scanned_bytes += size
         result = scan(text, path)
@@ -392,20 +398,20 @@ class _Report:
                 raise core.ProtocolError('file_encoding', 'not base64')
             data = base64.b64decode(''.join(core.require(value.get('content'), str, 'content').split()), validate=True)
         except _Limit:
-            self.omit(repository, path, kind, 'request limit', blob)
+            self.omit(repository, path, kind, 'request limit', blob, file=True)
             return
         except (core.ProtocolError, ValueError, binascii.Error):
-            self.note(label, 'read failed', key=key, blob=blob)
+            self.note(label, 'read failed', key=key, blob=blob, file=True)
             return
         if len(data) > MAX_FILE_BYTES:
-            self.note(label, 'exceeds 200 kB', key=key, blob=blob)
+            self.note(label, 'exceeds 200 kB', key=key, blob=blob, file=True)
         elif not _pinned(blob, value.get('sha'), data):
-            self.note(label, 'content did not match the pinned tree entry', key=key, blob=blob)
+            self.note(label, 'content did not match the pinned tree entry', key=key, blob=blob, file=True)
         else:
             try:
                 text = data.decode('utf-8')
             except UnicodeError:
-                self.note(label, 'not UTF-8 text', key=key, blob=blob)
+                self.note(label, 'not UTF-8 text', key=key, blob=blob, file=True)
                 return
             self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data), blob)
 
@@ -418,7 +424,7 @@ class _Report:
                 continue
             if _format(path) not in SCANNED_FORMATS:
                 self.note(path if origin == 'repository' else f'{repository}:{path}', 'unsupported format',
-                          key=(repository.casefold(), path), blob=blob)
+                          key=(repository.casefold(), path), blob=blob, file=True)
                 continue
             # Nested security/governance files are read after top-level ones and rank lower; never skipped (RP-25).
             found.append((KIND_ORDER.index(kind), kind == 'community' and not _top_level(path), path, blob, kind))
@@ -426,7 +432,7 @@ class _Report:
         for _, _, path, blob, kind in found[:cap]:
             self.fetch(origin, repository, commit, path, blob, kind)
         for _, _, path, blob, kind in found[cap:]:
-            self.omit(repository, path, kind, 'file limit', blob)
+            self.omit(repository, path, kind, 'file limit', blob, file=True)
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
 
@@ -585,8 +591,11 @@ def report(repository, commit, instructions, client, *, default_branch=None):
                 if not _assessed(link['url'], source['repository'], path, refs, scanned):
                     target, relative = _relative_what(link['url'], path)
                     shown = target if not relative or source['repository'] == repository else f'{source["repository"]}:{target}'
+                    tree = state.trees.get(source['repository'].casefold(), {})
+                    local = relative and target in tree  # a linked file in the pinned tree: fingerprint it, no fetch
                     state.note(shown, 'referenced, not assessed', origin, link['line'], link['link_text'],
-                               key=(source['repository'].casefold(), target) if relative else link['url'])
+                               key=(source['repository'].casefold(), target) if relative else link['url'],
+                               blob=tree.get(target) if local else None, file=local)
             except ValueError:  # e.g. 'https://[' or a netloc that NFKC-normalizes to a delimiter
                 state.note(link['url'], 'malformed reference, not assessed', origin, link['line'], link['link_text'])
     if state.skipped:
