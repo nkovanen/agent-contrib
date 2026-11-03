@@ -72,8 +72,12 @@ Exact rules:
   or `closed`. The first two fields are required; optional arrays default to
   empty only in the parsed report, without rewriting source bytes.
 - Each array has at most 16 distinct strings. Each string is 1–500 Unicode code
-  points, nonblank after stripping; reject C0 controls and DEL. Preserve other
-  text as untrusted data; escape/sanitize terminal output using existing helpers.
+  points and contains a character outside this fixed Unicode White_Space set:
+  U+0009–000D, U+0020, U+0085, U+00A0, U+1680, U+2000–200A, U+2028–2029,
+  U+202F, U+205F, U+3000. Thus U+0085 alone is blank; U+FEFF is nonblank.
+  Reject C0 controls and DEL even in otherwise nonblank text. Use this explicit
+  set in both parser/schema validation, never runtime-dependent whitespace
+  shorthands. Preserve text as untrusted data; sanitize terminal output.
 - Maximum raw file size: 16,384 bytes, including whitespace. Strict UTF-8 JSON;
   reject duplicate keys, nonfinite values, unknown fields, wrong types and
   unsupported versions. Do not partially accept a `welcome` from invalid data.
@@ -134,8 +138,11 @@ there are no prose hints. Manifest state and pinned absence/unknown must also
 enter its fingerprint. Keep the historical instructions allow-list and
 `instructions_sha256` unchanged, so old task baselines can be reconstructed.
 Bump inventory format 2 to 3; tag/hash the format as today. Jar reads have a
-separate fixed budget of at most four actual GET transport attempts per jar
-inspection (metadata, commit, tree, contents). Every jar read site, including
+separate fixed budget of at most four `gh api` invocations per jar inspection
+(metadata, commit, tree, contents), without application retries. GitHub CLI may
+follow internal HTTP redirects, so this is not a cap on raw HTTP GETs.
+Validate canonical repository identity after redirects and reject a renamed
+identity; never follow application-returned URLs. Every jar read site, including
 historical and integration reads, uses the existing `request_once` path; do not
 call helpers that silently use retrying `request`. A transient failure yields
 unknown immediately, without retry or fallback. Only test clients lacking
@@ -143,8 +150,8 @@ unknown immediately, without retry or fallback. Only test clients lacking
 existing `request_once` fails. Jar reads never consume a prose-policy file slot
 or bypass a hiding limit. With `--report-budget`, the before/after `rate_limit`
 snapshots are separate instrumentation outside the jar's four command reads;
-the total command transport count includes those snapshots and their existing
-retry behavior, so do not advertise four attempts for the instrumented command. Do not silently treat
+the total command invocation count includes those snapshots and their existing
+retry behavior, so do not advertise four invocations for the instrumented command. Do not silently treat
 an old inventory digest as proof of jar review. Reconstruct historical jar state
 at `task.source.commit` for drift; reread current state at each live gate.
 Compare presence/state and exact-byte digest, not commit advancement alone. Any
