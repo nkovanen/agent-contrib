@@ -70,6 +70,8 @@ class FakeGitHub:
                     'has_issues': False, 'parent': {'full_name': 'acme/photos'}}
         if path.endswith('/commits/main'):
             return {'sha': getattr(self, 'commit', 'a' * 40), 'commit': {'tree': {'sha': 'c' * 40}}}
+        if '/commits/' in path and core.SHA.fullmatch(path.rsplit('/', 1)[1]):
+            return {'sha': path.rsplit('/', 1)[1], 'commit': {'tree': {'sha': 'c' * 40}}}
         if '/compare/' in path:
             base, head = path.rsplit('/compare/', 1)[1].split('...')
             default = 'identical' if base == head else 'behind'
@@ -79,7 +81,7 @@ class FakeGitHub:
                      'docs/architecture.md', 'specs/README.md']
             if self.policy is not None:
                 paths.append('.agent-contrib.json')
-            return {'sha': 'c' * 40, 'truncated': False, 'tree': [
+            return {'sha': path.rsplit('/', 1)[1], 'truncated': False, 'tree': [
                 {'path': p, 'type': 'blob', 'sha': 'b' * 40, 'mode': '100644'} for p in paths]}
         if '/contents/' in path:
             name = path.split('/contents/')[1]

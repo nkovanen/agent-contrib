@@ -22,14 +22,16 @@ class JarGitHub(FakeGitHub):
         self.calls.append(endpoint)
         if self.jar_failed:
             raise core.ProtocolError('api_error', 'jar unavailable')
-        historical = '?ref=' + 'a' * 40 in endpoint or '/trees/' + 'a' * 40 in endpoint
+        historical = '?ref=' + 'a' * 40 in endpoint or '/trees/' + 'c' * 40 in endpoint
         data = self.baseline_jar if historical else self.jar
         if '/contents/.tipjar.json' in endpoint:
             return {'path': tipjar.PATH, 'type': 'file', 'encoding': 'base64', 'size': len(data),
                     'sha': tipjar.cache.blob_sha(data), 'content': base64.b64encode(data).decode()}
         result = copy.deepcopy(super().request(endpoint))
+        if '/commits/' in endpoint:
+            result['commit']['tree']['sha'] = ('c' if result['sha'] == 'a' * 40 else 'e') * 40
         if '/git/trees/' in endpoint:
-            result['sha'] = 'c' * 40
+            result['sha'] = endpoint.split('?')[0].rsplit('/', 1)[1]
             for entry in result['tree']:
                 entry.update(mode='100644', sha='b' * 40)
             if data is not None:

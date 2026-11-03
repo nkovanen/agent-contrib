@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_contribute import core
-from tests.test_tipjar import responses, COMMIT
+from tests.test_tipjar import responses, COMMIT, TREE
 
 
 def hit(name='acme/project', repo_id=1, owner_id=2):
@@ -141,7 +141,7 @@ class VerificationTests(unittest.TestCase):
                     responses(entries=[{'path': '.tipjar.json', 'sha': 'd'*40, 'type': 'blob', 'mode': '120000'}])]
         for kind in ('truncated', 'hash', 'missing'):
             data = responses()
-            if kind == 'truncated': data[f'repos/acme/project/git/trees/{COMMIT}?recursive=1']['truncated'] = True
+            if kind == 'truncated': data[f'repos/acme/project/git/trees/{TREE}?recursive=1']['truncated'] = True
             elif kind == 'hash': data[f'repos/acme/project/contents/.tipjar.json?ref={COMMIT}']['sha'] = 'f'*40
             else: data[f'repos/acme/project/contents/.tipjar.json?ref={COMMIT}'] = core.ProtocolError('api_error', 'PRIVATE SECRET')
             fixtures.append(data)

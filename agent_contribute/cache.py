@@ -22,6 +22,7 @@ TOTAL_LIMIT = 256 * 1024 * 1024
 PREFIX = 'blob-'
 _NAME = r'[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}'
 METADATA = re.compile(rf'repos/({_NAME})')
+COMMIT = re.compile(rf'repos/({_NAME})/commits/([^?#]+)')
 TREE = re.compile(rf'repos/({_NAME})/git/trees/([0-9a-f]{{40}})\?recursive=1')
 CONTENTS = re.compile(rf'repos/({_NAME})/contents/([^?#]+)\?ref=([0-9a-f]{{40}})')
 BLOB = re.compile(r'[0-9a-f]{40}')
@@ -58,7 +59,8 @@ class Cache:
     def __init__(self, directory):
         self.directory = directory
         self.public = set()  # casefolded owner/repo whose live metadata said private: false, visibility: public
-        self.blobs = {}  # (casefolded owner/repo, commit) -> {path: blob SHA} from a live, complete tree
+        self.commit_trees = {}  # (repository, commit) -> canonical tree from a live commit object
+        self.blobs = {}  # (casefolded owner/repo, commit or tree) -> {path: blob SHA} from a live, complete tree
         self._fd, self._checked = None, False
 
     def lookup(self, endpoint):
@@ -94,6 +96,16 @@ class Cache:
                       value.get('visibility') == 'public' and
                       isinstance(value.get('full_name'), str) and value['full_name'].casefold() == name)
             (self.public.add if public else self.public.discard)(name)
+            return
+        match = COMMIT.fullmatch(endpoint)
+        if match:
+            if isinstance(value, dict):
+                commit = value.get('sha')
+                tree = value.get('commit', {}).get('tree', {}).get('sha')
+                if (isinstance(commit, str) and BLOB.fullmatch(commit) and
+                        isinstance(tree, str) and BLOB.fullmatch(tree) and
+                        (not BLOB.fullmatch(match[2]) or match[2] == commit)):
+                    self.commit_trees[(match[1].casefold(), commit)] = tree
             return
         match = TREE.fullmatch(endpoint)
         if match:
@@ -131,7 +143,8 @@ class Cache:
         # blob map, never a filesystem path; entries are named by blob SHA.
         if quote(path, safe='/') != quoted or name not in self.public:
             return None, None
-        return self.blobs.get((name, commit), {}).get(path), path
+        tree = self.commit_trees.get((name, commit))
+        return self.blobs.get((name, commit), self.blobs.get((name, tree), {})).get(path), path
 
     def _root(self):
         """A descriptor for the checked cache directory, or None to bypass the cache. Every entry operation is

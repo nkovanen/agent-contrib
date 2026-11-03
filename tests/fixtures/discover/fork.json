@@ -174,7 +174,8 @@
     "repos/acme/photos/contents/CONTRIBUTING.md?ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "repos/acme/photos/contents/docs/architecture.md?ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "repos/acme/photos/contents/specs/README.md?ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "repos/acme/photos/git/trees/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?recursive=1",
+    "repos/acme/photos/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "repos/acme/photos/git/trees/cccccccccccccccccccccccccccccccccccccccc?recursive=1",
     "repos/acme/photos/issues?state=open&per_page=100&page=1",
     "repos/person/photos/pulls?state=open&per_page=100&page=1"
   ]

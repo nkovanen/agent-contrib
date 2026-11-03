@@ -1387,12 +1387,15 @@ is accepted only after its bytes match that pinned tree blob. Policy reads retai
 their own existing bounded budget in addition to jar reads.
 
 Caller-supplied report dictionaries are untrusted data. Public policy inventory
-builders reread the source jar at the requested commit (up to three additional
+builders reread the source jar at the requested commit (up to four additional
 `gh api` invocations). Live guards reread the current default-branch declaration
-(up to four) and the task's historical declaration (up to three), in addition to
+(up to four) and the task's historical declaration (up to four), in addition to
 inspection and other command reads. The standalone four-invocation jar budget
 is not a bound on an entire integrated command. Failed or inconsistent pins
-remain blockers.
+remain blockers. Each read resolves the commit object and queries its canonical
+tree SHA; explicit historical commits must match the returned commit identity.
+Supplying repository metadata saves one invocation, but never skips commit or
+tree validation. A jar absent from the complete tree saves the content read.
 
 The library's `core.prepare(inspected)` is an offline pending-draft transformation.
 It validates complete report shape, state/digest consistency and source pin

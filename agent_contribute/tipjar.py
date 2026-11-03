@@ -76,17 +76,17 @@ def read_jar(repository: str, client=None, *, commit: str | None = None, metadat
         if not branch.strip() or len(branch) > 1024 or any(ord(c) < 32 or ord(c) == 127 for c in branch):
             raise core.ProtocolError('api_shape', 'Invalid GitHub default branch')
         result['default_branch'] = branch
-        expected_tree = None
-        if commit is None:
-            resolved = core.require(get(f'repos/{canonical}/commits/{quote(branch, safe="")}'),
-                                    dict, 'default branch commit')
-            result['commit'] = _sha(resolved.get('sha'))
-            expected_tree = _sha(core.require(core.require(resolved.get('commit'), dict, 'commit').get('tree'),
-                                             dict, 'commit tree').get('sha'))
-        pinned = result['commit']
-        tree = core.require(get(f'repos/{canonical}/git/trees/{pinned}?recursive=1'), dict, 'pinned tree')
+        reference = commit if commit is not None else quote(branch, safe='')
+        resolved = core.require(get(f'repos/{canonical}/commits/{reference}'), dict, 'pinned commit')
+        pinned = _sha(resolved.get('sha'))
+        if commit is not None and pinned != commit:
+            raise core.ProtocolError('api_shape', 'Mismatched pinned GitHub commit')
+        result['commit'] = pinned
+        expected_tree = _sha(core.require(core.require(resolved.get('commit'), dict, 'commit').get('tree'),
+                                         dict, 'commit tree').get('sha'))
+        tree = core.require(get(f'repos/{canonical}/git/trees/{expected_tree}?recursive=1'), dict, 'pinned tree')
         tree_sha = _sha(tree.get('sha'))
-        if tree.get('truncated') is not False or expected_tree is not None and tree_sha != expected_tree:
+        if tree.get('truncated') is not False or tree_sha != expected_tree:
             raise core.ProtocolError('api_shape', 'Incomplete or mismatched pinned GitHub tree')
         entries = core.require(tree.get('tree'), list, 'tree entries')
         core.tree_entries(entries)  # validates kinds/modes and rejects duplicate paths

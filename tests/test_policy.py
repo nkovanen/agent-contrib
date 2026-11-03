@@ -58,10 +58,10 @@ class PolicyGitHub:
         for name, repo in self.repos.items():
             if path == f'repos/{name}':
                 return {'full_name': name, 'default_branch': repo['branch'], 'fork': False, 'has_issues': True}
-            if path == f'repos/{name}/commits/{repo["branch"]}':
-                return {'sha': repo['commit']}
-            if path == f'repos/{name}/git/trees/{repo["commit"]}':
-                return {'truncated': self.truncated and name == 'acme/photos', 'tree': [{'path': p, 'type': 'blob', 'sha': blob_sha(t)}
+            if path in (f'repos/{name}/commits/{repo["branch"]}', f'repos/{name}/commits/{repo["commit"]}'):
+                return {'sha': repo['commit'], 'commit': {'tree': {'sha': 'c' * 40}}}
+            if path in (f'repos/{name}/git/trees/{repo["commit"]}', f'repos/{name}/git/trees/{"c" * 40}'):
+                return {'sha': path.rsplit('/', 1)[1], 'truncated': self.truncated and name == 'acme/photos', 'tree': [{'path': p, 'type': 'blob', 'sha': blob_sha(t)}
                                                      for p, t in repo['files'].items()]}
             prefix = f'repos/{name}/contents/'
             if path.startswith(prefix):
@@ -593,10 +593,10 @@ class BoundTests(unittest.TestCase):
         files = {f'docs/{n}/CONTRIBUTING.md': 'x' for n in range(20)}
         result, client = report(files, owner)
         self.assertLessEqual(len(client.calls), policy.MAX_REQUESTS + 4)  # pinned jar reads have a separate budget
-        self.assertEqual(result['reads'], {'requests': len(client.calls) - 2, 'limit': policy.MAX_REQUESTS})  # metadata/tree jar reads are separate
+        self.assertEqual(result['reads'], {'requests': len(client.calls) - 3, 'limit': policy.MAX_REQUESTS})  # metadata/commit/tree jar reads are separate
         with patch.object(policy, 'MAX_REQUESTS', 6):
             result, client = report(files, owner)
-        self.assertEqual(len(client.calls), 8)  # plus independent pinned jar metadata/tree reads
+        self.assertEqual(len(client.calls), 9)  # plus independent pinned jar metadata/commit/tree reads
         self.assertIn('requests', {item['limit'] for item in result['limits_reached']})
         owner = [u for u in result['unassessed'] if u['what'] == 'acme/.github']
         self.assertEqual(owner[0]['reason'], 'not read: request limit')
