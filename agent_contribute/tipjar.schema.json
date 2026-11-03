@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:tipjar:0.1",
+  "description": "Repository invitation metadata, not approval or execution/publication authority. Raw input must be strict UTF-8 JSON of at most 16384 bytes without duplicate keys.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "0.1"},
+    "status": {"type": "string", "enum": ["welcome", "closed"]},
+    "wanted": {"$ref": "#/$defs/texts"},
+    "boundaries": {"$ref": "#/$defs/texts"}
+  },
+  "$defs": {
+    "texts": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500,
+        "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]{1,500}$"
+      }
+    }
+  }
+}
