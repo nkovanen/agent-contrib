@@ -59,6 +59,10 @@ RESTRICT_TERMS = {'not', 'no', 'never', 'nor', 'only', 'limited', 'restricted', 
                   'reject', 'rejected', 'rejects', 'refuse', 'refused', 'refuses', 'forbid', 'forbidden', 'forbids',
                   'prohibit', 'prohibited', 'prohibits', 'ban', 'banned', 'bans', 'disallow', 'disallowed',
                   'invitation', 'invite', 'invited', 'maintainers', 'members', 'instead', 'must'}
+# Who may open pull requests ("limited to maintainers", "issues instead of pull requests"); not the singular
+# "a maintainer's time", which is common in permissive AI wording.
+ELIGIBILITY_TERMS = {'maintainers', 'members', 'collaborators', 'limited', 'restricted', 'invitation', 'invite',
+                     'invited', 'instead'}
 PHRASES = {'artificial': [(('artificial', 'intelligence'), 'ai')],
            'large': [(('large', 'language', 'model'), 'ai'), (('large', 'language', 'models'), 'ai')],
            'machine': [(('machine', 'generated'), 'ai')],
@@ -130,7 +134,7 @@ def _non_latin(text):
 
 
 def _groups(tokens):
-    found = {'ai': [], 'agent': [], 'pr': [], 'restrict': []}
+    found = {'ai': [], 'agent': [], 'pr': [], 'restrict': [], 'elig': []}
     for index, (_, token) in enumerate(tokens):
         if token in AI_TERMS or token.startswith('gpt'):
             found['ai'].append(index)
@@ -140,6 +144,8 @@ def _groups(tokens):
             found['pr'].append(index)
         if token in RESTRICT_TERMS:
             found['restrict'].append(index)
+        if token in ELIGIBILITY_TERMS:
+            found['elig'].append(index)
         for words, group in PHRASES.get(token, ()):
             if tuple(t for _, t in tokens[index:index + len(words)]) == words:
                 found[group].append(index)
@@ -227,7 +233,9 @@ def scan(text, path):
             if anchor is not None:
                 hints.append({'kind': kind, 'line': line, 'heading': core.safe_text(heading, 120),
                               'untrusted_excerpt': _excerpt(normalized, tokens[anchor][0]),
-                              'ai_context': bool(found['ai'] or found['agent'])})
+                              'ai_context': bool(found['ai'] or found['agent']),
+                              'eligibility': kind == 'possible_pr_restriction' and
+                              _near(found['pr'], found['elig']) is not None})
     return {'hints': hints, 'links': _links(text), 'non_latin_paragraphs': non_latin}
 
 
@@ -368,10 +376,13 @@ def _top_level(path):
 
 
 def _tier(hint, source_kind):
-    """Attention order: agent, AI, PR hints with AI context, PR hints in policy files, other PR hints, mentions."""
+    """Attention order: agent, PR eligibility rules, AI, PR hints with AI context, PR hints in policy files, other PR
+    hints, mentions. Eligibility ranks high so a maintainers-only rule always reaches the text view (hono)."""
     if hint['kind'] != 'possible_pr_restriction':
-        return {'possible_agent_restriction': 0, 'possible_ai_restriction': 1}.get(hint['kind'], 5)
-    return 2 if hint['ai_context'] else 3 if source_kind in POLICY_KINDS else 4
+        return {'possible_agent_restriction': 0, 'possible_ai_restriction': 2}.get(hint['kind'], 6)
+    if hint['eligibility']:
+        return 1
+    return 3 if hint['ai_context'] else 4 if source_kind in POLICY_KINDS else 5
 
 
 def _pinned(blob, reported, data):
@@ -487,7 +498,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     hints.sort(key=lambda hint: (hint['tier'], hint['source'], hint['line']))
     for hint in hints[MAX_HINTS:]:  # mentions go first; a dropped stop-class hint is a hiding limit (N-04)
         state.limit('restriction hints' if hint['kind'] in STOP_HINTS else 'hints')
-    hints = [{k: v for k, v in hint.items() if k not in ('tier', 'ai_context')} for hint in hints[:MAX_HINTS]]
+    hints = [{k: v for k, v in hint.items() if k not in ('tier', 'ai_context', 'eligibility')} for hint in hints[:MAX_HINTS]]
     result = {'report': 'policy-report/1', 'review_obligation': OBLIGATION, 'sources_scanned': state.sources,
               'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
               'limits_hide_sources': False,

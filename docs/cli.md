@@ -498,8 +498,11 @@ the `agent_contribute.aipolicy` module no longer exist.
   turns an existing line into a heading. Excerpts are sanitized and at most 300
   characters.
 
-  Hints are ordered for attention: agent, then AI restrictions, then PR
-  restrictions whose paragraph also names AI or agents, then PR restrictions in
+  Hints are ordered for attention: agent, then PR eligibility rules (a PR term
+  near "maintainers", "members", "collaborators", "limited", "restricted",
+  "invitation" or "instead", such as "Pull requests are limited to
+  maintainers"), then AI restrictions, then PR restrictions whose paragraph also
+  names AI or agents, then PR restrictions in
   policy files (AI policy, agent instructions, contributing, PR templates), then
   other PR restrictions, and mentions last. When the 100-hint bound or the
   report-size bound applies, mentions are dropped first. A dropped restriction

@@ -216,3 +216,45 @@ class FreshDraftMessageTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class EligibilityTierTests(unittest.TestCase):
+    """Maintainers-only / eligibility PR rules rank just below agent restrictions."""
+    HONO = ('## AI Usage Policy\n\n'
+            + ''.join(f'You may use AI to contribute, but it must never waste a maintainer\'s time, case {n}.\n\n'
+                      for n in range(6))
+            + 'To enforce this, and regardless of whether AI was actually used, a maintainer may close your issue '
+              'without notice and block your account.\n\n'
+              '## Issues instead of Pull Requests\n\n'
+              'Pull requests are limited to maintainers. If you find a bug or want a change, please create an issue '
+              'instead. A clear issue with a minimal reproduction helps us more than a pull request.\n')
+
+    def test_eligibility_rule_is_in_the_text_top_five(self):
+        rp, _ = report({'docs/CONTRIBUTING.md': self.HONO}, {})
+        shown = [line for line in textfmt.render('inspect', {'repository_policy': rp}).splitlines()
+                 if line.startswith('  ! ')]
+        self.assertEqual(len(shown), 5)
+        self.assertTrue(any('Pull requests are limited to maintainers' in line for line in shown), shown)
+
+    def test_tier_is_below_agent_and_above_ai_hints(self):
+        rp, _ = report({'docs/CONTRIBUTING.md': self.HONO + '\nAutonomous agents are not allowed.\n'}, {})
+        kinds = [(h['kind'], h['untrusted_excerpt'][:30]) for h in rp['hints']]
+        self.assertEqual(kinds[0][0], 'possible_agent_restriction')
+        self.assertEqual(kinds[1][0], 'possible_pr_restriction')
+        self.assertTrue(kinds[1][1].startswith(('## Issues instead of Pull', 'Pull requests are limited to')), kinds[1])
+        self.assertEqual(kinds[3][0], 'possible_ai_restriction')
+
+    def test_a_singular_maintainer_mention_is_not_an_eligibility_rule(self):
+        rp, _ = report({'CONTRIBUTING.md': "You may contribute, but never waste a maintainer's time.\n\n"
+                                           'Pull requests are limited to maintainers.'}, {})
+        pr = [h['untrusted_excerpt'] for h in rp['hints'] if h['kind'] == 'possible_pr_restriction']
+        self.assertTrue(pr[0].startswith('Pull requests are limited to maintainers'), pr)
+
+
+class CommentExcerptTests(unittest.TestCase):
+    def test_text_excerpts_drop_html_comment_markers(self):
+        rp, _ = report({'.github/pull_request_template.md': '<!--\nAI-generated pull requests are closed.\n-->'}, {})
+        line = next(l for l in textfmt.render('inspect', {'repository_policy': rp}).splitlines() if l.startswith('  ! '))
+        self.assertTrue(line.endswith('-- AI-generated pull requests are closed.'), line)
+        self.assertNotIn('<!--', line)
+        self.assertEqual(rp['hints'][0]['untrusted_excerpt'][:4], '<!--', 'JSON keeps the sanitized excerpt as is')
