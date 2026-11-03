@@ -42,8 +42,15 @@ sections are grouped by task.
 
 ## Command index
 
-Every command exits **2** for a usage error and **1** for an input, protocol or read error. "Reads
-GitHub" means fixed `gh api --method GET` reads; nothing is ever written.
+Every command exits **2** for a usage error and **1** when its own input, protocol or core reads
+fail. Report-only reads that cannot change a command's result are the exceptions:
+their failures are reported inside the report and the exit code is unchanged. These
+are the default-on `repository_policy` report of `discover`, `inspect` and `prepare`,
+`verify --observe-ci`, `verify --observe-signatures` and `--cache` (a cache miss or
+unusable cache falls back to live reads). The opt-in reports `inspect --ownership`,
+`discover --responsiveness`, `discover --check-top` and `discover --repo-dir` do make
+an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
+`gh api --method GET` reads; nothing is ever written.
 
 | Command | Purpose | Reads GitHub? | Exit codes |
 | --- | --- | --- | --- |
