@@ -497,6 +497,20 @@ def _owner(state, repository):
         return None
     try:
         meta = core.require(state.get(f'repos/{name}'), dict, 'owner .github metadata')
+    except _Limit:
+        state.owner_lookup = {'repository': name, 'status': 'not_read_request_limit'}
+        state.note(name, 'not read: request limit')
+        return None
+    except core.ProtocolError as exc:
+        found_nothing = getattr(exc, 'http_status', None) == 404  # only here does a 404 mean "no such repository"
+        state.owner_lookup = {'repository': name, 'status': 'not_found_or_inaccessible' if found_nothing else 'unavailable'}
+        if found_nothing:
+            state.note(name, 'owner .github repository not found or inaccessible')
+        else:
+            state.note(name, 'owner .github lookup failed (not a 404); its policy files are unknown')
+            state.limit('owner lookup')
+        return None
+    try:
         branch = core.require(meta.get('default_branch'), str, 'owner default branch')
         commit = core.require(core.require(state.get(f'repos/{name}/commits/{quote(branch, safe="")}'), dict,
                                            'owner commit').get('sha'), str, 'owner commit sha')
@@ -507,14 +521,10 @@ def _owner(state, repository):
         state.owner_lookup = {'repository': name, 'status': 'not_read_request_limit'}
         state.note(name, 'not read: request limit')
         return None
-    except core.ProtocolError as exc:
-        if getattr(exc, 'http_status', None) == 404:
-            state.owner_lookup = {'repository': name, 'status': 'not_found_or_inaccessible'}
-            state.note(name, 'owner .github repository not found or inaccessible')
-        else:
-            state.owner_lookup = {'repository': name, 'status': 'unavailable'}
-            state.note(name, 'owner .github lookup failed (not a 404); its policy files are unknown')
-            state.limit('owner lookup')
+    except core.ProtocolError:  # the repository exists, so any later failure (even a 404) is unknown (RP-29)
+        state.owner_lookup = {'repository': name, 'status': 'unavailable'}
+        state.note(name, 'owner .github lookup failed after metadata; its policy files are unknown')
+        state.limit('owner lookup')
         return None
     state.owner_lookup = {'repository': name, 'status': 'read'}
     located = lambda path: '/' not in path or path.split('/')[0] in ('.github', 'docs')

@@ -172,3 +172,17 @@ class FingerprintResidualTests(unittest.TestCase):
         self.assertIs(result['repository_policy_drift']['policy_drifted'], True)
         self.assertEqual([c['what'] for c in result['repository_policy_drift']['changed']], ['docs/rules.md'])
 
+
+class OwnerStageTests(unittest.TestCase):
+    """RP-29 residual: only a 404 from the metadata lookup means 'not found'; later 404s are unknown."""
+    def test_a_404_after_metadata_is_unavailable(self):
+        class LateMissing(PolicyGitHub):
+            def request(self, endpoint):
+                if endpoint.startswith('repos/acme/.github/commits/'):
+                    self.calls.append(endpoint)
+                    raise not_found()
+                return super().request(endpoint)
+        client = LateMissing({}, {'CONTRIBUTING.md': 'x'})
+        rp = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
+        self.assertEqual(rp['owner_lookup']['status'], 'unavailable')
+        self.assertTrue(rp['limits_hide_sources'])

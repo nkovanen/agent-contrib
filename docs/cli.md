@@ -545,7 +545,9 @@ the `agent_contribute.aipolicy` module no longer exist.
 - **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
   comments, other repositories, non-Latin text.
 - **`owner_lookup`.** The owner `.github` lookup outcome: `read`,
-  `not_found_or_inaccessible` (HTTP 404), `unavailable` (any other failure,
+  `not_found_or_inaccessible` (HTTP 404 from the repository metadata lookup
+  only), `unavailable` (any other failure, including a 404 on the commit or tree
+  after the repository was found,
   recorded as the hiding limit `owner lookup` because its policy files are
   unknown), `not_read_request_limit` or `not_applicable`. It is part of
   `inventory_sha256`, so a change such as readable to not found is drift, and

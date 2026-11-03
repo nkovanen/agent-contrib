@@ -308,7 +308,8 @@ channel or runtime model provider is added.
 - `repository_policy.inventory_sha256` now also covers the pinned blob id of
   every unread policy candidate (RP-28) and the owner `.github` lookup outcome
   (`owner_lookup`, RP-29), so it differs from earlier 0.3.0 candidate builds.
-  An owner lookup that fails other than with HTTP 404 is now a hiding limit,
+  An owner lookup that fails other than with an HTTP 404 on the repository
+  metadata (a later commit or tree 404 included) is now a hiding limit,
   so it is unknown rather than "absent". Linked local files carry their pinned
   blob id, and a known file without a valid blob id is a hiding limit. Only newly
   recorded review hashes are affected. The policy hash is not part of
