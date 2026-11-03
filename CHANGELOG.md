@@ -272,7 +272,10 @@ channel or runtime model provider is added.
   at the repository root, exceeds 4096 bytes or 40 hops, contains a NUL byte,
   is not valid UTF-8, cannot be read, or resolves outside
   `allowed_paths` or into `prohibited_paths` is a scope violation that names the
-  reason. A link to an allowed file still passes.
+  reason. A link to an allowed file still passes. A link that resolves to a
+  directory of the same snapshot is also a violation when any prohibited
+  pattern can match a path beneath it, so `docs/l -> private` no longer passes
+  under `docs/*` with `docs/private/*` prohibited (FR2-02).
 - Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and
   numbers that overflow to infinity (`1e999`) as `invalid_json` in GitHub
   responses, contracts, evidence and host context. A lone surrogate used to
@@ -396,6 +399,8 @@ channel or runtime model provider is added.
 - Schema 0.1 changes, all fail-closed or message-only:
   - `verify` rejects evidence whose implementation adds a symlink that resolves
     outside the contract scope (G-08); a symlink to an in-scope file still passes.
+    A symlink to a directory beneath which a prohibited pattern can match is
+    rejected too (FR2-02).
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an
     evidence error instead of reading part of the checkout.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.

@@ -1130,9 +1130,10 @@ class BadLink(Exception):
 
 
 class LinkView:
-    """Symlinks of one snapshot (a commit, the index or the worktree) as {path: target}, read without following."""
+    """Symlinks of one snapshot (a commit, the index or the worktree) as {path: target}, read without following,
+    and the snapshot's directories."""
     def __init__(self, directory, revision=None, index=False, worktree=False):
-        self.directory, self.worktree, self.shas, self.targets = directory, worktree, {}, {}
+        self.directory, self.worktree, self.shas, self.targets, self.directories = directory, worktree, {}, {}, set()
         if worktree:
             return
         listing = (git_read(directory, 'ls-files', '--stage', '-z') if index else
@@ -1141,6 +1142,18 @@ class LinkView:
             meta, _, path = entry.partition('\t')
             if meta.startswith('120000 '):
                 self.shas[path] = meta.split()[1 if index else 2]
+            parts = path.split('/')[:-1]
+            self.directories.update('/'.join(parts[:n]) for n in range(1, len(parts) + 1))
+
+    def is_directory(self, path):
+        if not self.worktree:
+            return path in self.directories
+        try:  # every component was resolved already, so lstat never passes through a link
+            return stat.S_ISDIR(os.lstat(Path(self.directory, path)).st_mode)
+        except (FileNotFoundError, NotADirectoryError):
+            return False
+        except OSError:
+            raise BadLink('symlink target could not be read: ' + safe_text(path, 500)) from None
 
     def target(self, path):
         if path not in self.targets:
@@ -1222,7 +1235,38 @@ def _resolve_link(scope, path, view):
     if not resolved:
         return 'symlink to the repository root'
     rules = scope_violations(scope, [resolved])
-    return f'symlink to {safe_text(resolved, 500)}: {rules[0]["rule"]}' if rules else None
+    if rules:
+        return f'symlink to {safe_text(resolved, 500)}: {rules[0]["rule"]}'
+    if view.is_directory(resolved):  # the link exposes everything beneath it (FR2-02)
+        reach = [pattern for pattern in scope['prohibited_paths'] if can_match_beneath(pattern, resolved)]
+        if reach:
+            return (f'symlink to {safe_text(resolved, 500)}/: prohibited_paths: {safe_text(reach[0], 500)} '
+                    'can match beneath it')
+    return None
+
+
+def _glob_tokens(pattern):
+    """fnmatch's tokens: a bracket class up to its closing ']', read as fnmatch.translate reads it, else one
+    character (an unclosed '[' is a literal)."""
+    tokens, i = [], 0
+    while i < len(pattern):
+        j = i + 1
+        if pattern[i] == '[':
+            j += pattern[j:j + 1] == '!'
+            j += pattern[j:j + 1] == ']'
+            while j < len(pattern) and pattern[j] != ']':
+                j += 1
+            j = j + 1 if j < len(pattern) else i + 1
+        tokens.append(pattern[i:j])
+        i = j
+    return tokens
+
+
+def can_match_beneath(pattern, directory):
+    """Whether fnmatchcase(directory + '/' + rest, pattern) can hold for some rest: some token prefix of the pattern
+    matches directory + '/' exactly. Conservative: the remaining tokens are assumed satisfiable."""
+    tokens = _glob_tokens(pattern)
+    return any(fnmatch.fnmatchcase(directory + '/', ''.join(tokens[:n])) for n in range(len(tokens) + 1))
 
 
 def link_violations(scope, paths, view):
