@@ -16,7 +16,11 @@ NOTICE = ('An invitation is not issue approval or execution/publication authorit
 
 
 def parse_manifest(data: bytes) -> dict:
-    """Validate bounded exact source bytes, preserving omitted optional fields."""
+    """Validate exact source bytes; blankness uses the schema's explicit Unicode White_Space set.
+
+    C0/DEL are forbidden, so the bundled validator's extra Python strip check
+    agrees on allowed strings. U+0085 is whitespace; U+FEFF is nonblank.
+    """
     try:
         if not isinstance(data, bytes) or len(data) > MAX_BYTES:
             raise ValueError
@@ -41,7 +45,10 @@ def _sha(value):
 
 
 def read_jar(repository: str, client=None, *, commit: str | None = None, metadata: dict | None = None) -> dict:
-    """At most four single-attempt GETs; absence requires a complete pinned tree.
+    """At most four gh api invocations without application retries; require a complete pinned tree.
+
+    gh may follow internal HTTP redirects; this is not a raw HTTP request cap.
+    Canonical identity is checked; application-returned URLs are never followed.
 
     Explicit commit/metadata are for historical reads and pinned internal reuse.
     Direct reads never resolve an issue tracker or inherit an owner's declaration.

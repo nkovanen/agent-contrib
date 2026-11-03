@@ -118,7 +118,12 @@ def prevalidate(args):
         core.parse_issue(args.reference)
         if args.command == 'feedback' and args.expected_head is not None and not remote.SHA.fullmatch(args.expected_head):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
-    elif args.command in ('audit', 'jar'):
+    elif args.command == 'jar':
+        try:
+            core.parse_repository(args.repository)
+        except core.ProtocolError as exc:
+            raise core.ProtocolError('usage', str(exc)) from None
+    elif args.command == 'audit':
         core.parse_repository(args.repository)
     elif args.command == 'authorization-request':
         args.task = core.read_json(args.contract)  # read once; dispatch builds from this object

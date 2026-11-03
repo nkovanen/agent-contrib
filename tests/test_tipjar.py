@@ -4,6 +4,8 @@ import copy
 import hashlib
 import json
 import pathlib
+import shutil
+import subprocess
 import tempfile
 import types
 import unittest
@@ -53,6 +55,44 @@ class ManifestTests(unittest.TestCase):
         with patch('subprocess.run', side_effect=AssertionError('manifest executed')):
             self.assertEqual(tipjar.parse_manifest(json.dumps(value).encode()), value)
         self.assertEqual(tipjar.parse_manifest(RAW + b' ' * (16384 - len(RAW)))['status'], 'welcome')
+
+    def test_manifest_schema_matches_independent_ecmascript_validator(self):
+        node = shutil.which('node')
+        if node is None:
+            self.skipTest('Optional independent parity check requires Node and Ajv 2020')
+        probe = subprocess.run([node, '-e', 'require("ajv/dist/2020")'], capture_output=True)
+        if probe.returncode:
+            self.skipTest('Optional independent parity check requires Ajv 2020')
+        schema = json.loads(pathlib.Path(tipjar.__file__).with_name('tipjar.schema.json').read_text('utf-8'))
+        # Unicode White_Space, explicitly fixed by the manifest contract, not either runtime's shorthand.
+        whitespace = [*range(9, 14), 0x20, 0x85, 0xa0, 0x1680, *range(0x2000, 0x200b),
+                      0x2028, 0x2029, 0x202f, 0x205f, 0x3000]
+        texts = [('', False), (' ', False), ('\ufeff', True), ('\u0085', False),
+                 (' \u0085x ', True), ('😀' * 500, True), ('😀' * 501, False),
+                 ('\x1cx', False), ('\x7fx', False)]
+        texts += [(chr(point), False) for point in whitespace]
+        texts += [(chr(point) + 'x', point >= 32) for point in whitespace]
+        texts += [(chr(point) + '\ufeff', point >= 32) for point in whitespace]
+        cases = [(dict(schema_version='0.1', status='welcome', **{field: [text]}), expected)
+                 for field in ('wanted', 'boundaries') for text, expected in texts]
+        script = """
+const fs = require('fs');
+const Ajv = require('ajv/dist/2020');
+const {schema, cases} = JSON.parse(fs.readFileSync(0, 'utf8'));
+const validate = new Ajv({strict: true}).compile(schema);
+process.stdout.write(JSON.stringify(cases.map(value => validate(value))));
+"""
+        result = subprocess.run([node, '-e', script], input=json.dumps({
+            'schema': schema, 'cases': [value for value, _ in cases]}), text=True,
+            capture_output=True, check=True, timeout=15)
+        for (value, expected), independent in zip(cases, json.loads(result.stdout), strict=True):
+            with self.subTest(value=value):
+                try:
+                    tipjar.parse_manifest(json.dumps(value).encode())
+                    parsed = True
+                except core.ProtocolError:
+                    parsed = False
+                self.assertEqual((parsed, independent), (expected, expected))
 
     def test_invalid_bytes_and_shapes_fail_closed(self):
         invalid = [b'null', b'[]', b'{}', bytes([255]), RAW + b' ' * (16385 - len(RAW)),
