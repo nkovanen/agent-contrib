@@ -110,6 +110,7 @@ def installed_check(source):
     scripts = Path(sys.executable).parent
     env = {**os.environ, "PATH": str(scripts)}
     console = scripts / ("agent-contrib.exe" if os.name == "nt" else "agent-contrib")
+    tipjar = scripts / ("tipjar.exe" if os.name == "nt" else "tipjar")
     def cli(*args, expected=0):
         return run([console, *args], cwd=Path.cwd(), env=env, expected=expected)
 
@@ -125,9 +126,15 @@ def installed_check(source):
     assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:1:verify"
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
 
+    # The additive alias must use the same workflow and fail-closed gates.
+    assert run([tipjar, "--version"], cwd=Path.cwd(), env=env).strip() == "0.3.0"
+    assert json.loads(run([tipjar, "instructions"], cwd=Path.cwd(), env=env)) == instructions
+    assert "COMMAND" in run([tipjar, "--help"], cwd=Path.cwd(), env=env)
+
     # Exercise real installed entry points, including small buffered JSON errors.
     for name, entrypoint in (
             ("console", [console]),
+            ("tipjar", [tipjar]),
             ("module", [sys.executable, "-I", "-m", "agent_contribute"])):
         for args in (("instructions",), ("unknown-command",)):
             reader, writer = os.pipe()
@@ -175,6 +182,12 @@ def installed_check(source):
     assert result["error"]["code"] == "file_error"
     assert exported.read_bytes() == b"Keep this user-owned file.\n"
 
+    alias_exported = Path.cwd() / "tipjar-SKILL.md"
+    alias_result = json.loads(run([tipjar, "skill", "--output", alias_exported],
+                                 cwd=Path.cwd(), env=env))
+    assert alias_exported.read_bytes() == skill
+    assert alias_result["sha256"] == hashlib.sha256(skill).hexdigest()
+
     contract = Path.cwd() / "unknown-schema.json"
     contract.write_text('{"schema_version": "999"}', encoding="utf-8")
     result = json.loads(cli("verify", contract, expected=1))
@@ -182,6 +195,8 @@ def installed_check(source):
                   "upstream_submission_ready", "fork_completion_ready"):
         assert result[field] is False, field
     assert "$.schema_version: wrong constant or version" in result["errors"]
+    assert json.loads(run([tipjar, "verify", contract], cwd=Path.cwd(), env=env,
+                          expected=1)) == result
     # A new-schema draft with no actual host mandate cannot become ready, even
     # when installed outside the source and no GitHub executable is available.
     new_task = Path.cwd() / "new-schema-invalid.json"

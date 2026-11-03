@@ -27,8 +27,8 @@ The protocol tests use fake GitHub responses and temporary Git repositories;
 they need Git but no GitHub authentication or network. Run them from this root.
 The build/install check downloads standard build tools, creates wheel and source
 archives, rebuilds from the source archive, and installs into temporary clean
-virtual environments outside the checkout. It checks console/module entry
-points, metadata, packaged resources, the Skill export, schema compatibility
+virtual environments outside the checkout. It checks both `agent-contrib` and
+`tipjar` console entry points and `python -m agent_contribute`, metadata, packaged resources, the Skill export, schema compatibility
 and refusal to overwrite. It needs network access to retrieve build tooling,
 not credentials. No Rust or LightCraft checkout is involved.
 
