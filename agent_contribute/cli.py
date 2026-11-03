@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, find, multi, outputs, ownership, policy,
                prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
@@ -118,6 +118,8 @@ def prevalidate(args):
         core.parse_issue(args.reference)
         if args.command == 'feedback' and args.expected_head is not None and not remote.SHA.fullmatch(args.expected_head):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
+    elif args.command == 'find':
+        find.validate_owner(args.owner)
     elif args.command == 'jar':
         try:
             core.parse_repository(args.repository)
@@ -198,6 +200,8 @@ def main(argv=None):
     sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
                               description='Pinned root invitation inspection only; grants no approval or authority.')
     sub.add_argument('repository', help='GitHub owner/repo to inspect directly, without parent tracker resolution')
+    sub = commands.add_parser('find', help='Find a bounded batch of public repository invitations; grants no authority')
+    sub.add_argument('--owner', help='Limit the fixed search to one GitHub user or organization login')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -272,7 +276,7 @@ def main(argv=None):
             for flag, given in (('--report-budget', args.report_budget), ('--cache', args.cache)):
                 if given:
                     raise core.ProtocolError('usage', flag + ' applies only to commands that read GitHub')
-        cache.configure(args.cache and args.command != 'jar')
+        cache.configure(args.cache and args.command not in ('jar', 'find'))
         if getattr(args, 'ai_policy', False):
             notice()
         prevalidate(args)
@@ -331,6 +335,9 @@ def main(argv=None):
         elif args.command == 'authorization-request':
             result = authrequest.build(args.task)
             code = 0 if result.get('ready_for_issuance') is True else 1
+        elif args.command == 'find':
+            result = find.find_jars(owner=args.owner)
+            code = 0 if result['complete'] else 1
         elif args.command == 'jar':
             result = tipjar.read_jar(args.repository)
             code = 0 if result['complete'] else 1

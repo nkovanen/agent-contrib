@@ -1,6 +1,7 @@
 """Bounded search identities and independently verified public invitations."""
 import copy
 import json
+import pathlib
 import unittest
 from unittest.mock import patch
 
@@ -122,10 +123,6 @@ class SearchTests(unittest.TestCase):
         c = Fake(search=page([hit(), hit()])); r = self.find(c)
         self.assertEqual(len(r['observations']), 1); self.assertEqual(len(c.calls), 6)
 
-
-if __name__ == '__main__':
-    unittest.main()
-
 class VerificationTests(unittest.TestCase):
     find = SearchTests.find
 
@@ -140,7 +137,6 @@ class VerificationTests(unittest.TestCase):
         self.assertNotEqual(r['observations'][0]['jar']['blob_sha'], 'c'*40)
 
     def test_bad_jar_and_tree_never_select(self):
-        from tests.test_tipjar import RAW
         fixtures = [responses(b'bad'), responses(b'{"schema_version":"999","status":"welcome"}'),
                     responses(entries=[{'path': '.tipjar.json', 'sha': 'd'*40, 'type': 'blob', 'mode': '120000'}])]
         for kind in ('truncated', 'hash', 'missing'):
@@ -189,11 +185,11 @@ class VerificationTests(unittest.TestCase):
 
 
 class TransportTests(unittest.TestCase):
-    def run_transport(self, callback, *, owner=None):
+    def run_transport(self, callback, *, owner=None, client=None):
         from agent_contribute.find import find_jars
         endpoints = []
         def run(argv, **kwargs):
-            self.assertEqual(argv[:7], ['gh', 'api', '--hostname', 'github.com', '--method', 'GET', argv[6]])
+            self.assertEqual(argv[:6], ['gh', 'api', '--hostname', 'github.com', '--method', 'GET'])
             self.assertEqual(kwargs['timeout'], 30); self.assertFalse(kwargs['shell'])
             endpoint = argv[-1]; endpoints.append(endpoint)
             value = callback(endpoint, len(endpoints))
@@ -202,7 +198,7 @@ class TransportTests(unittest.TestCase):
             kwargs['stdout'].write(json.dumps(value).encode())
             return type('Result', (), {'returncode': 0})()
         with patch('subprocess.run', side_effect=run), patch('time.sleep', side_effect=AssertionError('retry')):
-            result = find_jars(owner=owner)
+            result = find_jars(client, owner=owner)
         return result, endpoints
 
     @staticmethod
@@ -237,7 +233,6 @@ class TransportTests(unittest.TestCase):
     def test_uncached_library_reads_ignore_seeded_valid_and_forged_cache(self):
         import tempfile
         from agent_contribute import cache
-        from tests.test_tipjar import RAW
         search, data = self.batch()
         with tempfile.TemporaryDirectory() as directory:
             cache.configure(True, directory)
@@ -250,4 +245,62 @@ class TransportTests(unittest.TestCase):
                 self.assertFalse(r['complete']); self.assertEqual(sum('/contents/' in e for e in calls), 10)
                 self.assertEqual(r['requests'], {'search': 1, 'core': 40})
                 self.assertIs(cache.active(), store)
+                # Neither valid nor forged disk bytes may satisfy this command.
+                for path in pathlib.Path(directory).glob('blob-*'):
+                    path.write_bytes(b'forged welcome')
+                client = core.GitHub()
+                with patch.object(store, 'lookup', side_effect=AssertionError('cache consulted')):
+                    r, calls = self.run_transport(lambda e, _: search if e.startswith('search/code?') else data[e],
+                                                 client=client)
+                self.assertTrue(r['complete']); self.assertEqual(len(calls), 51)
+                self.assertTrue(client.use_cache)
             finally: cache.configure(False)
+
+class BoundaryReviewTests(unittest.TestCase):
+    find = SearchTests.find
+
+    def test_malformed_duplicate_identity_cannot_leave_a_selectable_sibling(self):
+        for change in ({'owner': {'id': False, 'login': 'acme'}}, {'id': True}, {'full_name': None}):
+            bad = hit(); bad['repository'].update(change)
+            c = Fake(search=page([hit(), bad]))
+            r = self.find(c)
+            self.assertFalse(r['complete'])
+            self.assertFalse(any(o['disposition'] == 'welcome' for o in r['observations']))
+            self.assertEqual(len(c.calls), 1)
+
+    def test_owner_login_is_ascii_identity_not_unicode_casefold_alias(self):
+        h = hit('s/project'); h['repository']['owner']['login'] = '\u017f'
+        c = Fake(search=page([h]))
+        r = self.find(c)
+        self.assertEqual(r['observations'][0]['disposition'], 'unknown')
+        self.assertIsNone(r['observations'][0]['repository']); self.assertEqual(len(c.calls), 1)
+
+    def test_failed_search_provenance_is_null_not_a_fabricated_empty_page(self):
+        r = self.find(Fake(search={}))
+        for field in ('total_count', 'incomplete_results', 'returned_count', 'truncated', 'short_page'):
+            self.assertIsNone(r['search'][field])
+
+    def test_unusable_branch_refs_never_reach_reader(self):
+        for branch in ('a b', 'a..b', 'a.lock', '.hidden', 'a/', 'a//b', '@', 'a@{b', 'a?b', 'a\\b'):
+            c = Fake(); c.data['repos/acme/project']['default_branch'] = branch
+            r = self.find(c)
+            self.assertEqual(r['observations'][0]['disposition'], 'unknown')
+            self.assertEqual(len(c.calls), 2)
+
+    def test_returned_urls_and_parent_never_become_endpoints(self):
+        h = hit(); h.update(url='https://evil.invalid/run', html_url='https://evil.invalid/',
+                            text_matches=[{'fragment': 'welcome'}])
+        h['repository'].update(url='https://evil.invalid/repo')
+        c = Fake(search=page([h])); r = self.find(c)
+        self.assertEqual(r['observations'][0]['disposition'], 'welcome')
+        self.assertTrue(all(e.startswith(('search/code?', 'repos/acme/project')) for e in c.calls))
+        self.assertNotIn('evil.invalid', json.dumps(r))
+
+    def test_other_verified_findings_survive_unknowns_in_partial_batch(self):
+        r = self.find(Fake(search=page([hit(), None])))
+        self.assertFalse(r['complete'])
+        self.assertEqual([o['disposition'] for o in r['observations']], ['welcome', 'unknown'])
+
+
+if __name__ == '__main__':
+    unittest.main()

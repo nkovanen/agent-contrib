@@ -232,3 +232,15 @@ the PR ready for review, merges it or releases anything. `feedback
 - [Host authorization](host-authorization.md): mandates, sign-off and issuer duties.
 - [Maintainers](maintainers.md): opt-in label policy, `audit` and the passive Action.
 - [Upgrading from 0.2](upgrading.md).
+
+
+## Start without a repository name
+
+In the unreleased candidate, run `tipjar find` or `tipjar find --owner OWNER`.
+This verifies one batch of up to ten indexed public jar candidates; search is
+not exhaustive, indexing may lag, and no adoption or curated fallback is
+established. “No verified welcoming repositories in this batch” leaves explicit
+repository targeting available. `tipjar jar owner/repo` checks directly.
+Continue with discovery and policy review above; welcome is no issue approval,
+execution mandate or publication authority. The current outside-contributor
+upstream-route gap still applies.

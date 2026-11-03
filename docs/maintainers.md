@@ -156,3 +156,22 @@ must be reviewed with the existing source-linked requirements ledger. Links and
 commands in text remain data and are never automatically followed or executed.
 See [jar inspection](cli.md#jar-inspection-candidate-inspection-only) for states,
 provenance, fresh-read limits and current no-jar route limitations.
+
+
+### Let the bounded finder observe your jar
+
+Add the supported `.tipjar.json` to the repository root on its default branch,
+alongside ordinary contribution policies. A minimal invitation is:
+
+```json
+{"schema_version":"0.1","status":"welcome"}
+```
+
+Optionally include `wanted` and `boundaries` arrays as described above. Verify
+with `tipjar jar owner/repo`; direct inspection does not wait for indexing.
+`tipjar find --owner owner` verifies at most ten indexed hits from public active
+repositories. It does not register a project or promise index coverage.
+Indexing may lag, especially for forks. No adoption or external invitation is
+established by this implementation. Older clients do not enforce jars, so state
+refusals in ordinary contribution docs too. An invitation never waives
+contradictory policy or grants execution/publication authority.

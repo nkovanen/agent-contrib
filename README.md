@@ -9,13 +9,14 @@ project's rules and open pull requests, and turns the chosen issue into a review
 task contract. Your agent implements and publishes only after a human authorizes
 each step; the CLI itself never writes to GitHub.
 
-The candidate can inspect a repository's root invitation with
-`tipjar jar owner/repo`. This slice is **inspection only**: discover, prepare and
-verify do not yet read or enforce jars; welcome-only discovery is planned.
-You can explicitly target a repository without a jar through existing discovery
-and pending preparation. An absent jar is undeclared and grants no approval.
-Explicit repository bans remain binding. Source approval, local execution
-permission and publication authority remain separate.
+`tipjar find` verifies one batch of at most ten indexed public jar candidates.
+It is not an exhaustive directory. No adoption is established and there is no
+curated fallback list. Direct `tipjar jar owner/repo` reads without indexing.
+Normal discover/prepare/verify do not yet enforce jars; supplied-list
+welcome-only discovery is separate work. Explicit targeting remains available
+without a jar for assessment and pending preparation. Absence grants no approval;
+repository bans remain binding. Source approval, local execution permission and
+publication authority remain separate.
 
 **Versions.** v0.2.0 is the published release. This branch is the **v0.3.0
 candidate (unreleased)**: no v0.3.0 tag exists yet. Coming from 0.2? Read
@@ -97,6 +98,23 @@ total observed candidates, shown/omitted counts and full overlap/exclusion count
 display truncation never means a complete scan. With several repositories,
 `--limit` is one global budget. Omitting it preserves the existing output.
 
+## Find invitations
+
+```sh
+tipjar find
+tipjar find --owner acme
+tipjar --format text find --owner acme
+tipjar jar acme/project
+```
+
+Only `welcome` observations are selectable, subject to policy review. Search
+indexing can lag or omit repositories, especially forks, and repeated calls can
+return the same batch. An empty result says “No verified welcoming repositories
+in this batch”; it does not establish that none exist. Continue with `discover`,
+`inspect` and `prepare` for assessment. A jar alone does not supply the missing
+arbitrary outside-contributor upstream authorization route. Find proposes,
+executes and publishes nothing. See [find limits](docs/cli.md#find).
+
 ## Approval and authorization
 
 An ordinary issue is a **candidate**. Labels such as `help wanted` do not permit
@@ -143,6 +161,7 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 | Command | Purpose |
 | --- | --- |
 | `jar` | Inspect one pinned root invitation; inspection only, no authority |
+| `find` | Verify one public invitation batch (`--owner OWNER` optional) |
 | `discover` | Rank issues of one repository, or 2–20 repositories |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs |
 | `prepare` | Write a draft contract (schema 0.1, or 0.2 when selected) |

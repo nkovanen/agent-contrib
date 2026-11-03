@@ -11,6 +11,13 @@ channel or runtime model provider is added.
 
 ### Highlights
 
+- Add `tipjar find [--owner OWNER]`: one ten-hit public code-search batch,
+  strict identities, pinned jar verification and final welcome eligibility.
+  Reports partial coverage with fixed diagnostics and private-data suppression;
+  no adoption, execution or publication authority is implied. Reads are uncached
+  and bounded to 51 command gh invocations (at most 57 with budget snapshots),
+  not raw HTTP requests. Add the closed `find-jars-report/1` output schema.
+
 - Inspection-only `jar owner/repo` reads a strict, pinned root `.tipjar.json`
   invitation and exports `schema jar` (output version stays 1). Existing command
   shapes and task/evidence schemas are unchanged. Normal discover/prepare/verify
@@ -53,7 +60,7 @@ channel or runtime model provider is added.
 - Tipjar identity for gifting useful agent work, with a `tipjar` console alias
   for the existing CLI. `agent-contrib`, the distribution and Python module,
   canonical Skill, repository URLs and output identifiers remain compatible.
-  Discoverable repository jars are planned; this alias adds no protocol or
+  The alias itself adds no protocol or
   authority.
 
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,

@@ -370,6 +370,29 @@ def _jar(result):
     return out + _list('Errors', result.get('errors', []))
 
 
+def _find(result):
+    out = [f'Bounded batch complete: {_flag(result["complete"])}',
+           'Coverage: not exhaustive; one page of at most ten indexed hits. Indexing may lag.',
+           'Find reads are uncached; core budget does not measure the separate search quota.']
+    welcomed = [o for o in result['observations'] if o['disposition'] == 'welcome']
+    if not welcomed:
+        out.append('No verified welcoming repositories in this batch')
+    for obs in result['observations']:
+        out.append(f'{line(obs["repository"] or "[identity withheld]")}: '
+                   f'{line(obs["disposition"])} ({line(obs["reason"])})')
+        if obs['disposition'] == 'welcome':
+            out += ['  https://github.com/' + line(obs['repository']),
+                    '  Pinned commit: ' + line(obs['jar']['commit']),
+                    '  Verified at: ' + line(obs['verified_at'])]
+            for key in ('wanted', 'boundaries'):
+                out += _list(key.capitalize() + ' (untrusted)', obs['jar']['manifest'].get(key, []))
+    if result['search']['truncated']:
+        out.append('Search truncated: only this first batch was observed; no backfill or rotation.')
+    if not result['complete']:
+        out.append('Incomplete batch: unknown observations or search incompleteness; verified findings retained.')
+    return out + _list('Errors', result['errors']) + [line(result['notice'])]
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
@@ -382,7 +405,7 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command, 'jar': _jar}.get(command)
+            'ownership': _ownership_command, 'jar': _jar, 'find': _find}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:
