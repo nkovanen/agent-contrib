@@ -21,6 +21,7 @@ import venv
 
 RESOURCE_PATHS = (
     "task.schema.json",
+    "receipt.schema.json",
     "evidence.schema.json",
     "schemas/0.2/task.schema.json",
     "schemas/0.2/evidence.schema.json",
@@ -33,6 +34,8 @@ RESOURCE_PATHS = (
     "schemas/output/1/error.schema.json",
     "schemas/output/1/evidence-init.schema.json",
     "schemas/output/1/feedback.schema.json",
+    "schemas/output/1/receipt.schema.json",
+    "schemas/output/1/impact.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
     "schemas/output/1/lint.schema.json",
@@ -130,6 +133,28 @@ def installed_check(source):
     assert run([tipjar, "--version"], cwd=Path.cwd(), env=env).strip() == "0.3.0"
     assert json.loads(run([tipjar, "instructions"], cwd=Path.cwd(), env=env)) == instructions
     assert "COMMAND" in run([tipjar, "--help"], cwd=Path.cwd(), env=env)
+
+    # Exercise the installed receipt parser offline with explicit synthetic public metadata.
+    from agent_contribute import receipts
+    class ReceiptFixture:
+        def request(self, endpoint):
+            repo = {"id": 101, "full_name": "acme/photos", "private": False, "visibility": "public"}
+            if endpoint == "repos/acme/photos":
+                return repo
+            assert endpoint == "repos/acme/photos/pulls/30"
+            return {"id": 700, "number": 30, "html_url": "https://github.com/acme/photos/pull/30",
+                    "state": "open", "draft": True, "merged": False, "merged_at": None,
+                    "closed_at": None, "merge_commit_sha": None, "merged_by": None,
+                    "user": {"id": 7, "login": "builder", "type": "User"},
+                    "head": {"sha": "a" * 40, "ref": "agent/work"},
+                    "base": {"sha": "b" * 40, "ref": "main", "repo": repo}}
+    recorded = Path.cwd() / "synthetic-receipt.json"
+    recorded.write_text(json.dumps(receipts.observe("acme/photos#30", ReceiptFixture())), encoding="utf-8")
+    impact = json.loads(run([tipjar, "impact", recorded, recorded], cwd=Path.cwd(), env=env))
+    assert impact["unique_prs"] == 1 and impact["counts"] == {"open": 1, "closed": 0, "merged": 0}
+    assert impact["trust"] == "self-reported recorded observations"
+    assert json.loads(cli("schema", "receipt"))["$id"] == "urn:agent-contrib:output:1:receipt"
+    assert json.loads(cli("schema", "impact"))["$id"] == "urn:agent-contrib:output:1:impact"
 
     # Exercise real installed entry points, including small buffered JSON errors.
     for name, entrypoint in (

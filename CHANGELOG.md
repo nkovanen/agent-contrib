@@ -29,6 +29,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `receipt` saves a versioned public PR observation through bounded GETs;
+  `impact` summarizes up to 100 bounded local receipts without duplicate PR
+  inflation. Editable snapshots are self-reported recorded observations, never
+  authenticated contributions, proof that tests ran, or authority.
+
 - Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
   isolated Python child that is terminated and reaped on timeout. Strict UTF-8
   JSON, EOF, the 8 MiB bound and five-second deadline remain required. Narrow

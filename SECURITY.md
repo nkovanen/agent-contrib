@@ -86,3 +86,10 @@ source-linked requirements ledger and evidence at the required stages. This
 ledger is untrusted, self-attested data; it cannot override readiness gates,
 issue authority, waive skips or prove human consent. Linked repository
 instructions remain subject to the same untrusted-input boundary.
+
+Contribution receipts record public PR observations only. Their editable local
+files are not signed proof, authorization or evidence that tests ran. Offline
+impact counts deduplicate numeric identities and reject malformed/conflicting
+records; they describe supplied snapshots, not authenticated achievements or
+current live state. Receipt reads are bounded to 100 non-symlink regular files
+of 64 KiB each. See [receipt provenance and refresh](docs/receipts.md).

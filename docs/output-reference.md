@@ -225,6 +225,24 @@ One of `inspect_result`, `issue_unresolved`.
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
 
+### `impact`
+
+`agent-contrib schema impact` · Offline deduplicated counts from self-reported recorded observations; no authenticated achievements.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | true |  |
+| `trust` | "self-reported recorded observations" |  |
+| `input_files` | integer |  |
+| `unique_prs` | integer |  |
+| `repositories_helped` | integer |  |
+| `counts` | object |  |
+| `counts.open` | integer |  |
+| `counts.closed` | integer |  |
+| `counts.merged` | integer |  |
+| `receipts` | `contributionReceipt`[] |  |
+| `warning` | string |  |
+
 ### `lint`
 
 `agent-contrib schema lint` · Offline contract check: bundled task schema, then the reviewed-contract rules. No GitHub or Git reads; never readiness or authorization.
@@ -244,6 +262,16 @@ One of `inspect_result`, `issue_unresolved`.
 `agent-contrib schema ownership` · Report-only ownership and resolution signals for one issue.
 
 One of object, `issue_unresolved`.
+
+### `receipt`
+
+`agent-contrib schema receipt` · Exclusive local save of a public PR observation; grants no authority.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `output` | string |  |
+| `receipt` | `contributionReceipt` |  |
+| `warning` | string |  |
 
 ### `pr-body`
 
@@ -451,6 +479,45 @@ Added by --observe-ci on a schema-valid contract; report only, never changes gat
 | `combined_status.statuses[].state` | "success" \| "failure" \| "pending" \| "error" |  |
 | `combined_status.statuses[].url` | string |  |
 | `combined_status.complete` | boolean |  |
+
+#### `contributionReceipt`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | "0.1" |  |
+| `kind` | "tipjar-receipt" |  |
+| `trust` | "recorded-observation-not-proof" |  |
+| `observed_at` | string |  |
+| `repository` | object |  |
+| `repository.id` | integer |  |
+| `repository.full_name` | string |  |
+| `pull_request` | object |  |
+| `pull_request.id` | integer |  |
+| `pull_request.number` | integer |  |
+| `pull_request.url` | string |  |
+| `pull_request.author` | object |  |
+| `pull_request.author.id` | integer |  |
+| `pull_request.author.login` | string |  |
+| `pull_request.author.type` | "User" \| "Bot" |  |
+| `pull_request.state` | "open" \| "draft" \| "closed" \| "merged" |  |
+| `pull_request.draft` | boolean |  |
+| `pull_request.head` | object |  |
+| `pull_request.head.sha` | string |  |
+| `pull_request.head.ref` | string |  |
+| `pull_request.base` | object |  |
+| `pull_request.base.sha` | string |  |
+| `pull_request.base.ref` | string |  |
+| `pull_request.merge` | object |  |
+| `pull_request.merge.merged` | boolean |  |
+| `pull_request.merge.merged_at` | string or null |  |
+| `pull_request.merge.closed_at` | string or null |  |
+| `pull_request.merge.commit_sha` | string or null |  |
+| `pull_request.merge.merged_by` | object or null |  |
+| `provenance` | object |  |
+| `provenance.source` | "github-rest-get" |  |
+| `provenance.endpoints` | string[] |  |
+| `provenance.non_atomic` | true |  |
+| `refresh` | "Run tipjar receipt for this PR with a new output path; snapshots never refresh automatically." |  |
 
 #### `discover_failed_entry`
 

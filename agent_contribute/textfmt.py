@@ -358,6 +358,23 @@ def _vocabulary(report):
             'project_vocabulary']
 
 
+def _receipt(result):
+    receipt = result['receipt']
+    pr = receipt['pull_request']
+    return [f"Receipt saved: {line(result['output'])}",
+            f"PR: {line(pr['url'])} ({line(pr['state'])})",
+            f"Observed: {line(receipt['observed_at'])}", line(result['warning'], 1000),
+            line(receipt['refresh'])]
+
+
+def _impact(result):
+    counts = result['counts']
+    return [f"Impact: {result['trust']}",
+            f"Unique PRs: {result['unique_prs']}; repositories helped: {result['repositories_helped']}",
+            f"Open: {counts['open']} (includes drafts); closed: {counts['closed']}; merged: {counts['merged']}",
+            line(result['warning'], 1000)]
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
@@ -370,7 +387,7 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command}.get(command)
+            'ownership': _ownership_command, 'receipt': _receipt, 'impact': _impact}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:

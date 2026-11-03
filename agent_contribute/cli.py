@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
-               prbody, remote, signals, signatures, textfmt, workspace, __version__)
+               prbody, receipts, remote, signals, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -49,7 +49,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'impact')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -114,7 +114,7 @@ def prevalidate(args):
         if args.repo_dir is not None and len(args.names) != 1:
             raise core.ProtocolError('usage', '--repo-dir with discover supports one repository')
         core.parse_repository(args.names[0]) if len(args.names) == 1 else multi.validate(args.names)
-    elif args.command in ('inspect', 'prepare', 'ownership', 'feedback'):
+    elif args.command in ('inspect', 'prepare', 'ownership', 'feedback', 'receipt'):
         core.parse_issue(args.reference)
         if args.command == 'feedback' and args.expected_head is not None and not remote.SHA.fullmatch(args.expected_head):
             raise core.ProtocolError('invalid_head', 'Expected head must be a full 40-character commit SHA')
@@ -190,6 +190,11 @@ def main(argv=None):
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
+    sub = commands.add_parser('receipt', help='Save a public PR observation; never proof or permission')
+    sub.add_argument('reference', help='Public GitHub owner/repo#PR')
+    sub.add_argument('--output', required=True, help='New receipt file; never overwritten')
+    sub = commands.add_parser('impact', help='Offline impact from editable recorded PR observations')
+    sub.add_argument('files', nargs='+', help='1-100 receipt files, at most 64 KiB each')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -296,6 +301,14 @@ def main(argv=None):
             create_new(args.output, adapter, 'adapter')
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
+            code = 0
+        elif args.command == 'receipt':
+            receipt = receipts.observe(args.reference)
+            write_new_json(args.output, receipt)
+            result = {'output': str(args.output), 'receipt': receipt, 'warning': receipts.NOTICE}
+            code = 0
+        elif args.command == 'impact':
+            result = receipts.impact(args.files)
             code = 0
         elif args.command == 'lint':
             result = core.lint(core.read_json(args.contract))

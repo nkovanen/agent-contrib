@@ -63,6 +63,8 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 | `scope-check` | Offline check of local changes against the contract scope | No | 0 no violation; 1 violation or error |
 | `evidence init` | Unfilled evidence skeleton from observed Git facts | No | 0 file written; 1 error |
 | `pr-body` | Markdown PR description from the contract, evidence and a fresh `verify` | Yes | 0 file written; 1 error |
+| `receipt` | Save a public PR observation to a new file | Yes | 0 written; 1 invalid/incomplete read or write error |
+| `impact` | Summarize editable recorded observations, deduplicated by numeric identity | No | 0 valid summary; 1 invalid/conflicting input |
 | `feedback` | Reviews, comments and exact-head checks of a published PR | Yes | 0 complete; 1 incomplete |
 | `ownership` | Report-only claims, linked PRs and possible prior fixes for one issue | Yes | 0 complete; 1 incomplete |
 | `drift` | What changed since the contract was prepared | Yes | 0 complete and not drifted; 1 drifted or incomplete |
@@ -79,6 +81,8 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 | `agent-contrib discover owner/a owner/b ... [--repositories-file FILE]` | Two to 20 repositories in one run, each with its own result, plus a merged candidate order |
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
 | `agent-contrib discover owner/repo --responsiveness` | One extra read of recently closed PRs, reported as `repository_signals.responsiveness`; issues and ordering unchanged |
+| `agent-contrib receipt owner/repo#123 --output receipt.json` | New schema 0.1 public PR observation; never overwrites |
+| `agent-contrib impact receipt.json [FILE...]` | Offline counts from at most 100 bounded local receipts |
 | `agent-contrib audit owner/repo [--print-policy]` | Read-only maintainer report: policy validity, labels, instruction coverage, issue-quality and overlap counts, non-binding suggestions |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
 | `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft with a `pending` `ai-policy-review` prerequisite; an existing output file is never overwritten |
@@ -1046,6 +1050,27 @@ Any failed, partial or malformed read makes that part, and the observation,
 `complete: false` with fixed error strings. Contract-required verified heads and
 signed evidence attestations (the rest of #18) are not implemented.
 
+### Contribution receipts and impact
+
+```sh
+tipjar receipt 'owner/repo#123' --output receipt.json
+tipjar --format text impact receipt.json later-receipt.json
+```
+
+`receipt` exclusively saves a schema 0.1 public PR observation from two fixed
+GitHub GETs (repository metadata and PR detail). Exact canonical URL and numeric
+repository/PR identities, author, head/base, state and merge facts must be
+complete and consistent. It refuses private repositories and never overwrites.
+
+`impact` is offline: 1–100 regular non-symlink files, at most 64 KiB each. It
+rejects unknown schemas, duplicate JSON keys, malformed records and conflicting
+identities. The latest valid timestamp per numeric identity wins, regardless of
+file order; equal-time conflicting snapshots reject. Drafts count as open;
+closed means unmerged. Output counts unique PRs and repositories represented and
+lists selected observations. Editable local data is labeled self-reported
+recorded observations, never signed proof, authenticated contributions, tests,
+quality or permission. See [receipt limits and refresh](receipts.md).
+
 ### Output schemas
 
 Every command's JSON output has a packaged JSON Schema (draft 2020-12 subset).
@@ -1212,7 +1237,7 @@ option before the subcommand.
 
 #### Global options on offline commands
 
-`instructions`, `schema`, `skill`, `lint`, `scope-check` and `evidence init`
+`instructions`, `schema`, `skill`, `lint`, `scope-check`, `evidence init` and `impact`
 never read GitHub. On them `--report-budget` and `--cache` are both usage errors
 (exit 2, "`--cache` applies only to commands that read GitHub", and likewise for
 `--report-budget`), checked before any file is read; `--min-remaining` already
