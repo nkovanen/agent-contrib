@@ -9,6 +9,24 @@ every 0.1 behaviour change, including fail-closed hardening and message
 changes, is listed under "Compatibility notes". No GitHub write API, merge, release
 channel or runtime model provider is added.
 
+### Highlights
+
+- Schema 0.2: one candidate issue in a repository you own or maintain, with a
+  host-issued mandate and separate `implementation`, `draft` and `completion`
+  gates; `authorization-request` prepares the unsigned request.
+- Host-context 0.2: reviewed overlap dispositions and one recognized
+  draft-update round.
+- A default-on repository policy report, a mandatory policy review recorded as
+  `ai-policy-review`, and `drift --policy-sha256`.
+- New helpers: `lint`, `scope-check`, `evidence init`, `drift`, `pr-body`,
+  `feedback`, `audit`, `ownership` and `schema`.
+- Report-only ranking aids, `--format text`, versioned output JSON Schemas,
+  `--report-budget` and an opt-in, blob-verified `--cache`.
+- Opt-in required CI checks for completion; a report-only maintainer Action.
+- Hardened Git reads: checkout config, attributes, index flags and hidden files
+  can no longer hide edits or run programs. See "Compatibility notes" and
+  [upgrading](docs/upgrading.md).
+
 ### Added
 
 - `drift task.json --policy-sha256 HASH` (N1, dogfood 4): re-reads the
