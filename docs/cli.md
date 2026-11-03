@@ -1287,9 +1287,10 @@ Policy inventories use format 3 and include a reserved `tipjar` entry with full
 validated wanted/boundaries and pinned declaration state/digest, independent of
 prose-file limits. Ordinary source and owner prose remain binding; unresolved
 links and refusals cannot be waived by a welcome. Historical inventory 1/2 hashes
-remain recognizable in drift reports, but do not attest jar review. All jar reads
-are fresh single-attempt GETs even with `--cache`; policy reads retain their own
-existing bounded budget in addition to jar reads.
+remain recognizable in drift reports, but do not attest jar review. Standalone `jar` ignores `--cache`. Integrated jar reads use
+single-attempt requests and live tree checks; an opt-in cached content response
+is accepted only after its bytes match that pinned tree blob. Policy reads retain
+their own existing bounded budget in addition to jar reads.
 
 A repository without a jar is still manually targetable for assessment:
 
