@@ -162,8 +162,10 @@ and 2 for usage errors. Details: [command reference](docs/cli.md).
   evidence base. Evidence is self-reported; hashes prove neither consent nor execution.
 - A draft update is recognized only after one host-authorized fast-forward push;
   pre-push readiness, force-push adoption and reopening are unsupported.
-- Linux with Python 3.10–3.14 is tested; Windows host-context input is
-  unsupported and macOS is untested. There is no PyPI release.
+- Full regression coverage is Linux with Python 3.10–3.14. Windows/macOS CI
+  covers bounded host-context stdin and installed offline CLI smoke checks;
+  it does not validate the full Git, cache or evidence workflows there.
+  There is no PyPI release.
 
 [Product map](docs/product-map.md) (shipped and planned) ·
 [architecture](docs/architecture.md) (how it is built).

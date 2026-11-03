@@ -572,7 +572,10 @@ base branch. It refuses resolved fork targets. No authorization is generated.
 
 After the actual human/host has issued a task-bound record, it can supply it on
 stdin using `--host-context-stdin`. The input is strict UTF-8 JSON, at most 8 MiB,
-with a five-second read timeout. Terminal prompting, implicit files/environment
+with a five-second read timeout including reader startup. The pipe writer must
+close stdin (EOF), even after a complete JSON value. A fixed isolated Python
+child performs the bounded binary read; the parent terminates and reaps it on
+timeout. Terminal prompting, implicit files/environment
 and a host-context filename option are intentionally absent. The transport does
 not authenticate consent. Follow [host authorization](host-authorization.md).
 
