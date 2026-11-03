@@ -522,7 +522,8 @@ def inspect_from_snapshot(snapshot, issue):
 
 
 def inspect_issue(reference, client=None, *, pr_ids=None):
-    """pr_ids, when a dict, receives {number: numeric ID or None} for every open source PR the scan read."""
+    """pr_ids, when a dict, receives {number: numeric ID or None} for every open source PR the scan read; a number
+    the scan repeated maps to None, so conflicting identities never resolve by order (FR1-05)."""
     repository, number = parse_issue(reference)
     client = client or GitHub()
     context, meta = resolve_repository(repository, client)
@@ -533,7 +534,10 @@ def inspect_issue(reference, client=None, *, pr_ids=None):
         source = context['issue_source_repository']
         snapshot = repository_snapshot(source, client, meta)
         if pr_ids is not None:
-            pr_ids.update({entry['number']: entry['id'] for entry in snapshot['pr_index']})
+            seen = set()
+            for entry in snapshot['pr_index']:
+                pr_ids[entry['number']] = None if entry['number'] in seen else entry['id']
+                seen.add(entry['number'])
         issue = issue_data(client.request(f'repos/{source}/issues/{number}'), number)
         result = inspect_from_snapshot(snapshot, issue)
         if source.casefold() != repository.casefold():
@@ -1091,9 +1095,11 @@ _COMPARE_SHAPES = {  # status: (ahead_by > 0, behind_by > 0, merge base); GitHub
 
 def compare_relation(client, repository, base, head):
     """The status of compare/{base}...{head}, accepted only when the response proves it (FR1-01): the echoed base
-    commit, a merge base consistent with the status, and non-negative counters that agree with it."""
+    commit, a merge base consistent with the status, and non-negative counters that agree with it. Equal commits
+    are identical and nothing else is (FR1-04); a status that is not a string is malformed (FR1-06)."""
     data = client.request(f'repos/{repository}/compare/{base}...{head}')
-    shape = _COMPARE_SHAPES.get(data.get('status')) if isinstance(data, dict) else None
+    status = data.get('status') if isinstance(data, dict) else None
+    shape = _COMPARE_SHAPES.get(status) if isinstance(status, str) else None
     counters = [data.get(key) for key in ('ahead_by', 'behind_by', 'total_commits')] if shape else []
     merge = data.get('merge_base_commit') if shape else None
     echoed = data.get('base_commit') if shape else None
@@ -1106,9 +1112,9 @@ def compare_relation(client, repository, base, head):
     if ((ahead > 0) != shape[0] or (behind > 0) != shape[1] or total != ahead or
             (expected_merge is not None and merge['sha'] != expected_merge) or
             (shape[2] is None and merge['sha'] in (base, head)) or
-            (data['status'] == 'identical' and base != head)):
+            (status == 'identical') != (base == head)):
         raise ProtocolError('api_shape', 'Inconsistent or partial GitHub commit comparison')
-    return data['status']
+    return status
 
 
 def base_relation(task, base, tip, status=None):
@@ -1130,9 +1136,10 @@ class BadLink(Exception):
 
 
 class LinkView:
-    """Symlinks of one snapshot (a commit, the index or the worktree) as {path: target}, read without following."""
+    """Symlinks of one snapshot (a commit, the index or the worktree) as {path: target}, read without following,
+    and the snapshot's directories."""
     def __init__(self, directory, revision=None, index=False, worktree=False):
-        self.directory, self.worktree, self.shas, self.targets = directory, worktree, {}, {}
+        self.directory, self.worktree, self.shas, self.targets, self.directories = directory, worktree, {}, {}, set()
         if worktree:
             return
         listing = (git_read(directory, 'ls-files', '--stage', '-z') if index else
@@ -1141,6 +1148,18 @@ class LinkView:
             meta, _, path = entry.partition('\t')
             if meta.startswith('120000 '):
                 self.shas[path] = meta.split()[1 if index else 2]
+            parts = path.split('/')[:-1]
+            self.directories.update('/'.join(parts[:n]) for n in range(1, len(parts) + 1))
+
+    def is_directory(self, path):
+        if not self.worktree:
+            return path in self.directories
+        try:  # every component was resolved already, so lstat never passes through a link
+            return stat.S_ISDIR(os.lstat(Path(self.directory, path)).st_mode)
+        except (FileNotFoundError, NotADirectoryError):
+            return False
+        except OSError:
+            raise BadLink('symlink target could not be read: ' + safe_text(path, 500)) from None
 
     def target(self, path):
         if path not in self.targets:
@@ -1222,7 +1241,38 @@ def _resolve_link(scope, path, view):
     if not resolved:
         return 'symlink to the repository root'
     rules = scope_violations(scope, [resolved])
-    return f'symlink to {safe_text(resolved, 500)}: {rules[0]["rule"]}' if rules else None
+    if rules:
+        return f'symlink to {safe_text(resolved, 500)}: {rules[0]["rule"]}'
+    if view.is_directory(resolved):  # the link exposes everything beneath it (FR2-02)
+        reach = [pattern for pattern in scope['prohibited_paths'] if can_match_beneath(pattern, resolved)]
+        if reach:
+            return (f'symlink to {safe_text(resolved, 500)}/: prohibited_paths: {safe_text(reach[0], 500)} '
+                    'can match beneath it')
+    return None
+
+
+def _glob_tokens(pattern):
+    """fnmatch's tokens: a bracket class up to its closing ']', read as fnmatch.translate reads it, else one
+    character (an unclosed '[' is a literal)."""
+    tokens, i = [], 0
+    while i < len(pattern):
+        j = i + 1
+        if pattern[i] == '[':
+            j += pattern[j:j + 1] == '!'
+            j += pattern[j:j + 1] == ']'
+            while j < len(pattern) and pattern[j] != ']':
+                j += 1
+            j = j + 1 if j < len(pattern) else i + 1
+        tokens.append(pattern[i:j])
+        i = j
+    return tokens
+
+
+def can_match_beneath(pattern, directory):
+    """Whether fnmatchcase(directory + '/' + rest, pattern) can hold for some rest: some token prefix of the pattern
+    matches directory + '/' exactly. Conservative: the remaining tokens are assumed satisfiable."""
+    tokens = _glob_tokens(pattern)
+    return any(fnmatch.fnmatchcase(directory + '/', ''.join(tokens[:n])) for n in range(len(tokens) + 1))
 
 
 def link_violations(scope, paths, view):

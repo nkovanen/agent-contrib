@@ -269,12 +269,16 @@ channel or runtime model provider is added.
   recognized, even inside the mandate interval (FR1-03).
 - Schema 0.2 exempts the own draft from overlap only when the open-PR scan lists
   it with the same numeric ID that exact-head history and detail report; a
-  conflicting or missing scan ID keeps it blocking (FR1-02).
+  conflicting or missing scan ID keeps it blocking (FR1-02). A PR number the
+  scan lists twice is a conflict in either order, never resolved by the last
+  entry (FR1-05).
 - A GitHub comparison counts as a history proof only when its response proves
   the status: the echoed base commit, a merge base consistent with the status,
   and non-negative `ahead_by`/`behind_by`/`total_commits` that agree with it.
   A bare or contradictory `status` used to authenticate the reviewed source
-  commit and the evidence base (FR1-01).
+  commit and the evidence base (FR1-01). Equal commits must compare
+  `identical` and different commits must not (FR1-04), and a status that is
+  not a string is a malformed response rather than a crash (FR1-06).
 - Scope judges each changed symlink by where it points (G-08), in `verify`
   evidence checks and `scope-check`. The committed (or staged, or worktree)
   target is read without following it and resolved lexically from the link's
@@ -283,7 +287,10 @@ channel or runtime model provider is added.
   at the repository root, exceeds 4096 bytes or 40 hops, contains a NUL byte,
   is not valid UTF-8, cannot be read, or resolves outside
   `allowed_paths` or into `prohibited_paths` is a scope violation that names the
-  reason. A link to an allowed file still passes.
+  reason. A link to an allowed file still passes. A link that resolves to a
+  directory of the same snapshot is also a violation when any prohibited
+  pattern can match a path beneath it, so `docs/l -> private` no longer passes
+  under `docs/*` with `docs/private/*` prohibited (FR2-02).
 - Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and
   numbers that overflow to infinity (`1e999`) as `invalid_json` in GitHub
   responses, contracts, evidence and host context. A lone surrogate used to
@@ -407,6 +414,8 @@ channel or runtime model provider is added.
 - Schema 0.1 changes, all fail-closed or message-only:
   - `verify` rejects evidence whose implementation adds a symlink that resolves
     outside the contract scope (G-08); a symlink to an in-scope file still passes.
+    A symlink to a directory beneath which a prohibited pattern can match is
+    rejected too (FR2-02).
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an
     evidence error instead of reading part of the checkout.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.

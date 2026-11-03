@@ -308,6 +308,12 @@ escapes the repository, points at the repository root, is longer than 4096
 bytes, contains a NUL byte, is not valid UTF-8, cannot be read (for example a
 permission error on a hop), loops, or resolves to a path outside `allowed_paths` or matching
 `prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
+A link that resolves to a directory of the same snapshot (the commit, the index
+or the worktree) exposes everything beneath it, so it is also a violation when
+any prohibited pattern can match some path beneath that directory, whether or
+not such a path exists (for example `symlink to docs/private/: prohibited_paths:
+docs/private/* can match beneath it` under `docs/*`). The check is conservative:
+a pattern counts when a prefix of it matches the directory plus `/`.
 A link to an allowed file passes; a scope pass does not prove the target exists.
 Git records no path beyond a symlink, so a
 file written through a linked directory appears at its real path and is judged

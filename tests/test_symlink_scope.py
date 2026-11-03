@@ -202,5 +202,85 @@ class SymlinkScopeTests(unittest.TestCase):
         self.assertFalse(json.loads(output.getvalue())['within_scope'])
 
 
+
+class DirectoryLinkTests(unittest.TestCase):
+    """FR2-02: a link to a directory passes only if no prohibited pattern can match anything beneath it."""
+    SCOPE = {'allowed_paths': ['docs/*'], 'prohibited_paths': ['docs/private/*']}
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.tmp = directory.name
+        self.task, self.client, self.evidence, self.git = evidence_checkout(self.tmp)
+        for path in ('docs/private/key', 'docs/pub/readme.md', 'docs/a.md'):
+            pathlib.Path(self.tmp, path).parent.mkdir(parents=True, exist_ok=True)
+            pathlib.Path(self.tmp, path).write_text('content')
+        self.git('add', '-A')
+        self.git('commit', '-q', '-m', 'docs tree in the base')
+        base = self.git('rev-parse', 'HEAD')
+        self.task['source']['commit'] = self.client.commit = self.evidence['base_commit'] = base
+        self.task['scope'] = dict(self.SCOPE)
+
+    def violations(self):
+        return {item['path']: item['rule'] for item in workspace.scope_check(self.task, self.tmp)['violations']}
+
+    def test_links_to_a_prohibited_subtree_are_violations_in_every_view(self):
+        reach = 'symlink to docs/private/: prohibited_paths: docs/private/* can match beneath it'
+        link(self.tmp, 'docs/l', 'private')
+        link(self.tmp, 'docs/l2', 'private/')
+        self.assertEqual(self.violations(), {'docs/l': reach, 'docs/l2': reach})  # worktree
+        self.git('add', '-A')
+        self.assertEqual(self.violations(), {'docs/l': reach, 'docs/l2': reach})  # index
+        self.git('commit', '-q', '-m', 'links')
+        refresh_checkout_evidence(self.evidence, self.git)
+        self.assertEqual(self.violations(), {'docs/l': reach, 'docs/l2': reach})  # commit
+        digest = core.canonical_hash(self.task)
+        for record in (self.evidence, self.evidence['independent_review'], self.evidence['human_signoff']):
+            record['contract_sha256'] = digest
+        errors = core.verify(self.task, self.evidence, self.tmp, self.client)['evidence_errors']
+        self.assertIn(f'Implementation adds a symlink outside reviewed scope: docs/l ({reach})', errors)
+
+    def test_a_pattern_that_can_reach_beneath_a_directory_counts_even_without_matching_contents(self):
+        self.task['scope']['prohibited_paths'] = ['docs/p*/secret']
+        link(self.tmp, 'docs/l', 'pub')
+        self.assertEqual(self.violations(),
+                         {'docs/l': 'symlink to docs/pub/: prohibited_paths: docs/p*/secret can match beneath it'})
+
+    def test_links_to_safe_directories_files_and_missing_paths_pass(self):
+        self.task['scope']['prohibited_paths'] = ['docs/private/*', '**/secret', 'docs/[!p]*/x']
+        link(self.tmp, 'docs/a-link', 'a.md')        # a file: nothing lies beneath it
+        link(self.tmp, 'docs/missing', 'nowhere')    # no directory in the snapshot
+        self.assertEqual(self.violations(), {})
+        link(self.tmp, 'docs/pub-link', 'pub')       # '**/secret' can match docs/pub/secret
+        self.assertEqual(set(self.violations()), {'docs/pub-link'})
+        self.task['scope']['prohibited_paths'] = ['docs/private/*', 'docs/[!p]*/x', 'docs/pu', 'docs/pub[', 'docs/pubx']
+        self.assertEqual(self.violations(), {}, 'a class, a shorter literal or an unclosed bracket cannot reach beneath docs/pub/')
+
+
+    def test_whether_a_pattern_can_match_beneath_a_directory(self):
+        cases = [('docs/private/*', 'docs/private', True), ('docs/pr*', 'docs/private', True),
+                 ('docs/*', 'docs/private', True), ('**/secret', 'docs/pub', True), ('docs/pub[/]x', 'docs/pub', True),
+                 ('[]]/x', ']', True), ('[!]]/x', 'a', True), ('docs/[pub/x', 'docs/[pub', True),
+                 ('docs/[!p]*/x', 'docs/pub', False), ('docs/pu', 'docs/pub', False), ('docs/pubx', 'docs/pub', False),
+                 ('docs/pub', 'docs/pub', False), ('docs/pub[', 'docs/pub', False), ('[!]]/x', ']', False),
+                 ('?', 'a', False), ('[!]/]', '[!]', False), ('[]/]', '[]', False)]  # whole classes, not literals
+        for pattern, directory, expected in cases:
+            with self.subTest(pattern=pattern, directory=directory):
+                self.assertIs(core.can_match_beneath(pattern, directory), expected)
+
+    def test_an_unreadable_directory_target_fails_closed(self):
+        from unittest.mock import patch
+        link(self.tmp, 'docs/l', 'pub')
+        real, seen = os.lstat, []
+
+        def fake(path, *args, **kwargs):  # the hop read succeeds; the directory check after it fails
+            if str(path).endswith('docs/pub'):
+                seen.append(path)
+                if len(seen) > 1:
+                    raise PermissionError('denied')
+            return real(path, *args, **kwargs)
+        with patch.object(core.os, 'lstat', side_effect=fake):
+            self.assertEqual(self.violations().get('docs/l'), 'symlink target could not be read: docs/pub')
+
 if __name__ == '__main__':
     unittest.main()

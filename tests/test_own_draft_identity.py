@@ -1,4 +1,5 @@
 """The own-draft exemption needs one consistent numeric PR identity across the open scan and history (FR1-02)."""
+import copy
 import unittest
 
 from tests import test_lifecycle
@@ -39,6 +40,27 @@ class OwnDraftIdentityTests(unittest.TestCase):
                 self.assertIn(CONFLICT, result['stage_blockers']['completion'])
                 if name != 'boolean id':  # a boolean ID already makes the open scan incomplete
                     self.assertTrue(result['blocking_duplicates'], 'the unreconciled scan entry still blocks')
+
+    def test_a_repeated_scan_number_is_a_conflict_in_either_order(self):
+        # FR1-05: two open-scan entries for #30 must not resolve to whichever came last.
+        def other(pr):
+            return dict(copy.deepcopy(pr), id=98765)
+
+        def missing(pr):
+            entry = copy.deepcopy(pr)
+            entry.pop('id')
+            return entry
+        for name, extra in {'other id': other, 'missing id': missing}.items():
+            for order in ('extra first', 'extra last'):
+                with self.subTest(case=name, order=order):
+                    self.complete()
+                    own = self.client.prs[0]
+                    self.client.prs = [extra(own), own] if order == 'extra first' else [own, extra(own)]
+                    result = self.verify()
+                    self.assertFalse(result['publication']['verified'])
+                    self.assertFalse(result['completion_ready'])
+                    self.assertIn(CONFLICT, result['stage_blockers']['completion'])
+                    self.assertEqual(len(result['blocking_duplicates']), 2, result['blocking_duplicates'])
 
 
 if __name__ == '__main__':

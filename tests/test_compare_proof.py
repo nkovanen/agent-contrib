@@ -44,11 +44,27 @@ class RelationTests(unittest.TestCase):
             'not an object': ['behind'],
             'identical for different commits': comparison(BASE, HEAD, 'identical'),
             'diverged at an endpoint': dict(comparison(BASE, HEAD, 'diverged'), merge_base_commit={'sha': BASE}),
+            'list status': dict(good, status=[]),  # FR1-06: unhashable statuses are malformed, not a crash
+            'object status': dict(good, status={}),
+            'number status': dict(good, status=1),
         }
         for name, value in cases.items():
             with self.subTest(case=name), self.assertRaises(core.ProtocolError) as caught:
                 core.compare_relation(Responding(value), 'o/r', BASE, HEAD)
             self.assertIn(caught.exception.code, ('api_shape',))
+
+
+    def test_equal_commits_must_be_identical(self):
+        # FR1-04: H...H cannot be behind, ahead or diverged, even with otherwise consistent fields.
+        cases = {'behind': {'status': 'behind', 'ahead_by': 0, 'behind_by': 1, 'total_commits': 0,
+                            'base_commit': {'sha': BASE}, 'merge_base_commit': {'sha': BASE}},
+                 'ahead': {'status': 'ahead', 'ahead_by': 1, 'behind_by': 0, 'total_commits': 1,
+                           'base_commit': {'sha': BASE}, 'merge_base_commit': {'sha': BASE}},
+                 'diverged': dict(comparison(BASE, BASE, 'diverged'))}
+        for name, value in cases.items():
+            with self.subTest(status=name), self.assertRaises(core.ProtocolError) as caught:
+                core.compare_relation(Responding(value), 'o/r', BASE, BASE)
+            self.assertEqual(caught.exception.code, 'api_shape')
 
 
 class RawCompare:
@@ -64,6 +80,7 @@ class RawCompare:
 
 
 ATTACKS = {'status only': {'status': 'behind'},
+           'list status': {'status': []},
            'contradictory identical': {'status': 'identical', 'ahead_by': 4, 'behind_by': 0, 'total_commits': 4,
                                        'base_commit': {'sha': OTHER}, 'merge_base_commit': {'sha': 'e' * 40}}}
 
