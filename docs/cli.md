@@ -557,11 +557,12 @@ the `agent_contribute.aipolicy` module no longer exist.
   (such as `AI_POLICY.adoc` or an oversized `AI_POLICY.md`) changes the
   inventory hash. Policy-like links to files in the pinned tree (such as
   `docs/rules.md`) carry that file's blob id too, without a new read, as do
-  same-repository `github.com/OWNER/REPO/blob|tree/REF/PATH` links whose REF is
-  the default branch or the pinned commit (host and owner case, `www.`,
+  `github.com/OWNER/REPO/blob|tree/REF/PATH` links into either inventoried
+  repository (the source or the owner `.github`, in both directions) whose REF
+  is that repository's default branch or pinned commit (host and owner case, `www.`,
   `http://`, protocol-relative forms, fragments and queries are accepted). A
-  known file without a valid blob id, or a same-repository blob/tree link that
-  cannot be resolved to the pinned tree (another branch, a tag, an unknown ref,
+  known file without a valid blob id, or a blob/tree link into an inventoried
+  repository that cannot be resolved to its pinned tree (another branch, a tag, an unknown ref,
   a missing path or a directory), is the hiding limit `unfingerprinted files`.
 - **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained
   unassessed identifiers and the limits. It excludes commit SHAs, so unrelated

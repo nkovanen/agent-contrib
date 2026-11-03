@@ -238,3 +238,51 @@ class AbsoluteLinkTests(unittest.TestCase):
         code, result = run(client, 'drift', path, '--policy-sha256', recorded)
         self.assertEqual(code, 1)
         self.assertIs(result['repository_policy_drift']['policy_drifted'], True)
+
+
+class CrossRepositoryLinkTests(unittest.TestCase):
+    """RP-28 residual: links between the source and the owner .github repository resolve against the target's tree."""
+    def report(self, files, owner):
+        return policy.report('acme/photos', SOURCE_COMMIT, [], PolicyGitHub(files, owner), default_branch='main')
+
+    def entry(self, rp, url):
+        return next(u for u in rp['unassessed'] if u['what'] == url)
+
+    def test_source_to_owner_and_owner_to_source_links_get_blobs(self):
+        to_owner = 'https://github.com/acme/.github/blob/trunk/docs/rules.md'
+        to_source = 'https://github.com/acme/photos/blob/main/docs/rules.md'
+        rp = self.report({'SECURITY.md': f'See [policy]({to_owner}).', 'docs/rules.md': 'x'},
+                         {'CONTRIBUTING.md': f'See [policy]({to_source}).', 'docs/rules.md': 'y'})
+        self.assertRegex(self.entry(rp, to_owner)['blob_sha'] or '', '^[0-9a-f]{40}$')
+        self.assertRegex(self.entry(rp, to_source)['blob_sha'] or '', '^[0-9a-f]{40}$')
+        self.assertNotIn('unfingerprinted files', {i['limit'] for i in rp['limits_reached']})
+
+    def test_unresolvable_cross_links_are_unknown(self):
+        for url in ('https://github.com/acme/.github/blob/dev/docs/rules.md',
+                    'https://github.com/acme/.github/blob/trunk/docs/nope.md'):
+            with self.subTest(url):
+                rp = self.report({'SECURITY.md': f'See [policy]({url}).'}, {'docs/rules.md': 'y'})
+                self.assertIsNone(self.entry(rp, url)['blob_sha'])
+                self.assertTrue(rp['limits_hide_sources'])
+
+    def test_editing_an_owner_file_linked_from_the_source_is_drift(self):
+        text = 'See [policy rules](https://github.com/acme/.github/blob/trunk/docs/rules.md).'
+        client = OwnerGitHub(owner={'docs/rules.md': 'AI ok.'}, files={'SECURITY.md': text})
+        task, recorded = reviewed(client)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        client.owner = {'docs/rules.md': 'No AI.'}
+        code, result = run(client, 'drift', path, '--policy-sha256', recorded)
+        self.assertEqual(code, 1)
+        self.assertIs(result['repository_policy_drift']['policy_drifted'], True)
+
+    def test_editing_a_source_file_linked_from_the_owner_is_drift(self):
+        owner = {'CONTRIBUTING.md': 'See [policy rules](https://github.com/acme/photos/blob/main/docs/rules.md).'}
+        client = OwnerGitHub(owner=owner, files={'docs/rules.md': 'AI ok.'})
+        task, recorded = reviewed(client)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        client.advance({'docs/rules.md': 'No AI.'})
+        code, result = run(client, 'drift', path, '--policy-sha256', recorded)
+        self.assertEqual(code, 1)
+        self.assertIs(result['repository_policy_drift']['policy_drifted'], True)

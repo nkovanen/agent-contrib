@@ -556,9 +556,10 @@ def _assessed(url, base_repository, base_path, refs, scanned):
     return (base_repository.casefold(), path) in scanned
 
 
-def _github_target(url, repository, refs, tree):
-    """For a github.com blob/tree URL into `repository`, the pinned blob id of its file, or '' when the URL cannot be
-    resolved to the pinned tree (another branch, a tag, an unknown ref, a missing path or a directory), so the
+def _github_target(url, scope):
+    """For a github.com blob/tree URL into an inventoried repository (scope: casefolded name -> (refs, pinned tree);
+    the source and the owner .github repository), the pinned blob id of its file, or '' when the URL cannot be
+    resolved to that pinned tree (another branch, a tag, an unknown ref, a missing path or a directory), so the
     caller treats it as unfingerprinted (RP-28). None for other repositories, other URL kinds and other sites."""
     target = url.split('#', 1)[0].split('?', 1)[0]
     parts = urlsplit(target)
@@ -568,9 +569,10 @@ def _github_target(url, repository, refs, tree):
     if host != 'github.com':
         return None
     segments = unquote(parts.path).strip('/').split('/')
-    if len(segments) < 3 or '/'.join(segments[:2]).casefold() != repository.casefold() or \
+    if len(segments) < 3 or '/'.join(segments[:2]).casefold() not in scope or \
             segments[2].casefold() not in ('blob', 'tree'):
         return None
+    refs, tree = scope['/'.join(segments[:2]).casefold()]
     rest = '/'.join(segments[3:])
     for ref in refs:
         fold = re.fullmatch('[0-9a-f]{40}', ref) is not None  # commit SHAs compare case-insensitively, branches exactly
@@ -629,8 +631,9 @@ def report(repository, commit, instructions, client, *, default_branch=None):
                     local = relative and target in tree  # a linked file in the pinned tree: fingerprint it, no fetch
                     blob = tree.get(target) if local else None
                     if not relative:  # same-repository github.com blob/tree URLs resolve against the pinned tree
-                        resolved = _github_target(link['url'], source['repository'],
-                                                  refs.get(source['repository'].casefold(), []), tree)
+                        # Resolve against the TARGET's pinned tree: the source or the owner .github repository.
+                        resolved = _github_target(link['url'], {name: (names, state.trees.get(name, {}))
+                                                                for name, names in refs.items()})
                         if resolved is not None:
                             local, blob = True, resolved
                     state.note(shown, 'referenced, not assessed', origin, link['line'], link['link_text'],

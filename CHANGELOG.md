@@ -311,9 +311,10 @@ channel or runtime model provider is added.
   An owner lookup that fails other than with an HTTP 404 on the repository
   metadata (a later commit or tree 404 included) is now a hiding limit,
   so it is unknown rather than "absent". Linked local files carry their pinned
-  blob id (relative links, and same-repository github.com blob/tree links at the
-  default branch or pinned commit). A known file without a valid blob id, or an
-  unresolvable same-repository blob/tree link, is a hiding limit. Only newly
+  blob id: relative links, and github.com blob/tree links into the source or
+  the owner `.github` repository (in either direction) at that repository's
+  default branch or pinned commit. A known file without a valid blob id, or an
+  unresolvable blob/tree link into either repository, is a hiding limit. Only newly
   recorded review hashes are affected. The policy hash is not part of
   `instructions_sha256`, so existing contracts and their verification decisions
   are unchanged.
