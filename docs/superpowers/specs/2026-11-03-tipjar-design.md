@@ -134,8 +134,17 @@ there are no prose hints. Manifest state and pinned absence/unknown must also
 enter its fingerprint. Keep the historical instructions allow-list and
 `instructions_sha256` unchanged, so old task baselines can be reconstructed.
 Bump inventory format 2 to 3; tag/hash the format as today. Jar reads have a
-separate fixed budget of four GETs (metadata, commit, tree, contents), never
-consume a prose-policy file slot and never bypass a hiding limit. Do not silently treat
+separate fixed budget of at most four actual GET transport attempts per jar
+inspection (metadata, commit, tree, contents). Every jar read site, including
+historical and integration reads, uses the existing `request_once` path; do not
+call helpers that silently use retrying `request`. A transient failure yields
+unknown immediately, without retry or fallback. Only test clients lacking
+`request_once` may fall back to their fake `request`; never fall back after an
+existing `request_once` fails. Jar reads never consume a prose-policy file slot
+or bypass a hiding limit. With `--report-budget`, the before/after `rate_limit`
+snapshots are separate instrumentation outside the jar's four command reads;
+the total command transport count includes those snapshots and their existing
+retry behavior, so do not advertise four attempts for the instrumented command. Do not silently treat
 an old inventory digest as proof of jar review. Reconstruct historical jar state
 at `task.source.commit` for drift; reread current state at each live gate.
 Compare presence/state and exact-byte digest, not commit advancement alone. Any
@@ -185,7 +194,11 @@ agent-contrib prepare 'acme/one#12' --output task.json
 
 `--welcomed-only` is an explicit filter, not a change to default discovery.
 Each source has `selection: {mode, included, reason}`; mode is `explicit` or
-`welcomed-only`. Default discovery may retain diagnostic issue findings for
+`welcomed-only`. Output version 2 declares both enum values when introduced
+in Task 3, although Task 3 emits only `explicit`. Task 4 starts emitting
+`welcomed-only` without changing that published schema. A compatibility
+regression must validate Task 4 output against the unchanged Task 3 schema.
+Default discovery may retain diagnostic issue findings for
 closed/unknown sources, but excludes them from combined selectable candidates.
 Welcome and undeclared remain selectable in explicit mode, subject to policy review.
 Check each resolved source jar before admitting its issues. Closed, undeclared
