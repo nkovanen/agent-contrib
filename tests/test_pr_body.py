@@ -249,6 +249,34 @@ class PRBodyTests(unittest.TestCase):
         truncated.request = lambda endpoint: {'truncated': True, 'tree': []}
         self.assertEqual(prbody.template_pointer(task, truncated)['state'], 'unknown')
 
+    def test_a_malformed_tree_entry_makes_the_template_lookup_unknown(self):
+        # A template entry without a valid type was skipped, so the body claimed no template exists.
+        task, client = ready_contract()
+        original = client.request
+        for name, entry in {'type missing': {'path': '.github/PULL_REQUEST_TEMPLATE.md'},
+                            'type unknown': {'path': '.github/PULL_REQUEST_TEMPLATE.md', 'type': 'unknown'},
+                            'mode contradicts type': {'path': 'docs', 'type': 'tree', 'mode': '100644'},
+                            'empty path': {'path': '', 'type': 'blob'}}.items():
+            def request(endpoint, entry=entry):
+                value = original(endpoint)
+                if '/git/trees/' in endpoint:
+                    value['tree'].append(dict(entry))
+                return value
+            with self.subTest(case=name):
+                client.request = request
+                self.assertEqual(prbody.template_pointer(task, client), {'state': 'unknown', 'templates': []})
+                self.assertIn('Pull request template presence is unknown', prbody.pr_body(task, client=client)[0])
+
+        def non_blobs(endpoint):  # valid tree and submodule entries with template names are not templates
+            value = original(endpoint)
+            if '/git/trees/' in endpoint:
+                value['tree'] += [{'path': 'docs/pull_request_template.md', 'type': 'tree', 'mode': '040000'},
+                                  {'path': '.github/pull_request_template.md', 'type': 'commit', 'mode': '160000'}]
+            return value
+        client.request = non_blobs
+        self.assertEqual(prbody.template_pointer(task, client), {'state': 'none', 'templates': []})
+        client.request = original
+
     def test_closing_keyword_only_when_requested(self):
         task, client = ready_contract()
         self.assertIn('\nRefs acme/photos#12\n', prbody.pr_body(task, client=client)[0])

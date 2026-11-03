@@ -100,9 +100,13 @@ class Cache:
             key = (match[1].casefold(), match[2])
             self.blobs.pop(key, None)
             if isinstance(value, dict) and value.get('truncated') is False and isinstance(value.get('tree'), list):
-                self.blobs[key] = {entry['path']: entry['sha'] for entry in value['tree']
-                                   if isinstance(entry, dict) and entry.get('type') == 'blob' and
-                                   isinstance(entry.get('path'), str) and isinstance(entry.get('sha'), str) and
+                from . import core  # deferred: core imports this module
+                try:  # one malformed entry makes the whole tree uncacheable, so every content read stays live
+                    kinds = [core.tree_entry(entry)[1] for entry in value['tree']]
+                except core.ProtocolError:
+                    return
+                self.blobs[key] = {entry['path']: entry['sha'] for entry, kind in zip(value['tree'], kinds)
+                                   if kind == 'blob' and isinstance(entry.get('sha'), str) and
                                    BLOB.fullmatch(entry['sha'])}
             return
         expected, _ = self._expected(endpoint)

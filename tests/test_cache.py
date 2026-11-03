@@ -261,6 +261,37 @@ class AllowlistTests(CacheTestCase):
         self.assertEqual(self.entries(), [])
 
 
+    def test_a_tree_with_a_malformed_entry_is_not_cacheable(self):
+        # Any entry core.tree_entry refuses makes the whole tree uncacheable, so every content read stays live.
+        fake = ContentGitHub()
+        for name, bad in {'type missing': {'path': 'AI_POLICY.md'},
+                          'type unknown': {'path': 'AI_POLICY.md', 'type': 'unknown', 'sha': 'e' * 40},
+                          'mode contradicts type': {'path': 'docs', 'type': 'tree', 'mode': '100644'},
+                          'empty path': {'path': '', 'type': 'blob', 'sha': 'e' * 40},
+                          'not an object': ['AI_POLICY.md']}.items():
+            with self.subTest(case=name):
+                store = cache.Cache(str(self.root))
+                store.observe('repos/acme/photos', fake.request('repos/acme/photos'))
+                tree = fake.request(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1')
+                tree['tree'].append(bad)
+                store.observe(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1', tree)
+                store.observe(self.contents(), fake.request(self.contents()))
+                self.assertEqual(self.entries(), [])
+                self.assertIsNone(store.lookup(self.contents()))
+
+    def test_only_blob_entries_name_cacheable_contents(self):
+        # A valid submodule entry carrying a blob's SHA is not file content at that path.
+        fake = ContentGitHub()
+        store = cache.Cache(str(self.root))
+        store.observe('repos/acme/photos', fake.request('repos/acme/photos'))
+        tree = fake.request(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1')
+        tree['tree'].append({'path': 'vendor', 'type': 'commit', 'mode': '160000', 'sha': blob(INSTRUCTION)})
+        store.observe(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1', tree)
+        store.observe(self.contents('vendor'), fake.request(self.contents()))
+        self.assertEqual(self.entries(), [])
+        self.assertIsNone(store.lookup(self.contents('vendor')))
+
+
 class IntegrityTests(CacheTestCase):
     def warm(self):
         store, fake = self.store()

@@ -317,7 +317,10 @@ channel or runtime model provider is added.
   contradicts its type, or an empty path is a malformed GitHub response in
   the source snapshot and the policy inventory, not a skipped non-blob. A new
   `AI_POLICY.md` entry without a valid type made `drift --policy-sha256`
-  report an unchanged, complete inventory and exit 0 (FR1-08).
+  report an unchanged, complete inventory and exit 0 (FR1-08). The same check
+  applies to the `--cache` tree (a malformed entry makes the whole tree
+  uncacheable, so content reads stay live) and to the `pr-body` template
+  lookup (reported as unknown, never as no template).
 - A claimed draft whose GitHub creation time is still in the future is not
   recognized, even inside the mandate interval (FR1-03).
 - Schema 0.2 exempts the own draft from overlap only when the open-PR scan lists
