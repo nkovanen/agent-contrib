@@ -16,19 +16,20 @@ A summary of the sections below; it never overrides them. Global options such as
 `--report-budget` and `--format` go before the subcommand.
 
 1. Record `agent-contrib --version` and the user's exact request.
-2. Run `agent-contrib --report-budget discover owner/repo --signals` (it re-ranks,
-   never approves; `--responsiveness` samples outside merges). Before ranking or
-   selecting, complete the repository policy step below; for a constrained policy
-   (a human must review, submit or write every comment), first ask the user to
-   commit to that mode. Drop excluded or overlapping issues.
+2. Run `agent-contrib --report-budget discover owner/repo --signals` (re-ranks, never
+   approves; `--responsiveness` samples outside merges). Before ranking or selecting,
+   complete the repository policy step below; for a constrained policy, first ask
+   the user to commit to that mode. Drop excluded or overlapping issues.
 3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
    (claims, linked PRs, prior fixes).
 4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add
-   `--schema-version 0.2` for the owner/maintainer same-repository route). Fill
+   `--schema-version 0.2` for the owner/maintainer same-repository route); fill
    the contract and the requirements ledger as described below.
 5. `agent-contrib verify task.json` (0.1) or `agent-contrib verify task.json
    --stage implementation` (0.2) shows the hash and blockers; for 0.2,
    `agent-contrib authorization-request task.json` prepares the host request.
+   Before any authorization or publication, `agent-contrib drift task.json
+   --policy-sha256 HASH` (the reviewed `inventory_sha256`) must report no drift.
 6. Edit only with the user's actual authorization and a passing gate. 0.1:
    `execution_ready: true`. 0.2: `agent-contrib verify task.json --stage
    implementation --host-context-stdin`, host-issued context unchanged on stdin,
@@ -36,10 +37,9 @@ A summary of the sections below; it never overrides them. Global options such as
    `evidence init`, the repository's real checks and independent review.
 7. Publish only with separate user authorization and a passing publication gate.
    0.1: `upstream_submission_ready: true` (`fork_completion_ready: true` for a
-   fork experiment). 0.2: `verify ... --evidence
-   evidence.json --repo-dir checkout --stage draft --host-context-stdin` with
-   `draft_create_ready: true`; publish as a draft PR only, add the publication
-   claim and rerun until `publication.verified: true`.
+   fork experiment). 0.2: `verify ... --evidence evidence.json --repo-dir checkout
+   --stage draft --host-context-stdin` with `draft_create_ready: true`; publish as
+   a draft PR only, add the publication claim, rerun until `publication.verified: true`.
 8. 0.2 completion needs a separate, later human/host final sign-off for the exact
    final head and `--stage completion` with `completion_ready: true`. Until then
    report the draft as pending acceptance. Never mark the PR ready, merge or release.
@@ -124,7 +124,10 @@ so the host agent, the user and the independent reviewer are responsible for it.
    `inventory_sha256`, the unassessed list or any recorded digest differs,
    repeat the dispositions, update `ai-policy-review` and the ledger, and under schema 0.2
    present the change to the human before continuing. If you cannot establish a
-   source's contents again, it is unresolved.
+   source's contents again, it is unresolved. `agent-contrib drift task.json
+   --policy-sha256 HASH`, with the `inventory_sha256` recorded in
+   `ai-policy-review`, re-reads the inventory: `policy_drifted` must be `false`;
+   `true` means re-review, and `null` (an incomplete read) is unresolved.
 
 ## Start with discovery, then choose a contract version
 

@@ -576,6 +576,26 @@ including an unverifiable baseline, gives `complete: false`. The pinned re-read
 costs another snapshot's worth of reads. After drift, review and prepare the
 contract again.
 
+
+`drift task.json --policy-sha256 HASH` also re-reads the repository policy
+inventory at the current default-branch commit and adds
+`repository_policy_drift`. HASH is the `inventory_sha256` recorded in the
+`ai-policy-review` prerequisite evidence; a malformed value is a usage error
+before any read.
+
+- `policy_drifted` is `true` when the current inventory hash differs (it then
+  counts as drift, exit 1), and `null` when the current read is incomplete or a
+  limit hides sources (incomplete, exit 1).
+- When the inventory rebuilt at the contract's pinned commit reproduces HASH
+  (`baseline_verified`), `added`, `removed` and `changed` list source identities
+  (`identity_sha256`, repository, path, byte SHA-256). Otherwise they are `null`:
+  the owner `.github` repository is read at its current tip, so a baseline cannot
+  always be rebuilt, and no deltas are invented.
+
+This catches an edit to a policy-only file such as `SECURITY.md` or a new
+`AI_POLICY.md`, which `instructions_sha256` does not cover. It costs up to two
+policy reports (at most 25 requests each).
+
 ## CI observation (opt-in, report only)
 
 `verify ... --evidence evidence.json --observe-ci` adds `ci_observation` after
@@ -863,6 +883,29 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 | `overlap.removed` | string[] |  |
 | `overlap.scope` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `repository_policy_drift` | object (optional) | Added by --policy-sha256: the reviewed policy inventory hash compared with the current inventory |
+| `repository_policy_drift.expected_sha256` | string |  |
+| `repository_policy_drift.current_sha256` | string |  |
+| `repository_policy_drift.policy_drifted` | boolean or null | null when the current policy inventory read is incomplete or limited |
+| `repository_policy_drift.limits_hide_sources` | boolean |  |
+| `repository_policy_drift.baseline_verified` | boolean |  |
+| `repository_policy_drift.added` | object[] or null |  |
+| `repository_policy_drift.added[].identity_sha256` | string |  |
+| `repository_policy_drift.added[].repository` | string |  |
+| `repository_policy_drift.added[].path` | string |  |
+| `repository_policy_drift.added[].sha256` | string |  |
+| `repository_policy_drift.removed` | object[] or null |  |
+| `repository_policy_drift.removed[].identity_sha256` | string |  |
+| `repository_policy_drift.removed[].repository` | string |  |
+| `repository_policy_drift.removed[].path` | string |  |
+| `repository_policy_drift.removed[].sha256` | string |  |
+| `repository_policy_drift.changed` | object[] or null |  |
+| `repository_policy_drift.changed[].identity_sha256` | string |  |
+| `repository_policy_drift.changed[].repository` | string |  |
+| `repository_policy_drift.changed[].path` | string |  |
+| `repository_policy_drift.changed[].stored_sha256` | string |  |
+| `repository_policy_drift.changed[].current_sha256` | string |  |
+| `repository_policy_drift.note` | string |  |
 
 ### `error`
 

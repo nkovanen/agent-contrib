@@ -19,6 +19,13 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `drift task.json --policy-sha256 HASH` (N1, dogfood 4): re-reads the
+  repository policy inventory and reports `repository_policy_drift`, with
+  `policy_drifted` and, when a baseline can be rebuilt at the pinned commit,
+  added, removed and changed source identities. A policy-only edit (for example
+  to `SECURITY.md`) after the review used to be invisible to `drift`. Drift or
+  an incomplete policy read exits 1. The Quick path and the policy step now run
+  it before any authorization or publication.
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
   sections are unchanged, plus an optional host-issued `overlap_dispositions`
   record. It is bound to the contract, mandate and credential, and pins each

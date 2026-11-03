@@ -144,6 +144,13 @@ def _drift(result):
                        f'{line(policy.get("current_approval"), 40)}' if policy.get('stored_approval') !=
                        policy.get('current_approval') else 'Policy state/content changed')
     reasons += ['Overlapping PR added: ' + line(url, 200) for url in overlap.get('added', [])]
+    policy_drift = result.get('repository_policy_drift') or {}
+    if policy_drift.get('policy_drifted') is True:
+        named = [item.get('path', '') for kind in ('changed', 'added', 'removed') for item in policy_drift.get(kind) or []]
+        reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
+                                                        'recorded inventory_sha256 differs (no per-source baseline)'))
+    elif policy_drift and policy_drift.get('policy_drifted') is None:
+        info.append('Policy inventory could not be compared: the current read is incomplete or limited')
     if branch.get('advanced'):
         info.append('Default branch advanced since preparation')
     info += ['Overlapping PR no longer open: ' + line(url, 200) for url in overlap.get('removed', [])]
