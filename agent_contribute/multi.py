@@ -22,7 +22,8 @@ def validate(repositories):
     return names
 
 
-def discover_many(repositories, client=None, *, signals=False, responsiveness=False):
+def discover_many(repositories, client=None, *, signals=False, responsiveness=False, limit=None):
+    limit = core.validate_discovery_limit(limit)
     names = validate(repositories)
     client = client or core.GitHub()
     results, errors, candidates = [], [], []
@@ -42,9 +43,19 @@ def discover_many(repositories, client=None, *, signals=False, responsiveness=Fa
                                'complete': issue['complete'] and result['complete'] is True})
     candidates.sort(key=lambda c: (c['excluded'], c['overlapping'], c['low_likelihood'], -(c['score'] or 0),
                                    c['repository'].casefold(), c['number']))
-    return {'repositories': results, 'complete': all(r.get('complete') is True for r in results),
+    result = {'repositories': results, 'complete': all(r.get('complete') is True for r in results),
             'errors': errors, 'candidates': candidates,
             'ordering': 'exclusions, overlaps, low likelihood' + (', higher signal score' if signals else '') +
                         ', then repository and issue number',
             'limits': {'max_repositories': MAX_REPOSITORIES, 'per_repository': 'same as single-repository discover'},
             'warning': 'Candidates only. Each repository is resolved separately; nothing grants execution authority.'}
+    if limit is not None:
+        candidates = candidates[:limit]
+        references = {c['reference'] for c in candidates}
+        for repository in results:
+            core.limit_discovery(repository, limit, references)
+        counts = {key: sum(r['display'][key] for r in results)
+                  for key in ('total_issues_considered', 'returned', 'omitted', 'overlapping', 'excluded')}
+        result['display'] = {'requested_limit': limit, **counts, 'truncated': counts['omitted'] > 0}
+        result['candidates'] = candidates
+    return result

@@ -462,6 +462,7 @@ A repository in a multi-repository run whose discovery raised
 | `complete` | false |  |
 | `errors` | string[] |  |
 | `issues` | any[] |  |
+| `display` | `discovery_display` (optional) |  |
 
 #### `discover_issue`
 
@@ -507,6 +508,7 @@ Two to 20 repositories were requested
 | `limits.per_repository` | string |  |
 | `warning` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `display` | `discovery_display` (optional) |  |
 
 #### `discover_result`
 
@@ -550,6 +552,7 @@ One repository was resolved and read
 | `local_work` | `local_work` (optional) |  |
 | `api_budget` | `api_budget` (optional) |  |
 | `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
+| `display` | `discovery_display` (optional) |  |
 
 #### `discover_unresolved`
 
@@ -568,6 +571,21 @@ The repository could not be resolved or its snapshot read
 | `repository_signals.responsiveness` | `responsiveness` |  |
 | `api_budget` | `api_budget` (optional) |  |
 | `local_work` | `local_work` (optional) |  |
+| `display` | `discovery_display` (optional) |  |
+
+#### `discovery_display`
+
+Only with --limit. Counts describe observed candidates, never source approval or read completeness. Multi-repository totals count requested-repository entries, even when they resolve to the same tracker.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `requested_limit` | integer | Requested display budget (1-1000), shared globally in a multi-repository run |
+| `total_issues_considered` | integer | Successfully inspected observed entries before display projection; not inaccessible or malformed issues |
+| `returned` | integer | Entries retained in this list |
+| `omitted` | integer | Observed entries omitted by the display budget |
+| `truncated` | boolean | Whether display entries were omitted; independent of scan completeness |
+| `overlapping` | integer | Overlapping entries in the full observed list, including omitted entries |
+| `excluded` | integer | Excluded entries in the full observed list, including omitted entries |
 
 #### `duplicate`
 

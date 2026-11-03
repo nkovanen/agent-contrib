@@ -75,7 +75,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 
 | Command | Result |
 | --- | --- |
-| `agent-contrib discover owner/repo` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
+| `agent-contrib discover owner/repo [--limit N]` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
 | `agent-contrib discover owner/a owner/b ... [--repositories-file FILE]` | Two to 20 repositories in one run, each with its own result, plus a merged candidate order |
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
 | `agent-contrib discover owner/repo --responsiveness` | One extra read of recently closed PRs, reported as `repository_signals.responsiveness`; issues and ordering unchanged |
@@ -129,6 +129,41 @@ request, `fork/repo#123` means “resolve issue 123 for this requested repositor
 its `issue_url` names the actual source. It is not a claim that the issue exists
 on the fork. Both repositories' open PRs are scanned, including drafts; a bare
 `#123` in a PR belongs to that PR's repository.
+
+### Bounded candidate display (unreleased)
+
+`discover --limit N` accepts ASCII decimal integers from 1 through 1000 (leading
+zeros are allowed). Zero, negatives, non-decimal values and larger integers
+return a structured `invalid_limit` error (exit 1) before any GitHub reads,
+including `--report-budget`. A missing value is a usage error (exit 2).
+
+The limit applies after all existing discovery scans, pagination, fork resolution,
+ranking and opted-in reports. It changes neither read bounds nor `--check-top`'s
+own budget. It slices the final ranked `issues` list for one repository. With
+several repositories it slices the merged ranked `candidates` list globally,
+then retains only those entries in each repository's `issues` list. A repository
+may show zero candidates; its resolution, policy, reports, errors and provenance
+are still present. The full per-repository and aggregate scan status stays intact.
+
+Limited responses add `display` (also on each repository in a multi-repository
+run), with:
+
+- `requested_limit`: the normalized requested budget, shared across repositories.
+- `total_issues_considered`: successfully inspected observed entries before display
+  projection; inaccessible or malformed issues are not counted. Multi-repository
+  totals count each requested repository's entries, even when trackers are shared.
+- `returned`, `omitted`, `truncated`: retained entries, omitted entries, and whether
+  any observed entry was omitted. These describe the display, not read completeness.
+- `overlapping`, `excluded`: counts from the full observed list, including entries
+  omitted by the limit. These counts do not waive blockers or approve work.
+
+Text shows these totals and keeps its existing 20-row abbreviation; any extra
+retained entries are available in JSON. Omitted entries are absent from both
+lists; rerun without `--limit` for their details. Check `complete`, `errors` and
+provenance independently. Even an unresolved repository has zero-count display
+metadata. With no `--limit`, output and reads are unchanged and no `display`
+field is added. These optional fields extend the unreleased output/1 candidate;
+task and evidence schemas and their versions are unchanged.
 
 ### Opt-in ranking signals
 
