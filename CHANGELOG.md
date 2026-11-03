@@ -62,6 +62,17 @@ channel or runtime model provider is added.
   status `not_evaluated` or `invalid`. It never changes a gate, blocker,
   `next_action`, exit status or GitHub read, and the mandate hash is unchanged.
   Host requirements for update rounds are documented.
+- Draft-update recognition after the one host push (#21, slice 2). With a
+  `draft_update` record, the draft at its creation head is no longer
+  recognized; it is recognized at the updated head only when the live head is
+  the validated evidence HEAD, a strict fast-forward of `from_head` by
+  consistent comparisons, with no forbidden timeline event (complete
+  pagination), an unchanged final re-read, evidence based on the reviewed
+  commit exactly with no merge commit in the round, and validations started
+  inside the round. Completion needs a final sign-off issued after the round.
+  `draft_update` reports `recognized`, `not_evaluated` (no push yet) or
+  `blocked`, with `candidate_head` and `live_head`. No push readiness is
+  reported and nothing authorizes a push.
 - A default-on, report-only `repository_policy` in `discover`, `inspect` and
   `prepare` output (#8, part; dogfood E-01 to E-05). The earlier scanner found
   nothing on pallets/click, BurntSushi/ripgrep and honojs/hono, although each

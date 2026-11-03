@@ -8,17 +8,20 @@ import datetime as dt
 import pathlib
 import unittest
 
-from agent_contribute import core
+from agent_contribute import authorization, core, pr_identity
 from tests import test_lifecycle
 from tests.test_authorization import NOW, event_binding
 from tests.test_draft_update_v02 import update_for
+from tests.test_protocol import comparison
 
+OPEN_DRAFT = 'Claimed publication is not an open unmerged draft by the bound actor'
 FORBIDDEN = ('head_ref_force_pushed', 'head_ref_deleted', 'head_ref_restored', 'closed', 'reopened', 'merged',
              'ready_for_review', 'convert_to_draft')
 
 
 class UpdateGitHub(test_lifecycle.IntegratedGitHub):
-    """Adds exact compare statuses, a paginated timeline and an optional sequence of PR detail reads."""
+    """Adds compare statuses (consistent responses; a dict is returned raw), a paginated timeline and an optional
+    sequence of PR detail reads."""
     def __init__(self):
         super().__init__()
         self.compares, self.timeline, self.detail_sequence = {}, [], []
@@ -30,7 +33,10 @@ class UpdateGitHub(test_lifecycle.IntegratedGitHub):
             value = self.compares[path]
             if isinstance(value, Exception):
                 raise value
-            return value if isinstance(value, dict) else {'status': value}
+            if isinstance(value, str):
+                base, head = path.rsplit('/', 1)[1].split('...')
+                return comparison(base, head, value)
+            return value
         if path == 'repos/acme/photos/issues/30/timeline':
             self.calls.append(endpoint)
             page = int(endpoint.rsplit('page=', 1)[1])
@@ -142,7 +148,9 @@ class RecognitionTests(unittest.TestCase):
         self.assert_blocked(self.verify(), 'Updated draft head does not descend from the creation head')
 
     def test_malformed_or_failed_comparisons_block(self):
-        for value in ({'status': 'unknown'}, {}, [], core.ProtocolError('api_error', 'Synthetic compare failure')):
+        partial = {'status': 'ahead'}  # a status without commits and counters proves nothing (FR1-01)
+        failure = core.ProtocolError('api_error', 'Synthetic compare failure')
+        for value in ({'status': 'unknown'}, {}, [], partial, failure):
             with self.subTest(value=value):
                 self.client.compares[self.compare(self.creation, self.update_head)] = value
                 self.assert_blocked(self.verify())
@@ -170,6 +178,58 @@ class RecognitionTests(unittest.TestCase):
                 self.client.timeline = timeline
                 self.assert_blocked(self.verify())
 
+    # Claim and identity preconditions: each blocks with its own reason
+
+    def both(self, change):
+        for record in [self.client.history[0], self.client.details[30]]:
+            change(record)
+
+    def test_each_claim_and_identity_precondition_blocks_with_its_reason(self):
+        second = dict(copy.deepcopy(self.client.history[0]), id=3002, number=31,
+                      html_url='https://github.com/acme/photos/pull/31')
+        cases = {
+            'claim binding': (lambda: self.context['publication'].update(contract_sha256='0' * 64),
+                              'Publication claim does not match the reviewed binding'),
+            'incomplete history': (lambda: setattr(self.client, 'history', 'not a list'),
+                                   'Expected a bounded GitHub list page'),
+            'history route': (lambda: self.both(lambda r: r['head']['repo'].update(id=202)),
+                              'Exact-head history returned a different repository, ref or URL'),
+            'two pull requests': (lambda: self.client.history.append(second),
+                                  'Publication claim requires exactly one matching historical pull request'),
+            'list/detail race': (lambda: self.client.details[30].update(
+                created_at=(NOW - dt.timedelta(minutes=29)).isoformat()),
+                'Pull request list/detail race; repeat the complete read'),
+            'other author': (lambda: self.both(lambda r: r['user'].update(id=99)), OPEN_DRAFT),
+            'not a draft': (lambda: self.both(lambda r: r.update(draft=False)), OPEN_DRAFT),
+            'merged_at set': (lambda: self.both(lambda r: r.update(merged_at=NOW.isoformat())), OPEN_DRAFT),
+        }
+        for name, (change, message) in cases.items():
+            with self.subTest(case=name):
+                saved = copy.deepcopy((self.context, self.client.history, self.client.details))
+                change()
+                try:
+                    result = self.verify()
+                finally:
+                    self.context, self.client.history, self.client.details = saved
+                self.assert_blocked(result)
+                errors = self.report(result)['errors']
+                self.assertTrue(any(message in error for error in errors), errors)
+                if name == 'incomplete history':
+                    self.assertFalse(any('exactly one' in error for error in errors), errors)
+
+    def test_direct_calls_refuse_a_bad_from_head_or_a_missing_claim(self):
+        # The lifecycle never gets here (the record check refuses both first); the function still fails closed.
+        binding = authorization.check(self.task, self.context, self.client, NOW)['binding']
+        self.assertIsNotNone(binding)
+        cases = {'bad from_head': ('x' * 40, self.context['publication'], 'Invalid draft update from_head'),
+                 'no claim': (self.creation, None, 'A draft update requires a publication claim')}
+        for name, (from_head, claim, message) in cases.items():
+            with self.subTest(case=name):
+                publication, live = pr_identity.check_updated_publication(binding, claim, from_head,
+                                                                          self.update_head, self.client)
+                self.assertEqual((publication['verified'], live), (False, None))
+                self.assertTrue(any(message in error for error in publication['errors']), publication)
+
     # Final re-read (DU-07)
 
     def detail(self, **changes):
@@ -194,6 +254,27 @@ class RecognitionTests(unittest.TestCase):
             with self.subTest(case=name):
                 self.client.detail_sequence = [copy.deepcopy(self.client.details[30]), final]
                 self.assert_blocked(self.verify())
+
+    def test_the_first_detail_read_must_already_show_an_open_unmerged_draft(self):
+        # The final read alone is not enough: a merged first read blocks even if the final read looks clean.
+        self.client.detail_sequence = [self.detail(merged=True), copy.deepcopy(self.client.details[30])]
+        self.assert_blocked(self.verify(), 'Claimed publication is not an open unmerged draft by the bound actor')
+
+    def test_creation_outside_the_mandate_interval_or_in_the_future_blocks(self):
+        cases = {'before the mandate': ((NOW - dt.timedelta(days=30)).isoformat(),
+                                        'Pull request was created outside the publication mandate interval'),
+                 'in the future': ((NOW + dt.timedelta(minutes=5)).isoformat(),  # inside the interval; the clock is NOW
+                                   'Pull request creation time is in the future')}
+        for name, (created, message) in cases.items():
+            with self.subTest(case=name):
+                for record in [self.client.history[0], self.client.details[30]]:
+                    record['created_at'] = created
+                self.assert_blocked(self.verify(), message)
+
+    def test_creation_exactly_now_is_accepted(self):
+        for record in [self.client.history[0], self.client.details[30]]:
+            record['created_at'] = NOW.isoformat()
+        self.assertEqual(self.report(self.verify())['status'], 'recognized')
 
     # Evidence and review at E (T(E))
 

@@ -6,7 +6,7 @@ import re
 from urllib.parse import quote
 
 from .authorization import positive as _positive_id
-from .core import ProtocolError, paginate, parse_repository
+from .core import ProtocolError, compare_relation, paginate, parse_repository
 
 _BINDING_KEYS = {'target_repository', 'target_repository_id', 'head_repository',
                  'head_repository_id', 'head_ref', 'base_ref', 'credential_actor_id',
@@ -219,7 +219,6 @@ def check_publication(binding, publication_claim, expected_head, client):
 # Other event types are allowed: GitHub adds types, and the denylist plus host prevention is the stated guarantee.
 UPDATE_FORBIDDEN_EVENTS = frozenset({'head_ref_force_pushed', 'head_ref_deleted', 'head_ref_restored', 'closed',
                                      'reopened', 'merged', 'ready_for_review', 'convert_to_draft'})
-_COMPARE_STATUSES = ('identical', 'ahead', 'behind', 'diverged')
 
 
 def _timeline_key(item):
@@ -229,13 +228,6 @@ def _timeline_key(item):
     if item.get('event') == 'committed' and _hex(item.get('sha'), 40):
         return 'commit:' + item['sha']
     return None
-
-
-def _compare(client, repository, base, head):
-    """Only the status of compare/{base}...{head} on full SHAs is interpreted; commit and file arrays never are."""
-    data = client.request(f'repos/{repository}/compare/{base}...{head}')
-    _require(isinstance(data, dict) and data.get('status') in _COMPARE_STATUSES, 'Malformed commit comparison')
-    return data['status']
 
 
 def check_updated_publication(binding, publication_claim, from_head, expected_head, client):
@@ -310,11 +302,11 @@ def check_updated_publication(binding, publication_claim, from_head, expected_he
         if expected_head is None or live != expected_head:
             return blocked('Updated draft head differs from the exact validated evidence HEAD'), live
         creation = claim['head_sha']
-        if _compare(client, repository, creation, from_head) not in ('identical', 'ahead'):
+        if compare_relation(client, repository, creation, from_head) not in ('identical', 'ahead'):
             return blocked('Draft update from_head does not descend from the creation head'), live
-        if _compare(client, repository, creation, live) not in ('identical', 'ahead'):
+        if compare_relation(client, repository, creation, live) not in ('identical', 'ahead'):
             return blocked('Updated draft head does not descend from the creation head'), live
-        if _compare(client, repository, from_head, live) != 'ahead':
+        if compare_relation(client, repository, from_head, live) != 'ahead':
             return blocked('Updated draft head is not a strict fast-forward of the round from_head'), live
         timeline = paginate(client, f"repos/{repository}/issues/{claim['pr_number']}/timeline", key=_timeline_key)
         if not timeline['complete']:
@@ -332,6 +324,8 @@ def check_updated_publication(binding, publication_claim, from_head, expected_he
             return blocked('Claimed publication is not an open unmerged draft by the bound actor'), live
         if not _route_matches(final, binding):
             return blocked('Pull request route differs from the reviewed binding'), live
+        if _timestamp(final['created_at']) > dt.datetime.now(dt.timezone.utc):  # judged after the reads (FR1-03)
+            return blocked('Pull request creation time is in the future'), live
         result.update(status='own_draft', verified=True, own_pr={
             'repository': repository, 'repository_id': binding['target_repository_id'],
             **{key: final[key] for key in ('number', 'id', 'url', 'head_sha', 'head_ref',

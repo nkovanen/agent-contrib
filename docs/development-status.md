@@ -27,9 +27,9 @@ No native host issuer or cryptographic proof of human consent is implemented.
 
 Next priorities are an explicit human/host issuance handoff, a separately
 authorized draft-publication acceptance round, and a versioned opt-out policy.
-The candidate already ships host-issued overlap waivers (#7) and an inert
-`draft_update` record (#21, slice 1); both depend on a host that issues the
-records, and no native issuer exists. Resolve those boundaries before
+The candidate already ships host-issued overlap waivers (#7) and a
+`draft_update` record recognized after the host's push (#21, slices 1 and 2);
+both depend on a host that issues the records, and no native issuer exists. Resolve those boundaries before
 activating draft updates or adding a new fork route (#22).
 Release only after final-commit tests, independent review and hosted CI; nothing
 in this status page authorizes a merge or release.

@@ -1,7 +1,7 @@
 # Updating a recognized draft after review (#21): design proposal
 
 - Date: 2026-11-02
-- Status: proposal, **revision 4**. Review rounds 1 to 3 (DU-01 to DU-08) are resolved in [Review resolution](#review-resolution); DU-09 (wording) is fixed below. **Slice 1 (inert schema and host requirements) is implemented**; slices 2 to 4 are not.
+- Status: proposal, **revision 4**. Review rounds 1 to 3 (DU-01 to DU-08) are resolved in [Review resolution](#review-resolution); DU-09 (wording) is fixed below. **Slices 1 (inert schema and host requirements) and 2 (recognition after a push) are implemented**; slices 3 and 4 are not.
 - Base: `rsi/v03-land` at `e454848` (unreleased v0.3.0 candidate: task and evidence schemas 0.1 and 0.2, host-context 0.1 and 0.2).
 - Issue: [#21](https://github.com/nkovanen/agent-contrib/issues/21), product-map key F3. Depends on #3. Uses #20 (`feedback`).
 
@@ -78,7 +78,7 @@ Notation:
 - `P`: the live PR head.
 - `E`: the evidence head (local `HEAD` at the reviewed `head_ref`).
 
-Comparisons use GitHub `compare/{x}...{y}` on full SHAs, interpreting only `status`. They never use the truncated commit or file arrays.
+Comparisons use GitHub `compare/{x}...{y}` on full SHAs. A `status` counts only when the base echo, merge base and counters agree with it (`core.compare_relation`, FR1-01). They never use the truncated commit or file arrays.
 
 | State | Required facts | `draft_update.status` / `next_action` | Stage exit 0 |
 | --- | --- | --- | --- |
@@ -106,7 +106,7 @@ All of these are required. Only the original mandate's expiry is waived.
 ### `I(X)`: identity of the own draft at head `X`, with no evidence needed
 
 1. The publication claim's schema holds and it matches the binding, as today, except that its `head_sha` is `A` and need not equal `X`.
-2. The exact head/base history has exactly one PR, the claimed one. List and detail agree. It is open, draft and unmerged, authored by the bound actor, with an unchanged route and URL, created inside the mandate interval.
+2. The exact head/base history has exactly one PR, the claimed one. List and detail agree. It is open, draft and unmerged, authored by the bound actor, with an unchanged route and URL, created inside the mandate interval and not in the future (FR1-03).
 3. Live `P == X`. Then `compare A...X` is `identical` or `ahead`, and `compare A...F` is `identical` or `ahead`.
 4. Timeline: the paginated `repos/{repo}/issues/{n}/timeline` has no `head_ref_force_pushed`, `head_ref_deleted`, `head_ref_restored`, `closed`, `reopened`, `merged`, `ready_for_review` or `convert_to_draft` event.
 5. **Final re-read (DU-07).** After the timeline and compare reads, the PR detail is read again and parsed with the full publication shape validation (`pr_identity._pr_facts(detail=True)`). The resulting **complete normalized facts** must equal those from the first read:
@@ -223,7 +223,7 @@ These extend "Status and action-time checks" in `docs/host-authorization.md`. Th
   - Event types not on the denylist are allowed, because GitHub adds types.
 
   The denylist plus host prevention is the stated guarantee. A successful listing is an observation, not an authenticated event log.
-- **Compare.** Only full SHAs, in the stated order; only `status` is interpreted. Requirement for any response cache, present or future: compare, PR, timeline and other mutable or authority-bearing reads are never served from a cache. The opt-in content cache in #27 serves only blob-verified file contents.
+- **Compare.** Only full SHAs, in the stated order; only a `status` consistent with its commits and counters is interpreted. Requirement for any response cache, present or future: compare, PR, timeline and other mutable or authority-bearing reads are never served from a cache. The opt-in content cache in #27 serves only blob-verified file contents.
 - **Coexistence.** Whole-context schema validation and the pairwise event-identity rules apply to every present section. An `overlap_dispositions` section is evaluated exactly as without a `draft_update` section; its waivers apply to the update path only through the shared overlap list (`U.5`).
 - **Expiry.** The record and final sign-off are evaluated after every blocking read. The host re-checks the round's status at push time.
 
