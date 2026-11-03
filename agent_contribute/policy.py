@@ -30,7 +30,7 @@ MAX_OMITTED = 50
 HIDING_LIMITS = {'requests', 'policy files', 'owner policy files', 'scanned bytes', 'unassessed entries',
                  'omitted sources not listed', 'report size: unassessed entries', 'report size: omitted sources',
                  'report size: sources not listed', 'restriction hints', 'report size: restriction hints',
-                 'owner lookup', 'unfingerprinted files'}
+                 'owner lookup', 'unfingerprinted files', 'hint_id_collision'}
 STOP_HINTS = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction')
 POLICY_KINDS = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template')
 EXCERPT_CHARS = 300
@@ -445,17 +445,21 @@ def _blob_id(blob):
 def hint_id(identity, line, kind):
     """Stable hint ID (N12): from the source's identity_sha256, the line and the kind, never the report position,
     so it survives other sources, other hints and builds that order the report differently."""
-    return 'H-' + core.canonical_hash(['policy-hint/1', identity, line, kind])[:10]
+    return 'H-' + core.canonical_hash(['policy-hint/1', identity, line, kind])
 
 
-def _with_ids(hints, sources):
+def _with_ids(hints, sources, state):
     """Hints in their report order, each with its stable ID. A repeated ID (never expected: a paragraph yields
-    each kind once) gets a -2, -3 ... suffix in report order, so IDs stay unique."""
-    seen, out = {}, []
+    each kind once, and the full SHA-256 is used) fails closed (FU-01): the first hint keeps it, later ones are
+    dropped and counted as the hiding limit hint_id_collision, so the policy review stays unresolved."""
+    seen, out = set(), []
     for hint in hints:
-        base = hint_id(sources[hint['source']]['identity_sha256'], hint['line'], hint['kind'])
-        seen[base] = seen.get(base, 0) + 1
-        out.append(dict(hint, id=base if seen[base] == 1 else f'{base}-{seen[base]}'))
+        key = hint_id(sources[hint['source']]['identity_sha256'], hint['line'], hint['kind'])
+        if key in seen:
+            state.limit('hint_id_collision')
+            continue
+        seen.add(key)
+        out.append(dict(hint, id=key))
     return out
 
 
@@ -671,7 +675,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
               'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
               'limits_hide_sources': False,
               'never_inspected': list(NEVER_INSPECTED),
-              'hints': _with_ids(hints, state.sources),
+              'hints': _with_ids(hints, state.sources, state),
               'owner_lookup': state.owner_lookup,
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:

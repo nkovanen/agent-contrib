@@ -213,7 +213,7 @@ class SchemaFileTests(unittest.TestCase):
             length = re.search(r'\{(\d+)\}', pattern)
             valid = 'a' * int(length.group(1)) if length else 'usage'
             if pattern.startswith('^H-'):  # stable policy hint IDs (N12)
-                valid = 'H-' + 'a' * 10
+                valid = 'H-' + 'a' * int(length.group(1))
             for value, expected in ((valid, True), ('-' + valid, False), (valid + '-', False), (valid + '\n', False),
                                     ('\n' + valid, False), ('!' + valid + '!', False)):
                 with self.subTest(pattern=pattern, value=value):

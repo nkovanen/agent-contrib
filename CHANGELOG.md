@@ -211,11 +211,11 @@ channel or runtime model provider is added.
 
 ### Changed
 
-- Policy hint IDs are stable (dogfood N12): `hints[].id` is `H-` plus 10 hex
-  digits of the SHA-256 of (source `identity_sha256`, line, kind) instead of
-  the report position (`H1`, `H2`, ...), so a disposition recorded by ID keeps
-  naming the same line when other sources or builds change the order. Report
-  order is unchanged.
+- Policy hint IDs are stable (dogfood N12): `hints[].id` is `H-` plus the full
+  SHA-256 of (source `identity_sha256`, line, kind) instead of the report
+  position (`H1`, `H2`, ...), so a disposition recorded by ID keeps naming the
+  same line when other sources or builds change the order. Report order is
+  unchanged. A shared ID fails closed as the hiding limit `hint_id_collision`.
 - The installed workflow's Quick path names `lint` before `verify`, the
   optional `discover` ranking aids `--check-top N` and `--repo-dir CHECKOUT`,
   and the optional `--cache` (dogfood N13).

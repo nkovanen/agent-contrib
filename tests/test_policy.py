@@ -213,7 +213,7 @@ class RecallTests(unittest.TestCase):
 class StableHintIdTests(unittest.TestCase):
     """N12: a hint's ID names (source identity, line, kind), so a recorded disposition keeps naming the same line
     when other sources, hints or builds change the report order."""
-    ID = re.compile(r'H-[0-9a-f]{10}\Z')
+    ID = re.compile(r'H-[0-9a-f]{64}\Z')
     FILES = {'AI_POLICY.md': 'Intro.\n\nAutonomous agents are not allowed.',
              'CONTRIBUTING.md': 'Run tests.\n\nAI-generated pull requests are closed.\n\nWe use AI tools.'}
 
@@ -256,19 +256,30 @@ class StableHintIdTests(unittest.TestCase):
         result, _ = report(self.FILES)
         schema = outputs.output_schema('inspect')['$defs']['repository_policy']['properties']['hints']['items']
         id_schema = {'type': 'string', **schema['properties']['id']}
-        for value in [h['id'] for h in result['hints']] + ['H-0123456789-2', 'H-0123456789-100']:
+        full = 'H-' + '0123456789abcdef' * 4
+        for value in [h['id'] for h in result['hints']] + [full]:
             with self.subTest(value=value):
                 self.assertEqual(core.schema_errors(value, id_schema), [])
-        for value in ('H1', 'H-0123456789\n', 'H-0123456789-', 'H-012345678', 'H-0123456789-1000', 'x' + 'H-0123456789'):
+        for value in ('H1', full + '\n', full + '-2', full[:-1], full[:34], 'x' + full, full.upper()):
             with self.subTest(value=value):
                 self.assertTrue(core.schema_errors(value, id_schema))
 
-    def test_a_colliding_id_is_made_unique_without_reordering(self):
-        with patch.object(policy, 'hint_id', return_value='H-0000000000'):
+    def test_a_colliding_id_fails_closed_as_a_hiding_limit(self):
+        # FU-01: an ordinal suffix would swap meaning when sources reorder. A shared ID keeps the first hint,
+        # drops the rest and reports a limit that hides sources, so the policy review stays unresolved.
+        reference, _ = report(self.FILES)
+        self.assertFalse(reference['limits_hide_sources'])
+        count = len(reference['hints'])
+        self.assertGreater(count, 2)
+        with patch.object(policy, 'hint_id', return_value='H-' + '0' * 64):
             result, _ = report(self.FILES)
-        ids = [h['id'] for h in result['hints']]
-        self.assertEqual(ids[0], 'H-0000000000')
-        self.assertEqual(ids[1:], [f'H-0000000000-{n}' for n in range(2, len(ids) + 1)])
+        self.assertEqual([h['id'] for h in result['hints']], ['H-' + '0' * 64])
+        self.assertEqual({k: v for k, v in result['hints'][0].items() if k != 'id'},
+                         {k: v for k, v in reference['hints'][0].items() if k != 'id'})
+        self.assertIn({'limit': 'hint_id_collision', 'not_reported': count - 1, 'hides_sources': True},
+                      result['limits_reached'])
+        self.assertTrue(result['limits_hide_sources'])
+        self.assertNotEqual(result['inventory_sha256'], reference['inventory_sha256'])
 
 
 class InventoryTests(unittest.TestCase):
