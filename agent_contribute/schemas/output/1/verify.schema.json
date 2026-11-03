@@ -1593,9 +1593,11 @@
           "type": "string",
           "enum": [
             "not_evaluated",
+            "recognized",
+            "blocked",
             "invalid"
           ],
-          "description": "not_evaluated: bindings valid, but this version evaluates no update and authorizes nothing; invalid: schema or binding errors"
+          "description": "recognized: the draft was recognized at the one pushed update head (candidate_head); blocked: the live head moved but recognition failed (see errors); not_evaluated: the draft is still at from_head, and pre-push readiness is not evaluated by this version; invalid: schema or binding errors"
         },
         "trust": {
           "type": "string",
@@ -1622,8 +1624,24 @@
           "description": "The record's from_head; null when the host context is invalid"
         },
         "candidate_head": {
-          "type": "null",
-          "description": "Reserved for the validated candidate head of a later version; always null here"
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "The exact validated evidence HEAD that was recognized; non-null exactly when status is recognized"
+        },
+        "live_head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "The live PR head of the first complete read; null when it was not read"
         },
         "current": {
           "type": "boolean",
@@ -1648,12 +1666,13 @@
         "sha256",
         "from_head",
         "candidate_head",
+        "live_head",
         "current",
         "errors",
         "note"
       ],
       "additionalProperties": false,
-      "description": "Host-context 0.2 draft_update report (#21, slice 1): parsed and binding-checked only; never consulted by a gate"
+      "description": "Host-context 0.2 draft_update report (#21, slices 1-2): bindings, then recognition after the one host push; never authorizes a push"
     },
     "verify_live_provenance": {
       "type": "object",

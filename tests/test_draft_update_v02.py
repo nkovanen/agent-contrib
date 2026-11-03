@@ -1,4 +1,5 @@
-"""Host-context 0.2 draft_update (#21, slice 1): strictly parsed and reported, never consulted by a gate."""
+"""Host-context 0.2 draft_update (#21): strictly parsed and binding-checked (slice 1). With a record present the
+draft at its creation head is never recognized (slice 2), so a record never makes any gate more permissive."""
 import copy
 import datetime as dt
 import unittest
@@ -8,7 +9,8 @@ from tests import test_lifecycle
 from tests.test_authorization import NOW, event_binding
 from tests.test_host_context_v02 import section_for as disposition_for
 
-REPORT_KEYS = {'status', 'trust', 'sha256', 'from_head', 'candidate_head', 'current', 'errors', 'note'}
+REPORT_KEYS = {'status', 'trust', 'sha256', 'from_head', 'candidate_head', 'live_head', 'current', 'errors', 'note'}
+GATES = ('implementation_ready', 'technical_evidence_valid', 'draft_create_ready', 'completion_ready')
 
 
 def update_for(task, context, evidence, **changes):
@@ -77,7 +79,7 @@ class MissingPulls(dict):
         raise core.ProtocolError('api_error', 'Synthetic missing pull request')
 
 
-class InertReportTests(unittest.TestCase):
+class RecordReportTests(unittest.TestCase):
     def setUp(self):
         test_lifecycle.IntegratedLifecycleTests.setUp(self)
         self.client.details = MissingPulls(self.client.details)
@@ -104,42 +106,54 @@ class InertReportTests(unittest.TestCase):
         finally:
             self.context = base
 
-    def assert_inert(self, **extra):
-        reference, reference_calls = self.without_update(**extra)
+    def assert_never_more_permissive(self, **extra):
+        reference, _ = self.without_update(**extra)
         self.assertNotIn('draft_update', reference, 'no record, no report: byte-identical to today')
         result, calls = self.with_update(**extra)
         report = result.pop('draft_update')
-        self.assertEqual(result, reference, 'gates, blockers, next_action and every other field are unchanged')
-        self.assertEqual(calls, reference_calls, 'no extra GitHub reads')
-        return report
+        for gate in GATES:
+            self.assertFalse(result[gate] and not reference[gate], gate + ' became more permissive')
+        self.assertFalse(result['publication']['verified'] and not reference['publication']['verified'])
+        return report, result, reference
 
-    def test_valid_record_is_reported_not_evaluated_before_and_after_publication(self):
-        report = self.assert_inert()
+    def test_valid_record_before_and_after_publication(self):
+        report, _, _ = self.assert_never_more_permissive()
         self.assertEqual(report['status'], 'invalid', 'a draft update needs a publication claim')
         self.assertIn('Draft update requires a publication claim', report['errors'])
         self.publish()
-        report = self.assert_inert()
+        report, result, reference = self.assert_never_more_permissive()
         self.assertEqual(set(report), REPORT_KEYS)
         self.assertEqual((report['status'], report['errors'], report['current'], report['candidate_head']),
                          ('not_evaluated', [], True, None))
-        self.assertEqual(report['from_head'], self.evidence['git_head'])
+        self.assertEqual((report['from_head'], report['live_head']), (self.evidence['git_head'],) * 2)
         self.assertEqual(report['sha256'], core.canonical_hash(update_for(self.task, self.context, self.evidence)))
-        self.assertIn('nothing is authorized', report['note'])
+        self.assertIn('never authorizes a push', report['note'])
+        # The unchanged draft is not an update: its creation-head recognition is withheld (DU-03).
+        self.assertTrue(reference['publication']['verified'])
+        self.assertFalse(result['publication']['verified'])
+        self.assertIn('The draft is still at the update round from_head; no update was pushed',
+                      result['stage_blockers']['completion'])
+        self.assertEqual(result['next_action'], 'resolve_blockers')
 
-    def test_completion_is_unchanged_by_the_section(self):
+    def test_completion_at_the_creation_head_is_blocked_by_an_open_round(self):
         self.publish()
         self.context['final_signoff'] = test_lifecycle.signoff(self.task, self.context, self.evidence)
-        report = self.assert_inert()
+        report, result, reference = self.assert_never_more_permissive()
+        self.assertTrue(reference['completion_ready'])
+        self.assertFalse(result['completion_ready'])
         self.assertEqual(report['status'], 'not_evaluated')
 
     def test_coexists_with_overlap_dispositions_without_changing_their_result(self):
         self.publish()
         self.client.prs.append({'id': 3101, 'number': 31, 'title': 'Thumbnail bounds renderer refactor', 'body': None,
                                 'html_url': 'https://github.com/acme/photos/pull/31', 'head': {'ref': 'renderer'}})
-        report = self.assert_inert(overlap_dispositions=disposition_for(self.task, self.context))
+        extra = dict(overlap_dispositions=disposition_for(self.task, self.context))
+        report, result, reference = self.assert_never_more_permissive(**extra)
+        self.assertEqual(result['overlap_dispositions'], reference['overlap_dispositions'])
+        self.assertEqual(result['waived_duplicates'], reference['waived_duplicates'])
         self.assertEqual(report['status'], 'not_evaluated')
 
-    def test_binding_errors_are_reported_without_changing_gates(self):
+    def test_binding_errors_make_the_record_invalid_and_skip_publication_reads(self):
         self.publish()
         signoff = test_lifecycle.signoff(self.task, self.context, self.evidence)
         disposition = disposition_for(self.task, self.context)
@@ -169,10 +183,12 @@ class InertReportTests(unittest.TestCase):
                 reference, reference_calls = self.without_update(**extra)
                 result, calls = self.with_update(record, **extra)
                 report = result.pop('draft_update')
-                self.assertEqual(result, reference)
-                self.assertEqual(calls, reference_calls)
                 self.assertEqual(report['status'], 'invalid')
                 self.assertIn(message, report['errors'])
+                self.assertFalse(result['publication']['verified'])
+                self.assertFalse(result['completion_ready'])
+                self.assertNotIn('repos/acme/photos/pulls/30', calls, 'an invalid record reads no PR detail')
+                self.assertTrue(set(calls) <= set(reference_calls))
         record = update_for(self.task, self.context, self.evidence)
         record['event']['binding_sha256'] = '1' * 64
         report = self.with_update(record)[0]['draft_update']
@@ -189,15 +205,14 @@ class InertReportTests(unittest.TestCase):
         self.assertFalse(result['user_authorization']['historical_valid'])
         self.assertEqual(report['errors'], ['Draft update requires a valid mandate'])
 
-    def test_an_expired_record_is_reported_but_not_an_error(self):
+    def test_an_expired_record_before_a_push_is_reported_and_recognizes_nothing(self):
         self.publish()
         record = update_for(self.task, self.context, self.evidence, issued_at=(NOW - dt.timedelta(hours=3)).isoformat(),
                             expires_at=(NOW - dt.timedelta(minutes=1)).isoformat())
-        reference, _ = self.without_update()
         result, _ = self.with_update(record)
-        report = result.pop('draft_update')
-        self.assertEqual(result, reference)
+        report = result['draft_update']
         self.assertEqual((report['status'], report['current'], report['errors']), ('not_evaluated', False, []))
+        self.assertFalse(result['publication']['verified'])
 
     def test_a_malformed_section_fails_the_host_context_closed(self):
         record = update_for(self.task, self.context, self.evidence)

@@ -45,6 +45,11 @@ def check_publication(binding, publication_claim, expected_head, client):
     return check(binding, publication_claim, expected_head, client)
 
 
+def check_updated_publication(binding, publication_claim, from_head, expected_head, client):
+    from .pr_identity import check_updated_publication as check
+    return check(binding, publication_claim, from_head, expected_head, client)
+
+
 def independent_review(task, evidence, now):
     result = {'valid': False, 'status': 'pending', 'errors': [], 'trust': 'self-attested'}
     if evidence is None:
@@ -206,10 +211,23 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result['independent_review'] = review
     publication = result['publication']
     unchecked = HISTORY_UNCHECKED
-    if authority['historical_valid']:
+    # A host-context 0.2 draft_update record replaces creation-head recognition with the update path (#21 slice 2):
+    # with a record present the draft at the creation head is never recognized, so no completion can bypass it.
+    update, live_head = None, None
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2' and 'draft_update' in host_context:
+        update = draft_updates.evaluate(task, host_context, authority, now)
+    if authority['historical_valid'] and update is None:
         claim = host_context.get('publication')
         head = evidence['git_head'] if result['technical_evidence_valid'] else None
         publication = check_publication(authority['binding'], claim, head, client)
+        result['publication'] = publication
+    elif authority['historical_valid'] and update['status'] != 'invalid':
+        record = host_context['draft_update']
+        head = evidence['git_head'] if result['technical_evidence_valid'] else None
+        publication, live_head = check_updated_publication(authority['binding'], host_context.get('publication'),
+                                                           record['from_head'], head, client)
+        if publication['verified']:
+            publication['errors'].extend(draft_updates.technical_errors(task, record, evidence, repo_dir))
         result['publication'] = publication
     if publication['status'] != 'absent' or not publication['creation_clear'] or publication['errors']:
         implementation_errors.append('Implementation requires complete empty exact-head PR history'
@@ -241,6 +259,15 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     # Judge final sign-off expiry after every blocking read, never at the start of verification.
     signoff = human_signoff(task, host_context, evidence, authority, publication, review,
                             dt.datetime.now(dt.timezone.utc))
+    if update is not None and signoff['valid']:
+        try:  # the CLI-visible half of host rule 6: a sign-off must postdate the update round
+            if authorization.timestamp(host_context['final_signoff']['issued_at']) <= authorization.timestamp(
+                    host_context['draft_update']['issued_at']):
+                signoff = dict(signoff, valid=False, status='invalid',
+                               errors=signoff['errors'] + ['Final signoff must follow the draft update round'])
+        except (ValueError, OverflowError, KeyError, TypeError):
+            signoff = dict(signoff, valid=False, status='invalid',
+                           errors=signoff['errors'] + ['Final signoff must follow the draft update round'])
     result['human_signoff'] = signoff
     result['final_signoff_sha256'] = signoff['sha256']
     completion_errors = list(post_errors) + signoff['errors']
@@ -274,7 +301,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         disposition['errors'] = list(dict.fromkeys(disposition['errors'] + expired))
         result['overlap_dispositions'] = disposition
         result['waived_duplicates'] = disposition['waived']
-    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2' and 'draft_update' in host_context:
-        # Slice 1 is inert: reported after every blocking read, never consulted by a gate.
-        result['draft_update'] = draft_updates.evaluate(task, host_context, authority, dt.datetime.now(dt.timezone.utc))
+    if update is not None:
+        # Currency is judged again after every blocking read; recognition itself does not need a current record.
+        now_after = dt.datetime.now(dt.timezone.utc)
+        current = draft_updates.evaluate(task, host_context, authority, now_after)['current']
+        result['draft_update'] = draft_updates.finish(dict(update, current=current), result['publication'],
+                                                      live_head, evidence, now_after)
     return result

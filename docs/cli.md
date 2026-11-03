@@ -2051,15 +2051,16 @@ Normalized mandate binding; null unless the mandate is historically valid
 
 #### `verify_draft_update`
 
-Host-context 0.2 draft_update report (#21, slice 1): parsed and binding-checked only; never consulted by a gate
+Host-context 0.2 draft_update report (#21, slices 1-2): bindings, then recognition after the one host push; never authorizes a push
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `status` | "not_evaluated" \| "invalid" | not_evaluated: bindings valid, but this version evaluates no update and authorizes nothing; invalid: schema or binding errors |
+| `status` | "not_evaluated" \| "recognized" \| "blocked" \| "invalid" | recognized: the draft was recognized at the one pushed update head (candidate_head); blocked: the live head moved but recognition failed (see errors); not_evaluated: the draft is still at from_head, and pre-push readiness is not evaluated by this version; invalid: schema or binding errors |
 | `trust` | "host-asserted" |  |
 | `sha256` | string or null | Canonical hash of the draft_update section; null when the host context is invalid |
 | `from_head` | string or null | The record's from_head; null when the host context is invalid |
-| `candidate_head` | null | Reserved for the validated candidate head of a later version; always null here |
+| `candidate_head` | string or null | The exact validated evidence HEAD that was recognized; non-null exactly when status is recognized |
+| `live_head` | string or null | The live PR head of the first complete read; null when it was not read |
 | `current` | boolean | Whether the record's interval contains the verification time |
 | `errors` | string[] |  |
 | `note` | string |  |
