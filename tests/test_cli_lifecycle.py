@@ -54,7 +54,7 @@ class LifecycleCLITests(unittest.TestCase):
 
     @output_contract.unchecked()
     def test_new_schema_prepare_is_explicit_and_unknown_versions_never_read_github(self):
-        snapshot = {'complete': True, 'source': {}, 'requested_repository': 'a/b',
+        snapshot = {'complete': True, 'source': {}, 'tipjar': {}, 'requested_repository': 'a/b',
                     'issue_source_repository': 'a/b', 'proposed_target_repository': 'a/b',
                     'resolution_provenance': {}, 'reference': 'a/b#1'}
         with tempfile.TemporaryDirectory() as tmp, patch.object(core, 'inspect_issue', return_value=snapshot) as inspect, patch.object(core, 'prepare', return_value={'status': 'draft'}) as prepare, \

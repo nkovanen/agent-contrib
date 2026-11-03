@@ -85,6 +85,8 @@ def _discover(result):
         return out + _list('Errors', result.get('errors', []))
     out = [f'Repository: {line(result.get("requested_repository", result.get("repository", "")))}',
            f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}'] + _policy(result)
+    if result.get('tipjar'):
+        out += _jar_summary(result)
     out += _display(result)
     if result.get('issue_source_repository'):
         out.append('Issue source: ' + line(result['issue_source_repository']))
@@ -144,6 +146,7 @@ def _inspect(result):
     out = [f'Reference: {line(result.get("reference", ""))}', f'Complete: {_flag(result.get("complete"))}',
            'Approval: ' + line(result.get('approval', {}).get('status', 'unknown')),
            'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))] + _policy(result)
+    out += _jar_summary(result)
     out += _list('Exclusions', result.get('exclusions', []))
     out += _list('Overlapping PRs', (f'{d.get("url", "")}: {d.get("reason", "")}' for d in result.get('duplicates', [])))
     out += _ownership(result.get('ownership_signals'))
@@ -375,11 +378,24 @@ def _impact(result):
             line(result['warning'], 1000)]
 
 
+def _jar_summary(result):
+    jar = result.get('tipjar') or {}
+    if not jar:
+        return []
+    out = ['Jar: ' + line(jar.get('state', 'unknown'), 30)]
+    selection = result.get('selection')
+    if selection:
+        out.append('Selection (' + line(selection['mode']) + '): ' + line(selection['reason']))
+    for key in ('wanted', 'boundaries'):
+        out += _list(key.capitalize() + ' (untrusted)', (jar.get('manifest') or {}).get(key, []))
+    return out
+
+
 def _jar(result):
     out = [f'Repository: {line(result["repository"])}',
            f'Jar: {line(result["state"], 30)} (complete: {_flag(result["complete"])})',
            f'Pinned commit: {line(result.get("commit") or "unavailable", 40)}',
-           'Inspection only; discover/prepare/verify do not yet enforce jars.',
+           'Source declaration only; other policy and authorization gates remain.',
            line(result['notice'])]
     manifest = result.get('manifest') or {}
     for key in ('wanted', 'boundaries'):
@@ -387,10 +403,67 @@ def _jar(result):
     return out + _list('Errors', result.get('errors', []))
 
 
+def _onboarding(result):
+    out = [f'File: {line(result.get("output", result.get("path")))}',
+           f'Jar: {line(result["state"])}', f'SHA-256: {line(result["sha256"], 64)}',
+           line(result['notice'])]
+    return out + _list('Next steps', result.get('next_steps', []))
+
+
+def _find(result):
+    out = [f'Bounded batch complete: {_flag(result["complete"])}',
+           'Coverage: not exhaustive; one page of at most ten indexed hits. Indexing may lag.',
+           'Find reads are uncached; core budget does not measure the separate search quota.']
+    welcomed = [o for o in result['observations'] if o['disposition'] == 'welcome']
+    if not welcomed:
+        out.append('No verified welcoming repositories in this batch')
+    for obs in result['observations']:
+        out.append(f'{line(obs["repository"] or "[identity withheld]")}: '
+                   f'{line(obs["disposition"])} ({line(obs["reason"])})')
+        if obs['disposition'] == 'welcome':
+            out += ['  https://github.com/' + line(obs['repository']),
+                    '  Pinned commit: ' + line(obs['jar']['commit']),
+                    '  Verified at: ' + line(obs['verified_at'])]
+            for key in ('wanted', 'boundaries'):
+                out += _list(key.capitalize() + ' (untrusted)', obs['jar']['manifest'].get(key, []))
+    if result['search']['truncated']:
+        out.append('Search truncated: only this first batch was observed; no backfill or rotation.')
+    if not result['complete']:
+        out.append('Incomplete batch: unknown observations or search incompleteness; verified findings retained.')
+    return out + _list('Errors', result['errors']) + [line(result['notice'])]
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
         return f'error [{line(result["error"].get("code", ""), 60)}]: {line(result["error"].get("message", ""))}\n'
+    if command == 'dependencies':
+        out = ['Offline dependency candidates',
+               'Supported file coverage complete: ' + _flag(result['complete']),
+               'All declarations resolved: ' + _flag(result['resolution_complete'])]
+        if 'installed' in result:
+            installed = result['installed']
+            out.append(f"Installed metadata: {installed['examined']}/{installed['max_packages']} packages; "
+                       'complete: ' + _flag(installed['complete']))
+            out += _list('Installed package provenance',
+                         (d['package'] + '@' + d['installed']['version'] + ' -> ' + d['repository'] +
+                          ' [' + d['installed']['source_file'] + ']'
+                          for d in result['dependencies'] if d.get('installed', {}).get('status') == 'github'))
+        out += _list('Repositories', result['repositories'])
+        out += _list('Unsupported files', result['unsupported_files'])
+        out += _list('Unresolved declarations',
+                     (d['package'] + ' [' + d['source_file'] + ':' + d['field'] + ']: ' + d['reason']
+                      for d in result['dependencies'] if d['status'] != 'github'))
+        return '\n'.join(out + [line(result['warning'])]) + '\n'
+    if command == 'session':
+        out = ['Session: proposed; actions are not authorized',
+               f'Stopping budget: {result["minutes"]} minutes; allocated: {result["allocated_minutes"]}',
+               f'Source complete: {_flag(result["source_complete"])}; retained candidates: {len(result["candidates"])}',
+               'Source display and scan limits are preserved in source_report; no fresh checks occurred.']
+        out += [f'  {line(t["reference"])}: stop after {t["stop_after_minutes"]} minutes' for t in result['tasks']]
+        out += _list('Not selected', [c['reference'] + ': ' + ', '.join(c['reasons'])
+                                      for c in result['candidates'] if not c['selected']])
+        return '\n'.join(out + [line(result['notice'], 1000)]) + '\n'
     if command == 'instructions':
         # The workflow is the packaged Markdown, not remote text: print it whole so agents need no JSON unwrapping.
         versions = ', '.join(result['supported_schema_versions'])
@@ -399,7 +472,7 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command, 'receipt': _receipt, 'impact': _impact, 'jar': _jar, 'card': _card}.get(command)
+            'ownership': _ownership_command, 'jar': _jar, 'init': _onboarding, 'jar-check': _onboarding, 'receipt': _receipt, 'impact': _impact, 'find': _find, 'card': _card}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:

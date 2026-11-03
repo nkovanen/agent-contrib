@@ -11,10 +11,20 @@ channel or runtime model provider is added.
 
 ### Highlights
 
-- Inspection-only `jar owner/repo` reads a strict, pinned root `.tipjar.json`
-  invitation and exports `schema jar` (output version stays 1). Existing command
-  shapes and task/evidence schemas are unchanged. Normal discover/prepare/verify
-  do not yet enforce jars; welcome/absence grants no new route or authority.
+- Add `tipjar find [--owner OWNER]`: one ten-hit public code-search batch,
+  strict identities, pinned jar verification and final welcome eligibility.
+  Reports partial coverage with fixed diagnostics and private-data suppression;
+  no adoption, execution or publication authority is implied. Reads are uncached
+  and bounded to 51 command gh invocations (at most 57 with budget snapshots),
+  not raw HTTP requests. Add the closed `find-jars-report/1` output schema.
+
+- Pinned `.tipjar.json` declarations now appear in discover/inspect/audit/prepare
+  and policy inventory format 3. Closed/unknown and changed declarations block
+  preparation/live contribution gates on both existing routes. No-jar explicit
+  targeting remains available; welcome grants no issue or execution authority.
+  `discover --welcomed-only` filters named sources after full scans, before limits.
+  Output schema 2 adds wrapper fields and preserves output/1; task, evidence,
+  host and instruction-baseline schema/hash semantics are unchanged.
   Manifest blankness uses an explicit Unicode White_Space set shared by Python
   and JSON Schema validation. Invalid `jar` repository arguments exit 2 before
   reads. Its four-invocation budget does not cap internal HTTP redirects in gh.
@@ -37,10 +47,26 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Offline maintainer onboarding: `tipjar init --status welcome|closed --output FILE`
+  exclusively creates an editable invitation template; `tipjar jar-check FILE`
+  validates bounded local bytes through the packaged parser without echoing
+  manifest text. Both report exact byte hashes, reject GitHub-only flags and
+  grant no approval or execution/publication authority.
+- `tipjar dependencies PATH`: offline GitHub give-back candidates from npm
+  manifests/lockfiles and Python requirements direct references, with source
+  hashes and declaration provenance. Explicit `--installed` resolves ordinary
+  direct npm registry dependencies from bounded existing node_modules repository
+  metadata with observed versions; symlinks are refused. No registry lookup or project execution;
+  unsupported sources stay visible and candidates grant no authority. See the
+  [give-back workflow](docs/dependencies.md).
 - `receipt` saves a versioned public PR observation through bounded GETs;
   `impact` summarizes up to 100 bounded local receipts without duplicate PR
   inflation. Editable snapshots are self-reported recorded observations, never
   authenticated contributions, proof that tests ran, or authority.
+- A dependency-free local Tipjar directory (`web/`) with clearly fictional demo
+  jars, bounded local `find-jars-report/1` snapshot import, source-linked details,
+  read-only CLI command copying, and schema 0.1 manifest preview/download.
+  Assets ship in the source archive; no hosting or GitHub requests are enabled.
 
 - Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
   isolated Python child that is terminated and reaped on timeout. Strict UTF-8
@@ -58,7 +84,7 @@ channel or runtime model provider is added.
 - Tipjar identity for gifting useful agent work, with a `tipjar` console alias
   for the existing CLI. `agent-contrib`, the distribution and Python module,
   canonical Skill, repository URLs and output identifiers remain compatible.
-  Discoverable repository jars are planned; this alias adds no protocol or
+  Repository jars use separate source-policy declarations; this alias adds no
   authority.
 
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,

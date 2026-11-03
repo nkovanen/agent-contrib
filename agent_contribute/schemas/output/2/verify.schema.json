@@ -1,0 +1,2511 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:verify",
+  "title": "verify result",
+  "description": "Contract, live GitHub state and optional evidence checks; never runs validation argv. The shape follows the contract schema_version (0.1 or 0.2) and whether the contract validated.",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/verify_0_1"
+    },
+    {
+      "$ref": "#/$defs/verify_0_1_rejected"
+    },
+    {
+      "$ref": "#/$defs/verify_0_2"
+    },
+    {
+      "$ref": "#/$defs/verify_0_2_rejected"
+    }
+  ],
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "approval": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "candidate",
+            "unknown"
+          ]
+        },
+        "policy_path": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "policy_commit": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "matched_labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "status",
+        "policy_path",
+        "policy_commit",
+        "matched_labels",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "description": "Source approval from the default-branch .agent-contrib.json policy; never execution authorization"
+    },
+    "authorization_provenance": {
+      "type": "object",
+      "properties": {
+        "fetched_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "GitHub endpoints read",
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "fetched_at",
+        "endpoints"
+      ],
+      "additionalProperties": false
+    },
+    "ci_observation": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "description": "Repository whose CI was read: the execution target, else the source",
+          "maxLength": 2147483647
+        },
+        "head_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "Evidence git_head; null when the evidence has none",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "check_runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_check_run"
+          },
+          "maxItems": 4000,
+          "description": "Check runs for exactly head_sha"
+        },
+        "other_head_runs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Returned runs for a different head; ignored"
+        },
+        "check_runs_complete": {
+          "type": "boolean"
+        },
+        "combined_status": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "success",
+                "failure",
+                "pending",
+                "error",
+                null
+              ],
+              "description": "Null when the read failed"
+            },
+            "statuses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "context": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "success",
+                      "failure",
+                      "pending",
+                      "error"
+                    ]
+                  },
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  }
+                },
+                "required": [
+                  "context",
+                  "state",
+                  "url"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 4000
+            },
+            "complete": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "state",
+            "statuses",
+            "complete"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "repository",
+        "head_sha",
+        "complete",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --observe-ci on a schema-valid contract; report only, never changes gates or exit status. The run and status fields are absent when there was no valid head or target to read"
+    },
+    "duplicate": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "reason": {
+          "type": "string",
+          "description": "\"Explicit reference to this issue\" or a heuristic overlap naming the shared words/IDs",
+          "maxLength": 2147483647
+        },
+        "repository": {
+          "type": "string",
+          "description": "Repository of the PR, when it is not the issue source",
+          "maxLength": 2147483647
+        },
+        "observed_in": {
+          "type": "string",
+          "const": "disposition_read",
+          "description": "Only in schema 0.2 verify: the match was first seen in a host-context 0.2 disposition read, not the open-PR list scan"
+        }
+      },
+      "required": [
+        "number",
+        "url",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "description": "An open PR that references or overlaps the issue"
+    },
+    "list_scan": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "pages",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "Completeness of one paginated GitHub list read"
+    },
+    "metadata_read": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "observed": {
+          "$ref": "#/$defs/repository_observation"
+        },
+        "fetched_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "endpoint",
+        "observed",
+        "fetched_at"
+      ],
+      "additionalProperties": false
+    },
+    "policy_file": {
+      "description": "The parsed .agent-contrib.json exactly as read: any JSON value, untrusted and possibly invalid; null when absent"
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    },
+    "repository_observation": {
+      "type": "object",
+      "properties": {
+        "full_name": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "fork": {
+          "type": "boolean"
+        },
+        "has_issues": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": "object",
+          "properties": {
+            "full_name": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "full_name"
+          ],
+          "additionalProperties": false,
+          "description": "Immediate fork parent, when it was read"
+        }
+      },
+      "required": [
+        "full_name",
+        "fork",
+        "has_issues"
+      ],
+      "additionalProperties": false
+    },
+    "resolution_provenance": {
+      "type": "object",
+      "properties": {
+        "metadata_reads": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata_read"
+          },
+          "maxItems": 1000
+        },
+        "reason": {
+          "type": "string",
+          "description": "How the issue tracker was chosen, or \"unresolved\"",
+          "maxLength": 2147483647
+        },
+        "execution_authority": {
+          "type": "string",
+          "description": "Always \"none\": resolution never grants authority",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "metadata_reads",
+        "reason",
+        "execution_authority"
+      ],
+      "additionalProperties": false
+    },
+    "signature_github_verification": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "verified": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "GitHub key-to-account match; not approval. Null when unread"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "bad_cert",
+            "bad_email",
+            "expired_key",
+            "gpgverify_error",
+            "gpgverify_unavailable",
+            "invalid",
+            "malformed_signature",
+            "no_user",
+            "not_signing_key",
+            "ocsp_pending",
+            "unknown_key",
+            "unknown_signature_type",
+            "unsigned",
+            "unverified_email",
+            "valid",
+            "unrecognized",
+            null
+          ],
+          "description": "GitHub verification reason; unrecognized values are not echoed"
+        },
+        "verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Timezone-bearing time GitHub verified, or null"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "verified_means": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "What verified does and does not show"
+        }
+      },
+      "required": [
+        "complete",
+        "verified",
+        "reason",
+        "verified_at",
+        "errors",
+        "verified_means"
+      ],
+      "additionalProperties": false,
+      "description": "GitHub verification object for the evidence head (git/commits)"
+    },
+    "signature_local_commit": {
+      "type": "object",
+      "properties": {
+        "sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "signature_header": {
+          "type": "string",
+          "enum": [
+            "present",
+            "absent"
+          ],
+          "description": "Header presence only, never validity"
+        }
+      },
+      "required": [
+        "sha",
+        "signature_header"
+      ],
+      "additionalProperties": false
+    },
+    "signature_local_commits": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "commits": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/signature_local_commit"
+          },
+          "maxItems": 1000,
+          "description": "base_commit..git_head, oldest first; null when incomplete, never truncated"
+        },
+        "with_header": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "without_header": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Commit cap; more is reported as incomplete"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "commits",
+        "with_header",
+        "without_header",
+        "limit",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Local signature-header presence; no signature program runs"
+    },
+    "signature_observation": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "Repository read: the execution target, else the source"
+        },
+        "head_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "Evidence git_head; null when the evidence has none"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "github_verification": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/signature_github_verification"
+            }
+          ]
+        },
+        "required_signatures": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/signature_required"
+            }
+          ]
+        },
+        "local_commits": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "const": "not_requested"
+                }
+              },
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/signature_local_commits"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "repository",
+        "head_sha",
+        "complete",
+        "github_verification",
+        "required_signatures",
+        "local_commits",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Report-only commit-signature observation (verify --observe-signatures); never a gate"
+    },
+    "signature_required": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Base branch whose active rules were read"
+        },
+        "required": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "An active required_signatures ruleset rule applies; null when unread"
+        },
+        "ruleset_ids": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxItems": 4000,
+          "description": "Rulesets requiring signatures, ascending; null when unread"
+        },
+        "classic_branch_protection": {
+          "const": "not_observed",
+          "description": "Classic protection needs admin access and is never read"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "branch",
+        "required",
+        "ruleset_ids",
+        "classic_branch_protection",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "Active ruleset rules for the base branch (rules/branches)"
+    },
+    "target_pulls_scan": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "endpoint": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "repository",
+        "endpoint",
+        "complete",
+        "pages",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "Open-PR scan of the proposed target repository when it differs from the issue source"
+    },
+    "verify_0_1": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "schema_valid": {
+          "type": "boolean",
+          "description": "The contract matches the bundled task schema"
+        },
+        "execution_ready": {
+          "type": "boolean",
+          "description": "Contract, live source and local execution authorization all pass"
+        },
+        "evidence_valid": {
+          "type": "boolean",
+          "description": "Supplied evidence validates against the contract and checkout"
+        },
+        "upstream_submission_ready": {
+          "type": "boolean",
+          "description": "Exit gate for upstream-contribution mode"
+        },
+        "fork_completion_ready": {
+          "type": "boolean",
+          "description": "Exit gate for fork-experiment mode"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/approval"
+            },
+            {
+              "$ref": "#/$defs/verify_unrefreshed_approval"
+            }
+          ],
+          "description": "Live source approval; \"Not refreshed\" until the live read succeeds"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Blockers for execution_ready",
+          "maxItems": 2147483647
+        },
+        "evidence_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Blockers for evidence_valid",
+          "maxItems": 2147483647
+        },
+        "evidence_trust": {
+          "type": "string",
+          "description": "Evidence is self-attested; identity and truth are not authenticated",
+          "maxLength": 2147483647
+        },
+        "publication": {
+          "type": "string",
+          "description": "Fixed notice: this CLI never publishes",
+          "maxLength": 2147483647
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        },
+        "ci_observation": {
+          "$ref": "#/$defs/ci_observation"
+        },
+        "signature_observation": {
+          "$ref": "#/$defs/signature_observation"
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Canonical hash of the contract",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "requested_repository": {
+          "type": "null",
+          "description": "Not stored in schema 0.1"
+        },
+        "issue_source_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "proposed_target_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "resolution_provenance": {
+          "type": "object",
+          "properties": {
+            "requested_repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "issue_source_repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "proposed_target_repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "execution_authority": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "requested_repository",
+            "issue_source_repository",
+            "proposed_target_repository",
+            "execution_authority"
+          ],
+          "additionalProperties": false,
+          "description": "Which contract fields the repositories come from"
+        },
+        "live_complete": {
+          "type": "boolean",
+          "description": "Whether the live refresh was complete"
+        },
+        "live_provenance": {
+          "$ref": "#/$defs/verify_live_provenance"
+        },
+        "source_resolution_provenance": {
+          "$ref": "#/$defs/resolution_provenance"
+        },
+        "duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/duplicate"
+          },
+          "description": "Open PRs overlapping the issue now",
+          "maxItems": 2147483647
+        },
+        "execution_authorization": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "fork-experiment",
+                "upstream-contribution"
+              ]
+            },
+            "target_repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "authorized_by": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "authorization_evidence": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "mode",
+            "target_repository",
+            "authorized_by",
+            "authorization_evidence"
+          ],
+          "additionalProperties": false,
+          "description": "The contract's execution block, echoed; a reviewed assertion, never inferred"
+        }
+      },
+      "required": [
+        "schema_version",
+        "schema_valid",
+        "execution_ready",
+        "evidence_valid",
+        "upstream_submission_ready",
+        "fork_completion_ready",
+        "approval",
+        "errors",
+        "evidence_errors",
+        "evidence_trust",
+        "publication",
+        "contract_sha256",
+        "requested_repository",
+        "issue_source_repository",
+        "proposed_target_repository",
+        "resolution_provenance",
+        "live_complete",
+        "execution_authorization"
+      ],
+      "additionalProperties": false,
+      "description": "Schema 0.1: a schema-valid contract was checked. live_provenance, source_resolution_provenance and duplicates are absent when the live refresh failed"
+    },
+    "verify_0_1_rejected": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "schema_valid": {
+          "type": "boolean",
+          "description": "The contract matches the bundled task schema"
+        },
+        "execution_ready": {
+          "type": "boolean",
+          "description": "Contract, live source and local execution authorization all pass"
+        },
+        "evidence_valid": {
+          "type": "boolean",
+          "description": "Supplied evidence validates against the contract and checkout"
+        },
+        "upstream_submission_ready": {
+          "type": "boolean",
+          "description": "Exit gate for upstream-contribution mode"
+        },
+        "fork_completion_ready": {
+          "type": "boolean",
+          "description": "Exit gate for fork-experiment mode"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/approval"
+            },
+            {
+              "$ref": "#/$defs/verify_unrefreshed_approval"
+            }
+          ],
+          "description": "Live source approval; \"Not refreshed\" until the live read succeeds"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Blockers for execution_ready",
+          "maxItems": 2147483647
+        },
+        "evidence_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Blockers for evidence_valid",
+          "maxItems": 2147483647
+        },
+        "evidence_trust": {
+          "type": "string",
+          "description": "Evidence is self-attested; identity and truth are not authenticated",
+          "maxLength": 2147483647
+        },
+        "publication": {
+          "type": "string",
+          "description": "Fixed notice: this CLI never publishes",
+          "maxLength": 2147483647
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        },
+        "ci_observation": {
+          "$ref": "#/$defs/ci_observation"
+        },
+        "signature_observation": {
+          "$ref": "#/$defs/signature_observation"
+        }
+      },
+      "required": [
+        "schema_version",
+        "schema_valid",
+        "execution_ready",
+        "evidence_valid",
+        "upstream_submission_ready",
+        "fork_completion_ready",
+        "approval",
+        "errors",
+        "evidence_errors",
+        "evidence_trust",
+        "publication"
+      ],
+      "additionalProperties": false,
+      "description": "Schema 0.1: the contract failed validation; nothing was read"
+    },
+    "verify_0_2": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.2"
+        },
+        "schema_valid": {
+          "type": "boolean",
+          "const": true
+        },
+        "repository_approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/approval"
+            },
+            {
+              "$ref": "#/$defs/verify_unrefreshed_approval"
+            }
+          ],
+          "description": "Live source approval; \"Not refreshed\" when the live read failed"
+        },
+        "user_authorization": {
+          "$ref": "#/$defs/verify_user_authorization"
+        },
+        "implementation_ready": {
+          "type": "boolean",
+          "description": "Gate for --stage implementation"
+        },
+        "technical_evidence_valid": {
+          "type": "boolean",
+          "description": "Supplied evidence validates against the contract and checkout"
+        },
+        "independent_review": {
+          "$ref": "#/$defs/verify_review"
+        },
+        "draft_create_ready": {
+          "type": "boolean",
+          "description": "Draft-creation gate; false once an own draft is verified"
+        },
+        "publication": {
+          "$ref": "#/$defs/verify_publication"
+        },
+        "human_signoff": {
+          "$ref": "#/$defs/verify_signoff"
+        },
+        "completion_ready": {
+          "type": "boolean",
+          "description": "Gate for --stage completion (the default)"
+        },
+        "next_action": {
+          "type": "string",
+          "enum": [
+            "resolve_blockers",
+            "implement",
+            "create_draft",
+            "none"
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Contract, live-source and mandate blockers",
+          "maxItems": 2147483647
+        },
+        "evidence_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "stage_blockers": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            },
+            "draft": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            },
+            "completion": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            }
+          },
+          "required": [
+            "implementation",
+            "draft",
+            "completion"
+          ],
+          "additionalProperties": false,
+          "description": "Blockers per --stage gate"
+        },
+        "blocking_duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/duplicate"
+          },
+          "description": "Overlapping PRs other than the verified own draft",
+          "maxItems": 2147483647
+        },
+        "evidence_trust": {
+          "type": "string",
+          "description": "Evidence is self-attested; identity and truth are not authenticated",
+          "maxLength": 2147483647
+        },
+        "mandate_trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "mandate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "final_signoff_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "source_identity": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "repository_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "owner_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "issue": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "issue_id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "repository",
+            "repository_id",
+            "owner_id",
+            "issue",
+            "issue_id"
+          ],
+          "additionalProperties": false,
+          "description": "Reviewed numeric source identity"
+        },
+        "live_complete": {
+          "type": "boolean"
+        },
+        "live_provenance": {
+          "$ref": "#/$defs/verify_live_provenance"
+        },
+        "duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/duplicate"
+          },
+          "description": "Open PRs overlapping the issue now",
+          "maxItems": 2147483647
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        },
+        "ci_observation": {
+          "$ref": "#/$defs/ci_observation"
+        },
+        "signature_observation": {
+          "$ref": "#/$defs/signature_observation"
+        },
+        "overlap_dispositions": {
+          "$ref": "#/$defs/verify_overlap_dispositions",
+          "description": "Present only for a host-context 0.2 document"
+        },
+        "waived_duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_waived_overlap"
+          },
+          "maxItems": 20,
+          "description": "Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them"
+        },
+        "draft_update": {
+          "$ref": "#/$defs/verify_draft_update",
+          "description": "Present only when a host-context 0.2 document carries draft_update"
+        },
+        "ci_gate": {
+          "$ref": "#/$defs/ci_gate"
+        }
+      },
+      "required": [
+        "schema_version",
+        "schema_valid",
+        "repository_approval",
+        "user_authorization",
+        "implementation_ready",
+        "technical_evidence_valid",
+        "independent_review",
+        "draft_create_ready",
+        "publication",
+        "human_signoff",
+        "completion_ready",
+        "next_action",
+        "errors",
+        "evidence_errors",
+        "stage_blockers",
+        "blocking_duplicates",
+        "evidence_trust",
+        "mandate_trust",
+        "mandate_sha256",
+        "final_signoff_sha256",
+        "contract_sha256",
+        "source_identity",
+        "live_complete",
+        "duplicates"
+      ],
+      "additionalProperties": false,
+      "description": "Schema 0.2: a schema-valid contract was checked. live_provenance is absent when the live refresh failed"
+    },
+    "verify_0_2_rejected": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.2"
+        },
+        "schema_valid": {
+          "type": "boolean",
+          "const": false
+        },
+        "repository_approval": {
+          "$ref": "#/$defs/verify_unrefreshed_approval"
+        },
+        "user_authorization": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "implementation_ready": {
+          "type": "boolean",
+          "const": false
+        },
+        "technical_evidence_valid": {
+          "type": "boolean",
+          "const": false
+        },
+        "independent_review": {
+          "$ref": "#/$defs/verify_review_pending"
+        },
+        "draft_create_ready": {
+          "type": "boolean",
+          "const": false
+        },
+        "publication": {
+          "$ref": "#/$defs/verify_publication_pending"
+        },
+        "human_signoff": {
+          "$ref": "#/$defs/verify_review_pending"
+        },
+        "completion_ready": {
+          "type": "boolean",
+          "const": false
+        },
+        "next_action": {
+          "type": "string",
+          "const": "resolve_blockers"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "minItems": 1,
+          "description": "Contract schema errors",
+          "maxItems": 2147483647
+        },
+        "evidence_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 0
+        },
+        "stage_blockers": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "blocking_duplicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/duplicate"
+          },
+          "maxItems": 0
+        },
+        "evidence_trust": {
+          "type": "string",
+          "description": "Evidence is self-attested; identity and truth are not authenticated",
+          "maxLength": 2147483647
+        },
+        "mandate_trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "mandate_sha256": {
+          "type": "null"
+        },
+        "final_signoff_sha256": {
+          "type": "null"
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        }
+      },
+      "required": [
+        "schema_version",
+        "schema_valid",
+        "repository_approval",
+        "user_authorization",
+        "implementation_ready",
+        "technical_evidence_valid",
+        "independent_review",
+        "draft_create_ready",
+        "publication",
+        "human_signoff",
+        "completion_ready",
+        "next_action",
+        "errors",
+        "evidence_errors",
+        "stage_blockers",
+        "blocking_duplicates",
+        "evidence_trust",
+        "mandate_trust",
+        "mandate_sha256",
+        "final_signoff_sha256"
+      ],
+      "additionalProperties": false,
+      "description": "Schema 0.2: the contract failed validation; nothing was read"
+    },
+    "verify_binding": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "target_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "target_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "head_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_ref": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "base_ref": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "credential_actor_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "issued_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "expires_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "mandate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        }
+      },
+      "required": [
+        "target_repository",
+        "target_repository_id",
+        "head_repository",
+        "head_repository_id",
+        "head_ref",
+        "base_ref",
+        "credential_actor_id",
+        "contract_sha256",
+        "issued_at",
+        "expires_at",
+        "mandate_sha256"
+      ],
+      "additionalProperties": false,
+      "description": "Normalized mandate binding; null unless the mandate is historically valid"
+    },
+    "verify_check_run": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "app_slug": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "app_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "in_progress",
+            "completed",
+            "waiting",
+            "requested",
+            "pending"
+          ]
+        },
+        "conclusion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "success",
+            "failure",
+            "neutral",
+            "cancelled",
+            "skipped",
+            "timed_out",
+            "action_required",
+            "stale",
+            "startup_failure",
+            null
+          ],
+          "description": "Null unless status is completed"
+        },
+        "url": {
+          "type": "string",
+          "description": "Empty when GitHub gave none",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "app_slug",
+        "app_id",
+        "head_sha",
+        "status",
+        "conclusion",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "verify_draft_update": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_evaluated",
+            "recognized",
+            "blocked",
+            "invalid"
+          ],
+          "description": "recognized: the draft was recognized at the one pushed update head (candidate_head); blocked: the live head moved but recognition failed (see errors); not_evaluated: the draft is still at from_head, and pre-push readiness is not evaluated by this version; invalid: schema or binding errors"
+        },
+        "trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64,
+          "description": "Canonical hash of the draft_update section; null when the host context is invalid"
+        },
+        "from_head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "The record's from_head; null when the host context is invalid"
+        },
+        "candidate_head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "The exact validated evidence HEAD that was recognized; non-null exactly when status is recognized"
+        },
+        "live_head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40,
+          "description": "The live PR head of the first complete read; null when it was not read"
+        },
+        "current": {
+          "type": "boolean",
+          "description": "Whether the record's interval contains the verification time"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "status",
+        "trust",
+        "sha256",
+        "from_head",
+        "candidate_head",
+        "live_head",
+        "current",
+        "errors",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Host-context 0.2 draft_update report (#21, slices 1-2): bindings, then recognition after the one host push; never authorizes a push"
+    },
+    "verify_live_provenance": {
+      "type": "object",
+      "properties": {
+        "pulls": {
+          "$ref": "#/$defs/list_scan"
+        },
+        "labels": {
+          "$ref": "#/$defs/list_scan"
+        },
+        "policy_state": {
+          "type": "string",
+          "enum": [
+            "missing",
+            "present",
+            "unknown"
+          ]
+        },
+        "policy": {
+          "$ref": "#/$defs/policy_file"
+        },
+        "proposed_target_pulls": {
+          "$ref": "#/$defs/target_pulls_scan"
+        },
+        "proposed_target_metadata": {
+          "$ref": "#/$defs/metadata_read",
+          "description": "Schema 0.1 fork target metadata read"
+        }
+      },
+      "required": [
+        "pulls",
+        "labels",
+        "policy_state",
+        "policy"
+      ],
+      "additionalProperties": false,
+      "description": "Provenance of the live inspect refresh"
+    },
+    "verify_own_pr": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "head_ref": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "base_ref": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "author_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "repository",
+        "repository_id",
+        "number",
+        "id",
+        "url",
+        "head_sha",
+        "head_ref",
+        "base_ref",
+        "author_id",
+        "created_at"
+      ],
+      "additionalProperties": false,
+      "description": "The verified own exact-head draft PR; null otherwise"
+    },
+    "verify_publication": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "unknown",
+            "blocked",
+            "absent",
+            "own_draft"
+          ],
+          "description": "absent: no exact-head PR history; own_draft: the claimed draft was verified"
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "identity_verified and no completion-stage blockers"
+        },
+        "creation_clear": {
+          "type": "boolean",
+          "description": "Exact-head history and timing permit creating a draft"
+        },
+        "own_pr": {
+          "$ref": "#/$defs/verify_own_pr"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "publication_claim_trust": {
+              "type": "string",
+              "const": "untrusted"
+            },
+            "authority_evaluated": {
+              "type": "boolean",
+              "const": false
+            },
+            "history": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "maxLength": 2147483647
+                },
+                "complete": {
+                  "type": "boolean"
+                },
+                "pages": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "matches": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "maxItems": 2147483647
+                }
+              },
+              "required": [
+                "endpoint",
+                "complete",
+                "pages",
+                "matches",
+                "errors"
+              ],
+              "additionalProperties": false
+            },
+            "detail_endpoint": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [],
+          "additionalProperties": false,
+          "description": "Empty when exact-head history was not checked (no valid mandate)"
+        },
+        "identity_verified": {
+          "type": "boolean",
+          "description": "The claimed PR matched the binding and evidence head"
+        },
+        "stage_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Blockers for verified",
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "status",
+        "verified",
+        "creation_clear",
+        "own_pr",
+        "errors",
+        "provenance",
+        "identity_verified",
+        "stage_errors"
+      ],
+      "additionalProperties": false
+    },
+    "verify_publication_pending": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unknown"
+        },
+        "verified": {
+          "type": "boolean",
+          "const": false
+        },
+        "creation_clear": {
+          "type": "boolean",
+          "const": false
+        },
+        "own_pr": {
+          "type": "null"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 0
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "status",
+        "verified",
+        "creation_clear",
+        "own_pr",
+        "errors",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "description": "Placeholder; publication was not checked"
+    },
+    "verify_review": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "invalid",
+            "passed"
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "trust": {
+          "type": "string",
+          "const": "self-attested"
+        }
+      },
+      "required": [
+        "valid",
+        "status",
+        "errors",
+        "trust"
+      ],
+      "additionalProperties": false,
+      "description": "Independent review recorded in the evidence"
+    },
+    "verify_review_pending": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "const": false
+        },
+        "status": {
+          "type": "string",
+          "const": "pending"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "valid",
+        "status",
+        "errors"
+      ],
+      "additionalProperties": false
+    },
+    "verify_signoff": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "invalid",
+            "passed"
+          ]
+        },
+        "trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        }
+      },
+      "required": [
+        "valid",
+        "status",
+        "trust",
+        "errors",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "description": "Final human sign-off from the host context"
+    },
+    "verify_unrefreshed_approval": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unknown"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "description": "Placeholder before (or without) a live refresh"
+    },
+    "verify_user_authorization": {
+      "type": "object",
+      "properties": {
+        "authorized": {
+          "type": "boolean",
+          "description": "historical_valid and not expired for new actions"
+        },
+        "historical_valid": {
+          "type": "boolean",
+          "description": "The mandate matched the contract and credential when issued"
+        },
+        "implement": {
+          "type": "boolean",
+          "description": "implement is currently authorized"
+        },
+        "create_draft": {
+          "type": "boolean",
+          "description": "create_draft is currently authorized"
+        },
+        "mandate_trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "mandate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "credential_actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "login": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "type": {
+              "type": "string",
+              "const": "User"
+            }
+          },
+          "required": [
+            "id",
+            "login",
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "The authenticated GitHub user; null when unreadable"
+        },
+        "permission": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "role_name": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "maintain"
+              ]
+            },
+            "user_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "endpoint": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "role_name",
+            "user_id",
+            "endpoint"
+          ],
+          "additionalProperties": false
+        },
+        "binding": {
+          "$ref": "#/$defs/verify_binding"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "implement",
+              "create_draft"
+            ]
+          },
+          "maxItems": 2
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Why the mandate is not historically valid",
+          "maxItems": 2147483647
+        },
+        "current_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Why a valid mandate does not authorize new actions now (expiry)",
+          "maxItems": 2147483647
+        },
+        "source_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Source identity failures; also listed in errors",
+          "maxItems": 2147483647
+        },
+        "provenance": {
+          "$ref": "#/$defs/authorization_provenance"
+        },
+        "mandate_id": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "event_reference": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "event_text_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        }
+      },
+      "required": [
+        "authorized",
+        "historical_valid",
+        "implement",
+        "create_draft",
+        "mandate_trust",
+        "mandate_sha256",
+        "credential_actor",
+        "permission",
+        "binding",
+        "actions",
+        "errors",
+        "current_errors",
+        "source_errors",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "description": "Host-asserted mandate checked against live credential facts; never proof of human consent. mandate_id, event_reference and event_text_sha256 are present once the host context validates"
+    },
+    "verify_overlap_dispositions": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "absent",
+            "evaluated",
+            "invalid"
+          ],
+          "description": "absent: no section; evaluated: bindings valid and each entry checked against fresh reads; invalid: schema, binding or expiry errors, nothing waived"
+        },
+        "trust": {
+          "type": "string",
+          "const": "host-asserted"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64,
+          "description": "Canonical hash of the overlap_dispositions section; null when absent or the host context is invalid"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "waived": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verify_waived_overlap"
+          },
+          "maxItems": 20
+        },
+        "unused": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 20,
+          "description": "Disposed PRs that match nothing now; informational"
+        }
+      },
+      "required": [
+        "status",
+        "trust",
+        "sha256",
+        "errors",
+        "waived",
+        "unused"
+      ],
+      "additionalProperties": false,
+      "description": "Host-context 0.2 overlap_dispositions report; waives only topical overlaps whose bound observations still hold"
+    },
+    "verify_waived_overlap": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "number": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "pr_id": {
+          "type": "integer"
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "base_tip_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "updated_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "untrusted_rationale": {
+          "type": "string",
+          "maxLength": 2147483647,
+          "description": "Host-supplied rationale, sanitized; untrusted text"
+        }
+      },
+      "required": [
+        "repository",
+        "number",
+        "url",
+        "reason",
+        "pr_id",
+        "head_sha",
+        "base_tip_sha",
+        "updated_at",
+        "untrusted_rationale"
+      ],
+      "additionalProperties": false,
+      "description": "A topical overlap waived by a host disposition at the observed PR state"
+    },
+    "ci_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "head_sha",
+        "complete",
+        "suites_read",
+        "github_paths_changed",
+        "requirements",
+        "errors",
+        "notice"
+      ],
+      "description": "Present only when the contract declares ci_requirements; its blockers appear only in stage_blockers.completion",
+      "properties": {
+        "head_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "minLength": 40,
+          "maxLength": 40,
+          "description": "Exact head observed; null until an exact-head published draft is verified"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "suites_read": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "github_paths_changed": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether the implementation diff touches .github/; null when not read"
+        },
+        "requirements": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "check",
+              "app_id",
+              "state",
+              "runs",
+              "blocking_suites",
+              "other_app_runs"
+            ],
+            "properties": {
+              "check": {
+                "type": "string",
+                "maxLength": 200,
+                "description": "Reviewed check name (display copy)"
+              },
+              "app_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "met",
+                  "failed",
+                  "not_met",
+                  "pending",
+                  "missing",
+                  "unknown"
+                ],
+                "description": "Only met passes"
+              },
+              "runs": {
+                "type": "array",
+                "maxItems": 4000,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "status",
+                    "conclusion",
+                    "url"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "in_progress",
+                        "completed",
+                        "waiting",
+                        "requested",
+                        "pending"
+                      ]
+                    },
+                    "conclusion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "success",
+                        "failure",
+                        "neutral",
+                        "cancelled",
+                        "skipped",
+                        "timed_out",
+                        "action_required",
+                        "stale",
+                        "startup_failure",
+                        null
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  }
+                },
+                "description": "Every retained run with this exact raw name from this app on the head"
+              },
+              "blocking_suites": {
+                "type": "array",
+                "maxItems": 1000,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Suites of this app on the head that are not completed"
+              },
+              "other_app_runs": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Same-name runs from other apps; never accepted"
+              }
+            }
+          }
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          }
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      }
+    }
+  }
+}

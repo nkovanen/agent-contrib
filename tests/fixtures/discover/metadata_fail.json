@@ -12,7 +12,12 @@
     "errors": [
       "GitHub read failed"
     ],
-    "issues": []
+    "issues": [],
+    "selection": {
+      "mode": "explicit",
+      "included": false,
+      "reason": "Tipjar source declaration is unknown; refresh and review source policy"
+    }
   },
   "calls": [
     "repos/person/photos"

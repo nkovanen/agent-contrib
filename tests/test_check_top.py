@@ -170,8 +170,9 @@ class CheckTopTests(unittest.TestCase):
 
         class OnceGitHub(CheckGitHub):
             def request_once(self, endpoint):
-                self.once = getattr(self, 'once', 0) + 1
-                return self.request(endpoint)
+                if '/timeline' in endpoint or '/comments' in endpoint or '/pulls/' in endpoint:
+                    self.once = getattr(self, 'once', 0) + 1
+                return super().request_once(endpoint)
         client = OnceGitHub()
         code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '5')
         self.assertEqual(client.once, result['top_check']['reads'])

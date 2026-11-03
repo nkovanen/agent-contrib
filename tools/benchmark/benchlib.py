@@ -203,8 +203,9 @@ class SnapshotClient:
         path, _, query = endpoint.partition('?')
         if path == f'repos/{repo}':
             return {'full_name': repo, 'default_branch': branch, 'fork': False, 'has_issues': True}
-        if path == f'repos/{repo}/commits/{branch}':
-            return {'sha': commit}
+        if path in (f'repos/{repo}/commits/{branch}', f'repos/{repo}/commits/{commit}'):
+            # Replay synthesizes its path-only tree; this identity is not a live source attestation.
+            return {'sha': commit, 'commit': {'tree': {'sha': commit}}}
         if path == f'repos/{repo}/labels':
             return []
         if path == f'repos/{repo}/pulls' and query.startswith('state=open'):
@@ -212,8 +213,8 @@ class SnapshotClient:
                                 'body': None, 'head': None} for pr in snap['open_prs_at_cutoff']], query)
         if path == f'repos/{repo}/git/trees/{commit}':
             # The policy file is left out: approval never affects the ranking order.
-            return {'truncated': snap['tree_truncated'], 'tree': [
-                {'path': name, 'type': 'blob'} for name in snap['tree_paths'] if name != '.agent-contrib.json']}
+            return {'sha': commit, 'truncated': snap['tree_truncated'], 'tree': [
+                {'path': name, 'type': 'blob', 'sha': commit, 'mode': '100644'} for name in snap['tree_paths'] if name != '.agent-contrib.json']}
         if path.startswith(f'repos/{repo}/contents/'):
             return {'encoding': 'base64', 'content': base64.b64encode(b'').decode()}
         if path == f'repos/{repo}/issues' and query.startswith('state=open'):

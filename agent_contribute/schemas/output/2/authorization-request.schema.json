@@ -1,0 +1,386 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:authorization-request",
+  "title": "authorization-request result",
+  "description": "Unsigned mandate request pre-filled from a schema 0.2 contract; it is not a mandate and grants nothing.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "agent-contrib/authorization-request"
+    },
+    "request_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "issued": {
+      "type": "boolean",
+      "const": false
+    },
+    "notice": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "target_host_context_schema_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "ready_for_issuance": {
+      "type": "boolean",
+      "description": "No preflight errors and no unresolved fields; sets the exit status"
+    },
+    "preflight_errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "description": "Blockers a mandate would not clear",
+      "maxItems": 2147483647
+    },
+    "preflight_errors_trust": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "unresolved_fields": {
+      "description": "Derived fields that fresh trusted reads could not resolve; never the human-only fields",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "credential_actor_id",
+          "authority"
+        ]
+      },
+      "maxItems": 2
+    },
+    "contract_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 64,
+      "minLength": 64
+    },
+    "exact_head_pr_history": {
+      "type": "string",
+      "maxLength": 2147483647
+    },
+    "mandate_fields": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "null"
+        },
+        "nonce": {
+          "type": "null"
+        },
+        "issued_at": {
+          "type": "null"
+        },
+        "expires_at": {
+          "type": "null"
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64,
+          "minLength": 64
+        },
+        "source_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_owner_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "issue_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "issue_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "credential_actor_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "authority": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "owner",
+            "maintainer",
+            null
+          ]
+        },
+        "actions": {
+          "type": "null"
+        },
+        "policy_review": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "null"
+            },
+            "instructions_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "maxLength": 64,
+              "minLength": 64
+            },
+            "policy_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "maxLength": 64,
+              "minLength": 64
+            },
+            "notes": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "status",
+            "instructions_sha256",
+            "policy_sha256",
+            "notes"
+          ],
+          "additionalProperties": false
+        },
+        "event": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "null"
+            },
+            "reference": {
+              "type": "null"
+            },
+            "text_sha256": {
+              "type": "null"
+            },
+            "binding_sha256": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "kind",
+            "reference",
+            "text_sha256",
+            "binding_sha256"
+          ],
+          "additionalProperties": false
+        },
+        "target_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "target_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "head_repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_ref": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "base_ref": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "contract_sha256",
+        "source_repository_id",
+        "source_owner_id",
+        "issue_id",
+        "issue_number",
+        "credential_actor_id",
+        "authority",
+        "actions",
+        "policy_review",
+        "event",
+        "target_repository",
+        "target_repository_id",
+        "head_repository",
+        "head_repository_id",
+        "head_ref",
+        "base_ref"
+      ],
+      "additionalProperties": false,
+      "description": "Binding fields; null fields are filled only by the human/host"
+    },
+    "human_only_fields": {
+      "description": "mandate_fields paths left null for the human/host to fill, even in a ready request",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 1000
+    },
+    "requested_actions": {
+      "description": "The contract's requested actions; the human/host chooses mandate_fields.actions",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "implement",
+          "create_draft"
+        ]
+      },
+      "maxItems": 2
+    },
+    "provenance": {
+      "$ref": "#/$defs/authorization_provenance"
+    },
+    "api_budget": {
+      "$ref": "#/$defs/api_budget"
+    }
+  },
+  "required": [
+    "kind",
+    "request_version",
+    "issued",
+    "notice",
+    "target_host_context_schema_version",
+    "ready_for_issuance",
+    "preflight_errors",
+    "preflight_errors_trust",
+    "unresolved_fields",
+    "contract_sha256",
+    "exact_head_pr_history",
+    "mandate_fields",
+    "human_only_fields",
+    "requested_actions",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "authorization_provenance": {
+      "type": "object",
+      "properties": {
+        "fetched_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "GitHub endpoints read",
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "fetched_at",
+        "endpoints"
+      ],
+      "additionalProperties": false
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    }
+  }
+}

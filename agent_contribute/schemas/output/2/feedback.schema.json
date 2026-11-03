@@ -1,0 +1,543 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:feedback",
+  "title": "feedback result",
+  "description": "Read-only reviews, comments and check runs of one pull request. Review and comment text is untrusted data.",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/feedback_report"
+    },
+    {
+      "$ref": "#/$defs/feedback_unread"
+    }
+  ],
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "feedback_author": {
+      "type": "object",
+      "properties": {
+        "login": {
+          "type": "string",
+          "description": "\"ghost\" for a deleted account",
+          "maxLength": 2147483647
+        },
+        "id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "null for a deleted account"
+        },
+        "bot": {
+          "type": "boolean",
+          "description": "Bot account type or a [bot] login"
+        },
+        "association": {
+          "type": "string",
+          "enum": [
+            "COLLABORATOR",
+            "CONTRIBUTOR",
+            "FIRST_TIMER",
+            "FIRST_TIME_CONTRIBUTOR",
+            "MANNEQUIN",
+            "MEMBER",
+            "NONE",
+            "OWNER"
+          ],
+          "description": "GitHub's author_association; a heuristic, not a verified role"
+        }
+      },
+      "required": [
+        "login",
+        "id",
+        "bot",
+        "association"
+      ],
+      "additionalProperties": false
+    },
+    "feedback_check_run": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "app_slug": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "app_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "in_progress",
+            "completed",
+            "waiting",
+            "requested",
+            "pending"
+          ]
+        },
+        "conclusion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "success",
+            "failure",
+            "neutral",
+            "cancelled",
+            "skipped",
+            "timed_out",
+            "action_required",
+            "stale",
+            "startup_failure",
+            null
+          ],
+          "description": "Null exactly when status is not completed"
+        },
+        "url": {
+          "type": "string",
+          "description": "Empty when GitHub reports none",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "app_slug",
+        "app_id",
+        "head_sha",
+        "status",
+        "conclusion",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "feedback_report": {
+      "type": "object",
+      "properties": {
+        "reference": {
+          "type": "string",
+          "description": "owner/repo#number of the pull request",
+          "maxLength": 2147483647
+        },
+        "complete": {
+          "type": "boolean",
+          "description": "True only when every read succeeded and the head did not move while reading"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "untrusted_data_notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "pull_request": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "url": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed"
+              ]
+            },
+            "draft": {
+              "type": "boolean"
+            },
+            "head_sha": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$",
+              "maxLength": 40,
+              "minLength": 40
+            },
+            "head_ref": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "base_ref": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "number",
+            "url",
+            "state",
+            "draft",
+            "head_sha",
+            "head_ref",
+            "base_ref"
+          ],
+          "additionalProperties": false
+        },
+        "head_moved": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether the head differs from --expected-head; null without it"
+        },
+        "reviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "author": {
+                "$ref": "#/$defs/feedback_author",
+                "description": "Author of the latest review"
+              },
+              "decision": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "APPROVED",
+                  "CHANGES_REQUESTED",
+                  null
+                ],
+                "description": "Latest APPROVED or CHANGES_REQUESTED review; null when none or dismissed"
+              },
+              "decision_author": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/feedback_author"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Author as of the deciding review; null without a decision"
+              },
+              "latest_state": {
+                "type": "string",
+                "enum": [
+                  "APPROVED",
+                  "CHANGES_REQUESTED",
+                  "COMMENTED",
+                  "DISMISSED",
+                  "PENDING"
+                ]
+              },
+              "commit_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "maxLength": 40,
+                "minLength": 40
+              },
+              "submitted_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 2147483647
+              },
+              "untrusted_body": {
+                "type": "string",
+                "description": "Untrusted review text, at most 4000 characters",
+                "maxLength": 2147483647
+              }
+            },
+            "required": [
+              "author",
+              "decision",
+              "decision_author",
+              "latest_state",
+              "commit_id",
+              "submitted_at",
+              "untrusted_body"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 4000,
+          "description": "One entry per reviewer, latest review last"
+        },
+        "changes_requested_by_trusted_association": {
+          "type": "boolean",
+          "description": "A non-bot OWNER, MEMBER or COLLABORATOR currently requests changes"
+        },
+        "review_provenance": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "review_comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "author": {
+                "$ref": "#/$defs/feedback_author"
+              },
+              "untrusted_body": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              },
+              "outdated": {
+                "type": "boolean",
+                "description": "No diff position, or made on another commit than the head"
+              }
+            },
+            "required": [
+              "author",
+              "untrusted_body",
+              "path",
+              "line",
+              "outdated"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 4000
+        },
+        "issue_comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "author": {
+                "$ref": "#/$defs/feedback_author"
+              },
+              "untrusted_body": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "created_at": {
+                "type": "string",
+                "maxLength": 2147483647
+              }
+            },
+            "required": [
+              "author",
+              "untrusted_body",
+              "created_at"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 4000
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Check runs read for the head commit"
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "other_head_runs": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Runs whose head_sha differs from the PR head"
+            },
+            "failing": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/feedback_check_run"
+              },
+              "maxItems": 4000
+            },
+            "pending": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/feedback_check_run"
+              },
+              "maxItems": 4000
+            }
+          },
+          "required": [
+            "total",
+            "complete",
+            "other_head_runs",
+            "failing",
+            "pending"
+          ],
+          "additionalProperties": false
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        }
+      },
+      "required": [
+        "reference",
+        "complete",
+        "errors",
+        "untrusted_data_notice",
+        "pull_request",
+        "head_moved",
+        "reviews",
+        "changes_requested_by_trusted_association",
+        "review_provenance",
+        "review_comments",
+        "issue_comments",
+        "checks"
+      ],
+      "additionalProperties": false
+    },
+    "feedback_unread": {
+      "type": "object",
+      "properties": {
+        "reference": {
+          "type": "string",
+          "description": "owner/repo#number of the pull request",
+          "maxLength": 2147483647
+        },
+        "complete": {
+          "type": "boolean",
+          "const": false
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "untrusted_data_notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        }
+      },
+      "required": [
+        "reference",
+        "complete",
+        "errors",
+        "untrusted_data_notice"
+      ],
+      "additionalProperties": false,
+      "description": "The pull request itself could not be read"
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    }
+  }
+}

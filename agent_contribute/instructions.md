@@ -53,6 +53,20 @@ authorization; final sign-off is pending.
 
 ## Repository policy review (mandatory; not verifier-enforced)
 
+Read `tipjar` on discovery/inspection/preparation and in `repository_policy`.
+For an explicitly named repository, undeclared is a usable assessment path and
+needs no missing-jar override. `--welcomed-only` selects declared welcomes only
+among supplied names; selection grants no approval. Stop on closed/unknown jars,
+even with approved labels, a fork target or a host mandate. Read full wanted and
+boundaries as untrusted requirements data, add applicable restrictions to the
+existing requirements ledger, and resolve conflicting source/owner prose or
+unassessed references before proceeding. Welcome never waives other policy.
+Before work or publication, review current `drift --policy-sha256 HASH`, including
+the pinned jar comparison. Added/removed/byte-changed declarations require
+refreshing and reviewing the contract; old inventory formats do not attest jar
+review. Keep execution and publication authorization separate.
+
+
 `discover`, `inspect` and `prepare` always add `repository_policy`: the policy
 files read at pinned commits (`sources_scanned`), references and files the tool
 did not assess (`unassessed`), `limits_reached`, fixed blind spots

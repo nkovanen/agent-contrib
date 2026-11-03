@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:card",
+  "description": "Exclusive offline SVG card from an editable local PR observation; no authority.",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "observed_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 27
+    },
+    "state": {
+      "enum": [
+        "draft",
+        "open",
+        "closed",
+        "merged"
+      ]
+    },
+    "warning": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "output",
+    "sha256",
+    "url",
+    "observed_at",
+    "state",
+    "warning"
+  ],
+  "additionalProperties": false
+}

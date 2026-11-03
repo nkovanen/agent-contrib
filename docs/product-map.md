@@ -15,16 +15,29 @@ separate source approval, execution authorization and publication authority.
 ## Tipjar invitation status
 
 - [3] Inspection-only `jar owner/repo`: strict root manifest 0.1, pinned identities,
-  welcome/closed/undeclared/unknown reports and packaged output schema 1.
-- [ ] Enforce jar declarations in discovery, preparation and live verification.
-- [ ] Filter supplied repository names by declared welcome; no global registry.
+  welcome/closed/undeclared/unknown reports and preserved output schema 1; integrated reports use output schema 2.
+- [3] Enforce jar declarations in discovery, preparation and live verification.
+- [3] Filter supplied repository names by declared welcome; no global registry.
+- [3] `find [--owner OWNER]`: one partial public search batch with pinned verification; no adoption established.
 - [ ] New policy-reviewed outside-contributor upstream route for welcome or
   manually selected no-jar repositories. Existing fork/owner routes cover only
   part of this goal; a jar alone grants no execution or publication authority.
 
 Explicit no-jar discovery and pending preparation remain available. See
 [jar inspection](cli.md#jar-inspection-candidate-inspection-only) for the exact
-inspection-only boundary and route limitations.
+source-policy boundary and route limitations.
+
+
+### Bounded public invitation finder (implemented in this candidate)
+
+`tipjar find [--owner OWNER]` verifies up to ten indexed public repository jar
+candidates. This is a partial batch, not an exhaustive directory, registry or
+automatic contribution pipeline. Only verified welcome observations are
+selectable, subject to policy review and separate authorization. No adoption is
+established; there is no curated fallback. Explicit targeting and direct
+`tipjar jar owner/repo` remain available without indexing. The outside-contributor
+upstream-route gap remains separate follow-up work.
+
 
 ## Shipped in v0.2.0
 
@@ -75,6 +88,7 @@ inspection-only boundary and route limitations.
 Details: [getting started](getting-started.md), [command reference](cli.md), [upgrading from 0.2](upgrading.md) and [CHANGELOG](../CHANGELOG.md).
 
 ### Implemented
+- [3] Offline `tipjar dependencies PATH`: explicit GitHub candidates from npm manifests/locks and Python requirements, plus opt-in installed npm metadata, with provenance and unresolved-source reporting ([workflow](dependencies.md))
 - [3] Task-scoped owner/maintainer authorization: schema 0.2, host-context mandate, exact-head draft recognition, `implementation`/`draft`/`completion` gates ([#3](https://github.com/nkovanen/agent-contrib/issues/3))
 - [3] Closed or missing stdout without traceback ([#4](https://github.com/nkovanen/agent-contrib/issues/4))
 - [3] A1 Ranking signals: code location (paths, file and module names), clarity, activity, author association, and an opt-in one-read responsiveness sample ([#12](https://github.com/nkovanen/agent-contrib/issues/12))
@@ -133,6 +147,6 @@ Not yet issues; revisit when a real need appears.
 - GitHub Enterprise Server and other forges (hostname is fixed to github.com).
 - MCP server adapter exposing the read-only commands as typed tools.
 - Local contribution ledger to avoid re-suggesting abandoned or rejected tasks.
-- "Help what you use": candidate repositories from a project's dependency graph.
+- Broader "help what you use" dependency coverage: Cargo/pyproject and explicit opt-in registry metadata resolution (today: offline npm/requirements direct GitHub references).
 - Local-base mandates for stacked unpublished work (design preconditions in
   [docs/design](design/2026-11-02-owner-local-and-stacked-routes.md)).

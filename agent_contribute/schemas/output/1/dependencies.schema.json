@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:1:dependencies",
+  "title": "Offline dependency give-back candidates",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "resolution_complete": {
+      "type": "boolean"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 3
+    },
+    "unsupported_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 32
+      },
+      "maxItems": 3
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "maxItems": 10000
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "package": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "ecosystem": {
+            "enum": [
+              "npm",
+              "python"
+            ]
+          },
+          "source_file": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "field": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "status": {
+            "enum": [
+              "github",
+              "unresolved",
+              "unsupported"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "repository": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "revision": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          },
+          "subdirectory": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          },
+          "installed": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "github",
+                  "unresolved",
+                  "unsupported"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "source_file": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 256
+              },
+              "sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 4096
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "field": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 32
+              },
+              "repository": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "revision": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 512
+              },
+              "subdirectory": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "status",
+              "reason",
+              "source_file",
+              "sha256",
+              "name",
+              "version",
+              "field",
+              "repository",
+              "revision",
+              "subdirectory"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "package",
+          "ecosystem",
+          "source_file",
+          "field",
+          "status",
+          "reason",
+          "repository",
+          "revision",
+          "subdirectory"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10000
+    },
+    "warning": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "installed": {
+      "type": "object",
+      "properties": {
+        "max_packages": {
+          "const": 100
+        },
+        "examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "max_packages",
+        "examined",
+        "complete"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "complete",
+    "resolution_complete",
+    "sources",
+    "unsupported_files",
+    "repositories",
+    "dependencies",
+    "warning"
+  ],
+  "additionalProperties": false,
+  "description": "Offline report of explicit GitHub dependency URLs; candidates grant no authority."
+}

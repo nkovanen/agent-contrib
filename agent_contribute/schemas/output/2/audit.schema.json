@@ -1,0 +1,1464 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:audit",
+  "title": "audit result",
+  "description": "Read-only maintainer report of what an agent sees in a repository.",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/audit_report"
+    },
+    {
+      "$ref": "#/$defs/audit_unread"
+    }
+  ],
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "audit_report": {
+      "type": "object",
+      "properties": {
+        "requested_repository": {
+          "type": "string",
+          "description": "Repository named on the command line",
+          "maxLength": 2147483647
+        },
+        "issue_source_repository": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Repository whose tracker was read; null when unresolved",
+          "maxLength": 2147483647
+        },
+        "proposed_target_repository": {
+          "type": "string",
+          "description": "Proposed contribution target; context, never authority",
+          "maxLength": 2147483647
+        },
+        "resolution_provenance": {
+          "$ref": "#/$defs/resolution_provenance"
+        },
+        "complete": {
+          "type": "boolean",
+          "description": "False when any read failed or a label name is malformed"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "warning": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "repository": {
+          "type": "string",
+          "description": "Repository whose snapshot was audited",
+          "maxLength": 2147483647
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "Default-branch commit read",
+          "maxLength": 40,
+          "minLength": 40
+        },
+        "policy": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "missing",
+                "present",
+                "unknown"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$",
+              "maxLength": 40,
+              "minLength": 40
+            },
+            "valid": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Null unless a policy file is present"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "approval_labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "description": "Labels the policy declares; with a list-valued declaration only",
+              "maxItems": 2147483647
+            },
+            "missing_labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "description": "Declared labels that do not exist in the repository",
+              "maxItems": 2147483647
+            },
+            "generic_approval_labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "description": "Declared labels that are generic triage labels",
+              "maxItems": 2147483647
+            }
+          },
+          "required": [
+            "state",
+            "path",
+            "commit",
+            "valid",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "description": "Approval policy validity at the default branch"
+        },
+        "instructions": {
+          "type": "object",
+          "properties": {
+            "found": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 60,
+              "description": "Instruction files agents load"
+            },
+            "expected": {
+              "type": "object",
+              "properties": {
+                "contributing": {
+                  "type": "string",
+                  "enum": [
+                    "loaded",
+                    "present_unread",
+                    "missing",
+                    "unknown"
+                  ]
+                },
+                "agent instructions": {
+                  "type": "string",
+                  "enum": [
+                    "loaded",
+                    "present_unread",
+                    "missing",
+                    "unknown"
+                  ]
+                },
+                "pull request template": {
+                  "type": "string",
+                  "enum": [
+                    "loaded",
+                    "present_unread",
+                    "missing",
+                    "unknown"
+                  ]
+                },
+                "architecture/spec index": {
+                  "type": "string",
+                  "enum": [
+                    "loaded",
+                    "present_unread",
+                    "missing",
+                    "unknown"
+                  ]
+                }
+              },
+              "required": [
+                "contributing",
+                "agent instructions",
+                "pull request template",
+                "architecture/spec index"
+              ],
+              "additionalProperties": false
+            },
+            "read_limit": {
+              "type": "integer"
+            },
+            "tree_complete": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "found",
+            "expected",
+            "read_limit",
+            "tree_complete"
+          ],
+          "additionalProperties": false
+        },
+        "labels": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "malformed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "scan": {
+              "$ref": "#/$defs/list_scan"
+            }
+          },
+          "required": [
+            "count",
+            "malformed",
+            "scan"
+          ],
+          "additionalProperties": false
+        },
+        "issues": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ambiguity": {
+              "type": "object",
+              "properties": {
+                "high": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "medium": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "description": "Open issues per ranking.ambiguity value"
+            },
+            "approval": {
+              "type": "object",
+              "properties": {
+                "approved": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "candidate": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unknown": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "description": "Open issues per approval status"
+            },
+            "excluded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "overlapping": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "scan": {
+              "$ref": "#/$defs/list_scan"
+            }
+          },
+          "required": [
+            "open",
+            "ambiguity",
+            "approval",
+            "excluded",
+            "overlapping",
+            "scan"
+          ],
+          "additionalProperties": false
+        },
+        "pull_requests": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "scan": {
+              "$ref": "#/$defs/list_scan"
+            },
+            "overlap_density": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Share of open issues with an overlapping PR; null without issues"
+            }
+          },
+          "required": [
+            "open",
+            "scan",
+            "overlap_density"
+          ],
+          "additionalProperties": false
+        },
+        "fork": {
+          "type": "object",
+          "properties": {
+            "tracker": {
+              "type": "string",
+              "description": "resolution_provenance.reason",
+              "maxLength": 2147483647
+            },
+            "proposed_target_pulls": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/target_pulls_scan"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Null unless the tracker is a fork parent"
+            }
+          },
+          "required": [
+            "tracker",
+            "proposed_target_pulls"
+          ],
+          "additionalProperties": false
+        },
+        "suggestions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "description": "Non-binding suggestions for maintainers",
+          "maxItems": 1000
+        },
+        "policy_template": {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "type": "string",
+              "const": "0.1"
+            },
+            "agent_approved_labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            },
+            "label_authority": {
+              "type": "string",
+              "const": "repository-label-permission"
+            }
+          },
+          "required": [
+            "schema_version",
+            "agent_approved_labels",
+            "label_authority"
+          ],
+          "additionalProperties": false,
+          "description": "Example policy file; only with --print-policy, never written"
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        },
+        "tipjar": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Actual repository inspected; no parent or owner inheritance"
+            },
+            "default_branch": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1024
+            },
+            "commit": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "path": {
+              "type": "string",
+              "const": ".tipjar.json"
+            },
+            "blob_sha": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+              "description": "Exact decoded-byte digest, even when validation fails; not by itself trusted provenance"
+            },
+            "fetched_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "welcome",
+                "closed",
+                "undeclared",
+                "unknown"
+              ]
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "manifest": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/tipjar_manifest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "errors": {
+              "type": "array",
+              "maxItems": 1,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "notice": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "api_budget": {
+              "$ref": "#/$defs/api_budget"
+            }
+          },
+          "required": [
+            "repository",
+            "default_branch",
+            "commit",
+            "path",
+            "blob_sha",
+            "sha256",
+            "fetched_at",
+            "state",
+            "complete",
+            "manifest",
+            "errors",
+            "notice"
+          ],
+          "additionalProperties": false
+        },
+        "repository_policy": {
+          "$ref": "#/$defs/repository_policy"
+        }
+      },
+      "required": [
+        "requested_repository",
+        "issue_source_repository",
+        "proposed_target_repository",
+        "resolution_provenance",
+        "complete",
+        "errors",
+        "warning",
+        "repository",
+        "commit",
+        "policy",
+        "instructions",
+        "labels",
+        "issues",
+        "pull_requests",
+        "fork",
+        "suggestions",
+        "tipjar",
+        "repository_policy"
+      ],
+      "additionalProperties": false
+    },
+    "audit_unread": {
+      "type": "object",
+      "properties": {
+        "requested_repository": {
+          "type": "string",
+          "description": "Repository named on the command line",
+          "maxLength": 2147483647
+        },
+        "issue_source_repository": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Repository whose tracker was read; null when unresolved",
+          "maxLength": 2147483647
+        },
+        "proposed_target_repository": {
+          "type": "string",
+          "description": "Proposed contribution target; context, never authority",
+          "maxLength": 2147483647
+        },
+        "resolution_provenance": {
+          "$ref": "#/$defs/resolution_provenance"
+        },
+        "complete": {
+          "type": "boolean",
+          "const": false
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "warning": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "api_budget": {
+          "$ref": "#/$defs/api_budget"
+        }
+      },
+      "required": [
+        "requested_repository",
+        "issue_source_repository",
+        "proposed_target_repository",
+        "resolution_provenance",
+        "complete",
+        "errors",
+        "warning"
+      ],
+      "additionalProperties": false,
+      "description": "The repository could not be resolved or its snapshot read"
+    },
+    "list_scan": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "pages",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "Completeness of one paginated GitHub list read"
+    },
+    "metadata_read": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "observed": {
+          "$ref": "#/$defs/repository_observation"
+        },
+        "fetched_at": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "endpoint",
+        "observed",
+        "fetched_at"
+      ],
+      "additionalProperties": false
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    },
+    "repository_observation": {
+      "type": "object",
+      "properties": {
+        "full_name": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "fork": {
+          "type": "boolean"
+        },
+        "has_issues": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": "object",
+          "properties": {
+            "full_name": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "full_name"
+          ],
+          "additionalProperties": false,
+          "description": "Immediate fork parent, when it was read"
+        }
+      },
+      "required": [
+        "full_name",
+        "fork",
+        "has_issues"
+      ],
+      "additionalProperties": false
+    },
+    "resolution_provenance": {
+      "type": "object",
+      "properties": {
+        "metadata_reads": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata_read"
+          },
+          "maxItems": 1000
+        },
+        "reason": {
+          "type": "string",
+          "description": "How the issue tracker was chosen, or \"unresolved\"",
+          "maxLength": 2147483647
+        },
+        "execution_authority": {
+          "type": "string",
+          "description": "Always \"none\": resolution never grants authority",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "metadata_reads",
+        "reason",
+        "execution_authority"
+      ],
+      "additionalProperties": false
+    },
+    "target_pulls_scan": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "endpoint": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        }
+      },
+      "required": [
+        "repository",
+        "endpoint",
+        "complete",
+        "pages",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "Open-PR scan of the proposed target repository when it differs from the issue source"
+    },
+    "repository_policy": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "type": "string",
+          "enum": [
+            "policy-report/1"
+          ]
+        },
+        "review_obligation": {
+          "type": "string",
+          "maxLength": 2147483647
+        },
+        "sources_scanned": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "enum": [
+                  "repository",
+                  "owner-github"
+                ]
+              },
+              "repository": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "path_truncated": {
+                "type": "boolean"
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ai_policy",
+                  "agent_instructions",
+                  "contributing",
+                  "pr_template",
+                  "community",
+                  "readme",
+                  "instruction"
+                ]
+              },
+              "notes": {
+                "type": "array",
+                "maxItems": 2147483647,
+                "items": {
+                  "type": "string",
+                  "maxLength": 2147483647
+                }
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              }
+            },
+            "required": [
+              "origin",
+              "repository",
+              "path",
+              "path_truncated",
+              "commit",
+              "sha256",
+              "kind",
+              "notes",
+              "path_sanitized",
+              "identity_sha256"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "unassessed": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "what": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 2147483647
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              },
+              "link_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 300
+              },
+              "what_truncated": {
+                "type": "boolean"
+              },
+              "what_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "what",
+              "reason",
+              "from",
+              "line",
+              "link_text",
+              "what_truncated",
+              "what_sanitized",
+              "identity_sha256",
+              "blob_sha"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "omitted_sources": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "repository": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "path_truncated": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ai_policy",
+                  "agent_instructions",
+                  "contributing",
+                  "pr_template",
+                  "community",
+                  "readme",
+                  "instruction"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "file limit",
+                  "scan byte limit",
+                  "request limit"
+                ]
+              },
+              "path_sanitized": {
+                "type": "boolean"
+              },
+              "identity_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "minLength": 64,
+                "maxLength": 64,
+                "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
+              }
+            },
+            "required": [
+              "repository",
+              "path",
+              "path_truncated",
+              "kind",
+              "reason",
+              "path_sanitized",
+              "identity_sha256",
+              "blob_sha"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limits_reached": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "not_reported": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "hides_sources": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "limit",
+              "not_reported",
+              "hides_sources"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "limits_hide_sources": {
+          "type": "boolean",
+          "description": "A limit hid a policy candidate or reference, or omitted_sources is non-empty"
+        },
+        "never_inspected": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          }
+        },
+        "hints": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "possible_agent_restriction",
+                  "possible_ai_restriction",
+                  "possible_pr_restriction",
+                  "ai_mention"
+                ]
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^H-[0-9a-f]{64}(?![\\s\\S])",
+                "maxLength": 66,
+                "description": "Stable ID: H- and the SHA-256 of (source identity_sha256, line, kind); unchanged by report order"
+              },
+              "excerpt_truncated": {
+                "type": "boolean",
+                "description": "The excerpt omits text before or after it"
+              }
+            },
+            "required": [
+              "kind",
+              "line",
+              "heading",
+              "untrusted_excerpt",
+              "source",
+              "id",
+              "excerpt_truncated"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "reads": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "requests",
+            "limit"
+          ],
+          "additionalProperties": false
+        },
+        "inventory_format": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version of the inventory_sha256 input; 1 was the unversioned hash of earlier 0.3.0 candidates"
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "hinted_lines": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "kinds": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "possible_agent_restriction",
+                    "possible_ai_restriction",
+                    "possible_pr_restriction",
+                    "ai_mention"
+                  ]
+                }
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "excerpt_truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source",
+              "line",
+              "kinds",
+              "heading",
+              "untrusted_excerpt",
+              "excerpt_truncated"
+            ],
+            "additionalProperties": false
+          },
+          "description": "One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line"
+        },
+        "project_vocabulary": {
+          "type": "object",
+          "properties": {
+            "terms": {
+              "type": "array",
+              "maxItems": 2147483647,
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              }
+            },
+            "mentions_collapsed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lines": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "source",
+                  "line"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lines_not_listed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "terms",
+            "mentions_collapsed",
+            "lines",
+            "lines_not_listed"
+          ],
+          "additionalProperties": false,
+          "description": "Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions"
+        },
+        "owner_lookup": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "read",
+                "not_found_or_inaccessible",
+                "unavailable",
+                "not_read_request_limit",
+                "not_applicable"
+              ]
+            }
+          },
+          "required": [
+            "repository",
+            "status"
+          ],
+          "additionalProperties": false,
+          "description": "Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted."
+        },
+        "tipjar": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Actual repository inspected; no parent or owner inheritance"
+            },
+            "default_branch": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1024
+            },
+            "commit": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "path": {
+              "type": "string",
+              "const": ".tipjar.json"
+            },
+            "blob_sha": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+            },
+            "sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+              "description": "Exact decoded-byte digest, even when validation fails; not by itself trusted provenance"
+            },
+            "fetched_at": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "welcome",
+                "closed",
+                "undeclared",
+                "unknown"
+              ]
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "manifest": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/tipjar_manifest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "errors": {
+              "type": "array",
+              "maxItems": 1,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "notice": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "api_budget": {
+              "$ref": "#/$defs/api_budget"
+            }
+          },
+          "required": [
+            "repository",
+            "default_branch",
+            "commit",
+            "path",
+            "blob_sha",
+            "sha256",
+            "fetched_at",
+            "state",
+            "complete",
+            "manifest",
+            "errors",
+            "notice"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "report",
+        "review_obligation",
+        "sources_scanned",
+        "unassessed",
+        "omitted_sources",
+        "limits_reached",
+        "limits_hide_sources",
+        "never_inspected",
+        "hints",
+        "reads",
+        "inventory_format",
+        "inventory_sha256",
+        "hinted_lines",
+        "project_vocabulary",
+        "owner_lookup",
+        "tipjar"
+      ],
+      "additionalProperties": false,
+      "description": "Default-on, report-only policy inventory and hints; never a verdict"
+    },
+    "tipjar_manifest": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "welcome",
+            "closed"
+          ]
+        },
+        "wanted": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

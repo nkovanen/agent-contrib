@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:scope-check",
+  "title": "scope-check result",
+  "description": "Offline comparison of local changes with the contract scope; never evidence.",
+  "type": "object",
+  "properties": {
+    "within_scope": {
+      "type": "boolean",
+      "description": "True only with no errors and no violations; sets the exit status"
+    },
+    "base_commit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Resolved base commit; null when the contract or base is invalid",
+      "maxLength": 40,
+      "minLength": 40
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647,
+      "description": "Committed, staged, unstaged and untracked paths since the base"
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "rule": {
+            "type": "string",
+            "description": "\"not in allowed_paths\" or \"prohibited_paths: PATTERN\"",
+            "maxLength": 2147483647
+          }
+        },
+        "required": [
+          "path",
+          "rule"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 2147483647
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647
+    },
+    "evidence": {
+      "type": "string",
+      "maxLength": 2147483647
+    }
+  },
+  "required": [
+    "within_scope",
+    "base_commit",
+    "changed_paths",
+    "violations",
+    "errors",
+    "warnings",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    }
+  }
+}

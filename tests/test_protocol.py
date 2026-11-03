@@ -43,6 +43,17 @@ class FakeGitHub:
         self.failed = set()
         self.calls = []
 
+    def request_once(self, endpoint):
+        """The pinned jar reader needs complete tree identities, including for absence."""
+        result = self.request(endpoint)
+        if '/git/trees/' in endpoint and isinstance(result, dict):
+            result = copy.deepcopy(result)
+            result.setdefault('sha', 'c' * 40)
+            for entry in result.get('tree', []):
+                entry.setdefault('sha', 'b' * 40)
+                entry.setdefault('mode', '100644')
+        return result
+
     def request(self, endpoint):
         self.calls.append(endpoint)
         if any(key in endpoint for key in self.failed):
@@ -58,7 +69,9 @@ class FakeGitHub:
             return {'full_name': 'human/photos', 'default_branch': 'main', 'fork': True,
                     'has_issues': False, 'parent': {'full_name': 'acme/photos'}}
         if path.endswith('/commits/main'):
-            return {'sha': getattr(self, 'commit', 'a' * 40)}
+            return {'sha': getattr(self, 'commit', 'a' * 40), 'commit': {'tree': {'sha': 'c' * 40}}}
+        if '/commits/' in path and core.SHA.fullmatch(path.rsplit('/', 1)[1]):
+            return {'sha': path.rsplit('/', 1)[1], 'commit': {'tree': {'sha': 'c' * 40}}}
         if '/compare/' in path:
             base, head = path.rsplit('/compare/', 1)[1].split('...')
             default = 'identical' if base == head else 'behind'
@@ -68,7 +81,8 @@ class FakeGitHub:
                      'docs/architecture.md', 'specs/README.md']
             if self.policy is not None:
                 paths.append('.agent-contrib.json')
-            return {'truncated': False, 'tree': [{'path': p, 'type': 'blob'} for p in paths]}
+            return {'sha': path.rsplit('/', 1)[1], 'truncated': False, 'tree': [
+                {'path': p, 'type': 'blob', 'sha': 'b' * 40, 'mode': '100644'} for p in paths]}
         if '/contents/' in path:
             name = path.split('/contents/')[1]
             if name == '.agent-contrib.json':
