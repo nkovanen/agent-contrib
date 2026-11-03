@@ -1287,6 +1287,9 @@
         "draft_update": {
           "$ref": "#/$defs/verify_draft_update",
           "description": "Present only when a host-context 0.2 document carries draft_update"
+        },
+        "ci_gate": {
+          "$ref": "#/$defs/ci_gate"
         }
       },
       "required": [
@@ -2325,6 +2328,165 @@
       ],
       "additionalProperties": false,
       "description": "A topical overlap waived by a host disposition at the observed PR state"
+    },
+    "ci_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "head_sha",
+        "complete",
+        "suites_read",
+        "github_paths_changed",
+        "requirements",
+        "errors",
+        "notice"
+      ],
+      "description": "Present only when the contract declares ci_requirements; its blockers appear only in stage_blockers.completion",
+      "properties": {
+        "head_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "minLength": 40,
+          "maxLength": 40,
+          "description": "Exact head observed; null until an exact-head published draft is verified"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "suites_read": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "github_paths_changed": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether the implementation diff touches .github/; null when not read"
+        },
+        "requirements": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "check",
+              "app_id",
+              "state",
+              "runs",
+              "blocking_suites",
+              "other_app_runs"
+            ],
+            "properties": {
+              "check": {
+                "type": "string",
+                "maxLength": 200,
+                "description": "Reviewed check name (display copy)"
+              },
+              "app_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "met",
+                  "failed",
+                  "not_met",
+                  "pending",
+                  "missing",
+                  "unknown"
+                ],
+                "description": "Only met passes"
+              },
+              "runs": {
+                "type": "array",
+                "maxItems": 4000,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "status",
+                    "conclusion",
+                    "url"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "in_progress",
+                        "completed",
+                        "waiting",
+                        "requested",
+                        "pending"
+                      ]
+                    },
+                    "conclusion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "success",
+                        "failure",
+                        "neutral",
+                        "cancelled",
+                        "skipped",
+                        "timed_out",
+                        "action_required",
+                        "stale",
+                        "startup_failure",
+                        null
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  }
+                },
+                "description": "Every retained run with this exact raw name from this app on the head"
+              },
+              "blocking_suites": {
+                "type": "array",
+                "maxItems": 1000,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Suites of this app on the head that are not completed"
+              },
+              "other_app_runs": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Same-name runs from other apps; never accepted"
+              }
+            }
+          }
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 2147483647,
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          }
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      }
     }
   }
 }
