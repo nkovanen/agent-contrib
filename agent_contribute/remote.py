@@ -79,7 +79,8 @@ def counted_pages(client, endpoint, key, parse, *, page, count, noun, oversize, 
     records, errors, seen, total = [], [], set(), None
     for number in range(1, MAX_PAGES + 1):
         try:
-            data = require(client.request(f'{endpoint}?per_page=100&page={number}'), dict, page)
+            separator = '&' if '?' in endpoint else '?'  # an endpoint may carry its own query (filter=all)
+            data = require(client.request(f'{endpoint}{separator}per_page=100&page={number}'), dict, page)
             if check_page is not None:
                 check_page(data, errors)
             value = data.get('total_count')
