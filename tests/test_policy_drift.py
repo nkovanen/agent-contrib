@@ -125,6 +125,56 @@ class PolicyDriftTests(unittest.TestCase):
         self.assertIs(result['complete'], False)
         self.assertIsNone(result['repository_policy_drift']['policy_drifted'])
 
+    def test_a_malformed_new_tree_entry_makes_policy_drift_unknown(self):
+        # FR1-08: a new AI_POLICY.md entry whose type is missing or invalid was skipped as a non-blob, so the
+        # current inventory looked unchanged and drift exited 0.
+        self.client.advance({})
+        original = self.client.request
+        cases = {'type missing': {'path': 'AI_POLICY.md'}, 'type null': {'path': 'AI_POLICY.md', 'type': None},
+                 'type list': {'path': 'AI_POLICY.md', 'type': []},
+                 'type unknown': {'path': 'AI_POLICY.md', 'type': 'unknown'},
+                 'mode contradicts type': {'path': 'AI_POLICY.md', 'type': 'tree', 'mode': '100644'},
+                 'mode list': {'path': 'AI_POLICY.md', 'type': 'tree', 'mode': []},
+                 'empty path': {'path': '', 'type': 'blob', 'mode': '100644'}}
+        for name, entry in cases.items():
+            def request(endpoint, entry=entry):
+                value = original(endpoint)
+                if '/git/trees/' + LATER in endpoint:
+                    value['tree'].append(dict(entry))
+                return value
+            with self.subTest(case=name), patch.object(self.client, 'request', side_effect=request):
+                code, result = run(self.client, 'drift', self.path, '--policy-sha256', self.recorded)
+                self.assertEqual(code, 1)
+                self.assertIs(result['complete'], False)
+                self.assertIsNone(result['repository_policy_drift']['policy_drifted'])
+        valid = [{'path': 'vendor', 'type': 'tree', 'mode': '040000', 'sha': 'd' * 40},
+                 {'path': 'vendor/lib', 'type': 'commit', 'mode': '160000', 'sha': 'e' * 40}]
+
+        def request(endpoint):
+            value = original(endpoint)
+            if '/git/trees/' + LATER in endpoint:
+                value['tree'] += [dict(entry) for entry in valid]
+            return value
+        with patch.object(self.client, 'request', side_effect=request):
+            code, result = run(self.client, 'drift', self.path, '--policy-sha256', self.recorded)
+        self.assertIsNot(result['repository_policy_drift']['policy_drifted'], None, 'tree and commit entries are valid')
+
+    def test_each_tree_reader_refuses_a_malformed_entry_on_its_own(self):
+        # The source snapshot and the policy inventory each read the tree; neither may skip a malformed entry.
+        original = self.client.request
+
+        def request(endpoint):
+            value = original(endpoint)
+            if '/git/trees/' + PINNED in endpoint:
+                value['tree'].append({'path': 'AI_POLICY.md', 'type': 'unknown'})
+            return value
+        with patch.object(self.client, 'request', side_effect=request):
+            inspected = core.inspect_issue('acme/photos#12', self.client)
+            self.assertIs(inspected['complete'], False)
+            self.assertIn('Invalid GitHub tree entry type, mode or path', ' '.join(inspected['errors']))
+            report = policy.report('acme/photos', PINNED, [], self.client, default_branch='main')
+            self.assertIn('repository tree not read', [item['reason'] for item in report['unassessed']])
+
     def test_hidden_sources_make_the_policy_check_incomplete(self):
         with patch.object(policy, 'MAX_SOURCE_FILES', 0):
             code, result = run(self.client, 'drift', self.path, '--policy-sha256', self.recorded)

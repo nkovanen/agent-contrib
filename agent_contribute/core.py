@@ -211,6 +211,20 @@ def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
     return {'items': items, 'complete': False, 'pages': page_count, 'errors': errors}
 
 
+TREE_MODES = {'blob': ('100644', '100755', '120000'), 'tree': ('040000',), 'commit': ('160000',)}
+
+
+def tree_entry(entry):
+    """(path, type) of one recursive-tree entry. A missing or unknown type, a mode that contradicts it, or an empty
+    path is malformed, never a skipped non-blob (FR1-08); a missing mode is allowed, the type decides."""
+    require(entry, dict, 'tree entry')
+    path, kind, mode = require(entry.get('path'), str, 'tree path'), entry.get('type'), entry.get('mode')
+    if (not path or not isinstance(kind, str) or kind not in TREE_MODES or
+            (mode is not None and (not isinstance(mode, str) or mode not in TREE_MODES[kind]))):
+        raise ProtocolError('api_shape', 'Invalid GitHub tree entry type, mode or path')
+    return path, kind
+
+
 def require(value, expected, description):
     if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
         raise ProtocolError('api_shape', 'Invalid GitHub ' + description)
@@ -327,12 +341,7 @@ def repository_snapshot(repository, client, meta=None, commit=None):
         entries = require(tree.get('tree'), list, 'tree entries')
         if tree.get('truncated') is not False:
             raise ProtocolError('partial_tree', 'Repository tree is truncated or completeness is unknown')
-        paths = []
-        for entry in entries:
-            require(entry, dict, 'tree entry')
-            path = require(entry.get('path'), str, 'tree path')
-            if entry.get('type') == 'blob':
-                paths.append(path)
+        paths = [path for path, kind in map(tree_entry, entries) if kind == 'blob']
         snapshot['blob_paths'] = paths
         snapshot['spec_paths'] = [safe_text(p, 500) for p in paths if
                                   re.search(r'(?i)(^|/)(specs?|docs)(/|\.)', p) and p.endswith('.md')]
