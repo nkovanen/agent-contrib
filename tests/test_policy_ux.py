@@ -155,7 +155,8 @@ class QuickPathTests(unittest.TestCase):
 
     def test_policy_step_comes_before_ranking_and_selection(self):
         quick = ' '.join(self.quick_path().split())
-        policy_at = quick.index('complete the repository policy step below')
+        policy_at = quick.index('complete the "Repository policy review" section below')
+        self.assertIn('\n## Repository policy review (mandatory; not verifier-enforced)\n', installed_workflow())
         self.assertLess(policy_at, quick.index('Drop excluded or overlapping issues'))
         self.assertLess(policy_at, quick.index("inspect 'owner/repo#N' --ownership"))
         self.assertIn('Before ranking or selecting', quick)

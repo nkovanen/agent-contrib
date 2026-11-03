@@ -18,8 +18,8 @@ A summary of the sections below; it never overrides them. Global options such as
 1. Record `agent-contrib --version` and the user's exact request.
 2. Run `agent-contrib --report-budget discover owner/repo --signals` (re-ranks, never
    approves; `--responsiveness` samples outside merges). Before ranking or selecting,
-   complete the repository policy step below; for a constrained policy, first ask
-   the user to commit to that mode. Drop excluded or overlapping issues.
+   complete the "Repository policy review" section below; for a constrained policy,
+   first ask the user to commit to that mode. Drop excluded or overlapping issues.
 3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership`
    (claims, linked PRs, prior fixes).
 4. `agent-contrib prepare 'owner/repo#N' --output task.json` (schema 0.1; add

@@ -144,6 +144,8 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- The Quick path names the "Repository policy review" section explicitly instead
+  of "the repository policy step below" (N3, dogfood 4).
 - The repository policy report adds `hinted_lines` (N2, dogfood 4), one
   reading entry per hinted line with all its hint kinds. It also adds
   `project_vocabulary`, which summarizes mentions made only of the project's own
