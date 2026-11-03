@@ -3,9 +3,14 @@
 Install on the machine that runs your agent. A remote Paseo agent needs the CLI,
 Git and `gh` on its host, not merely on the device displaying the conversation.
 The package requires Python 3.10+ and has no Python runtime dependencies. Build
-and installer tools have their own Python requirements. Linux is the tested
-platform; Windows and macOS are untested. In the unreleased v0.3.0 route, `verify --host-context-stdin` waits on stdin with
-`select()`, which Windows supports only for sockets, so it fails closed there.
+and installer tools have their own Python requirements. Full regression coverage
+is Linux-only. Windows/macOS CI is limited to bounded host-context stdin and
+installed offline CLI smoke checks, not the full Git, cache or evidence workflows.
+In the unreleased v0.3.0 route, `verify --host-context-stdin` uses a bounded binary
+reader in an isolated Python child with a five-second deadline. It works with
+pipes and redirected files without relying on POSIX `select()`; timed-out readers
+are terminated and reaped. The running Python interpreter must remain available
+to launch that child. This adds no runtime dependency.
 Scope and containment decisions use the literal POSIX paths Git reports on
 every OS. Backslashes, drive letters and case are never normalized, so a path
 that would match only after normalization is out of scope.
@@ -106,8 +111,9 @@ New-Item -ItemType Directory -Force "$HOME/.agents/skills/agent-contribute"
 agent-contrib skill --output "$HOME/.agents/skills/agent-contribute/SKILL.md"
 ```
 
-The same CLI commands apply, but Windows execution is not covered by the current
-CI matrix. A virtual environment uses `Scripts/python.exe` and `Scripts` on PATH.
+The same CLI commands apply; Windows CI covers only the transport and offline
+smoke checks described above. A virtual environment uses `Scripts/python.exe`
+and `Scripts` on PATH.
 
 ## Compatibility and updates
 
