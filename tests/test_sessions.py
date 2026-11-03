@@ -185,3 +185,11 @@ class SessionTests(unittest.TestCase):
         result = self.plan(source)
         self.assertEqual(result['tasks'][0]['reference'], 'person/photos#12')
         self.assertEqual(result['tasks'][0]['issue_url'], 'https://github.com/acme/photos/issues/12')
+
+    def test_incomplete_scan_cannot_be_overridden_by_complete_flag(self):
+        source = report()
+        source['provenance']['pulls_scan']['complete'] = False
+        source['provenance']['pulls_scan']['errors'] = ['cap reached']
+        result = self.plan(source)
+        self.assertEqual(result['tasks'], [])
+        self.assertIn('repository_scans_incomplete', result['candidates'][0]['reasons'])

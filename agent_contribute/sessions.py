@@ -97,6 +97,13 @@ def plan(path, *, max_tasks, minutes):
         reasons = []
         if repository['complete'] is not True or repository['errors']:
             reasons.append('repository_incomplete')
+        provenance = repository['provenance']
+        scans = [repository['issue_scan'], provenance['pulls_scan'], provenance['labels_scan'],
+                 provenance['proposed_target_pulls']]
+        if any(scan is not None and (scan['complete'] is not True or scan['errors']) for scan in scans):
+            reasons.append('repository_scans_incomplete')
+        if provenance['policy_state'] == 'unknown':
+            reasons.append('source_policy_unknown')
         if issue['complete'] is not True:
             reasons.append('issue_incomplete')
         if issue['approval']['status'] == 'unknown':
