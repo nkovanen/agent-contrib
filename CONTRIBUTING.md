@@ -38,6 +38,11 @@ read-only check, install `gh` and authenticate separately, then use
 `python -m agent_contribute discover owner/repo`. Live results change over time;
 do not turn them into deterministic unit fixtures or publish private data.
 
+The full suite and package checks run on Linux. Windows/macOS jobs run only
+`tests.test_host_input_transport` and installed offline entrypoint smoke checks
+on Python 3.10 and 3.14. Those jobs do not establish portability of the complete
+Git, cache or evidence workflows.
+
 ## Changes and reviews
 
 - Releases follow [docs/releasing.md](docs/releasing.md); `python tools/release_check.py`

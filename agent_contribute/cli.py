@@ -5,7 +5,7 @@ import hashlib
 import importlib.resources
 import os
 import re
-import select
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -24,20 +24,25 @@ def read_host_context_stdin():
             raise OSError('An explicit piped host context is required')
         descriptor = sys.stdin.fileno()
         deadline = time.monotonic() + HOST_INPUT_TIMEOUT
-        chunks, size = [], 0
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0 or not select.select([descriptor], [], [], remaining)[0]:
-                raise OSError('Host context input timed out')
-            chunk = os.read(descriptor, min(65536, core.MAX_BYTES + 1 - size))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            size += len(chunk)
-            if size > core.MAX_BYTES:
-                raise OSError('Host context exceeds the input bound')
-        return core.strict_json(b''.join(chunks).decode('utf-8'))
-    except (OSError, ValueError, UnicodeError) as exc:
+        # An isolated fixed reader can be killed and reaped; a blocked thread cannot.
+        reader_code = ('import sys; '
+                       f'data = sys.stdin.buffer.read({core.MAX_BYTES + 1}); '
+                       'sys.stdout.buffer.write(data)')
+        with subprocess.Popen([sys.executable, '-I', '-S', '-c', reader_code],
+                              stdin=descriptor, stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL, close_fds=True) as reader:
+            try:
+                data, _ = reader.communicate(timeout=max(0, deadline - time.monotonic()))
+            except BaseException:
+                reader.kill()
+                reader.communicate()
+                raise
+            if reader.returncode:
+                raise OSError('Host context reader failed')
+        if len(data) > core.MAX_BYTES:
+            raise OSError('Host context exceeds the input bound')
+        return core.strict_json(data.decode('utf-8'))
+    except (OSError, ValueError, UnicodeError, subprocess.SubprocessError) as exc:
         raise core.ProtocolError('host_context_input',
                                  'Cannot read explicit bounded UTF-8 host context from stdin') from exc
 
