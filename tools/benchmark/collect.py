@@ -5,7 +5,9 @@
 
 Read-only: every request is a fixed `gh api --method GET` through agent_contribute.core.GitHub.
 Reads are bounded: repository metadata, one commit and one tree read, at most --max-search-pages
-pages per search query (four queries), and one timeline (at most 5 pages) per kept issue."""
+pages per search query (four queries), one timeline (at most 5 pages) per kept issue, and one
+events read (at most 2 pages) per PR whose title can create an overlap, to confirm it was open at T.
+Refuses to run before the horizon has ended."""
 import argparse
 import datetime as dt
 import json
@@ -63,7 +65,33 @@ def timeline(client, repository, number, notes):
     return None
 
 
+def pr_events(client, repository, number):
+    events = []
+    for page in range(1, 3):
+        batch = core.require(client.request(f'repos/{repository}/issues/{number}/events?per_page=100&page={page}'),
+                             list, 'issue events page')
+        events.extend(batch)
+        if len(batch) < 100:
+            return events
+    return None
+
+
+def overlapping_prs(repository, issues, prs):
+    """PR numbers whose title (as the replay will see it) overlaps some kept issue's title."""
+    index = core.index_prs([{'number': pr['number'], 'title': pr['title'], 'html_url': pr['html_url'],
+                             'body': None, 'head': None} for pr in prs])
+    found = set()
+    for issue in issues:
+        found.update(item['number'] for item in core.duplicate_prs(
+            repository, {'number': issue['number'], 'title': issue['title'], 'body': ''}, index))
+    return found
+
+
 def collect(repository, cutoff, horizon_days, client, *, max_issues, max_search_pages):
+    if benchlib.when(cutoff) + dt.timedelta(days=horizon_days) > dt.datetime.now(dt.timezone.utc):
+        raise SystemExit('The horizon has not ended yet: outcomes would not be mature')
+    if max_issues <= 0 or max_search_pages <= 0 or horizon_days <= 0:
+        raise SystemExit('Bounds must be positive')
     notes = []
     meta = core.repository_metadata(repository, client)
     branch = meta['default_branch']
@@ -81,7 +109,8 @@ def collect(repository, cutoff, horizon_days, client, *, max_issues, max_search_
         for state in ('is:open', f'closed:>{day}'):
             for item in search(client, f'{open_query} is:{kind} {state}', max_search_pages, notes):
                 found.setdefault(kind, {})[item['number']] = item
-    prs = [{'number': item['number'], 'title': item['title'], 'created_at': item['created_at']}
+    prs = [{'number': item['number'], 'title': item['title'], 'created_at': item['created_at'],
+            'html_url': f'https://github.com/{repository}/pull/{item["number"]}'}
            for item in sorted(found.get('pr', {}).values(), key=lambda item: item['number'])]
     candidates = sorted(found.get('issue', {}).values(), key=lambda item: item['created_at'], reverse=True)
     if len(candidates) > max_issues:
@@ -92,26 +121,47 @@ def collect(repository, cutoff, horizon_days, client, *, max_issues, max_search_
         events = timeline(client, repository, item['number'], notes)
         if events is None:
             continue
-        label = benchlib.classify(events, cutoff, horizon_days, repository)
-        if not label['open_at_cutoff']:
+        record = benchlib.evidence(events, item)
+        if not benchlib.classify(record, cutoff, horizon_days, repository)['open_at_cutoff']:
             dropped += 1
             continue
         issue = benchlib.reconstruct(item, events, cutoff)
-        issue.update(outcome=label['outcome'], outcome_reason=label['reason'], evidence=label['evidence'])
+        issue['evidence'] = record
         issues.append(issue)
         bodies[str(item['number'])] = item.get('body') or ''
     if dropped:
         notes.append(f'{dropped} issues were closed at the cutoff (reopened only after it) and were dropped')
+    # PR membership and titles at T matter only where a PR can create an overlap; verify those.
+    relevant = overlapping_prs(repository, issues, prs)
+    verified, removed = [], 0
+    for pr in prs:
+        if pr['number'] not in relevant:
+            verified.append(dict(pr, membership_verified=False))
+            continue
+        events = pr_events(client, repository, pr['number'])
+        if events is None:
+            notes.append(f'PR #{pr["number"]} events exceed 2 pages; kept unverified')
+            verified.append(dict(pr, membership_verified=False))
+            continue
+        state = benchlib.pr_at_cutoff(pr, events, cutoff)
+        if not state['open']:
+            removed += 1
+            continue
+        verified.append(dict(pr, title=state['title'], membership_verified=True))
+    prs = verified
+    if removed:
+        notes.append(f'{removed} PRs were closed at the cutoff (reopened later) and were removed')
     snapshot = {'format': benchlib.FORMAT, 'repository': repository, 'default_branch': branch,
                 'cutoff': cutoff, 'horizon_days': horizon_days,
                 'collected_at': dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds'),
                 'commit_at_cutoff': commit, 'tree_paths': paths, 'tree_truncated': tree.get('truncated') is not False,
-                'open_prs_at_cutoff': [dict(pr, html_url=f'https://github.com/{repository}/pull/{pr["number"]}')
-                                       for pr in prs],
+                'open_prs_at_cutoff': prs,
                 'issues': issues, 'notes': notes,
                 'source': {'api': 'https://api.github.com', 'repository_url': f'https://github.com/{repository}'},
-                'licence': ('Public GitHub metadata (issue and PR titles, label names, timestamps, file paths) '
-                            'with source URLs for attribution; no issue or PR bodies are stored.')}
+                'provenance': ('Public GitHub metadata (issue and PR titles, label names, timestamps, author '
+                               'associations, file paths) with source URLs for attribution; no bodies or logins. '
+                               'Content rights remain with their authors (GitHub Terms of Service); this is not '
+                               'a licence grant and the harness MIT licence does not cover it.')}
     return snapshot, bodies
 
 
@@ -134,8 +184,8 @@ def main():
     pathlib.Path(args.output).write_text(json.dumps(snapshot, indent=1, sort_keys=True) + '\n', 'utf-8')
     if args.bodies_out:
         pathlib.Path(args.bodies_out).write_text(json.dumps(bodies, sort_keys=True) + '\n', 'utf-8')
-    counts = {name: sum(issue['outcome'] == name for issue in snapshot['issues'])
-              for name in ('positive', 'negative', 'excluded')}
+    labels = benchlib.labels(snapshot)
+    counts = {name: sum(value == name for value in labels.values()) for name in ('positive', 'negative', 'excluded')}
     print(json.dumps({'repository': args.repository, 'issues': len(snapshot['issues']), **counts,
                       'reads': client.reads, 'notes': snapshot['notes']}))
 

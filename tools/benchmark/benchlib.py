@@ -1,9 +1,10 @@
 """Offline task-selection benchmark (#28). Not part of the installed package.
 
-Snapshots describe a repository's open issues as of a cutoff T, with an outcome label observed
-in (T, T + horizon]. The scorer replays the real discover ranking against a snapshot through a
-fake client that serves only snapshot data, with the clock fixed at T, and measures how many
-later-positive issues land in the top k."""
+A snapshot holds a repository's issues open at a cutoff T, rolled back to T where the timeline
+allows, plus raw outcome evidence (close/reopen events and timestamped PR references). Labels are
+derived from that evidence at scoring time. The scorer replays the real discover ranking through a
+fake client that serves only snapshot data, with the clock fixed at T, and refuses any incomplete
+replay or changed issue set."""
 from __future__ import annotations
 
 import base64
@@ -13,12 +14,19 @@ from unittest.mock import patch
 
 from agent_contribute import core
 
-FORMAT = 'agent-contrib-benchmark/1'
-MAINTAINERS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
+FORMAT = 'agent-contrib-benchmark/2'
+EXTERNAL = {'CONTRIBUTOR', 'FIRST_TIME_CONTRIBUTOR', 'FIRST_TIMER', 'NONE'}  # explicit, never "not a maintainer"
 MERGE_CLOSE_TOLERANCE = dt.timedelta(hours=24)
+NEGATIVE_REASONS = {'not_planned', 'duplicate'}
+
+
+class BenchmarkError(Exception):
+    """A snapshot or replay that cannot be scored honestly."""
 
 
 def when(value):
+    if not isinstance(value, str) or not (value.endswith('Z') or value[-6] in '+-'):
+        raise BenchmarkError(f'Expected a timezone-aware timestamp, got {value!r}')
     return dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
 
 
@@ -27,67 +35,86 @@ def _ordered(events):
                   key=lambda item: when(item['created_at']))
 
 
-def classify(events, cutoff, horizon_days, repository):
-    """Outcome of an issue after the cutoff, from its timeline events.
+def evidence(events, current):
+    """The outcome evidence kept from an issue timeline: metadata only, no text or logins."""
+    closes, references = [], []
+    for item in _ordered(events):
+        if item.get('event') in ('closed', 'reopened'):
+            closes.append({'at': item['created_at'], 'kind': item['event'], 'reason': item.get('state_reason')})
+        source = item.get('source') if item.get('event') == 'cross-referenced' else None
+        issue = source.get('issue') if isinstance(source, dict) else None
+        pull = issue.get('pull_request') if isinstance(issue, dict) else None
+        if isinstance(pull, dict):
+            user = issue.get('user') if isinstance(issue.get('user'), dict) else {}
+            references.append({'at': item['created_at'], 'pr': issue.get('number'),
+                               'repository': (issue.get('repository') or {}).get('full_name'),
+                               'merged_at': pull.get('merged_at'), 'author_association': issue.get('author_association'),
+                               'user_type': user.get('type')})
+    return {'closes': closes, 'references': references,
+            'current': {key: current.get(key) for key in ('state', 'closed_at', 'state_reason')}}
 
-    positive: closed (completed) inside the window, by a merged PR from the same repository whose
-      author is not OWNER/MEMBER/COLLABORATOR and not a bot, merged inside the window and within 24
-      hours of the close. This is the work an outside contributor demonstrably landed.
-    negative: still open at the horizon, or closed as not planned or duplicate.
-    excluded: closed as completed without such a PR (a maintainer fix, a direct commit or an
-      unlinked close). It is ambiguous whether an outside contributor could have landed it, so it
-      counts as neither."""
+
+def classify(record, cutoff, horizon_days, repository, *, open_prs=frozenset(), claimed_excluded=True):
+    """Outcome in (T, T + horizon] from stored evidence.
+
+    positive: the issue is closed at the horizon by a same-repository PR that was merged inside the
+      window within 24 hours of the close, referenced by the horizon, written by an explicitly
+      external (CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER or NONE) human user, and not
+      already linked or open at the cutoff. The close reason must be completed or unknown.
+    negative: still open at the horizon, or closed with an explicit not_planned/duplicate reason.
+    excluded: everything else that closed: maintainer or bot fixes, unknown authorship, unlinked
+      closes, unknown reasons without a qualifying PR, and fixes already in flight at the cutoff."""
     start = when(cutoff)
     end = start + dt.timedelta(days=horizon_days)
-    events = _ordered(events)
     state_at_cutoff, state, closing = 'open', 'open', None
-    for item in events:
-        moment = when(item['created_at'])
-        if item['event'] not in ('closed', 'reopened'):
-            continue
-        new = 'closed' if item['event'] == 'closed' else 'open'
+    for item in record['closes']:
+        moment = when(item['at'])
+        new = 'closed' if item['kind'] == 'closed' else 'open'
         if moment <= start:
             state_at_cutoff = new
         elif moment <= end:
             state, closing = new, (item if new == 'closed' else None)
-    result = {'open_at_cutoff': state_at_cutoff == 'open', 'evidence': {}}
+    result = {'open_at_cutoff': state_at_cutoff == 'open', 'evidence': {}, 'reason_known': True}
     if state == 'open':
         return dict(result, outcome='negative', reason='open at the horizon')
-    reason = closing.get('state_reason') or 'completed'
-    result['evidence'] = {'closed_at': closing['created_at'], 'state_reason': reason}
-    if reason != 'completed':
+    reason = closing.get('reason')
+    current = record.get('current') or {}
+    if reason is None and current.get('state') == 'closed' and current.get('closed_at') == closing['at']:
+        reason = current.get('state_reason')  # the current close is this close: its reason applies
+    result.update(evidence={'closed_at': closing['at'], 'state_reason': reason}, reason_known=reason is not None)
+    if reason in NEGATIVE_REASONS:
         return dict(result, outcome='negative', reason='closed as ' + reason)
-    closed_at = when(closing['created_at'])
-    for item in events:
-        source = item.get('source') if item['event'] == 'cross-referenced' else None
-        issue = source.get('issue') if isinstance(source, dict) else None
-        pull = issue.get('pull_request') if isinstance(issue, dict) else None
-        if not isinstance(pull, dict) or not isinstance(pull.get('merged_at'), str):
+    closed_at = when(closing['at'])
+    for ref in record['references']:
+        if not isinstance(ref.get('merged_at'), str) or not isinstance(ref.get('at'), str):
             continue
-        merged = when(pull['merged_at'])
-        repo = (issue.get('repository') or {}).get('full_name')
-        user = issue.get('user') or {}
-        if (repo == repository and start < merged <= end and abs(closed_at - merged) <= MERGE_CLOSE_TOLERANCE and
-                issue.get('author_association') not in MAINTAINERS and user.get('type') != 'Bot'):
-            result['evidence'].update(pr=issue.get('number'), merged_at=pull['merged_at'],
-                                      pr_author_association=issue.get('author_association'))
-            return dict(result, outcome='positive', reason='closed by an external merged PR')
-    return dict(result, outcome='excluded', reason='closed as completed without an external merged PR')
+        merged = when(ref['merged_at'])
+        if (ref.get('repository') == repository and when(ref['at']) <= end and start < merged <= end and
+                abs(closed_at - merged) <= MERGE_CLOSE_TOLERANCE and ref.get('author_association') in EXTERNAL and
+                ref.get('user_type') == 'User'):
+            result['evidence'].update(pr=ref['pr'], merged_at=ref['merged_at'], referenced_at=ref['at'])
+            if claimed_excluded and (when(ref['at']) <= start or ref['pr'] in open_prs):
+                return dict(result, outcome='excluded', reason='fixed by a PR already linked or open at the cutoff')
+            return dict(result, outcome='positive', reason='closed by a new external merged PR')
+    if reason is None:
+        return dict(result, outcome='excluded', reason='closed with an unknown reason and no qualifying PR')
+    return dict(result, outcome='excluded', reason='closed as completed without a qualifying external PR')
 
 
-def labels(snapshot, *, claimed_at_cutoff=False):
-    """Outcome per issue for scoring. A positive whose fixing PR was already open at the cutoff was
-    not an available task at T (someone had claimed it), so it is excluded unless claimed_at_cutoff
-    asks for the raw collected label."""
-    open_prs = {pr['number'] for pr in snapshot['open_prs_at_cutoff']}
-    result = {}
-    for issue in snapshot['issues']:
-        outcome = issue['outcome']
-        if (not claimed_at_cutoff and outcome == 'positive' and
-                issue.get('evidence', {}).get('pr') in open_prs):
-            outcome = 'excluded'
-        result[issue['number']] = outcome
-    return result
+def pr_at_cutoff(item, events, cutoff):
+    """Whether a PR was open at T, and its title then, from its issue events."""
+    start = when(cutoff)
+    open_now, title = True, item['title']
+    for event in _ordered(events):
+        moment = when(event['created_at'])
+        if event['event'] in ('closed', 'reopened') and moment <= start:
+            open_now = event['event'] == 'reopened'
+    for event in reversed(_ordered(events)):
+        if when(event['created_at']) <= start:
+            break
+        if event['event'] == 'renamed' and isinstance(event.get('rename'), dict):
+            title = event['rename'].get('from', title)
+    return {'open': open_now, 'title': title}
 
 
 def reconstruct(item, events, cutoff):
@@ -112,6 +139,34 @@ def reconstruct(item, events, cutoff):
             'created_at': item['created_at'], 'updated_at': updated,
             'comments': sum(event['event'] == 'commented' for event in before),
             'author_association': item.get('author_association'), 'html_url': item['html_url']}
+
+
+def validate(snapshot):
+    """Refuse anything the scorer cannot score honestly."""
+    if snapshot.get('format') != FORMAT:
+        raise BenchmarkError(f'Unsupported snapshot format {snapshot.get("format")!r}')
+    cutoff = when(snapshot['cutoff'])
+    horizon = snapshot['horizon_days']
+    if type(horizon) is not int or horizon <= 0:
+        raise BenchmarkError('Horizon must be a positive number of days')
+    if when(snapshot['collected_at']) < cutoff + dt.timedelta(days=horizon):
+        raise BenchmarkError('Collected before the horizon ended: outcomes are not mature')
+    numbers = [issue['number'] for issue in snapshot['issues']]
+    if len(numbers) != len(set(numbers)):
+        raise BenchmarkError('Duplicate issue numbers')
+    for issue in snapshot['issues']:
+        if 'body' in issue or set(issue['evidence']) != {'closes', 'references', 'current'}:
+            raise BenchmarkError(f'Issue #{issue["number"]} has a body or malformed evidence')
+    return snapshot
+
+
+def labels(snapshot, *, claimed_at_cutoff=False):
+    """Scoring label per issue. claimed_at_cutoff=True keeps fixes already in flight at T as positive."""
+    open_prs = {pr['number'] for pr in snapshot['open_prs_at_cutoff']}
+    return {issue['number']: classify(issue['evidence'], snapshot['cutoff'], snapshot['horizon_days'],
+                                      snapshot['repository'], open_prs=open_prs,
+                                      claimed_excluded=not claimed_at_cutoff)['outcome']
+            for issue in snapshot['issues']}
 
 
 class SnapshotClient:
@@ -155,6 +210,25 @@ class SnapshotClient:
         raise core.ProtocolError('api_error', 'Benchmark replay has no data for ' + endpoint)
 
 
+def discover_at_cutoff(snapshot, *, signals=False, bodies=None):
+    """discover's issue results at T. An incomplete run or a changed issue set is an error, never a score."""
+    cutoff = when(snapshot['cutoff'])
+
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cutoff.astimezone(tz)
+
+    with patch.object(core.dt, 'datetime', Clock):
+        result = core.discover(snapshot['repository'], SnapshotClient(snapshot, bodies), signals=signals)
+    if result.get('complete') is not True or result.get('errors'):
+        raise BenchmarkError(f'Incomplete replay for {snapshot["repository"]}: {result.get("errors")}')
+    returned = [issue['number'] for issue in result['issues']]
+    if sorted(returned) != sorted(issue['number'] for issue in snapshot['issues']):
+        raise BenchmarkError(f'Replay for {snapshot["repository"]} did not return exactly the snapshot issues')
+    return result['issues']
+
+
 def replay(snapshot, *, signals=False, bodies=None):
     """Issue numbers in the order discover ranks them at the cutoff."""
     return [issue['number'] for issue in discover_at_cutoff(snapshot, signals=signals, bodies=bodies)]
@@ -185,79 +259,82 @@ def rank(snapshot, variant, bodies=None):
     return [issue['number'] for issue in sorted(discover_at_cutoff(snapshot, bodies=bodies), key=key)]
 
 
-def discover_at_cutoff(snapshot, *, signals=False, bodies=None):
-    cutoff = when(snapshot['cutoff'])
-
-    class Clock(dt.datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return cutoff.astimezone(tz)
-
-    client = SnapshotClient(snapshot, bodies)
-    with patch.object(core.dt, 'datetime', Clock):
-        return core.discover(snapshot['repository'], client, signals=signals)['issues']
-
-
 def at_k(ranking, labels, k):
-    decided = [number for number in ranking if labels.get(number) in ('positive', 'negative')]
-    positives = sum(labels[number] == 'positive' for number in decided)
-    top = decided[:k]
+    """Metrics over the first k actual recommendations. Unjudged (excluded) slots bound precision:
+    lower counts them as misses, upper as hits; coverage is the judged share. condensed_precision is
+    the older conditional metric over the first k judged issues and uses outcomes to pick the slots."""
+    if len(ranking) != len(set(ranking)) or set(ranking) != set(labels):
+        raise BenchmarkError('Ranking is not a permutation of the labelled issues')
+    top = ranking[:k]
     hits = sum(labels[number] == 'positive' for number in top)
-    return {'precision': hits / len(top) if top else None, 'recall': hits / positives if positives else None,
-            'hits': hits, 'decidable': len(decided), 'positives': positives}
+    unjudged = sum(labels[number] == 'excluded' for number in top)
+    judged = [number for number in ranking if labels[number] != 'excluded']
+    condensed = judged[:k]
+    positives = sum(value == 'positive' for value in labels.values())
+    return {'precision_lower': hits / len(top) if top else None,
+            'precision_upper': (hits + unjudged) / len(top) if top else None,
+            'coverage': (len(top) - unjudged) / len(top) if top else None,
+            'condensed_precision': (sum(labels[n] == 'positive' for n in condensed) / len(condensed)
+                                    if condensed else None),
+            'recall': hits / positives if positives else None,
+            'hits': hits, 'issues': len(ranking), 'judged': len(judged), 'positives': positives}
 
 
-def pooled(runs, k, metric):
-    """Mean over repositories of the per-repository metric. Repositories without positives are left
-    out: no ordering can score there, so they would only add a constant zero."""
-    results = [at_k(ranking, labels, k) for ranking, labels in runs]
-    values = [result[metric] for result in results if result['positives'] and result[metric] is not None]
+POSITIVE_ONLY = {'condensed_precision', 'recall'}
+
+
+def support(runs):
+    """Which snapshots a metric averages over, fixed from the original labels."""
+    return [any(value == 'positive' for value in labels.values()) for _, labels in runs]
+
+
+def pooled(runs, k, metric, fixed=None):
+    """Macro mean over snapshots. Top-k bounds and coverage use every snapshot; condensed precision and
+    recall use the snapshots with positives (fixed from the original data), counting 0 when a
+    resample leaves a supported snapshot without a value."""
+    fixed = support(runs) if fixed is None else fixed
+    values = []
+    for (ranking, labels), supported in zip(runs, fixed):
+        if metric in POSITIVE_ONLY and not supported:
+            continue
+        value = at_k(ranking, labels, k)[metric]
+        values.append(0.0 if value is None else value)
     return sum(values) / len(values) if values else None
 
 
-def base_rate(runs):
-    """Mean per-repository share of positives among decidable issues: the expected precision of a random order."""
-    rates = []
-    for ranking, labels in runs:
-        result = at_k(ranking, labels, len(ranking))
-        if result['positives']:
-            rates.append(result['positives'] / result['decidable'])
-    return sum(rates) / len(rates) if rates else None
-
-
-def _resampled(prepared, rng):
-    sample_runs = []
-    for decided, labels in prepared:
-        sample = sorted(rng.choice(decided) for _ in decided) if decided else []
-        # Duplicated issues need distinct identities so each copy keeps its label.
-        ranking = [(number, index) for index, (_, number) in enumerate(sample)]
-        sample_runs.append((ranking, {key: labels[key[0]] for key in ranking}))
-    return sample_runs
-
-
-def _prepare(runs):
-    return [([(position, number) for position, number in enumerate(ranking)
-              if labels.get(number) in ('positive', 'negative')], labels) for ranking, labels in runs]
-
-
 def _interval(values):
+    values = sorted(value for value in values if value is not None)
     if not values:
-        return {'low': None, 'high': None, 'reps': 0}
-    values.sort()
-    return {'low': values[int(0.025 * (len(values) - 1))], 'high': values[int(0.975 * (len(values) - 1))],
-            'reps': len(values)}
-
-
-def bootstrap_base_rate(runs, *, reps=2000, seed=0):
-    """Interval of the random-order reference under the same resampling as bootstrap()."""
-    rng, prepared = random.Random(seed), _prepare(runs)
-    values = [base_rate(_resampled(prepared, rng)) for _ in range(reps)]
-    return _interval([value for value in values if value is not None])
+        return {'low': None, 'median': None, 'high': None, 'reps': 0}
+    pick = lambda q: values[int(q * (len(values) - 1))]
+    return {'low': pick(0.025), 'median': pick(0.5), 'high': pick(0.975), 'reps': len(values)}
 
 
 def bootstrap(runs, k, metric, *, reps=2000, seed=0):
-    """Percentile 95% interval of the pooled metric, resampling decidable issues within each repository
-    (with replacement) while keeping each issue's original rank position."""
-    rng, prepared = random.Random(seed), _prepare(runs)
-    values = [pooled(_resampled(prepared, rng), k, metric) for _ in range(reps)]
-    return _interval([value for value in values if value is not None])
+    """Conditional issue-population bootstrap: resample each snapshot's issues with replacement,
+    keeping their rank positions and labels, with the snapshot support fixed. It measures sensitivity
+    to which issues happened to be open, not label noise or repository-to-repository variation."""
+    rng, fixed = random.Random(seed), support(runs)
+    values = []
+    for _ in range(reps):
+        sample_runs = []
+        for ranking, labels in runs:
+            picks = sorted(rng.randrange(len(ranking)) for _ in ranking) if ranking else []
+            keys = [(ranking[position], index) for index, position in enumerate(picks)]
+            sample_runs.append((keys, {key: labels[key[0]] for key in keys}))
+        values.append(pooled(sample_runs, k, metric, fixed))
+    return _interval(values)
+
+
+def permutation_null(runs, k, metric, *, reps=2000, seed=0):
+    """The same pooled metric for uniformly random orderings of each snapshot's full issue set."""
+    rng, fixed = random.Random(seed), support(runs)
+    values = []
+    for _ in range(reps):
+        shuffled = []
+        for ranking, labels in runs:
+            order = list(ranking)
+            rng.shuffle(order)
+            shuffled.append((order, labels))
+        values.append(pooled(shuffled, k, metric, fixed))
+    return _interval(values)

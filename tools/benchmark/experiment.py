@@ -1,10 +1,11 @@
 """Held-out ranking experiment: score candidate orderings on tuning, held-out and all snapshots.
 
     python tools/benchmark/experiment.py --tune A.json B.json --heldout C.json D.json \\
-        --variants default signals recent help-wanted --k 5 10 [--json]
+        --variants default signals recent help-wanted --k 5 10 [--raw-labels] [--json]
 
-A variant qualifies only when its held-out precision interval lies wholly above the random-order
-interval (non-overlapping 95% bootstrap intervals). Offline: replays snapshots only."""
+Primary metric: precision@k over the first k actual recommendations, with unjudged slots counted
+as misses. A variant qualifies only when the 2.5th percentile of its conditional bootstrap lies
+above the 97.5th percentile of a seeded random-permutation null on the same snapshots. Offline."""
 import argparse
 import json
 import pathlib
@@ -17,41 +18,49 @@ import benchlib  # noqa: E402
 
 
 def load(paths):
-    return [core.strict_json(pathlib.Path(path).read_text('utf-8')) for path in paths]
+    return [benchlib.validate(core.strict_json(pathlib.Path(path).read_text('utf-8'))) for path in paths]
 
 
 def evaluate(splits, variants, ks, reps=2000, seed=0, raw_labels=False):
     rows = []
     for split, snapshots in splits.items():
         labels = [benchlib.labels(snap, claimed_at_cutoff=raw_labels) for snap in snapshots]
-        random_runs = [(benchlib.rank(snap, 'default'), label) for snap, label in zip(snapshots, labels)]
-        reference = {'value': benchlib.base_rate(random_runs),
-                     **benchlib.bootstrap_base_rate(random_runs, reps=reps, seed=seed)}
+        population = {'snapshots': len(snapshots), 'issues': sum(len(label) for label in labels),
+                      'judged': sum(sum(v != 'excluded' for v in label.values()) for label in labels),
+                      'positives': sum(sum(v == 'positive' for v in label.values()) for label in labels)}
         for variant in variants:
             runs = [(benchlib.rank(snap, variant), label) for snap, label in zip(snapshots, labels)]
             for k in ks:
-                ci = benchlib.bootstrap(runs, k, 'precision', reps=reps, seed=seed)
-                rows.append({'split': split, 'variant': variant, 'k': k,
-                             'repositories': [snap['repository'] for snap in snapshots],
-                             'precision': benchlib.pooled(runs, k, 'precision'), 'precision_ci': ci,
-                             'recall': benchlib.pooled(runs, k, 'recall'),
-                             'recall_ci': benchlib.bootstrap(runs, k, 'recall', reps=reps, seed=seed),
-                             'random': reference,
-                             'beats_random': (ci['low'] is not None and reference['high'] is not None and
-                                              ci['low'] > reference['high'])})
+                ci = benchlib.bootstrap(runs, k, 'precision_lower', reps=reps, seed=seed)
+                null = benchlib.permutation_null(runs, k, 'precision_lower', reps=reps, seed=seed)
+                rows.append({'split': split, 'variant': variant, 'k': k, 'population': population,
+                             'repositories': [snap['repository'] + '@' + snap['cutoff'][:10] for snap in snapshots],
+                             **{metric: benchlib.pooled(runs, k, metric) for metric in
+                                ('precision_lower', 'precision_upper', 'coverage', 'condensed_precision', 'recall')},
+                             'precision_lower_ci': ci, 'null': null,
+                             'qualifies': (ci['low'] is not None and null['high'] is not None and
+                                           ci['low'] > null['high'])})
     return rows
 
 
 def table(rows):
     def fmt(value):
         return '–' if value is None else f'{value:.2f}'
-    out = ['| Split | Variant | k | Precision@k (95% CI) | Recall@k (95% CI) | Random (95% CI) | Beats random |',
-           '| --- | --- | --- | --- | --- | --- | --- |']
+    out = ['| Split | Variant | k | P@k, unjudged as misses (95% sensitivity) | Upper bound | Coverage | '
+           'Condensed P@k | Recall@k | Random null median (95%) | Qualifies |',
+           '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |']
     for row in rows:
-        p, r, rnd = row['precision_ci'], row['recall_ci'], row['random']
-        out.append(f"| {row['split']} | {row['variant']} | {row['k']} | {fmt(row['precision'])} "
-                   f"({fmt(p['low'])}–{fmt(p['high'])}) | {fmt(row['recall'])} ({fmt(r['low'])}–{fmt(r['high'])}) | "
-                   f"{fmt(rnd['value'])} ({fmt(rnd['low'])}–{fmt(rnd['high'])}) | {'yes' if row['beats_random'] else 'no'} |")
+        ci, null = row['precision_lower_ci'], row['null']
+        out.append(f"| {row['split']} | {row['variant']} | {row['k']} | {fmt(row['precision_lower'])} "
+                   f"({fmt(ci['low'])}–{fmt(ci['high'])}) | {fmt(row['precision_upper'])} | {fmt(row['coverage'])} | "
+                   f"{fmt(row['condensed_precision'])} | {fmt(row['recall'])} | {fmt(null['median'])} "
+                   f"({fmt(null['low'])}–{fmt(null['high'])}) | {'yes' if row['qualifies'] else 'no'} |")
+    seen = {}
+    for row in rows:
+        seen.setdefault(row['split'], row['population'])
+    out.append('')
+    out += [f"Population {split}: {p['snapshots']} snapshots, {p['issues']} issues, {p['judged']} judged, "
+            f"{p['positives']} positive." for split, p in seen.items()]
     return '\n'.join(out)
 
 
@@ -63,8 +72,8 @@ def main():
     parser.add_argument('--k', type=int, nargs='+', default=[5, 10])
     parser.add_argument('--reps', type=int, default=2000)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--raw-labels', action='store_true', help='Keep fixes already in flight at T as positive')
     parser.add_argument('--json', action='store_true')
-    parser.add_argument('--raw-labels', action='store_true', help='Keep positives whose fixing PR was already open at T')
     args = parser.parse_args()
     splits = {'tune': load(args.tune), 'held-out': load(args.heldout), 'all': load(args.tune + args.heldout)}
     rows = evaluate(splits, args.variants, args.k, args.reps, args.seed, args.raw_labels)
