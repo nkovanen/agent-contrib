@@ -142,6 +142,7 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 
 | Command | Purpose |
 | --- | --- |
+| `init`, `jar-check` | Create an explicit-state local invitation template; validate a local manifest offline |
 | `jar` | Inspect one pinned root invitation; inspection only, no authority |
 | `discover` | Rank issues of one repository, or 2–20 repositories |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs |

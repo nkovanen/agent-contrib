@@ -38,6 +38,7 @@ sections are grouped by task.
   - [API budget (opt-in)](#api-budget-opt-in)
   - [Content cache (opt-in)](#content-cache-opt-in)
   - [Text output (unreleased)](#text-output-unreleased)
+- [Offline manifest setup and validation](#offline-manifest-setup-and-validation)
 - [Jar inspection (candidate, inspection only)](#jar-inspection-candidate-inspection-only)
 - [Command index](#command-index)
 
@@ -55,6 +56,8 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 
 | Command | Purpose | Reads GitHub? | Exit codes |
 | --- | --- | --- | --- |
+| `init` | Create an explicit-state local invitation template at a new path | No | 0 created; 1 file error; 2 usage |
+| `jar-check` | Validate a bounded local invitation without printing its text | No | 0 valid; 1 invalid/unreadable; 2 usage |
 | `jar` | Inspect a pinned root invitation directly, without parent tracker resolution | Yes | 0 welcome/closed/undeclared; 1 unknown |
 | `discover` | Rank open issues of one repository, or 2-20, with policy and overlap context | Yes | 0 complete; 1 incomplete (also an incomplete `--responsiveness`, `--check-top` or `--repo-dir` report) |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs | Yes | 0 complete; 1 incomplete (also incomplete `--ownership` signals) |
@@ -1223,6 +1226,44 @@ requires `--report-budget`. `--format` applies to every command.
 The text option uses the same stdout handling as JSON. Closed output returns 1
 quietly; writable output retains the command's normal exit status.
 
+
+## Offline manifest setup and validation
+
+```sh
+tipjar init --status welcome --output .tipjar.json
+# Or choose --status closed explicitly when declining agent work.
+# Edit the template to describe your actual wanted work and boundaries, then:
+tipjar jar-check .tipjar.json
+tipjar --format text jar-check .tipjar.json
+tipjar schema init
+tipjar schema jar-check
+# Equivalent through the original command name:
+agent-contrib init --status closed --output closed-example.json
+agent-contrib jar-check closed-example.json
+```
+
+`init` requires both `--status welcome|closed` and `--output FILE`. It creates only
+that explicit local path, refusing existing files and symlinks. Templates use the
+packaged manifest parser before writing and include editable wanted/boundary text.
+The result contains `output`, `state`, the exact file byte `sha256`, `notice` and
+`next_steps`. Replace the marked wanted placeholder and review the boundaries
+before adoption; structurally valid text is not proof of your policy's intent.
+
+`jar-check FILE` reads at most 16,385 bytes from one regular local file (symlinks
+and nonregular files are refused), then uses the same strict packaged parser as
+remote jar inspection. Success reports `path`, `state`, `sha256`, `valid: true`
+and `notice`; it does not print the manifest text or modify the file. Invalid,
+unsupported, oversized, non-UTF-8 and unreadable files return exit 1 with the
+standard structured error envelope and no input-content echo. The hash covers
+original bytes, including formatting and line endings. Validation is local: it
+does not establish remote provenance, policy approval or any authorization.
+
+Both commands work without GitHub authentication, Git or `gh`. GitHub-only global
+`--cache`, `--report-budget` and `--min-remaining` options are refused with exit 2
+before touching a file. `--format text` is supported before either command.
+The `agent-contrib` alias exposes the same commands. See the
+[maintainer two-minute setup](maintainers.md#two-minute-setup-offline) for adoption
+and old-client limitations. No file is published automatically.
 
 ## Jar inspection (candidate, inspection only)
 

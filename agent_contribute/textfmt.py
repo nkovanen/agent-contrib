@@ -370,6 +370,13 @@ def _jar(result):
     return out + _list('Errors', result.get('errors', []))
 
 
+def _onboarding(result):
+    out = [f'File: {line(result.get("output", result.get("path")))}',
+           f'Jar: {line(result["state"])}', f'SHA-256: {line(result["sha256"], 64)}',
+           line(result['notice'])]
+    return out + _list('Next steps', result.get('next_steps', []))
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
@@ -382,7 +389,7 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command, 'jar': _jar}.get(command)
+            'ownership': _ownership_command, 'jar': _jar, 'init': _onboarding, 'jar-check': _onboarding}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:
