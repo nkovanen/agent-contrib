@@ -26,7 +26,11 @@ issue identities, issue URLs and merged candidate flags. Input remains untrusted
 a structurally consistent snapshot and its SHA-256 do not prove GitHub state,
 maintainer consent, or human authorization.
 
-Selection preserves the existing discovery order. Only complete issues from
+Selection preserves the existing discovery candidate order. Excluded diagnostic
+issues in a mixed report receive decisions after those candidates, with no time
+allocated. Repositories rejected by discovery selection and observed closed,
+unknown or incomplete jars cannot supply tasks. Explicit undeclared repositories
+remain candidates for manual policy review. Only complete issues from
 complete repository reports with no exclusions, overlapping PRs or unknown source
 approval can enter the shortlist. Known assignees, merged-fix/top-check demotions
 and references in local work are excluded with reasons, including local references
@@ -50,10 +54,13 @@ to have checked all issues. Do not treat the abridged text summary as an audit.
 ## How a host agent uses the proposal
 
 Present the shortlist and source limits for human review. For each task, refresh
-repository policies and instructions and inspect its jar. Discovery currently
-has no integrated jar observation: an absent observation is undeclared. An absent
-jar permits proposing manual review, never implies source approval; an explicit
-prohibition must stop work. Do not infer permission from labels or ranking.
+repository policies and instructions and recheck its jar. Current discovery
+includes the pinned issue-source jar observation and its selection decision;
+the session preserves these historical observations without refreshing them.
+Older snapshots without a jar observation remain unassessed and need manual
+review. An undeclared jar permits proposing manual review, never implies source
+approval; closed or unknown declarations must stop work. Do not infer permission
+from labels or ranking.
 
 Ownership and local-work checks that were not requested remain unassessed, not
 passed; review them manually. Refresh `tipjar inspect owner/repo#N --ownership`

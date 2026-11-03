@@ -268,3 +268,104 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(len(result['tasks']), 1)
             self.assertIn('Refresh inspect --ownership', result['tasks'][0]['required_follow_up'][1])
             self.assertIs(result['actions_authorized'], False)
+
+
+class SessionJarSelectionTests(unittest.TestCase):
+    plan = SessionTests.plan
+
+    def mixed(self, state, peer_state, *, limit=None, welcomed_only=False):
+        from tests.test_tipjar_discovery import SourcesGitHub
+        class SourceURLs(SourcesGitHub):
+            def request(self, endpoint):
+                result = super().request(endpoint)
+                if endpoint.startswith('repos/person/photos/issues?'):
+                    return [dict(issue, html_url=f'https://github.com/person/photos/issues/{issue["number"]}')
+                            for issue in result]
+                return result
+        states = {name: value for name, value in [('acme/photos', state), ('person/photos', peer_state)]
+                  if value is not None}
+        return multi.discover_many(['acme/photos', 'person/photos'], SourceURLs(states),
+                                   limit=limit, welcomed_only=welcomed_only)
+
+    def test_single_closed_unknown_and_welcome_filter_exclusions_receive_no_time(self):
+        from tests.test_tipjar_discovery import SourcesGitHub
+        for state, welcomed_only, reason in [('closed', False, 'source_jar_closed'),
+                                              ('bad', False, 'source_jar_unknown'),
+                                              (None, True, None)]:
+            source = core.discover('acme/photos', SourcesGitHub({} if state is None else {'acme/photos': state}),
+                                   welcomed_only=welcomed_only)
+            self.assertFalse(source['selection']['included'])
+            with self.subTest(state=state, welcomed_only=welcomed_only):
+                result = self.plan(source)
+                self.assertEqual(result['source_report'], source)
+                self.assertEqual(result['tasks'], [])
+                self.assertEqual(result['allocated_minutes'], 0)
+                self.assertFalse(result['actions_authorized'])
+                if reason:
+                    self.assertIn(reason, result['candidates'][0]['reasons'])
+                    self.assertFalse(result['candidates'][0]['selected'])
+                else:
+                    self.assertEqual(result['candidates'], [])
+
+    def test_selection_rejection_is_honored_independently_of_welcome_state(self):
+        from tests.test_tipjar_discovery import SourcesGitHub
+        source = core.discover('acme/photos', SourcesGitHub({'acme/photos': 'welcome'}))
+        source['selection'].update(included=False, reason='Excluded from this discovery selection')
+        result = self.plan(source)
+        self.assertEqual(result['tasks'], [])
+        self.assertIn('source_selection_excluded', result['candidates'][0]['reasons'])
+        self.assertEqual(result['source_report'], source)
+
+    def test_single_explicit_welcome_and_undeclared_still_propose_manual_review(self):
+        from tests.test_tipjar_discovery import SourcesGitHub
+        for states in ({}, {'acme/photos': 'welcome'}):
+            source = core.discover('acme/photos', SourcesGitHub(states))
+            result = self.plan(source)
+            self.assertEqual([task['reference'] for task in result['tasks']], ['acme/photos#12'])
+            self.assertFalse(result['actions_authorized'])
+            self.assertEqual(result['source_report'], source)
+
+    def test_mixed_excluded_diagnostics_do_not_block_eligible_peers(self):
+        for state, reason in [('closed', 'source_jar_closed'), ('bad', 'source_jar_unknown')]:
+            for peer_state in ('welcome', None):
+                for limit in (None, 1):
+                    source = self.mixed(state, peer_state, limit=limit)
+                    with self.subTest(state=state, peer=peer_state, limit=limit):
+                        result = self.plan(source)
+                        self.assertEqual(result['source_report'], source)
+                        self.assertEqual([task['reference'] for task in result['tasks']], ['person/photos#12'])
+                        self.assertFalse(result['actions_authorized'])
+                        self.assertEqual(core.schema_errors(result, outputs.output_schema('session')), [])
+                        for decision in result['candidates']:
+                            if decision['reference'] == 'acme/photos#12':
+                                self.assertFalse(decision['selected'])
+                                self.assertIn(reason, decision['reasons'])
+                                self.assertEqual(decision['source_repository_index'], 0)
+                                self.assertEqual(decision['source_issue_index'], 0)
+                        self.assertEqual(len(result['candidates']), sum(len(r['issues']) for r in source['repositories']))
+                        self.assertEqual(result['tasks'][0]['source_repository_index'], 1)
+
+    def test_mixed_welcome_and_nojar_controls_keep_candidate_order_and_filter(self):
+        for peer_state in ('welcome', None):
+            for welcomed_only in (False, True):
+                for limit in (None, 1):
+                    source = self.mixed('welcome', peer_state, limit=limit, welcomed_only=welcomed_only)
+                    result = self.plan(source)
+                    self.assertEqual([task['reference'] for task in result['tasks']],
+                                     [candidate['reference'] for candidate in source['candidates']])
+                    self.assertEqual(result['source_report'], source)
+
+    def test_excluded_rows_do_not_weaken_candidate_or_detail_validation(self):
+        source = self.mixed('closed', 'welcome')
+        excluded = dict(source['candidates'][0], repository='acme/photos', reference='acme/photos#12')
+        mutations = [lambda r: r['candidates'].clear(),
+                     lambda r: r['candidates'].append(excluded),
+                     lambda r: r['candidates'].append(copy.deepcopy(r['candidates'][0])),
+                     lambda r: r['candidates'][0].update(overlapping=True),
+                     lambda r: r['candidates'][0].update(reference='person/photos#99'),
+                     lambda r: r['repositories'][0]['issues'][0].update(issue_url='https://evil.test/issues/12')]
+        for mutate in mutations:
+            forged = copy.deepcopy(source)
+            mutate(forged)
+            with self.subTest(mutation=mutate), self.assertRaises(core.ProtocolError):
+                self.plan(forged)
