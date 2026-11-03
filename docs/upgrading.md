@@ -23,6 +23,16 @@ Message-only changes never change a decision.
 3. Re-run `agent-contrib instructions`. The workflow now has a Quick path and a
    mandatory repository policy review.
 
+## Tipjar alias
+
+A candidate containing the Tipjar identity change installs both `tipjar` and
+`agent-contrib` for the same CLI. After installing that reviewed commit, check
+`tipjar --version` alongside `agent-contrib --version`; both print `0.3.0`.
+The published v0.2.0 has no alias. Existing scripts can keep `agent-contrib` or
+`python -m agent_contribute`; the distribution, repository URLs, output
+identifiers and canonical `agent-contribute` Skill keep their names. No file or
+schema migration is needed for the alias. See [installation](installation.md#tipjar-command-compatibility).
+
 ## Versions and schemas
 
 | Change | What to do |

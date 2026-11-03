@@ -29,6 +29,12 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Tipjar identity for gifting useful agent work, with a `tipjar` console alias
+  for the existing CLI. `agent-contrib`, the distribution and Python module,
+  canonical Skill, repository URLs and output identifiers remain compatible.
+  Discoverable repository jars are planned; this alias adds no protocol or
+  authority.
+
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,
   bounded collector of issues open at a past cutoff with post-cutoff outcome
   labels, an offline replay of `discover` and `--signals` ranking, and

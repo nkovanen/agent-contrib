@@ -48,6 +48,23 @@ immutable release commit may replace the tag in the Git URL when exact commit
 pinning is required. Installation uses standard Python build tools, not a
 custom shell installer. Nothing is published to PyPI in this release.
 
+## Tipjar command compatibility
+
+Tipjar describes gifting useful agent work to projects. The unreleased candidate
+adds `tipjar` as an alias for `agent-contrib`; the published v0.2.0 installation
+above does not include it. Install a reviewed candidate containing the alias as
+[described below](#testing-the-unreleased-v030-candidate), then check both
+`agent-contrib --version` and `tipjar --version` in your agent's environment.
+For example, `tipjar instructions` reads the same workflow as
+`agent-contrib instructions`.
+
+The distribution is still `agent-contrib` and the module is still
+`agent_contribute` (`python -m agent_contribute`). Help and output identifiers
+keep the canonical name. Both commands export the same `agent-contribute` Skill;
+keep its existing directory and invocation. Repository jars are planned, not
+implemented; see the [README](../README.md) for current targeting and authority
+boundaries.
+
 ## Install the Skill
 
 The installed package is the canonical source. Export creates a new file and
