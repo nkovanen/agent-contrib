@@ -120,7 +120,7 @@ All of these are required. Only the original mandate's expiry is waived.
 ### `T(E)`: fresh technical evidence at `E`
 
 1. `core.check_evidence` passes unchanged, with `git_head == E`, a clean worktree, the reviewed `head_ref`, scope, and validations after `E`'s committer time.
-2. **Update-only base rule (DU-04):** `evidence.base_commit == task.source.commit` exactly. A newer authenticated base, which is allowed for creation, blocks an update. If creation used a newer base, the update needs a re-prepared contract.
+2. **Update-only base rule (DU-04):** `evidence.base_commit == task.source.commit` exactly. A newer authenticated base, which is allowed for creation, blocks an update. The rule is about the current update evidence only: the CLI neither retains nor checks which base the creation evidence used. If creation used a newer base, that evidence cannot be reused; new evidence and an independent review covering `task.source.commit..E` satisfy the rule. Re-preparation is needed only if the update cannot be validated against the reviewed source commit (DUI-02).
 3. **Update-only history rule:** `rev-list --merges --max-count=1 F..E` is empty, through the hardened `core.git_read`. It stops at the first merge, and a traversal error fails closed. A merge of the newer default branch, or of anything else, blocks even when its net paths are allowed. Non-merge commits are judged by the existing path scope and the independent review.
 4. Every validation's `started_at` is at or after `draft_update.issued_at`.
 5. The independent review is valid at `E`: bound to `E` and the contract, by a reviewer other than the implementer, and after the validations (existing rule).
