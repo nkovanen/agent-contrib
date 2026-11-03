@@ -2,14 +2,6 @@
 
 ## 0.3.0 — unreleased
 
-- A report-only maintainer GitHub Action, slice 1 (#11):
-  `actions/verify/` with an example workflow. It reads only the
-  `pull_request` event payload and the PR-head checkout, needs only
-  `contents: read` and makes no API calls. It checks that the contract and
-  evidence blocks in the PR body describe this PR's route, head, tree, base
-  and scope, and writes a job summary. It never runs PR code and never writes
-  to GitHub. Live checks (freshness, overlap, approval, identity) are listed as
-  not evaluated.
 The v0.3.0 candidate adds a task-scoped authorization route (task schema 0.2),
 read-only helper commands and report-only options, and hardens untrusted-input
 handling. Schema 0.1 formats are unchanged and its routes keep their meaning;
@@ -19,6 +11,15 @@ channel or runtime model provider is added.
 
 ### Added
 
+- A report-only maintainer GitHub Action, slice 1 (#11):
+  `actions/verify/` with an example workflow
+  (`docs/examples/agent-contrib-verify.yml`). It reads only the
+  `pull_request` event payload and the PR-head checkout, needs only
+  `contents: read` and makes no API calls. It checks that the contract and
+  evidence blocks in the PR body describe this PR's route, head, tree, base
+  and scope, and writes a job summary. It never runs PR code and never writes
+  to GitHub. Live checks (freshness, overlap, approval, identity) are listed as
+  not evaluated.
 - Opt-in required CI checks for schema 0.2 completion (#17): an optional
   `ci_requirements` list of `{check, app_id}` pairs in the unreleased task
   schema 0.2. Once the exact-head draft is verified, `verify` reads the head's
@@ -145,7 +146,9 @@ channel or runtime model provider is added.
   `--cache` (#27) reuses file contents at a pinned commit of a public
   repository from the user cache, keyed by Git blob SHA and re-verified
   against the live tree on every hit; trees and all mutable reads stay live
-  and output is unchanged. An opted-in report that is incomplete exits 1
+  and output is unchanged. It is used only under a private directory chain
+  (cache directory exactly 0700); a default Ubuntu `~/.cache` (0775) disables
+  it, so point `XDG_CACHE_HOME` at a private directory. An opted-in report that is incomplete exits 1
   where documented. `discover
   --signals` also lists `code_location.named_paths_missing`: file paths the
   issue names that are not in the snapshot tree, compared exactly (F13).

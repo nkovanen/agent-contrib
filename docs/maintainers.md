@@ -66,6 +66,17 @@ fork/tracker resolution. Suggestions are non-binding. `--print-policy` adds a
 valid policy template to the JSON output; nothing is written to the repository.
 Exit 1 means some read was incomplete.
 
+## Check agent PRs passively (report only)
+
+The candidate includes a report-only GitHub Action, slice 1 (#11), in
+`actions/verify/`; copy [the example workflow](examples/agent-contrib-verify.yml)
+and pin a reviewed commit. On `pull_request` it reads only the event payload and
+the PR-head checkout, with `contents: read` and no API calls, and checks that the
+contract and evidence blocks in the PR body describe this PR's route, head,
+tree, base and scope. It never runs PR code and never writes to GitHub. Freshness,
+overlap, approval and identity are listed as not evaluated; see the
+[design](design/2026-11-02-maintainer-action.md) for the threat model.
+
 ## AI-contribution statements
 
 Agents receive a `repository_policy` report on every `discover`, `inspect` and

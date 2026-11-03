@@ -2,8 +2,9 @@
 
 - Date: 2026-11-02
 - Status: proposal, revision 4. Hostile review rounds 1 to 3 (RO-01 to RO-08)
-  are resolved in [Review resolution](#review-resolution). Slice 1
-  (inert plumbing) is implemented on this branch.
+  are resolved in [Review resolution](#review-resolution). Slices 1
+  to 3 (plumbing, issuer requirements and waiver evaluation) are implemented in
+  the v0.3.0 candidate; slice 4 is deferred.
 - Base: `rsi/v03-land` at `44bf2d5` (unreleased v0.3.0 candidate: task/evidence
   schemas 0.1 and 0.2, host-context 0.1).
 - Issue: [#7](https://github.com/nkovanen/agent-contrib/issues/7), product-map key B3.

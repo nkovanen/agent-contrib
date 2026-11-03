@@ -72,8 +72,9 @@ The opt-in `--cache` stores only file contents of repositories observed public i
 the same command, under a user-owned 0700 directory. That directory is opened
 once by a symlink-free walk from `/`. It is refused (the cache is then disabled)
 if any ancestor is group- or other-writable without being a root-owned sticky
-directory, is owned by another account, or carries a POSIX ACL, or if the cache
-directory is not exactly 0700. After that it is used only through the open
+directory or is owned by another account, if an ancestor you own carries a POSIX
+ACL (ACLs on root-owned ancestors are not checked), or if the cache directory is
+not exactly 0700 or carries a POSIX ACL. After that it is used only through the open
 descriptor. Each hit must hash to the
 Git blob SHA from a live tree read, so a corrupted or tampered entry is discarded
 rather than used. The cache does not defend against other code running as the
