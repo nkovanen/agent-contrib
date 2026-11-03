@@ -29,6 +29,13 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `discover --limit N` (#1): display at most 1–1000 final ranked candidates
+  after full scans and reports. Multi-repository runs share one global budget.
+  Optional `display` fields in the unreleased output/1 schema report observed,
+  returned and omitted counts, truncation, and full overlap/exclusion totals;
+  text keeps hidden overlaps visible in its totals. No-limit output, scan
+  completeness, approval, task/evidence schemas and read-only authority are unchanged.
+
 - Tipjar identity for gifting useful agent work, with a `tipjar` console alias
   for the existing CLI. `agent-contrib`, the distribution and Python module,
   canonical Skill, repository URLs and output identifiers remain compatible.
@@ -513,6 +520,12 @@ channel or runtime model provider is added.
   `schema_valid: true` and reports the refusal only in `errors`.
 
 ### Compatibility notes
+
+- Discovery's issue lists now reject a repeated repository number even if the
+  API supplies different IDs. The repeated entry is omitted and the scan stays
+  incomplete, including without `--limit`; inconsistent identities cannot expand
+  the limited detail lists or produce contradictory display counts. Valid
+  no-limit output is unchanged.
 
 - `repository_policy` adds `inventory_format` (currently 2), and the format is
   part of the `inventory_sha256` input, so every inventory hash differs from

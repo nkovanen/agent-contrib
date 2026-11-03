@@ -100,6 +100,7 @@ def discover_names(args):
 def prevalidate(args):
     """The single local argument check, run before any GitHub read (including the optional rate_limit read)."""
     if args.command == 'discover':
+        args.limit = core.validate_discovery_limit(args.limit)
         args.names = discover_names(args)
         if args.check_top is not None and (not args.signals or not 1 <= args.check_top <= signals.CHECK_TOP_MAX or
                                            len(args.names) != 1):
@@ -159,6 +160,9 @@ def main(argv=None):
         sub = commands.add_parser(command, help=summaries[command])
         if command == 'discover':
             sub.add_argument('reference', nargs='*', help='owner/repo; give 2-20 for a multi-repository run')
+            sub.add_argument('--limit', metavar='N',
+                             help='Display at most N ranked candidates (1-1000, globally across repositories); '
+                                  'all scans still run')
             sub.add_argument('--signals', action='store_true',
                              help='Add report-only code-location, clarity, activity and maintainer signals')
             sub.add_argument('--responsiveness', action='store_true',
@@ -329,6 +333,8 @@ def main(argv=None):
         elif args.command == 'discover':
             options = {key: True for key in ('signals', 'responsiveness') if getattr(args, key)}
             names, client = args.names, core.GitHub()
+            if args.limit is not None:
+                options['limit'] = args.limit
             if args.check_top is not None:
                 options['check_top'] = args.check_top
             if args.repo_dir is not None:
