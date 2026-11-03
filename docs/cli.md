@@ -167,14 +167,34 @@ non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 schemas 0.1 and 0.2.
 
 When a host-context 0.2 document carries a `draft_update` record (#21), `verify`
-adds a `draft_update` report. Its status is `not_evaluated` (the record's
-contract, mandate, credential, repository, PR, event, interval and identity
-bindings check out) or `invalid`. The report also has `sha256`, `from_head`,
-`current` (whether the interval contains the verification time), `errors` and a
-note. `candidate_head` is always `null` in this version. The record is parsed
-only: no gate, blocker, `next_action`, exit status or GitHub read changes, and
-without the section the output is byte-identical. See
-[host authorization](host-authorization.md#draft-update-rounds-host-context-02).
+adds a `draft_update` report and recognizes the draft only after its one
+fast-forward update (slice 2). The record's contract, mandate, credential,
+repository, PR, event, interval and identity bindings must check out, else the
+status is `invalid` and no publication is read. With a record present, the
+draft at its creation head is never recognized. The status is then:
+
+- `recognized`: the live PR head `P` equals the validated evidence HEAD `E`,
+  `P != from_head`, and `compare from_head...P` is `ahead`. The creation head
+  precedes both `from_head` and `P`, and the PR is still the one claimed open,
+  unmerged draft by the bound actor, created inside the mandate interval and
+  not in the future. Its complete timeline has no force-push, head-ref
+  deletion or restore, close, reopen, merge, ready-for-review or
+  convert-to-draft event. A final re-read equals the first and keeps the
+  route. The evidence is based on the reviewed source commit exactly, has no
+  merge commit in `from_head..E` and only validations started after the
+  round's `issued_at`. `publication.verified` is true at `E`; completion also
+  needs a final sign-off for `E` issued after the round.
+- `not_evaluated`: the PR is still at `from_head`, so no update was pushed.
+- `blocked`: anything else, with the reasons in `errors`.
+
+Every comparison must be internally consistent (status, commits and counters),
+or it blocks. `candidate_head` is `E` exactly when the status is `recognized`,
+else `null`; `live_head` is the PR head of the first complete read, or `null`.
+The record may have expired after the push; `current` reports whether its
+interval contains the verification time, judged after every read. Pre-push
+readiness is not evaluated: no `next_action` asks for an update or a push, and
+nothing here authorizes a push. Without the section the output is unchanged.
+See [host authorization](host-authorization.md#draft-update-rounds-host-context-02).
 
 With a host-context 0.2 document, `verify` adds `overlap_dispositions` and
 `waived_duplicates`. The status is:
@@ -2193,15 +2213,16 @@ Normalized mandate binding; null unless the mandate is historically valid
 
 #### `verify_draft_update`
 
-Host-context 0.2 draft_update report (#21, slice 1): parsed and binding-checked only; never consulted by a gate
+Host-context 0.2 draft_update report (#21, slices 1-2): bindings, then recognition after the one host push; never authorizes a push
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `status` | "not_evaluated" \| "invalid" | not_evaluated: bindings valid, but this version evaluates no update and authorizes nothing; invalid: schema or binding errors |
+| `status` | "not_evaluated" \| "recognized" \| "blocked" \| "invalid" | recognized: the draft was recognized at the one pushed update head (candidate_head); blocked: the live head moved but recognition failed (see errors); not_evaluated: the draft is still at from_head, and pre-push readiness is not evaluated by this version; invalid: schema or binding errors |
 | `trust` | "host-asserted" |  |
 | `sha256` | string or null | Canonical hash of the draft_update section; null when the host context is invalid |
 | `from_head` | string or null | The record's from_head; null when the host context is invalid |
-| `candidate_head` | null | Reserved for the validated candidate head of a later version; always null here |
+| `candidate_head` | string or null | The exact validated evidence HEAD that was recognized; non-null exactly when status is recognized |
+| `live_head` | string or null | The live PR head of the first complete read; null when it was not read |
 | `current` | boolean | Whether the record's interval contains the verification time |
 | `errors` | string[] |  |
 | `note` | string |  |

@@ -67,8 +67,8 @@ the same sections, byte for byte, so a mandate's hash does not depend on the
 wrapper. It adds an optional, host-issued `overlap_dispositions` record (#7).
 It can waive only a topical overlap whose bound observations still hold (see
 [overlap dispositions](#overlap-dispositions-host-context-02)). It also adds an
-optional `draft_update` record (#21). This version only parses and
-binding-checks that record and authorizes nothing with it (see
+optional `draft_update` record (#21). This version recognizes the draft after
+the round's one host push and authorizes no push (see
 [draft update rounds](#draft-update-rounds-host-context-02)). Any other
 version, or a 0.1 document carrying either section, fails closed.
 
@@ -178,11 +178,16 @@ the human saw. It has its own ID, nonce, interval (at most 24 hours) and event
 binding. Its ID, nonce and event reference must differ from those of the
 mandate, the final sign-off and any overlap dispositions.
 
-**This version is inert.** `verify` reports the record as
-`draft_update.status: not_evaluated` (bindings valid) or `invalid`. It never
-changes a gate, blocker, `next_action`, exit status or GitHub read, and
-`candidate_head` is always `null`. Hosts must not issue rounds as publication
-authority until a version evaluates them.
+**This version recognizes the update after the push (slice 2).** With a
+record present, `verify` never recognizes the draft at its creation head. It
+reports `recognized`, with `candidate_head` equal to the validated evidence
+HEAD, only when the live PR head is that HEAD and a strict fast-forward of
+`from_head` with fresh evidence and review (see
+[CLI](cli.md) for every fact); `not_evaluated` while the PR is still at
+`from_head`; else `blocked` or `invalid`. It never reports push readiness and
+never authorizes a push: the host decides the push under the requirements
+below. A recognized update grants no new publication capability; completion
+still needs a final sign-off for that head issued after the round.
 
 Hosts that will issue rounds follow these requirements, from the
 [design](design/2026-11-02-draft-updates.md#host-lifecycle-normative-issuer-requirements-for-draft_update):
