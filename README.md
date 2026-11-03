@@ -89,6 +89,12 @@ human must decide:
 6. **Complete.** For schema 0.2, **stop** until a human/host final sign-off covers
    the exact final head. Nothing marks the PR ready, merges or releases it.
 
+To bound the displayed list, use `agent-contrib discover owner/repo --limit 10`
+(1–1000). All existing scans and ranking still run. Limited JSON and text report
+total observed candidates, shown/omitted counts and full overlap/exclusion counts;
+display truncation never means a complete scan. With several repositories,
+`--limit` is one global budget. Omitting it preserves the existing output.
+
 ## Approval and authorization
 
 An ordinary issue is a **candidate**. Labels such as `help wanted` do not permit

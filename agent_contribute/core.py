@@ -179,9 +179,9 @@ class GitHub:
         return paginate(self, endpoint)
 
 
-def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
+def paginate(client, endpoint, key=None, max_pages=MAX_PAGES, *, unique_numbers=False):
     """key derives an identity for endpoints whose items lack id/number/name (timeline events)."""
-    items, errors, seen = [], [], set()
+    items, errors, seen, seen_numbers = [], [], set(), set()
     page_count = 0
     for page in range(1, max_pages + 1):
         separator = '&' if '?' in endpoint else '?'
@@ -196,10 +196,15 @@ def paginate(client, endpoint, key=None, max_pages=MAX_PAGES):
                 identity = key(item) if key else item.get('id', item.get('number', item.get('name')))
                 if not isinstance(identity, (str, int)) or isinstance(identity, bool):
                     raise ProtocolError('api_shape', 'GitHub list item lacks an identity')
-                if identity in seen:
+                # Discovery references use number even when the API also supplies an id.
+                number = item.get('number') if unique_numbers else None
+                numbered = type(number) is int
+                if identity in seen or (numbered and number in seen_numbers):
                     errors.append('Pagination repeated an item; snapshot may have moved')
                 else:
                     seen.add(identity)
+                    if numbered:
+                        seen_numbers.add(number)
                     items.append(item)
             if len(data) < 100:
                 return {'items': items, 'complete': not errors, 'pages': page_count, 'errors': errors}
@@ -575,7 +580,31 @@ def inspect_issue(reference, client=None, *, pr_ids=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None):
+def validate_discovery_limit(limit):
+    """Normalize a display budget before reads, without parsing an unbounded integer."""
+    if isinstance(limit, str) and re.fullmatch(r'[0-9]+', limit):
+        digits = limit.lstrip('0') or '0'
+        if len(digits) <= 4:
+            limit = int(digits)
+    if limit is not None and (type(limit) is not int or not 1 <= limit <= 1000):
+        raise ProtocolError('invalid_limit', 'Discovery limit must be an ASCII integer from 1 to 1000')
+    return limit
+
+
+def limit_discovery(result, limit, references=None):
+    """Project a completed ranking; keep full observed counts even when no candidate is displayed."""
+    issues = result['issues']
+    shown = issues[:limit] if references is None else [i for i in issues if i['reference'] in references]
+    result['display'] = {'requested_limit': limit, 'total_issues_considered': len(issues),
+                         'returned': len(shown), 'omitted': len(issues) - len(shown),
+                         'truncated': len(shown) < len(issues),
+                         'overlapping': sum(bool(i['duplicates']) for i in issues),
+                         'excluded': sum(bool(i['exclusions']) for i in issues)}
+    result['issues'] = shown
+
+
+def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None, limit=None):
+    limit = validate_discovery_limit(limit)
     client = client or GitHub()
     result, snapshot = discover_with_snapshot(repository, client, signals=signals, assignees=bool(check_top))
     if repo_dir is not None:
@@ -589,6 +618,8 @@ def discover(repository, client=None, *, signals=False, responsiveness=False, ch
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
         source = snapshot['repository'] if snapshot is not None and snapshot['complete'] else None
         result['repository_signals'] = {'responsiveness': report(source, client)}
+    if limit is not None:
+        limit_discovery(result, limit)
     return result
 
 
@@ -646,7 +677,7 @@ def discover_with_snapshot(repository, client=None, *, signals=False, assignees=
     except ProtocolError as exc:
         return {**context, 'complete': False, 'errors': [str(exc)], 'issues': []}, None
     source = snapshot['repository']
-    listing = paginate(client, f'repos/{source}/issues?state=open')
+    listing = paginate(client, f'repos/{source}/issues?state=open', unique_numbers=True)
     issues, errors = [], list(snapshot['errors']) + listing['errors']
     target_scan, target_index = None, []
     if source.casefold() != repository.casefold():
