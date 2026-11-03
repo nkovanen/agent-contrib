@@ -19,6 +19,11 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Release preparation (#26, not activated): `docs/releasing.md` runbook with
+  verification and rollback, `tools/release_check.py` (version statements
+  agree; `--release` needs a dated CHANGELOG heading; `--tag` checks the tag),
+  and a proposed PyPI trusted-publishing workflow with build provenance in
+  `docs/examples/release-pypi.yml`, which runs only after a maintainer adopts it.
 - `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
   referenced by local commits that are not in the source default branch, read
   with the hardened Git reader and capped at 500 commits, 64 KiB per commit and

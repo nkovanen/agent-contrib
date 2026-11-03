@@ -40,6 +40,8 @@ do not turn them into deterministic unit fixtures or publish private data.
 
 ## Changes and reviews
 
+- Releases follow [docs/releasing.md](docs/releasing.md); `python tools/release_check.py`
+  confirms that every version statement agrees. Releasing needs the maintainer's decision.
 - Keep the single Skill source in
   `agent_contribute/adapters/agent-contribute/SKILL.md`. Export it through the CLI.
 - CLI/library releases use semantic versions. Schema versions are separate;
