@@ -32,7 +32,8 @@
       const prefix = `Repository ${index + 1}: `;
       requireValue(object(observation) && typeof observation.repository === 'string' && repoPattern.test(observation.repository), prefix + 'invalid repository.');
       requireValue(['welcome','closed','undeclared','excluded','unknown'].includes(observation.disposition), prefix + 'invalid disposition.');
-      const row = observation.jar || {repository:observation.repository,state:'unknown',complete:false};
+      requireValue(observation.jar == null || object(observation.jar), prefix + 'jar must be an object or null.');
+      const row = observation.jar ?? {repository:observation.repository,state:'unknown',complete:false};
       requireValue(observation.jar != null || ['excluded','unknown'].includes(observation.disposition), prefix + 'missing jar report.');
       requireValue(object(row) && row.repository === observation.repository, prefix + 'wrapper and jar identities disagree.');
       requireValue(object(row) && typeof row.repository === 'string' && repoPattern.test(row.repository), prefix + 'invalid GitHub owner/repository.');
@@ -60,6 +61,7 @@
     return rows.filter(row => (state === 'all' || state === row.state) && [row.repository,...(row.manifest?.wanted || []),...(row.manifest?.boundaries || [])].join(' ').toLowerCase().includes(query));
   }
   function makeManifest(status, wanted, boundaries) {
+    requireValue(typeof wanted === 'string' && typeof boundaries === 'string' && wanted.length <= 32768 && boundaries.length <= 32768, 'Editor fields are limited to 32768 input units; shorten the text.');
     const lines = text => text.split(/\r?\n/).filter(x => x.length > 0);
     const result = validateManifest({schema_version:'0.1',status,wanted:lines(wanted),boundaries:lines(boundaries)});
     requireValue(bytes(JSON.stringify(result,null,2)+'\n') <= 16384, 'Downloaded manifest exceeds 16 KiB. Shorten the lists.');

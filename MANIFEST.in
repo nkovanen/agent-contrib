@@ -7,4 +7,4 @@ recursive-include tests *.py *.json *.md
 recursive-include actions *.py *.yml
 include docs/examples/*.yml
 recursive-include web *.html *.css *.js *.svg *.md
-recursive-include tests/web *.cjs
+recursive-include tests/web *.cjs *.html *.js

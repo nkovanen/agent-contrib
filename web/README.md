@@ -18,7 +18,10 @@ the data boundaries; unittest runs it when Node is available.
 
 ## Use a real snapshot
 
-Choose or drop a `.json` file emitted by a compatible `tipjar find` command.
+**Pending preview:** this candidate CLI does not yet include the `tipjar find`
+exporter. The importer supports its forward-compatible format and the fictional
+example below; the matching finder must ship before the CLI export workflow is
+available. Choose or drop a compatible local `.json` file.
 This importer requires format `find-jars-report/1`, at most 1 MiB and 200
 observations. It ignores extra bounded metadata, rejects unknown formats,
 invalid identities, conflicting dispositions, duplicate repositories, invalid
@@ -56,7 +59,10 @@ Welcome grants neither issue approval nor local execution/publication authority.
 
 Edit the status, wanted work and boundaries. The preview/download uses the exact
 0.1 manifest schema (at most 16 distinct lines per list, 500 characters per line,
-16 KiB JSON). Review the downloaded `.tipjar.json`, then add it to your repository
+16 KiB JSON). Exact line content is preserved; empty lines are skipped, but
+whitespace-only lines and control characters are rejected. The 32768 UTF-16-unit
+input memory cap exceeds every schema-valid per-field value (at most 16015 units
+including line breaks); the schema still counts Unicode codepoints. Review the downloaded `.tipjar.json`, then add it to your repository
 yourself. Downloading changes no repository. A closed manifest expresses refusal.
 
 ## Optional static hosting
@@ -77,3 +83,12 @@ Verify desktop and 390px layouts, search/filter/empty states, detail dialog via
 keyboard and Escape focus return, closed/unknown/excluded stops, valid/invalid
 file input and drop, literal hostile HTML, preview validation and JSON download.
 No receipt/impact viewer is included; its contract is a separate feature.
+
+The repeatable DOM-event regression page is `tests/web/browser.html`. For local
+QA, serve the repository root with `python3 -m http.server 8766 --bind 127.0.0.1`
+and open `http://localhost:8766/tests/web/browser.html`. It exercises actual file
+input, synthetic drop events, invalid-import preservation, hostile text, editor
+limits, and copy/download boundaries. Clipboard and download OS boundaries are
+replaced to inspect exact values; native keyboard actions and the OS clipboard /
+save dialog still require manual testing. A background browser may defer the
+native close event; the page reports this as a LIMIT rather than a passed check.

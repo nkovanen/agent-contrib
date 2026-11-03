@@ -26,3 +26,10 @@ Desktop and 390px mobile views inspected in Paseo; local hostile/invalid file
 imports, search empty state, editor errors and download action exercised.
 Paseo CSP blocks browser_evaluate and later paint/action timeouts limited final
 keyboard/drop/copy checks. Controller owns independent review and CI.
+
+Terra follow-up: explicit Unicode whitespace parity, preserved editor text,
+malformed nullable-jar rejection and compatible input memory cap are covered by
+Node, Python-parser and repeatable browser DOM regressions. Finder exporter is
+explicitly marked pending preview until separately reviewed integration. Browser
+copy/download OS boundaries are inspected via spies; native keyboard/focus remains
+limited by the host, not claimed passing. Fullsuite:1127 tests; package checks pass.
