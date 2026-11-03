@@ -87,3 +87,5 @@ rather than attesting or misstating them.
 
 The [product map](product-map.md) lists what is shipped, partial and planned by
 issue; [development status](development-status.md) records acceptance trials.
+New users start with [getting started](getting-started.md); [upgrading](upgrading.md)
+lists what changes from 0.2.
