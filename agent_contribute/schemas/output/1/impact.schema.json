@@ -17,7 +17,7 @@
       "type": "integer",
       "minimum": 1
     },
-    "repositories_helped": {
+    "repositories_represented": {
       "type": "integer",
       "minimum": 1
     },
@@ -63,7 +63,7 @@
     "trust",
     "input_files",
     "unique_prs",
-    "repositories_helped",
+    "repositories_represented",
     "counts",
     "receipts",
     "warning"

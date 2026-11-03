@@ -370,7 +370,7 @@ def _receipt(result):
 def _impact(result):
     counts = result['counts']
     return [f"Impact: {result['trust']}",
-            f"Unique PRs: {result['unique_prs']}; repositories helped: {result['repositories_helped']}",
+            f"Unique PRs: {result['unique_prs']}; repositories represented: {result['repositories_represented']}",
             f"Open: {counts['open']} (includes drafts); closed: {counts['closed']}; merged: {counts['merged']}",
             line(result['warning'], 1000)]
 

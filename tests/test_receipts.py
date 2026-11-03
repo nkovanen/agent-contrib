@@ -88,6 +88,22 @@ class ReceiptTests(unittest.TestCase):
                 self.assertEqual(code, 1, result)
                 self.assertFalse(path.exists())
 
+    def test_second_response_requires_explicit_public_visibility_before_save(self):
+        for visibility in ('private', 'internal', None, 'missing'):
+            client = ReceiptGitHub()
+            base_repo = client.pr['base']['repo']
+            if visibility == 'missing':
+                del base_repo['visibility']
+            else:
+                base_repo['visibility'] = visibility
+            with self.subTest(visibility=visibility), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'new.json'
+                with patch.object(core, 'GitHub', return_value=client):
+                    code, result = invoke('receipt', 'acme/photos#30', '--output', str(path))
+                self.assertEqual(code, 1, result)
+                self.assertIn('error', result)
+                self.assertFalse(path.exists())
+
     def test_api_failure_and_missing_head_base_never_write(self):
         for change in ('api_error', 'head', 'base_sha', 'base_id', 'missing_merged_at'):
             client = ReceiptGitHub()
@@ -148,7 +164,7 @@ class ImpactTests(unittest.TestCase):
                 code, result = invoke('impact', *map(str, paths))
             self.assertEqual(code, 0, result)
             self.assertEqual(result['unique_prs'], 1)
-            self.assertEqual(result['repositories_helped'], 1)
+            self.assertEqual(result['repositories_represented'], 1)
             self.assertEqual(result['counts'], {'open': 0, 'closed': 0, 'merged': 1})
             self.assertEqual(result['receipts'][0]['pull_request']['state'], 'merged')
             self.assertEqual(result['trust'], 'self-reported recorded observations')
@@ -175,8 +191,22 @@ class ImpactTests(unittest.TestCase):
         third_path = self.save('third.json', third)
         code, result = invoke('impact', str(one), str(path2), str(third_path))
         self.assertEqual(code, 0, result)
-        self.assertEqual((result['unique_prs'], result['repositories_helped']), (3, 2))
+        self.assertEqual((result['unique_prs'], result['repositories_represented']), (3, 2))
         self.assertEqual(result['counts'], {'open': 2, 'closed': 1, 'merged': 0})
+
+    def test_closed_unmerged_observation_represents_repository_without_claiming_benefit(self):
+        path, _ = self.snapshot(state='closed')
+        code, result = invoke('impact', str(path))
+        self.assertEqual(code, 0, result)
+        self.assertEqual(result.get('repositories_represented'), 1)
+        self.assertNotIn('repositories_helped', result)
+        self.assertEqual(result['counts'], {'open': 0, 'closed': 1, 'merged': 0})
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = cli.main(['--format', 'text', 'impact', str(path)])
+        self.assertEqual(code, 0)
+        self.assertIn('repositories represented: 1', output.getvalue())
+        self.assertNotIn('helped', output.getvalue())
 
     def test_numeric_identity_conflicts_and_equal_time_disagreement_reject_whole_summary(self):
         path, original = self.snapshot()

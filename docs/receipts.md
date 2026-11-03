@@ -18,7 +18,8 @@ tipjar impact first-observation.json later-observation.json
 ```
 
 Capture reads two fixed GitHub REST GET endpoints: repository metadata, then PR
-detail. The repository must be explicitly public. Private repositories are not
+detail. Both responses must explicitly report `private: false` and
+`visibility: public` for the base repository. Private repositories are not
 supported. Use the exact current canonical repository spelling; renamed or
 redirected references fail closed. Missing, malformed or contradictory metadata
 produces a structured error and no receipt. This is a non-atomic snapshot, not a
@@ -46,8 +47,8 @@ The JSON lists selected receipts in numeric identity order for future local UIs.
 The summary labels its input **self-reported recorded observations**: anyone can
 edit a local file, so it cannot authenticate contributions. `open` includes
 drafts; `closed` means unmerged; `merged` comes from the recorded merge facts.
-`repositories_helped` counts distinct repositories represented by supplied PR
-observations, including open/closed PRs; the name makes no acceptance or benefit
-claim. No LOC, quality scores, validation results or invented achievement metrics
-are calculated. Old observations remain old even after a PR changes on GitHub;
+`repositories_represented` counts distinct repositories represented by supplied PR
+observations, including open/closed PRs. Representation establishes neither
+acceptance nor benefit. No LOC, quality scores, validation results or invented
+achievement metrics are calculated. Old observations remain old even after a PR changes on GitHub;
 refresh explicitly into a new file to record its later state.

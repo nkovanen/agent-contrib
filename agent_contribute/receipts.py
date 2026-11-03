@@ -83,7 +83,8 @@ def observe(reference, client=None):
     _require(remote.positive(pr.get('number'), 'pull request number') == number, 'Pull request number mismatch')
     base = core.require(pr.get('base'), dict, 'pull request base')
     _require(remote.repository(base.get('repo'), 'base repository') == (name, rid), 'Base repository identity mismatch')
-    _require(base['repo'].get('private') is False, 'PR base repository is not explicitly public')
+    _require(base['repo'].get('private') is False and base['repo'].get('visibility') == 'public',
+             'PR base repository is not explicitly public')
     head = core.require(pr.get('head'), dict, 'pull request head')
     state = remote.choice(pr.get('state'), {'open', 'closed'}, 'pull request state')
     draft = remote.flag(pr.get('draft'), 'draft flag')
@@ -178,5 +179,5 @@ def impact(paths):
         state = receipt['pull_request']['state']
         counts['open' if state == 'draft' else state] += 1
     return {'complete': True, 'trust': 'self-reported recorded observations', 'input_files': len(paths),
-            'unique_prs': len(selected), 'repositories_helped': len(repositories), 'counts': counts,
+            'unique_prs': len(selected), 'repositories_represented': len(repositories), 'counts': counts,
             'receipts': selected, 'warning': NOTICE}

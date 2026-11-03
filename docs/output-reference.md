@@ -235,7 +235,7 @@ One of `inspect_result`, `issue_unresolved`.
 | `trust` | "self-reported recorded observations" |  |
 | `input_files` | integer |  |
 | `unique_prs` | integer |  |
-| `repositories_helped` | integer |  |
+| `repositories_represented` | integer |  |
 | `counts` | object |  |
 | `counts.open` | integer |  |
 | `counts.closed` | integer |  |

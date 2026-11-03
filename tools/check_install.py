@@ -152,6 +152,7 @@ def installed_check(source):
     recorded.write_text(json.dumps(receipts.observe("acme/photos#30", ReceiptFixture())), encoding="utf-8")
     impact = json.loads(run([tipjar, "impact", recorded, recorded], cwd=Path.cwd(), env=env))
     assert impact["unique_prs"] == 1 and impact["counts"] == {"open": 1, "closed": 0, "merged": 0}
+    assert impact["repositories_represented"] == 1 and "repositories_helped" not in impact
     assert impact["trust"] == "self-reported recorded observations"
     assert json.loads(cli("schema", "receipt"))["$id"] == "urn:agent-contrib:output:1:receipt"
     assert json.loads(cli("schema", "impact"))["$id"] == "urn:agent-contrib:output:1:impact"
