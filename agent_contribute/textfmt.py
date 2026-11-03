@@ -131,7 +131,56 @@ def _inspect(result):
            'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))] + _policy(result)
     out += _list('Exclusions', result.get('exclusions', []))
     out += _list('Overlapping PRs', (f'{d.get("url", "")}: {d.get("reason", "")}' for d in result.get('duplicates', [])))
+    out += _ownership(result.get('ownership_signals'))
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
+
+
+def _ownership(report):
+    """External evaluation 3 G1: the opt-in ownership report's key signals, so text never implies no prior work."""
+    if not isinstance(report, dict):
+        return []
+    resolution = report.get('resolution_signals') or {}
+    urls = lambda items: [line(item.get('url', ''), 200) for item in items or [] if isinstance(item, dict)]
+    open_prs = [line(pr.get('url', ''), 200) + (' (draft)' if pr.get('draft') is True else '')
+                for pr in report.get('cross_referenced_prs') or [] if isinstance(pr, dict) and pr.get('state') == 'open']
+    claims = [f'{line(claim.get("author", ""), 100)} ({line(claim.get("author_association", ""), 30)}, '
+              + ('age unknown' if claim.get('age_days') is None else f'{line(claim.get("age_days"), 10)} days')
+              + (', stale' if claim.get('stale') is True else '') + f'): {line(claim.get("pattern", ""), 40)}'
+              for claim in report.get('claims') or [] if isinstance(claim, dict)]
+    assignments = [f'{line(item.get("event", ""), 20)} {line(item.get("assignee", ""), 100)} by '
+                   f'{line(item.get("actor", ""), 100)} at {line(item.get("created_at", ""), 40)}'
+                   for item in report.get('assignment_history') or [] if isinstance(item, dict)]
+    shown = {item.get('url') for key in ('possibly_already_fixed', 'downstream_references', 'rejected_approaches')
+             for item in resolution.get(key) or [] if isinstance(item, dict)}
+    other_prs = [line(pr.get('url', ''), 200) + f' ({line(pr.get("state", ""), 20)})'
+                 for pr in report.get('cross_referenced_prs') or []
+                 if isinstance(pr, dict) and pr.get('state') != 'open' and pr.get('url') not in shown]
+    connections = [f'{line(item.get("event", ""), 20)} by {line(item.get("actor", ""), 100)} at '
+                   f'{line(item.get("created_at", ""), 40)}' for item in report.get('connected_events') or []
+                   if isinstance(item, dict)]
+    commits = [line(item.get('commit_id', ''), 40) for item in report.get('referencing_commits') or []
+               if isinstance(item, dict)]
+    sections = (_list('Possibly already fixed by a merged same-repository PR', urls(resolution.get('possibly_already_fixed'))) +
+                _list('Downstream references, merged elsewhere', urls(resolution.get('downstream_references'))) +
+                _list('Rejected approaches, closed unmerged', urls(resolution.get('rejected_approaches'))) +
+                _list('Open linked PRs', open_prs) + _list('Other linked PRs', other_prs) + _list('Claims', claims) +
+                _list('Assignments', assignments) + _list('Connected or disconnected events', connections) +
+                _list('Referencing commits', commits))
+    out = [f'Ownership signals: complete {_flag(report.get("complete"))} '
+           '(report only; incomplete reads are unknown, never "not fixed")']
+    lists = [report.get(key) for key in ('cross_referenced_prs', 'claims', 'assignment_history', 'connected_events',
+                                         'referencing_commits')] + [resolution.get(key) for key in
+                                                                    ('possibly_already_fixed', 'downstream_references',
+                                                                     'rejected_approaches')]
+    if report.get('complete') is not True:
+        out.append('Ownership report incomplete; absence unknown')
+    elif not any(lists):  # absence only when every list in the report is empty (review TO-01)
+        out.append('No linked PRs, prior fixes, claims or assignments found')
+    return out + sections + _list('Ownership errors', report.get('errors', []))
+
+
+def _ownership_command(result):
+    return _scalars(result) + _ownership(result.get('ownership_signals')) + _list('Errors', result.get('errors', []))
 
 
 def _scalars(result):
@@ -305,7 +354,8 @@ def render(command, result, stage=None):
                 f"{', '.join(result['supported_host_context_versions'])}; JSON output is canonical)\n\n"
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
-            'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request}.get(command)
+            'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
+            'ownership': _ownership_command}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:

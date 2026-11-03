@@ -165,6 +165,73 @@ class TextFormatTests(unittest.TestCase):
                       'demoted: assigned to alice\n', text)
         self.assertIn('  acme/photos#3 [candidate] overlaps 0, excluded no, score 2: T\n', text)
 
+    def test_ownership_signals_are_rendered_in_text(self):
+        # External evaluation 3, G1: text inspect --ownership printed none of the linked PRs or fixes.
+        def pr(number, repo='acme/photos', state='closed', merged=False, draft=False):
+            return {'repository': repo, 'number': number, 'url': f'https://github.com/{repo}/pull/{number}',
+                    'state': state, 'merged': merged, 'draft': draft, 'exact_reference': True}
+        signals = {'complete': False, 'errors': ['Pagination reached the 40-page limit\nComplete: yes'],
+                   'cross_referenced_prs': [pr(30, merged=True), pr(4, 'other/fork', merged=True), pr(31),
+                                            pr(32, state='open', draft=True), pr(33, state='open')],
+                   'resolution_signals': {'possibly_already_fixed': [pr(30, merged=True)],
+                                          'downstream_references': [pr(4, 'other/fork', merged=True)],
+                                          'rejected_approaches': [pr(31)], 'status': 'unknown'},
+                   'claims': [{'pattern': 'working on it', 'author': 'carol', 'author_association': 'NONE',
+                               'age_days': 2, 'stale': False, 'untrusted_excerpt': 'x'},
+                              {'pattern': '/assign command', 'author': 'dave\x1b[2K', 'author_association': 'CONTRIBUTOR',
+                               'age_days': None, 'stale': True, 'untrusted_excerpt': 'y'}],
+                   'assignment_history': [{'event': 'assigned', 'assignee': 'alice', 'actor': 'maint',
+                                           'created_at': '2029-12-01T00:00:00Z'}]}
+        result = {'reference': 'acme/photos#12', 'complete': False, 'approval': {'status': 'candidate'},
+                  'duplicate_scan': 'complete', 'ownership_signals': signals}
+        text = textfmt.render('inspect', result)
+        for expected in [
+                'Ownership signals: complete no (report only; incomplete reads are unknown, never "not fixed")\n',
+                'Possibly already fixed by a merged same-repository PR (1):\n  - https://github.com/acme/photos/pull/30\n',
+                'Downstream references, merged elsewhere (1):\n  - https://github.com/other/fork/pull/4\n',
+                'Rejected approaches, closed unmerged (1):\n  - https://github.com/acme/photos/pull/31\n',
+                'Open linked PRs (2):\n  - https://github.com/acme/photos/pull/32 (draft)\n'
+                '  - https://github.com/acme/photos/pull/33\n',
+                'Claims (2):\n  - carol (NONE, 2 days): working on it\n  - dave (CONTRIBUTOR, age unknown, stale): '
+                '/assign command\n',
+                'Assignments (1):\n  - assigned alice by maint at 2029-12-01T00:00:00Z\n',
+                'Ownership errors (1):\n  - Pagination reached the 40-page limit Complete: yes\n']:
+            self.assertIn(expected, text)
+        self.assertNotIn('\x1b', text)
+        self.assertEqual(textfmt.render('ownership', dict(result, complete=False)).count('Ownership signals:'), 1)
+        plain = textfmt.render('inspect', dict(result, ownership_signals=None))
+        self.assertNotIn('Ownership signals', plain)
+        empty = dict(signals, complete=True, errors=[], cross_referenced_prs=[], claims=[], assignment_history=[],
+                     resolution_signals={'possibly_already_fixed': [], 'downstream_references': [],
+                                         'rejected_approaches': [], 'status': 'complete'})
+        text = textfmt.render('inspect', dict(result, ownership_signals=empty))
+        self.assertIn('Ownership signals: complete yes (report only; incomplete reads are unknown, never "not fixed")\n'
+                      'No linked PRs, prior fixes, claims or assignments found\n', text)
+
+    def test_ownership_absence_only_for_a_complete_report_with_nothing_at_all(self):
+        # Review TO-01: a closed linked PR outside the displayed categories, or a failed empty read, printed absence.
+        absent = 'No linked PRs, prior fixes, claims or assignments found'
+        empty = {'complete': True, 'errors': [], 'cross_referenced_prs': [], 'claims': [], 'assignment_history': [],
+                 'connected_events': [], 'referencing_commits': [],
+                 'resolution_signals': {'possibly_already_fixed': [], 'downstream_references': [],
+                                        'rejected_approaches': [], 'status': 'complete'}}
+        render = lambda signals: textfmt.render('inspect', {'reference': 'acme/photos#12', 'complete': True,
+                                                            'ownership_signals': signals})
+        self.assertIn(absent, render(empty))
+        closed = {'repository': 'acme/photos', 'number': 40, 'url': 'https://github.com/acme/photos/pull/40',
+                  'state': 'closed', 'merged': False, 'draft': False, 'exact_reference': False}
+        text = render(dict(empty, cross_referenced_prs=[closed]))
+        self.assertNotIn(absent, text)
+        self.assertIn('Other linked PRs (1):\n  - https://github.com/acme/photos/pull/40 (closed)\n', text)
+        text = render(dict(empty, connected_events=[{'event': 'connected', 'actor': 'bob', 'created_at': 't'}],
+                           referencing_commits=[{'commit_id': 'c' * 40, 'url': ''}]))
+        self.assertNotIn(absent, text)
+        self.assertIn('Connected or disconnected events (1):\n  - connected by bob at t\n', text)
+        self.assertIn('Referencing commits (1):\n  - ' + 'c' * 40 + '\n', text)
+        text = render(dict(empty, complete=False, errors=['GitHub read failed']))
+        self.assertNotIn(absent, text)
+        self.assertIn('Ownership report incomplete; absence unknown\n', text)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
