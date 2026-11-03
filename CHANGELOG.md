@@ -170,6 +170,17 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- `authorization-request` JSON adds `requested_actions` (the contract's actions;
+  the host still chooses the mandate actions). Text output now lists the
+  requested actions and the human-only fields, and labels `unresolved_fields`
+  as derived fields, so a ready request no longer reads as having nothing left
+  to fill (dogfood N6).
+- `--ai-policy` is deprecated: it still changes no output or exit status, and now
+  writes one notice line to stderr (dogfood N5).
+- `--cache` on an offline command (`instructions`, `schema`, `skill`, `lint`,
+  `scope-check`, `evidence init`) is now a usage error (exit 2), like
+  `--report-budget`; it was silently accepted (dogfood N7).
+
 - `--observe-ci` and `--observe-signatures` share one target/head prelude.
   With an evidence head but an invalid target repository,
   `ci_observation.head_sha` is now `null`, like `signature_observation`, since

@@ -42,6 +42,10 @@ def read_host_context_stdin():
 
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
+# Commands that never read GitHub; GitHub-only global options are refused on them alike.
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
+                    'inspect always adds repository_policy')
 
 
 class Parser(argparse.ArgumentParser):
@@ -52,6 +56,16 @@ class Parser(argparse.ArgumentParser):
             message += ('; global options --format, --report-budget, --min-remaining and --cache go before the subcommand, '
                         'for example: agent-contrib --format text verify task.json')
         raise core.ProtocolError('usage', message)
+
+
+def notice():
+    """Best effort: a missing or closed stderr never changes stdout or the exit status. Not print(): the result
+    is the CLI's only print() call."""
+    try:
+        sys.stderr.write(AI_POLICY_NOTICE + '\n')
+        sys.stderr.flush()
+    except (AttributeError, OSError, ValueError):
+        pass
 
 
 def create_new(path, text, what, newline=''):
@@ -150,7 +164,8 @@ def main(argv=None):
         if command == 'inspect':
             sub.add_argument('--ownership', action='store_true', help='Add report-only ownership and resolution signals')
             sub.add_argument('--ai-policy', action='store_true',
-                             help='Syntax-compatible only: accepted and ignored; inspect always adds repository_policy')
+                             help='Deprecated and ignored (one notice on stderr); inspect always adds '
+                                  'repository_policy')
         if command == 'prepare':
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
@@ -220,11 +235,15 @@ def main(argv=None):
     stage_gate = None
     try:
         args = parser.parse_args(argv)
-        cache.configure(args.cache)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
-        if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence'):
-            raise core.ProtocolError('usage', '--report-budget applies only to commands that read GitHub')
+        if args.command in OFFLINE_COMMANDS:
+            for flag, given in (('--report-budget', args.report_budget), ('--cache', args.cache)):
+                if given:
+                    raise core.ProtocolError('usage', flag + ' applies only to commands that read GitHub')
+        cache.configure(args.cache)
+        if getattr(args, 'ai_policy', False):
+            notice()
         prevalidate(args)
         if args.report_budget:
             before = budget.snapshot()

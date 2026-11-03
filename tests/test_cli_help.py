@@ -76,5 +76,34 @@ class GlobalOptionPlacementTests(unittest.TestCase):
         self.assertEqual((code, result['error']['message']), (2, 'unrecognized arguments: --formatting'))
 
 
+class OfflineGlobalOptionTests(unittest.TestCase):
+    """GitHub-only global options are refused alike on every offline command, before any work."""
+    OFFLINE = (('instructions',), ('schema', 'lint'), ('skill', '--output', 'out.md'), ('lint', 'task.json'),
+               ('scope-check', 'task.json', '--repo-dir', '.'),
+               ('evidence', 'init', 'task.json', '--repo-dir', '.', '--base', 'HEAD', '--output', 'e.json'))
+
+    def invoke(self, *args):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), patch.object(core, 'read_json', side_effect=AssertionError('no work')), \
+                patch.object(core, 'GitHub', side_effect=AssertionError('no GitHub read')):
+            code = cli.main(list(args))
+        return code, json.loads(output.getvalue())
+
+    def test_report_budget_and_cache_are_both_usage_errors_on_offline_commands(self):
+        self.assertEqual({args[0] for args in self.OFFLINE}, set(cli.OFFLINE_COMMANDS))
+        for flag in ('--report-budget', '--cache'):
+            for args in self.OFFLINE:
+                with self.subTest(flag=flag, args=args):
+                    code, result = self.invoke(flag, *args)
+                    self.assertEqual(code, 2)
+                    self.assertEqual(result['error'], {'code': 'usage',
+                                                       'message': flag + ' applies only to commands that read GitHub'})
+
+    def test_format_stays_accepted_on_offline_commands(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(cli.main(['--format', 'text', 'instructions']), 0)
+
+
 if __name__ == '__main__':
     unittest.main()

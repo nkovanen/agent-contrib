@@ -34,7 +34,7 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
-| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is syntax-compatible only |
+| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is deprecated and ignored (one stderr notice) |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib verify task.json --evidence e.json [--repo-dir checkout] --observe-signatures` | Also reports GitHub's signature verification for the evidence head, required-signature rulesets on the base branch and local signature-header presence; never verifies locally or changes gates or exit code |
@@ -212,11 +212,15 @@ with `schema_errors` and no template (exit 1), before any read; the payload is
 identical with `--report-budget`, which takes no budget snapshot in that case.
 
 The output has `issued: false`, `contract_sha256`, `mandate_fields`,
-`human_only_fields`, `unresolved_fields`, `preflight_errors` and
+`human_only_fields`, `requested_actions`, `unresolved_fields`, `preflight_errors` and
 `ready_for_issuance` (exit 0 only when true). In a ready request the `null`
-leaves of `mandate_fields` are exactly `human_only_fields`. When identity or
+leaves of `mandate_fields` are exactly `human_only_fields`: a ready request
+still awaits the host for every one of them. `requested_actions` repeats the
+contract's actions; the host chooses `mandate_fields.actions`. When identity or
 permission reads fail, `credential_actor_id` and `authority` are also `null` and
-listed in `unresolved_fields`; only fresh trusted reads resolve them.
+listed in `unresolved_fields`, which names only these derived fields; only fresh
+trusted reads resolve them. Text output shows the requested actions, any
+unresolved derived fields and the human-only fields.
 `preflight_errors` omit the blockers that exist only because no mandate exists
 yet. They are untrusted diagnostics and may contain repository-authored paths.
 
@@ -567,8 +571,8 @@ unknown`; an unknown is never "not fixed". With
 `discover` (once per repository), `inspect` and `prepare` add `repository_policy`
 in the CLI output. The report changes no core result, contract field,
 `instructions_sha256` or exit code. Separately, `prepare` now writes a pending
-`ai-policy-review` prerequisite into new contracts; existing contracts are unchanged. `--ai-policy` is syntax-compatible only: it is
-accepted and changes nothing. The earlier unreleased `ai_policy` excerpts and
+`ai-policy-review` prerequisite into new contracts; existing contracts are unchanged. `--ai-policy` is deprecated: it is
+accepted, changes no output or exit status, and writes one notice line to stderr. The earlier unreleased `ai_policy` excerpts and
 the `agent_contribute.aipolicy` module no longer exist.
 
 - **Inventory.** The issue source repository (never a requested fork) at the
@@ -761,7 +765,8 @@ cause no GitHub read.
 `verify` still reports schema and evidence failures in its normal result envelope;
 optional budget reads do not turn those failures into success. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
-estimate a command's cost; choose N yourself. Offline commands reject the flag.
+estimate a command's cost; choose N yourself. Offline commands reject the flag
+(see "Global options on offline commands").
 Without the flag, no rate-limit read happens and output is unchanged.
 
 ## Content cache (opt-in)
@@ -822,6 +827,7 @@ status.
   to the live read.
 - `--report-budget` counts only the live reads that remain. The cache is active
   for one invocation; library callers never inherit it.
+- Offline commands reject `--cache`, as they reject `--report-budget`.
 
 ## Several repositories
 
@@ -879,6 +885,14 @@ A global option (`--format`, `--report-budget`, `--min-remaining`, `--cache`) pl
 the subcommand is still a usage error (exit 2); its message says to move the
 option before the subcommand.
 
+### Global options on offline commands
+
+`instructions`, `schema`, `skill`, `lint`, `scope-check` and `evidence init`
+never read GitHub. On them `--report-budget` and `--cache` are both usage errors
+(exit 2, "`--cache` applies only to commands that read GitHub", and likewise for
+`--report-budget`), checked before any file is read; `--min-remaining` already
+requires `--report-budget`. `--format` applies to every command.
+
 The text option uses the same stdout handling as JSON. Closed output returns 1
 quietly; writable output retains the command's normal exit status.
 
@@ -918,7 +932,7 @@ One of `audit_report`, `audit_unread`.
 | `ready_for_issuance` | boolean | No preflight errors and no unresolved fields; sets the exit status |
 | `preflight_errors` | string[] | Blockers a mandate would not clear |
 | `preflight_errors_trust` | string |  |
-| `unresolved_fields` | "credential_actor_id" \| "authority"[] |  |
+| `unresolved_fields` | "credential_actor_id" \| "authority"[] | Derived fields that fresh trusted reads could not resolve; never the human-only fields |
 | `contract_sha256` | string |  |
 | `exact_head_pr_history` | string |  |
 | `mandate_fields` | object | Binding fields; null fields are filled only by the human/host |
@@ -950,7 +964,8 @@ One of `audit_report`, `audit_unread`.
 | `mandate_fields.head_repository_id` | integer |  |
 | `mandate_fields.head_ref` | string |  |
 | `mandate_fields.base_ref` | string |  |
-| `human_only_fields` | string[] |  |
+| `human_only_fields` | string[] | mandate_fields paths left null for the human/host to fill, even in a ready request |
+| `requested_actions` | "implement" \| "create_draft"[] | The contract's requested actions; the human/host chooses mandate_fields.actions |
 | `provenance` | `authorization_provenance` |  |
 | `api_budget` | `api_budget` (optional) |  |
 
