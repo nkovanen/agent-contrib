@@ -144,6 +144,12 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- The repository policy report adds `hinted_lines` (N2, dogfood 4), one
+  reading entry per hinted line with all its hint kinds. It also adds
+  `project_vocabulary`, which summarizes mentions made only of the project's own
+  name. Restriction hints are never summarized. The text view groups by line and
+  counts the summarized mentions, and the review obligation now says to read
+  every hinted line.
 - Installed workflow Quick path (N-02): the stop rule now matches the policy
   section ("a relevant rule that is prohibited or unresolved" instead of "a
   refusal or restriction"), the policy step comes before ranking and selection,

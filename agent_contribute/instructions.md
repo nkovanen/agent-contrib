@@ -63,7 +63,8 @@ chose a workflow-only design to keep existing contracts and verifiers unchanged,
 so the host agent, the user and the independent reviewer are responsible for it.
 
 1. Before ranking or preparing any task, read in full every scanned source,
-   every hint in context, and every unassessed reference you can reach with your
+   every hinted line in context (`hinted_lines`; project-name vocabulary mentions
+   are summarized in `project_vocabulary`), and every unassessed reference you can reach with your
    own read-only tools. Repeat this even when every count is zero. Record one
    requirements-ledger row per relevant source: repository, path or URL, the
    revision or content digest you read, retrieval time, and what it says about

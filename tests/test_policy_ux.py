@@ -99,7 +99,7 @@ class TextHintTests(unittest.TestCase):
         shown = [line for line in lines[at:] if line.startswith('  ! ')]
         self.assertEqual(shown[0], '  ! possible_agent_restriction acme/photos:CONTRIBUTING.md:5 -- '
                                    'Autonomous agents are not allowed.')
-        self.assertIn('  ! possible_ai_restriction acme/photos:CONTRIBUTING.md:3 -- '
+        self.assertIn('  ! possible_ai_restriction, possible_pr_restriction acme/photos:CONTRIBUTING.md:3 -- '
                       'AI-generated PRs are closed on sight.', shown)
         self.assertNotIn('\x1b', text)
 
@@ -107,13 +107,14 @@ class TextHintTests(unittest.TestCase):
         files = {'CONTRIBUTING.md': '\n\n'.join('No AI-generated patch %d.' % n for n in range(9))}
         text = textfmt.render('inspect', {'repository_policy': self.policy_report(files)})
         self.assertEqual(sum(line.startswith('  ! ') for line in text.splitlines()), textfmt.POLICY_HINT_LINES)
-        self.assertIn(f'(+{18 - textfmt.POLICY_HINT_LINES} more restriction hints in JSON repository_policy.hints)', text)
+        self.assertIn(f'(+{9 - textfmt.POLICY_HINT_LINES} more hinted lines with restrictions in JSON '
+                      'repository_policy.hinted_lines)', text)
 
     def test_exactly_one_more_hint_is_counted(self):
         files = {'CONTRIBUTING.md': '\n\n'.join('Autonomous agents are not allowed, case %d.' % n for n in range(6))}
         text = textfmt.render('inspect', {'repository_policy': self.policy_report(files)})
         self.assertEqual(sum(line.startswith('  ! ') for line in text.splitlines()), 5)
-        self.assertIn('(+1 more restriction hints in JSON repository_policy.hints)', text)
+        self.assertIn('(+1 more hinted lines with restrictions in JSON repository_policy.hinted_lines)', text)
 
     def test_the_documented_bound_is_five(self):
         self.assertEqual(textfmt.POLICY_HINT_LINES, 5)
@@ -296,7 +297,7 @@ class RetainedHintTextTests(unittest.TestCase):
         text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(60))
         rp, _ = report({'CONTRIBUTING.md': text}, {})
         view = textfmt.render('inspect', {'repository_policy': rp})
-        self.assertIn('(+95 more restriction hints in JSON repository_policy.hints)', view)
+        self.assertIn('(+55 more hinted lines with restrictions in JSON repository_policy.hinted_lines)', view)
         self.assertIn('20 restriction hints not retained because of limits', view)
 
     def test_excerpts_keep_the_restriction_predicate_and_are_marked_when_cut(self):
@@ -337,3 +338,49 @@ class SubmitterEligibilityTests(unittest.TestCase):
         for name in ('CHANGELOG.md', 'docs/cli.md'):
             with self.subTest(name):
                 self.assertNotIn('always reaches the text view', ' '.join((root / name).read_text('utf-8').split()))
+
+
+class GroupedHintTests(unittest.TestCase):
+    """N2: one reading entry per hinted line; project-name vocabulary mentions are summarized, never restrictions."""
+    def agent_repo(self, files):
+        client = PolicyGitHub(files, {})
+        client.repos['acme/agent-kit'] = client.repos.pop('acme/photos')
+        return policy.report('acme/agent-kit', SOURCE_COMMIT, [], client, default_branch='main')
+
+    def test_hints_on_one_line_are_grouped(self):
+        rp, _ = report({'CONTRIBUTING.md': 'AI-generated PRs are closed on sight.\n\nUse AI responsibly.'}, {})
+        lines = rp['hinted_lines']
+        self.assertEqual([(l['line'], l['kinds']) for l in lines],
+                         [(1, ['possible_ai_restriction', 'possible_pr_restriction', 'ai_mention']), (3, ['ai_mention'])])
+        self.assertEqual(lines[0]['untrusted_excerpt'], 'AI-generated PRs are closed on sight.')
+        self.assertEqual(len(rp['hints']), 4, 'the per-kind hints are unchanged')
+
+    def test_project_vocabulary_mentions_are_collapsed_but_restrictions_never(self):
+        rp = self.agent_repo({'README.md': 'The agent kit runs an agent per task.\n\nAgents are fast.\n\n'
+                                           'Agents must not open pull requests.\n\nUse ChatGPT for drafts.'})
+        vocab = rp['project_vocabulary']
+        self.assertEqual(vocab['terms'], ['agent'])
+        self.assertEqual(vocab['mentions_collapsed'], 2)
+        self.assertEqual([l['line'] for l in vocab['lines']], [1, 3])
+        lines = {l['line']: l['kinds'] for l in rp['hinted_lines']}
+        self.assertEqual(set(lines), {5, 7})
+        self.assertIn('possible_agent_restriction', lines[5])
+        self.assertIn('ai_mention', lines[7])
+        self.assertEqual(sum(h['kind'] == 'ai_mention' for h in rp['hints']), 4, 'hints keep every mention')
+
+    def test_no_project_vocabulary_without_name_terms(self):
+        rp, _ = report({'README.md': 'An agent helps.'}, {})
+        self.assertEqual(rp['project_vocabulary'], {'terms': [], 'mentions_collapsed': 0, 'lines': [],
+                                                    'lines_not_listed': 0})
+        self.assertEqual(rp['hinted_lines'][0]['kinds'], ['ai_mention'])
+
+    def test_text_view_groups_lines_and_reports_collapsed_vocabulary(self):
+        rp = self.agent_repo({'CONTRIBUTING.md': 'AI-generated PRs are closed on sight.\n\nThe agent kit is an agent.'})
+        text = textfmt.render('inspect', {'repository_policy': rp})
+        self.assertIn('  ! possible_ai_restriction, possible_pr_restriction acme/agent-kit:CONTRIBUTING.md:1 -- '
+                      'AI-generated PRs are closed on sight.', text)
+        self.assertIn("  1 mention of project-name vocabulary ('agent') summarized in JSON project_vocabulary", text)
+
+    def test_obligation_says_read_every_hinted_line(self):
+        self.assertIn('every hinted line', policy.OBLIGATION)
+        self.assertIn('every hinted line in context', ' '.join(installed_workflow().split()))

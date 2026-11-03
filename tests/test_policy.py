@@ -783,7 +783,8 @@ class WorkflowTests(unittest.TestCase):
         'publication are blocked until every omitted candidate is read manually at the pinned revision or shown '
         'inapplicable with evidence. A successful CLI run does not resolve it.',
         # read first, even with no hints
-        '1. Before ranking or preparing any task, read in full every scanned source, every hint in context, and every '
+        '1. Before ranking or preparing any task, read in full every scanned source, every hinted line in context '
+        '(`hinted_lines`; project-name vocabulary mentions are summarized in `project_vocabulary`), and every '
         'unassessed reference you can reach with your own read-only tools. Repeat this even when every count is zero.',
     ]
     WEAKENING = ('optionally', 'if convenient', 'may skip', 'may mark', 'or the local user',

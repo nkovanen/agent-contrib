@@ -528,6 +528,13 @@ the `agent_contribute.aipolicy` module no longer exist.
   (`path_sanitized`, `what_sanitized`), so two entries can look alike. The
   identity, not the display text, is what deduplication and `inventory_sha256`
   use.
+- **`hinted_lines` and `project_vocabulary`.** `hinted_lines` is the reading
+  list: one entry per hinted source line in attention order, with every hint
+  kind on that line. Lines whose only hints are mentions made of the project's
+  own name (for example "agent" in a repository named `agent-kit`) are
+  summarized in `project_vocabulary` with a count and bounded line list.
+  Restriction hints are never summarized, and `hints` still lists every
+  retained hint.
 - **`omitted_sources` and `hides_sources`.** A policy candidate that a file,
   byte or request limit left unread is named in `omitted_sources` (at most 50,
   with its repository, path, kind and reason; overflow is counted). Each
@@ -1675,6 +1682,20 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `reads.requests` | integer |  |
 | `reads.limit` | integer |  |
 | `inventory_sha256` | string |  |
+| `hinted_lines` | object[] | One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line |
+| `hinted_lines[].source` | integer |  |
+| `hinted_lines[].line` | integer |  |
+| `hinted_lines[].kinds` | "possible_agent_restriction" \| "possible_ai_restriction" \| "possible_pr_restriction" \| "ai_mention"[] |  |
+| `hinted_lines[].heading` | string |  |
+| `hinted_lines[].untrusted_excerpt` | string |  |
+| `hinted_lines[].excerpt_truncated` | boolean |  |
+| `project_vocabulary` | object | Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions |
+| `project_vocabulary.terms` | string[] |  |
+| `project_vocabulary.mentions_collapsed` | integer |  |
+| `project_vocabulary.lines` | object[] |  |
+| `project_vocabulary.lines[].source` | integer |  |
+| `project_vocabulary.lines[].line` | integer |  |
+| `project_vocabulary.lines_not_listed` | integer |  |
 
 #### `resolution_provenance`
 

@@ -45,7 +45,8 @@ NEVER_INSPECTED = ['GitHub wiki', 'websites outside the GitHub REST API', 'image
                    "files in repositories other than the source and its owner's .github repository",
                    'non-Latin-script text (see per-source notes)']
 OBLIGATION = ('This report is not a verdict and never shows that contributions are permitted. Read every scanned '
-              'source in full, every hint in context and every unassessed reference before ranking or preparing '
+              'source in full, every hinted line in context (hinted_lines; project-name vocabulary mentions are '
+              'summarized in project_vocabulary) and every unassessed reference before ranking or preparing '
               'work. Record each relevant source with its revision or content digest. A policy-relevant source you '
               'cannot read, or unknown contributor eligibility under a maintainers-only rule, is unresolved: '
               'unresolved policy blocks upstream preparation, implementation and publication. So does any limit with '
@@ -166,6 +167,40 @@ def _eligibility(found):
                for anchor in found['pr'])
 
 
+def _project_terms(repository):
+    """AI/agent vocabulary that is the project's own name, such as 'agent' in acme/agent-kit (N2)."""
+    words = set(re.findall('[a-z0-9]+', repository.split('/')[-1].casefold()))
+    return {word for word in words if word in AI_TERMS | AGENT_TERMS or word + 's' in AGENT_TERMS}
+
+
+def _is_project_term(term, vocabulary):
+    return term in vocabulary or term.endswith('s') and term[:-1] in vocabulary
+
+
+def _group(hints, terms, vocabulary):
+    """(hinted_lines, project_vocabulary): one reading entry per (source, line) in attention order. A line whose only
+    hints are mentions made solely of project-name vocabulary is summarized instead; restrictions never are."""
+    lines, order = {}, []
+    for hint, matched in zip(hints, terms):
+        key = (hint['source'], hint['line'])
+        if key not in lines:
+            order.append(key)
+            lines[key] = {'source': hint['source'], 'line': hint['line'], 'kinds': [], 'heading': hint['heading'],
+                          'untrusted_excerpt': hint['untrusted_excerpt'], 'excerpt_truncated': hint['excerpt_truncated'],
+                          'vocabulary_only': True}
+        entry = lines[key]
+        entry['kinds'].append(hint['kind'])
+        if hint['kind'] != 'ai_mention' or not matched or not all(_is_project_term(t, vocabulary) for t in matched):
+            entry['vocabulary_only'] = False
+    collapsed = [lines[key] for key in order if lines[key]['vocabulary_only']]
+    hinted = [{k: v for k, v in lines[key].items() if k != 'vocabulary_only'} for key in order
+              if not lines[key]['vocabulary_only']]
+    summary = {'terms': sorted(vocabulary), 'mentions_collapsed': len(collapsed),
+               'lines': [{'source': e['source'], 'line': e['line']} for e in collapsed[:MAX_UNASSESSED]],
+               'lines_not_listed': max(0, len(collapsed) - MAX_UNASSESSED)}
+    return hinted, summary
+
+
 def _pair(anchors, restrict):
     """(anchor, nearest-window restriction index) for the first anchor with a restriction in range, or None."""
     for anchor in anchors:
@@ -267,6 +302,7 @@ def scan(text, path):
                                               None if restriction is None else matches[restriction].end())
                 hints.append({'kind': kind, 'line': line, 'heading': core.safe_text(heading, 120),
                               'untrusted_excerpt': excerpt, 'excerpt_truncated': truncated,
+                              'terms': sorted({tokens[i][1] for i in found['ai'] + found['agent']}),
                               'ai_context': bool(found['ai'] or found['agent']),
                               'eligibility': kind == 'possible_pr_restriction' and _eligibility(found)})
     return {'hints': hints, 'links': _links(text), 'non_latin_paragraphs': non_latin}
@@ -537,7 +573,10 @@ def report(repository, commit, instructions, client, *, default_branch=None):
     hints.sort(key=lambda hint: (hint['tier'], hint['source'], hint['line']))
     for hint in hints[MAX_HINTS:]:  # mentions go first; a dropped stop-class hint is a hiding limit (N-04)
         state.limit('restriction hints' if hint['kind'] in STOP_HINTS else 'hints')
-    hints = [{k: v for k, v in hint.items() if k not in ('tier', 'ai_context', 'eligibility')} for hint in hints[:MAX_HINTS]]
+    terms = [hint['terms'] for hint in hints[:MAX_HINTS]]  # aligned with the retained hints, for grouping (N2)
+    hints = [{k: v for k, v in hint.items() if k not in ('tier', 'ai_context', 'eligibility', 'terms')}
+             for hint in hints[:MAX_HINTS]]
+    vocabulary = _project_terms(repository)
     result = {'report': 'policy-report/1', 'review_obligation': OBLIGATION, 'sources_scanned': state.sources,
               'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
               'limits_hide_sources': False,
@@ -545,6 +584,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
               'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints, 1)],
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:
+        result['hinted_lines'], result['project_vocabulary'] = _group(result['hints'], terms, vocabulary)
         result['limits_reached'] = [{'limit': name, 'not_reported': count, 'hides_sources': name in HIDING_LIMITS}
                                     for name, count in sorted(state.limits.items())]
         result['limits_hide_sources'] = bool(result['omitted_sources']) or any(

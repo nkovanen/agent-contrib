@@ -652,6 +652,108 @@
           "pattern": "^[0-9a-f]{64}$",
           "minLength": 64,
           "maxLength": 64
+        },
+        "hinted_lines": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "kinds": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "possible_agent_restriction",
+                    "possible_ai_restriction",
+                    "possible_pr_restriction",
+                    "ai_mention"
+                  ]
+                }
+              },
+              "heading": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "untrusted_excerpt": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "excerpt_truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source",
+              "line",
+              "kinds",
+              "heading",
+              "untrusted_excerpt",
+              "excerpt_truncated"
+            ],
+            "additionalProperties": false
+          },
+          "description": "One reading entry per hinted source line, in attention order; kinds lists every hint kind on the line"
+        },
+        "project_vocabulary": {
+          "type": "object",
+          "properties": {
+            "terms": {
+              "type": "array",
+              "maxItems": 2147483647,
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              }
+            },
+            "mentions_collapsed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lines": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "source",
+                  "line"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lines_not_listed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "terms",
+            "mentions_collapsed",
+            "lines",
+            "lines_not_listed"
+          ],
+          "additionalProperties": false,
+          "description": "Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions"
         }
       },
       "required": [
@@ -665,7 +767,9 @@
         "never_inspected",
         "hints",
         "reads",
-        "inventory_sha256"
+        "inventory_sha256",
+        "hinted_lines",
+        "project_vocabulary"
       ],
       "additionalProperties": false,
       "description": "Default-on, report-only policy inventory and hints; never a verdict"
