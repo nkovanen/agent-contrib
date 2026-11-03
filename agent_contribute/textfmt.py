@@ -375,6 +375,18 @@ def _impact(result):
             line(result['warning'], 1000)]
 
 
+def _jar(result):
+    out = [f'Repository: {line(result["repository"])}',
+           f'Jar: {line(result["state"], 30)} (complete: {_flag(result["complete"])})',
+           f'Pinned commit: {line(result.get("commit") or "unavailable", 40)}',
+           'Inspection only; discover/prepare/verify do not yet enforce jars.',
+           line(result['notice'])]
+    manifest = result.get('manifest') or {}
+    for key in ('wanted', 'boundaries'):
+        out += _list(key.capitalize() + ' (untrusted)', manifest.get(key, []))
+    return out + _list('Errors', result.get('errors', []))
+
+
 def render(command, result, stage=None):
     """stage is (name, exit_gate_passed) for an explicit verify --stage; it changes presentation only."""
     if 'error' in result:
@@ -387,7 +399,7 @@ def render(command, result, stage=None):
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
             'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request,
-            'ownership': _ownership_command, 'receipt': _receipt, 'impact': _impact}.get(command)
+            'ownership': _ownership_command, 'receipt': _receipt, 'impact': _impact, 'jar': _jar}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:

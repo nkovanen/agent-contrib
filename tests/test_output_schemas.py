@@ -376,6 +376,10 @@ class DiagnosticVolumeTests(unittest.TestCase):
                 if name_rule.search(key) and 'items' in item:
                     found += 1
                     with self.subTest(name=name, path=path):
+                        if name == 'jar' and key == 'errors':
+                            self.assertEqual(item['maxItems'], 1)
+                            self.assertEqual(item['items']['maxLength'], 300)
+                            continue  # single-file inspection has one bounded failure, no paginated diagnostics
                         self.assertIn(item['maxItems'], (0, 2 ** 31 - 1))
                         self.assertEqual(item['items'].get('maxLength', 2 ** 31 - 1), 2 ** 31 - 1)
         self.assertGreater(found, 40)
