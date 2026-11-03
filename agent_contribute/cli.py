@@ -9,8 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, ci, core, drift, feedback, multi, outputs, ownership, policy, prbody,
-               remote, signals, signatures, textfmt, workspace, __version__)
+from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+               prbody, remote, signals, signatures, textfmt, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -41,7 +41,7 @@ def read_host_context_stdin():
                                  'Cannot read explicit bounded UTF-8 host context from stdin') from exc
 
 
-GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining')
+GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 
 
 class Parser(argparse.ArgumentParser):
@@ -49,7 +49,7 @@ class Parser(argparse.ArgumentParser):
         # Global options are parsed only before the subcommand; say so instead of a bare rejection.
         if message.startswith('unrecognized arguments: ') and any(
                 token.split('=', 1)[0] in GLOBAL_OPTIONS for token in message.split()[2:]):
-            message += ('; global options --format, --report-budget and --min-remaining go before the subcommand, '
+            message += ('; global options --format, --report-budget, --min-remaining and --cache go before the subcommand, '
                         'for example: agent-contrib --format text verify task.json')
         raise core.ProtocolError('usage', message)
 
@@ -123,6 +123,9 @@ def main(argv=None):
                         help='Add GitHub rate-limit snapshots around a GitHub-reading command')
     parser.add_argument('--min-remaining', type=int, metavar='N',
                         help='With --report-budget, refuse to start below N remaining core requests')
+    parser.add_argument('--cache', action='store_true',
+                        help='Reuse verified file contents at pinned commits of public repositories from the user cache '
+                             '(blob-SHA checked); every other read stays live and output is unchanged')
     commands = parser.add_subparsers(dest='command', required=True, metavar='COMMAND')
     summaries = {'discover': 'Rank open issues of one repository, or 2-20, with policy and overlap context',
                  'inspect': 'Inspect one issue: approval, instructions, exclusions and overlapping PRs',
@@ -217,6 +220,7 @@ def main(argv=None):
     stage_gate = None
     try:
         args = parser.parse_args(argv)
+        cache.configure(args.cache)
         if args.min_remaining is not None and (not args.report_budget or args.min_remaining < 0):
             raise core.ProtocolError('usage', '--min-remaining requires --report-budget and a non-negative count')
         if args.report_budget and args.command in ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence'):
@@ -359,6 +363,8 @@ def main(argv=None):
     except (OSError, UnicodeError, ValueError, RecursionError):
         result = {'error': {'code': 'input_error', 'message': 'Input or output could not be processed'}}
         code = 1
+    finally:
+        cache.configure(False)  # --cache lasts one invocation; library callers never inherit it
     stream = sys.stdout
     if stream is None:
         return 1

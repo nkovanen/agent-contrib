@@ -19,6 +19,8 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import quote
 
+from . import cache
+
 VERSION = '0.1'
 SUPPORTED_SCHEMA_VERSIONS = ('0.1', '0.2')
 HOST_CONTEXT_VERSIONS = ('0.1', '0.2')
@@ -126,6 +128,17 @@ class GitHub:
         return self.request(endpoint, attempts=1)
 
     def request(self, endpoint, attempts=3):
+        store = cache.active()  # opt-in --cache: verified file contents at a pinned commit only
+        if store is not None:
+            hit = store.lookup(endpoint)
+            if hit is not None:
+                return hit
+        value = self._live(endpoint, attempts)
+        if store is not None:
+            store.observe(endpoint, value)
+        return value
+
+    def _live(self, endpoint, attempts):
         for attempt in range(attempts):
             try:
                 env = dict(os.environ, GH_PROMPT_DISABLED='1', GH_NO_UPDATE_NOTIFIER='1')

@@ -70,6 +70,7 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [3] D2 `scope-check` offline scope check ([#15](https://github.com/nkovanen/agent-contrib/issues/15))
 - [3] F1 `pr-body` description from contract, evidence and live gates ([#19](https://github.com/nkovanen/agent-contrib/issues/19))
 - [3] F2 `feedback`: reviews, comments and exact-head checks on a PR ([#20](https://github.com/nkovanen/agent-contrib/issues/20))
+- [3] G4 `--report-budget`, `--min-remaining` and an opt-in, blob-SHA-verified `--cache` for file contents of public repositories ([#27](https://github.com/nkovanen/agent-contrib/issues/27))
 - [3] G1 `--format text` summaries and versioned output JSON Schemas for every command (`schemas/output/1/`, `agent-contrib schema`) ([#24](https://github.com/nkovanen/agent-contrib/issues/24))
 - [3] Requirements-ledger workflow, contract field mapping, local-only (implement-only) profile and coordinator relay rules in the installed workflow
 - [3] C2 Approval-label authority ([#9](https://github.com/nkovanen/agent-contrib/issues/9)): documented limitation; labeling-actor authority cannot be verified from public REST data (events name an actor, not its role). A maintainer-side label-actor report is deferred (R9-05, R9-06)
@@ -85,7 +86,6 @@ Details: [command reference](cli.md) and [CHANGELOG](../CHANGELOG.md).
 - [~] E2 `verify --observe-signatures`, report only: GitHub verification of the evidence head, required-signature rulesets and local signature-header presence ([#18](https://github.com/nkovanen/agent-contrib/issues/18)). Missing: contract-required verified heads and SSH-signed evidence attestations
 - [~] F5 `authorization-request` and normative [host issuer requirements](host-authorization.md#host-issuer-requirements) ([#23](https://github.com/nkovanen/agent-contrib/issues/23)). Missing: a native issuer in Claude Code or Paseo
 - [~] G2 Literal POSIX path decisions pinned ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: Windows host-context input and Windows/macOS CI
-- [~] G4 `--report-budget` and `--min-remaining` ([#27](https://github.com/nkovanen/agent-contrib/issues/27)). Missing: freshness-aware response cache
 
 ## Planned
 
@@ -106,7 +106,7 @@ prompt is not proof of human presence.
 3. Contributor ergonomics: #1.
 4. Lifecycle: F3, then F4; a native issuer for B3 alongside F5.
 5. Trust and adoption: E1 gating, C4, E2.
-6. Scale and reach: G4 cache, G2, G3; H1 to measure A1.
+6. Scale and reach: G2, G3; H1 to measure A1.
 
 ## Parked ideas
 

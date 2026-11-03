@@ -126,7 +126,11 @@ channel or runtime model provider is added.
   `--repo-dir`, signature-header presence for at most 1000 commits in
   `base_commit..git_head`, never truncated; no gpg, ssh-keygen or
   `verify-commit` runs) and `--report-budget` / `--min-remaining` (#27, part).
-  An opted-in report that is incomplete exits 1 where documented. `discover
+  `--cache` (#27) reuses file contents at a pinned commit of a public
+  repository from the user cache, keyed by Git blob SHA and re-verified
+  against the live tree on every hit; trees and all mutable reads stay live
+  and output is unchanged. An opted-in report that is incomplete exits 1
+  where documented. `discover
   --signals` also lists `code_location.named_paths_missing`: file paths the
   issue names that are not in the snapshot tree, compared exactly (F13).
 - `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
