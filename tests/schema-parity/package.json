@@ -1,0 +1,8 @@
+{
+  "name": "agent-contrib-schema-parity",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "ajv": "8.20.0"
+  }
+}

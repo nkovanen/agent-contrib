@@ -23,9 +23,25 @@ python -m unittest discover -v
 python tools/check_install.py
 ```
 
-The optional independent manifest-schema parity regression uses Node.js with
-Ajv's draft-2020-12 engine (`ajv/dist/2020`); it skips when either is unavailable.
-These are test-only tools, not Python runtime dependencies.
+The independent manifest-schema parity regression uses Node.js and Ajv's
+draft-2020-12 engine. Python-only local runs may skip it. The dedicated Linux
+`schema-parity` CI job requires Node/npm and installs Ajv 8.20.0 from
+`tests/schema-parity/package-lock.json` into a temporary directory; a missing
+dependency fails that job. These are development-only tools, with no Python
+runtime dependency. To run the same required check locally (Node/npm needed):
+
+```sh
+parity_dir=$(mktemp -d)
+cp tests/schema-parity/package*.json "$parity_dir/"
+npm ci --prefix "$parity_dir" --include=dev --ignore-scripts --no-audit --no-fund
+TIPJAR_PARITY_AJV="$parity_dir/node_modules/ajv/dist/2020" \
+  python -m unittest tests.test_tipjar.ManifestTests -v
+rm -rf "$parity_dir"
+```
+
+Setting `TIPJAR_PARITY_AJV` selects that exact validator module and makes missing
+Node or Ajv a failure instead of a skip. The npm install uses the network and
+requires no GitHub credentials.
 
 The protocol tests use fake GitHub responses and temporary Git repositories;
 they need Git but no GitHub authentication or network. Run them from this root.
