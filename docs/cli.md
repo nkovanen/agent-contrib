@@ -449,10 +449,12 @@ reading the issue.
 `local_work` object for unpublished local work. It lists the issue numbers that
 a closing keyword references: `fixes`, `fixed`, `fix`, `closes`, `closed`, `close`,
 `resolves`, `resolved` or `resolve` (any case, optionally with a colon), followed by
-`#N` or `owner/repo#N` for the source repository, or by a list such as
-`Fixes #1, #2 and #3`. `Refs #N` (partial work), PR numbers, other projects'
-`#N`, qualified references to other repositories and quoted mentions do not
-count. They are taken from the messages of commits reachable from the checkout's HEAD but not from the
+`#N` or `owner/repo#N` for the source repository. As in GitHub's syntax, each
+reference needs its own keyword: in `Fixes #1 and #2` only #1 counts. `Refs #N`
+(partial work), PR numbers, other projects' `#N`, qualified references to other
+repositories and examples of the syntax do not count: a keyword right after a
+quote or backtick, text in inline code spans, fenced code (``` or ~~~), indented
+code and `>` blockquote lines are ignored. They are taken from the messages of commits reachable from the checkout's HEAD but not from the
 snapshot's source default-branch commit. It lists the newest 500 commits at most,
 checks each commit object's size before reading any message, and reads only
 whole messages: a commit larger than 64 KiB is skipped, and reading stops once

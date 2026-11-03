@@ -67,12 +67,31 @@ class LocalWorkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
             done = commit(git, 'Bounds check\n\nFixes #12, closes acme/photos#3. Resolved: #4\n'
-                               'Fixes #20, #21 and #22')
+                               'Fixes #20, resolves #21 and closes #22')
             commit(git, "Port the ripgrep #278 workaround; test text \"I'm working on issue #999\"; cut '#1234567890'\n"
                         'Refs #25 (part 1 of 3); see PR #2; Fixes other/repo#6; prefixes #30; fix-ups #31')
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual([item['number'] for item in report['issues']], [3, 4, 12, 20, 21, 22])
             self.assertTrue(all(item['commits'] == [done] for item in report['issues']))
+
+    def test_quoted_code_and_list_continuations_never_count(self):
+        # Review R12-01/R12-02: examples of the syntax and continuation numbers are not closing statements.
+        examples = ['The example is "Fixes #12"; no implementation here.', "Write 'closes #12' in the PR.",
+                    'Document the syntax `Fixes #12`.', 'Spans ``Fixes #12`` too.', 'Run `git commit -m Fixes #12` here.',
+                    'Padded `` Fixes #12 `` span.', '> Fixes #12 (quoted reply)',
+                    '```\nFixes #12\n```', '~~~~\nresolves #12\n~~~~', '    Fixes #12 (indented code)',
+                    '\tFixes #12 (tab-indented code)', 'Fixes other/repo#3, #12', 'Fixes #40 and #12',
+                    '\u201cFixes #12\u201d is the quoted form']
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            for example in examples:
+                commit(git, 'Docs\n\n' + example)
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual([item['number'] for item in report['issues']], [40])
+            fix = commit(git, 'Real fix\n\nUses `cache` and fixes #12; a code span ``` alone ``` stays inert')
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual({item['number']: item['commits'] for item in report['issues']}[12], [fix])
+            self.assertEqual(workspace._issue_refs('`' * 30000 + ' Fixes #7 ' + '`' * 29999, 'acme/photos'), {7})
 
     def test_discover_signals_moves_locally_implemented_issues_below_other_candidates(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -263,6 +282,21 @@ class LocalWorkTests(unittest.TestCase):
             code, result = run(client, 'discover', 'acme/photos', '--repo-dir', missing)
             self.assertEqual(code, 1)
             self.assertEqual(result['local_work']['errors'], [prefix + f'--repo-dir {missing} is not a directory'])
+
+    def test_overlong_repo_dir_path_is_an_incomplete_report(self):
+        # Review R12-03: Path.is_dir raised ENAMETOOLONG and discarded the whole discovery.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            long = str(pathlib.Path(tmp, 'x' * 300))
+            report = workspace.local_issue_references(long, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['errors'], [workspace.LOCAL_UNREAD + f'--repo-dir {long} could not be inspected'])
+            client = SignalGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--repo-dir', long)
+            self.assertEqual(code, 1)
+            self.assertTrue(result['issues'])
+            self.assertFalse(result['local_work']['complete'])
 
     def test_cli_exit_usage_and_no_gate_change(self):
         with tempfile.TemporaryDirectory() as tmp:

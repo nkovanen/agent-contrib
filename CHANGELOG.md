@@ -26,8 +26,9 @@ channel or runtime model provider is added.
   `docs/examples/release-pypi.yml`, which runs only after a maintainer adopts it.
 - `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
   closed (`fixes`/`closes`/`resolves #N`, or same-repository `owner/repo#N`) by local
-  commits that are not in the source default branch; other mentions and `Refs`
-  do not count (dogfood 4 N4). Text discover marks each demoted issue. It is read
+  commits that are not in the source default branch, one keyword per reference;
+  other mentions, `Refs`, list continuations and quoted or code examples do not
+  count (dogfood 4 N4, review R12). Text discover marks each demoted issue. It is read
   with the hardened Git reader and capped at 500 commits, 64 KiB per commit and
   4 MiB in total, checked by object size before any message is read; messages
   come from raw commit objects, and a shallow checkout or a NUL byte in a
