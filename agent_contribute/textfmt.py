@@ -66,15 +66,26 @@ def _verify(result, stage=None):
     return out + _list('Blockers', result.get('errors', [])) + _list('Evidence blockers', result.get('evidence_errors', []))
 
 
+def _display(result):
+    display = result.get('display')
+    if display is None:
+        return []
+    return [f"Display: shown {display['returned']} of {display['total_issues_considered']} observed candidates; "
+            f"omitted {display['omitted']} (--limit {display['requested_limit']}; global budget). "
+            "Scan completeness is separate."]
+
+
 def _discover(result):
     if 'repositories' in result:
         out = [f'Complete: {_flag(result.get("complete"))}',
                f'Repositories: {len(result["repositories"])}']
+        out += _display(result)
         for repository in result['repositories']:
             out += _discover(repository)
         return out + _list('Errors', result.get('errors', []))
     out = [f'Repository: {line(result.get("requested_repository", result.get("repository", "")))}',
            f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}'] + _policy(result)
+    out += _display(result)
     if result.get('issue_source_repository'):
         out.append('Issue source: ' + line(result['issue_source_repository']))
     if result.get('proposed_target_repository'):
@@ -95,10 +106,14 @@ def _discover(result):
                    f'{score}: {line(issue.get("untrusted_title", ""), 120)}' + (' -- ' + '; '.join(notes) if notes else ''))
     if len(issues) > 20:
         out.append(f'  ... {len(issues) - 20} more issues in JSON output')
-    if issues:
+    if issues or result.get('display', {}).get('total_issues_considered'):
         # Overlapping and excluded issues sort last, so the 20-line cap would otherwise hide them.
-        out.append(f'Overlapping issues: {sum(bool(issue.get("duplicates")) for issue in issues)} of {len(issues)}; '
-                   f'excluded issues: {sum(bool(issue.get("exclusions")) for issue in issues)} of {len(issues)} '
+        counts = result.get('display', {})
+        total = counts.get('total_issues_considered', len(issues))
+        overlaps = counts.get('overlapping', sum(bool(issue.get('duplicates')) for issue in issues))
+        excluded = counts.get('excluded', sum(bool(issue.get('exclusions')) for issue in issues))
+        out.append(f'Overlapping issues: {overlaps} of {total}; '
+                   f'excluded issues: {excluded} of {total} '
                    '(all issues, including omitted)')
     check = result.get('top_check')
     if isinstance(check, dict):

@@ -29,6 +29,13 @@ channel or runtime model provider is added.
 
 ### Added
 
+- `discover --limit N` (#1): display at most 1–1000 final ranked candidates
+  after full scans and reports. Multi-repository runs share one global budget.
+  Optional `display` fields in the unreleased output/1 schema report observed,
+  returned and omitted counts, truncation, and full overlap/exclusion totals;
+  text keeps hidden overlaps visible in its totals. No-limit output, scan
+  completeness, approval, task/evidence schemas and read-only authority are unchanged.
+
 - `tools/benchmark/` (#28, development only; not in the wheel): a read-only,
   bounded collector of issues open at a past cutoff with post-cutoff outcome
   labels, an offline replay of `discover` and `--signals` ranking, and

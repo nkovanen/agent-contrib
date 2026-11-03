@@ -575,7 +575,31 @@ def inspect_issue(reference, client=None, *, pr_ids=None):
         return {**context, 'complete': False, 'errors': [str(exc)]}
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None):
+def validate_discovery_limit(limit):
+    """Normalize a display budget before reads, without parsing an unbounded integer."""
+    if isinstance(limit, str) and re.fullmatch(r'[0-9]+', limit):
+        digits = limit.lstrip('0') or '0'
+        if len(digits) <= 4:
+            limit = int(digits)
+    if limit is not None and (type(limit) is not int or not 1 <= limit <= 1000):
+        raise ProtocolError('invalid_limit', 'Discovery limit must be an ASCII integer from 1 to 1000')
+    return limit
+
+
+def limit_discovery(result, limit, references=None):
+    """Project a completed ranking; keep full observed counts even when no candidate is displayed."""
+    issues = result['issues']
+    shown = issues[:limit] if references is None else [i for i in issues if i['reference'] in references]
+    result['display'] = {'requested_limit': limit, 'total_issues_considered': len(issues),
+                         'returned': len(shown), 'omitted': len(issues) - len(shown),
+                         'truncated': len(shown) < len(issues),
+                         'overlapping': sum(bool(i['duplicates']) for i in issues),
+                         'excluded': sum(bool(i['exclusions']) for i in issues)}
+    result['issues'] = shown
+
+
+def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None, limit=None):
+    limit = validate_discovery_limit(limit)
     client = client or GitHub()
     result, snapshot = discover_with_snapshot(repository, client, signals=signals, assignees=bool(check_top))
     if repo_dir is not None:
@@ -589,6 +613,8 @@ def discover(repository, client=None, *, signals=False, responsiveness=False, ch
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
         source = snapshot['repository'] if snapshot is not None and snapshot['complete'] else None
         result['repository_signals'] = {'responsiveness': report(source, client)}
+    if limit is not None:
+        limit_discovery(result, limit)
     return result
 
 

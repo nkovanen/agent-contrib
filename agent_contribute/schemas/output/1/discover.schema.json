@@ -120,6 +120,9 @@
           "type": "array",
           "items": {},
           "maxItems": 0
+        },
+        "display": {
+          "$ref": "#/$defs/discovery_display"
         }
       },
       "required": [
@@ -349,6 +352,9 @@
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
+        },
+        "display": {
+          "$ref": "#/$defs/discovery_display"
         }
       },
       "required": [
@@ -576,6 +582,9 @@
         "repository_policy": {
           "$ref": "#/$defs/repository_policy",
           "description": "Default-on, report-only; never a verdict"
+        },
+        "display": {
+          "$ref": "#/$defs/discovery_display"
         }
       },
       "required": [
@@ -660,6 +669,9 @@
         },
         "local_work": {
           "$ref": "#/$defs/local_work"
+        },
+        "display": {
+          "$ref": "#/$defs/discovery_display"
         }
       },
       "required": [
@@ -1980,6 +1992,56 @@
       ],
       "additionalProperties": false,
       "description": "Present with --repo-dir: issues referenced by local commits not in the source default branch; report only"
+    },
+    "discovery_display": {
+      "type": "object",
+      "properties": {
+        "requested_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Requested display budget (1-1000), shared globally in a multi-repository run"
+        },
+        "total_issues_considered": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Successfully inspected observed entries before display projection; not inaccessible or malformed issues"
+        },
+        "returned": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Entries retained in this list"
+        },
+        "omitted": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Observed entries omitted by the display budget"
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "Whether display entries were omitted; independent of scan completeness"
+        },
+        "overlapping": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Overlapping entries in the full observed list, including omitted entries"
+        },
+        "excluded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Excluded entries in the full observed list, including omitted entries"
+        }
+      },
+      "required": [
+        "requested_limit",
+        "total_issues_considered",
+        "returned",
+        "omitted",
+        "truncated",
+        "overlapping",
+        "excluded"
+      ],
+      "additionalProperties": false,
+      "description": "Only with --limit. Counts describe observed candidates, never source approval or read completeness. Multi-repository totals count requested-repository entries, even when they resolve to the same tracker."
     }
   }
 }
