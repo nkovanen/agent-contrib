@@ -196,7 +196,7 @@ channel or runtime model provider is added.
 - Versioned JSON Schemas for every command's JSON output ship in
   `schemas/output/1/` (#24). `agent-contrib schema COMMAND` prints one (`error`
   is the error envelope), `instructions` reports `output_schema_version` and the
-  directory, and `docs/cli.md` has a field reference generated from them. Every
+  directory, and `docs/output-reference.md` has a field reference generated from them. Every
   output the test suite produces is validated against its schema. Output values
   do not carry the version, so existing results are unchanged; a shape change
   bumps it. The bundled validator gained `null`, `number`, type lists, `anyOf`,
