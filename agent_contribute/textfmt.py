@@ -169,6 +169,11 @@ def _policy(result):
 POLICY_HINT_LINES = 5
 
 
+def _uncomment(text):
+    """Drop HTML comment markers from a text-view excerpt (cosmetic; JSON keeps the excerpt unchanged)."""
+    return str(text).replace('<!--', ' ').replace('-->', ' ')
+
+
 def _policy_hints(report):
     """The restriction sentences that may justify a stop, in the report's attention order (N-01)."""
     sources = report.get('sources_scanned', [])
@@ -181,7 +186,7 @@ def _policy_hints(report):
         path = line(source.get('path', '?'), 500)
         path = path if len(path) <= 100 else '...' + path[-97:]
         out.append(f'  ! {line(hint["kind"], 40)} {line(source.get("repository", "?"), 100)}:{path}:'
-                   f'{line(hint.get("line", "?"), 10)} -- {line(hint.get("untrusted_excerpt", ""), 160)}')
+                   f'{line(hint.get("line", "?"), 10)} -- {line(_uncomment(hint.get("untrusted_excerpt", "")), 160)}')
     if len(stop) > POLICY_HINT_LINES:
         out.append(f'  (+{len(stop) - POLICY_HINT_LINES} more restriction hints in JSON repository_policy.hints)')
     return out
