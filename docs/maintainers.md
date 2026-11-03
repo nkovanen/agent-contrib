@@ -130,6 +130,46 @@ authority. The candidate's `agent-contrib jar owner/repo` inspects this file;
 normal discover/prepare/verify do not yet read or enforce it. Old clients do not
 enforce it either: state refusals plainly in ordinary contribution documentation.
 
+### Two-minute setup (offline)
+
+Use a reviewed v0.3.0 candidate containing these commands; the published v0.2.0
+has no `tipjar` alias or jar commands. No GitHub authentication is needed to
+create and check a local file. Choose a state explicitly:
+
+```sh
+# Welcome useful agent work; creates a new file, never overwrites one.
+tipjar init --status welcome --output .tipjar.json
+# Edit wanted and boundaries to match your actual policies before publishing.
+tipjar jar-check .tipjar.json
+```
+
+The welcome template marks its wanted-work entry `EDIT before publishing`.
+Replace it with concrete work you want, such as a broken documentation example
+or a small bug with a regression. Review each boundary: keep the scope bounded,
+require your contribution guide, and preserve separate human authorization for
+local execution and publication. Validation checks structure, not whether these
+statements accurately express your policy. It never approves an issue or task.
+
+To decline agent contributions, start with an explicit closed template instead:
+
+```sh
+# Alternative to the welcome command, in a directory without .tipjar.json:
+tipjar init --status closed --output .tipjar.json
+tipjar jar-check .tipjar.json
+```
+
+An existing file or symlink is refused; edit your existing file deliberately,
+then check it again. You may use a staging path with `--output` and place the
+reviewed file at the repository root as `.tipjar.json` later. Init reports the
+chosen state, exact byte SHA-256, path and next steps. Check reports the edited
+file's state and exact byte SHA-256 without printing its contents. Neither command
+reads GitHub, changes remote policy, publishes a file or grants authority.
+See [offline manifest commands](cli.md#offline-manifest-setup-and-validation).
+Keep refusals in CONTRIBUTING.md as well: older clients do not read or enforce
+jars, and this branch's remote jar behavior is inspection only.
+
+Copyable welcome example (replace the preferences with your own):
+
 ```json
 {
   "schema_version": "0.1",
@@ -139,8 +179,17 @@ enforce it either: state refusals plainly in ordinary contribution documentation
 }
 ```
 
-For an opt-out use `{"schema_version":"0.1","status":"closed"}`. Both optional
-arrays may be omitted. Only the four illustrated fields are allowed. Each array
+Copyable closed example:
+
+```json
+{
+  "schema_version": "0.1",
+  "status": "closed",
+  "boundaries": ["Agent-generated contributions are not accepted; read CONTRIBUTING.md"]
+}
+```
+
+Both optional arrays may be omitted. Only the four illustrated fields are allowed. Each array
 has at most 16 distinct, nonblank strings of 1–500 Unicode code points without
 C0 or DEL controls. The entire file is at most 16,384 bytes of strict UTF-8 JSON;
 duplicate keys, nonfinite numbers and unsupported schemas fail closed.

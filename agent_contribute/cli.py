@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, outputs, ownership, policy,
+from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, onboarding, outputs, ownership, policy,
                prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
@@ -44,7 +44,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -188,6 +188,11 @@ def main(argv=None):
     sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
                               description='Pinned root invitation inspection only; grants no approval or authority.')
     sub.add_argument('repository', help='GitHub owner/repo to inspect directly, without parent tracker resolution')
+    sub = commands.add_parser('init', help='Create a local Tipjar manifest template; offline, never overwrites')
+    sub.add_argument('--status', required=True, choices=('welcome', 'closed'), help='Explicit invitation state')
+    sub.add_argument('--output', required=True, help='New manifest file; edit and review before adopting')
+    sub = commands.add_parser('jar-check', help='Validate a local Tipjar manifest offline; grants no authority')
+    sub.add_argument('file', help='Bounded regular UTF-8 manifest file to check without changing it')
     commands.add_parser('instructions', help='Print the installed workflow, CLI version and supported schemas')
     sub = commands.add_parser('schema', help="Print the JSON Schema of a command's JSON output")
     sub.add_argument('name', choices=outputs.SCHEMAS, metavar='COMMAND',
@@ -294,6 +299,14 @@ def main(argv=None):
             create_new(args.output, adapter, 'adapter')
             result = {'output': str(args.output), 'cli_version': __version__,
                       'sha256': hashlib.sha256(adapter.encode()).hexdigest()}
+            code = 0
+        elif args.command == 'init':
+            template = onboarding.template(args.status)
+            create_new(args.output, template, 'Tipjar manifest')
+            result = onboarding.init_report(args.output, template)
+            code = 0
+        elif args.command == 'jar-check':
+            result = onboarding.jar_check(args.file)
             code = 0
         elif args.command == 'lint':
             result = core.lint(core.read_json(args.contract))

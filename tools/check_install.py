@@ -34,9 +34,11 @@ RESOURCE_PATHS = (
     "schemas/output/1/error.schema.json",
     "schemas/output/1/evidence-init.schema.json",
     "schemas/output/1/feedback.schema.json",
+    "schemas/output/1/init.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
     "schemas/output/1/jar.schema.json",
+    "schemas/output/1/jar-check.schema.json",
     "schemas/output/1/lint.schema.json",
     "schemas/output/1/ownership.schema.json",
     "schemas/output/1/pr-body.schema.json",
@@ -138,6 +140,26 @@ def installed_check(source):
     assert failed_jar["state"] == "unknown" and failed_jar["complete"] is False
     assert failed_jar["manifest"] is None and failed_jar["commit"] is None
     assert not core.schema_errors(failed_jar, jar_schema)
+
+    # Offline maintainer onboarding works without GitHub authentication or tools.
+    for state in ('welcome', 'closed'):
+        manifest_path = Path.cwd() / ('onboarding-' + state + '.json')
+        created = json.loads(run([tipjar, 'init', '--status', state, '--output', manifest_path],
+                                 cwd=Path.cwd(), env=env))
+        assert created['state'] == state
+        assert created['sha256'] == hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        assert not core.schema_errors(created, json.loads(cli('schema', 'init')))
+        checked = json.loads(run([tipjar, 'jar-check', manifest_path], cwd=Path.cwd(), env=env))
+        assert checked['valid'] is True and checked['state'] == state
+        assert checked['sha256'] == created['sha256']
+        assert not core.schema_errors(checked, json.loads(cli('schema', 'jar-check')))
+        assert json.loads(cli('init', '--status', state, '--output', manifest_path,
+                              expected=1))['error']['code'] == 'file_error'
+    invalid_manifest = Path.cwd() / 'onboarding-invalid.json'
+    invalid_manifest.write_bytes(b'\xffPRIVATE')
+    invalid = cli('jar-check', invalid_manifest, expected=1)
+    assert json.loads(invalid)['error']['code'] == 'invalid_tipjar'
+    assert 'PRIVATE' not in invalid
 
     # The additive alias must use the same workflow and fail-closed gates.
     assert run([tipjar, "--version"], cwd=Path.cwd(), env=env).strip() == "0.3.0"

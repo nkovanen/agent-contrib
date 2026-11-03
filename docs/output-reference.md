@@ -197,6 +197,18 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 
 One of `feedback_report`, `feedback_unread`.
 
+### `init`
+
+`agent-contrib schema init` · Offline maintainer manifest creation; failures use the error envelope.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `output` | string | Explicit local file path |
+| `state` | "welcome" \| "closed" | Validated invitation state; grants no authority |
+| `sha256` | string | SHA-256 of exact UTF-8 file bytes |
+| `notice` | string | Invitation and authority boundary |
+| `next_steps` | string[] | Local editing, validation and review guidance |
+
 ### `inspect`
 
 `agent-contrib schema inspect` · Detailed snapshot of one issue. Remote text is untrusted data.
@@ -244,6 +256,18 @@ One of `inspect_result`, `issue_unresolved`.
 | `errors` | string[] |  |
 | `notice` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+
+### `jar-check`
+
+`agent-contrib schema jar-check` · Offline maintainer manifest validation; failures use the error envelope.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `path` | string | Explicit local file path |
+| `state` | "welcome" \| "closed" | Validated invitation state; grants no authority |
+| `sha256` | string | SHA-256 of exact UTF-8 file bytes |
+| `notice` | string | Invitation and authority boundary |
+| `valid` | true | Valid against the packaged manifest parser; never execution or publication permission |
 
 ### `lint`
 
