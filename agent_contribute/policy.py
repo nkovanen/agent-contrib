@@ -556,6 +556,30 @@ def _assessed(url, base_repository, base_path, refs, scanned):
     return (base_repository.casefold(), path) in scanned
 
 
+def _github_target(url, repository, refs, tree):
+    """For a github.com blob/tree URL into `repository`, the pinned blob id of its file, or '' when the URL cannot be
+    resolved to the pinned tree (another branch, a tag, an unknown ref, a missing path or a directory), so the
+    caller treats it as unfingerprinted (RP-28). None for other repositories, other URL kinds and other sites."""
+    target = url.split('#', 1)[0].split('?', 1)[0]
+    parts = urlsplit(target)
+    host = parts.netloc.casefold()
+    if host.startswith('www.'):
+        host = host[4:]
+    if host != 'github.com':
+        return None
+    segments = unquote(parts.path).strip('/').split('/')
+    if len(segments) < 3 or '/'.join(segments[:2]).casefold() != repository.casefold() or \
+            segments[2].casefold() not in ('blob', 'tree'):
+        return None
+    rest = '/'.join(segments[3:])
+    for ref in refs:
+        fold = re.fullmatch('[0-9a-f]{40}', ref) is not None  # commit SHAs compare case-insensitively, branches exactly
+        head = rest[:len(ref)].casefold() if fold else rest[:len(ref)]
+        if head == (ref.casefold() if fold else ref) and rest[len(ref):len(ref) + 1] == '/':
+            return _blob_id(tree.get(rest[len(ref) + 1:])) or ''
+    return ''
+
+
 def _relative_what(url, base_path):
     """(target, relative): an absolute URL as is, or a link path resolved inside the linking repository."""
     if urlsplit(url).scheme or url.startswith('//'):
@@ -603,9 +627,15 @@ def report(repository, commit, instructions, client, *, default_branch=None):
                     shown = target if not relative or source['repository'] == repository else f'{source["repository"]}:{target}'
                     tree = state.trees.get(source['repository'].casefold(), {})
                     local = relative and target in tree  # a linked file in the pinned tree: fingerprint it, no fetch
+                    blob = tree.get(target) if local else None
+                    if not relative:  # same-repository github.com blob/tree URLs resolve against the pinned tree
+                        resolved = _github_target(link['url'], source['repository'],
+                                                  refs.get(source['repository'].casefold(), []), tree)
+                        if resolved is not None:
+                            local, blob = True, resolved
                     state.note(shown, 'referenced, not assessed', origin, link['line'], link['link_text'],
                                key=(source['repository'].casefold(), target) if relative else link['url'],
-                               blob=tree.get(target) if local else None, file=local)
+                               blob=blob, file=local)
             except ValueError:  # e.g. 'https://[' or a netloc that NFKC-normalizes to a delimiter
                 state.note(link['url'], 'malformed reference, not assessed', origin, link['line'], link['link_text'])
     if state.skipped:

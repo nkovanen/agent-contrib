@@ -186,3 +186,54 @@ class OwnerStageTests(unittest.TestCase):
         rp = policy.report('acme/photos', SOURCE_COMMIT, [], client, default_branch='main')
         self.assertEqual(rp['owner_lookup']['status'], 'unavailable')
         self.assertTrue(rp['limits_hide_sources'])
+
+
+class AbsoluteLinkTests(unittest.TestCase):
+    """RP-28 residual: same-repository github.com links resolve against the pinned tree or are unknown."""
+    def links(self, url):
+        rp = policy.report('acme/photos', SOURCE_COMMIT, [],
+                           PolicyGitHub({'CONTRIBUTING.md': f'See [policy]({url}).', 'docs/rules.md': 'No AI.'}, {}),
+                           default_branch='main')
+        entry = next(u for u in rp['unassessed'] if u['reason'] == 'referenced, not assessed')
+        return entry, {i['limit'] for i in rp['limits_reached']}, rp
+
+    def test_resolvable_same_repository_urls_get_the_pinned_blob(self):
+        for url in ('https://github.com/acme/photos/blob/main/docs/rules.md',
+                    'HTTPS://GitHub.com/ACME/Photos/blob/main/docs/rules.md#section',
+                    'http://www.github.com/acme/photos/blob/main/docs/rules.md?plain=1',
+                    '//github.com/acme/photos/blob/main/docs/rules.md',
+                    f'https://github.com/acme/photos/blob/{SOURCE_COMMIT}/docs/rules.md',
+                    'https://github.com/acme/photos/tree/main/docs/rules.md'):
+            with self.subTest(url):
+                entry, limits, _ = self.links(url)
+                self.assertRegex(entry['blob_sha'] or '', '^[0-9a-f]{40}$')
+                self.assertNotIn('unfingerprinted files', limits)
+
+    def test_unresolvable_same_repository_urls_are_unknown(self):
+        for url in ('https://github.com/acme/photos/blob/dev/docs/rules.md',
+                    'https://github.com/acme/photos/blob/v1.0/docs/rules.md',
+                    'https://github.com/acme/photos/blob/main/docs/nope.md',
+                    'https://github.com/acme/photos/tree/main/docs'):
+            with self.subTest(url):
+                entry, limits, rp = self.links(url)
+                self.assertIsNone(entry['blob_sha'])
+                self.assertIn('unfingerprinted files', limits)
+                self.assertTrue(rp['limits_hide_sources'])
+
+    def test_other_repositories_and_sites_are_plain_references(self):
+        for url in ('https://github.com/other/repo/blob/main/CONTRIBUTING.md', 'https://example.org/policy'):
+            with self.subTest(url):
+                entry, limits, _ = self.links(url)
+                self.assertIsNone(entry['blob_sha'])
+                self.assertNotIn('unfingerprinted files', limits)
+
+    def test_editing_a_file_linked_by_absolute_url_is_drift(self):
+        text = 'See [policy rules](https://github.com/acme/photos/blob/main/docs/rules.md).'
+        client = VersionedGitHub(files={'SECURITY.md': text, 'docs/rules.md': 'AI ok.'})
+        task, recorded = reviewed(client)
+        path = write(task)
+        self.addCleanup(os.unlink, path)
+        client.advance({'SECURITY.md': text, 'docs/rules.md': 'No AI.'})
+        code, result = run(client, 'drift', path, '--policy-sha256', recorded)
+        self.assertEqual(code, 1)
+        self.assertIs(result['repository_policy_drift']['policy_drifted'], True)
