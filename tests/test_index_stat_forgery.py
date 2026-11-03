@@ -112,5 +112,25 @@ class IndexStatForgeryTests(unittest.TestCase):
                     self.assertFalse(pathlib.Path(path).resolve().is_relative_to(pathlib.Path(root, '.git').resolve()), path)
                 git('worktree', 'remove', '--force', str(linked))
 
+    def test_unwritable_temp_root_falls_back_or_fails_with_a_structured_error(self):
+        # G-20: an unwritable TMPDIR is skipped; if no directory can be created, a ProtocolError names the cause.
+        failure = ('Could not create a temporary directory outside the checkout; '
+                   'set TMPDIR to a writable directory outside it')
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as parent:
+            task, client, evidence, git = evidence_checkout(root)
+            locked = pathlib.Path(parent, 'locked')
+            locked.mkdir(mode=0o500)
+            try:
+                with patch.object(tempfile, 'tempdir', str(locked)):
+                    self.assertEqual(core.worktree_changes(root, evidence['git_head']), set())
+            finally:
+                locked.chmod(0o700)
+            with patch.object(core.tempfile, 'TemporaryDirectory', side_effect=PermissionError('denied')):
+                self.assertIn(failure, core.verify(task, evidence, root, client)['evidence_errors'])
+                self.assertEqual(workspace.scope_check(task, root)['errors'], [failure])
+                with self.assertRaises(core.ProtocolError) as caught:
+                    workspace.evidence_skeleton(task, root, evidence['base_commit'])
+            self.assertEqual((caught.exception.code, str(caught.exception)), ('temp_dir_error', failure))
+
 if __name__ == '__main__':
     unittest.main()

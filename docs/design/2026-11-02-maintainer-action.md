@@ -3,7 +3,7 @@
 - Date: 2026-11-02
 - Status: proposal, revision 4. Hostile review rounds 1 to 3 (MA-01 to MA-11)
   are resolved in [Review resolution](#review-resolution). Slice 1 is implemented
-  on `rsi/maintainer-action`; later slices are not.
+  in the v0.3.0 candidate; later slices are not.
 - Base: `76632f8` (unreleased v0.3.0 candidate; task/evidence schemas 0.1 and
   0.2, host-context 0.1, output schemas 1).
 - Input: issue #11 (product map C4).

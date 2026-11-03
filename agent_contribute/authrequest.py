@@ -67,4 +67,5 @@ def build(task, client=None):
             'unresolved_fields': unresolved, 'contract_sha256': verified['contract_sha256'],
             'exact_head_pr_history': 'not checked before issuance; verify checks it after',
             'mandate_fields': fields, 'human_only_fields': list(HUMAN_ONLY_FIELDS),
+            'requested_actions': list(actions),
             'provenance': authority['provenance']}

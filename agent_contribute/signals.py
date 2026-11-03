@@ -5,7 +5,7 @@ import functools
 import re
 import statistics
 
-from . import core
+from . import core, remote
 
 SCAN_LIMIT = 65536
 MAX_HINTS = 20
@@ -15,7 +15,7 @@ MARKERS = {'checklist': re.compile(r'(?m)^[ \t]{0,8}[-*] \[[ xX]\]'),
            'expected/actual sections': re.compile(r'(?im)^[ \t#>*_]{0,8}(expected|actual)\b'),
            'reproduction steps': re.compile(r'(?i)\b(steps to reproduce|to reproduce|reproduction)\b'),
            'code block': re.compile(r'```')}
-MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
+MAINTAINER_ASSOCIATIONS = remote.MAINTAINER_ASSOCIATIONS
 # One unbounded class: each match is a complete run, never cut short. module_hint validates the segments.
 # Identifier characters outside \w (combining marks, ℘, ·) are not matched; _adjoins refuses such names whole.
 MODULE_TOKEN = re.compile(r'[\w.:]+')
@@ -152,20 +152,13 @@ def acceptance_clarity(text):
             'explanation': 'Structure found: ' + ', '.join(found) if found else 'No checklist, expected/actual, reproduction steps or code block'}
 
 
-def _days(value, now):
-    try:
-        return max(0, (now - dt.datetime.fromisoformat(value.replace('Z', '+00:00'))).days)
-    except (AttributeError, TypeError, ValueError, OverflowError):
-        return None
-
-
 def _count(value):
     return value if type(value) is int and value >= 0 else None
 
 
 def activity(issue, now):
     reactions = issue.get('reactions')
-    value = {'age_days': _days(issue.get('created_at'), now), 'updated_days': _days(issue.get('updated_at'), now),
+    value = {'age_days': remote.days(issue.get('created_at'), now), 'updated_days': remote.days(issue.get('updated_at'), now),
              'comments': _count(issue.get('comments')),
              'reactions': _count(reactions.get('total_count')) if isinstance(reactions, dict) else None}
     return {'value': value, 'explanation': 'From the issue list payload; missing or malformed fields are null'}
@@ -181,6 +174,8 @@ def maintainer_signal(issue):
 
 
 def _timestamp(value):
+    # Deliberately lax, unlike authorization.timestamp: a report-only sample tolerates any timezone-aware
+    # fromisoformat form (wider on Python 3.11+), and a value it rejects makes the report incomplete, never a gate.
     try:
         parsed = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
     except (AttributeError, TypeError, ValueError):
@@ -221,6 +216,7 @@ def responsiveness(repository, client):
             merged_at = None if pr['merged_at'] is None else _timestamp(pr['merged_at'])
             if pr['merged_at'] is not None and (merged_at is None or not created <= merged_at <= closed):
                 raise core.ProtocolError('api_shape', 'Closed PR merge timestamp is malformed or outside its lifetime')
+            # Only user.type marks a bot here; remote.user also treats a '[bot]' login suffix as a bot (A2-06).
             if kind == 'Bot' or association in MAINTAINER_ASSOCIATIONS:
                 continue
             days.append((closed - created).total_seconds() / 86400)
@@ -243,11 +239,103 @@ def responsiveness(repository, client):
     return report
 
 
+# Report-only ranking demotions (E-08, E-09). Label phrases match whole words of the lower-cased label name, with
+# punctuation and separators read as spaces, so 'Status: On-Hold' matches 'on hold' but 'blockedness' matches nothing.
+# A phrase right after a negation ('not blocked', 'non breaking') does not match. The major-version group needs an
+# explicit bucket: the label, or its last ':' or '/' part, is exactly a bucket name (R8-01: 'v5-compat' is not one).
+DEMOTING_LABELS = (
+    ('on hold or deferred', ('icebox', 'on hold', 'blocked', 'deferred', 'postponed', 'frozen')),
+    ('needs a decision or design discussion', ('needs decision', 'needs design', 'needs discussion', 'discussion',
+                                               'question', 'rfc', 'proposal')),
+    ('not planned or not this project', ('not planned', 'out of scope', 'upstream', 'third party', 'wont do')),
+    ('major-version or breaking-change bucket', ()))
+NEGATIONS = ('non', 'not', 'no', 'un')
+MAJOR_BUCKET = re.compile(r'breaking(?: changes?)?|v[0-9]{1,3}(?: x)?')
+META_TITLE = re.compile(r'(?i)^\W{0,3}(?:meta|wip|tracking|tracker|roadmap|rfc|umbrella|epic)\s{0,3}[]:)-]|'
+                        r'\b(?:meta|tracking|umbrella) issue\b|\broadmap\b|\bfeatures? list\b')
+DEMOTION = 2
+
+
+def _words(name):
+    return ' ' + ' '.join(re.sub(r'[^a-z0-9]+', ' ', name.casefold().replace("'", '')).split()) + ' '
+
+
+def demotions(issue):
+    reasons, meta = [], bool(META_TITLE.search(issue['title'][:300]))
+    labels = [label['name'] for label in issue.get('labels') or [] if isinstance(label, dict) and isinstance(label.get('name'), str)]
+    for group, phrases in DEMOTING_LABELS:
+        for name in labels:
+            words = _words(name)
+            bucket = _words(re.split(r'[:/]', name)[-1])
+            if any(' ' + phrase + ' ' in words and not any(f' {negation} {phrase} ' in words for negation in NEGATIONS)
+                   for phrase in phrases) or (not phrases and MAJOR_BUCKET.fullmatch(bucket.strip())):
+                reasons.append(f'label "{core.safe_text(name, 100)}": {group}')
+                break
+    if meta:
+        reasons.append('title: meta, tracking, roadmap or work-in-progress item; maintainer authorship not counted')
+    return {'value': 'demoted' if reasons else 'none', 'reasons': reasons}, meta, [core.safe_text(n, 100) for n in labels[:100]]
+
+
 def issue_signals(issue, paths, now):
     text = issue['title'] + '\n' + issue['body']
+    demotion, meta, labels = demotions(issue)
     signals = {'code_location': location_hints(text, paths), 'acceptance_clarity': acceptance_clarity(issue['body']),
-               'activity': activity(issue, now), 'maintainer': maintainer_signal(issue)}
-    signals['score'] = ((signals['code_location']['value'] == 'found') +
-                        {'high': 2, 'medium': 1, 'low': 0}[signals['acceptance_clarity']['value']] +
-                        (signals['maintainer']['value'] == 'maintainer'))
+               'activity': activity(issue, now), 'maintainer': maintainer_signal(issue), 'labels': labels,
+               'demotion': demotion}
+    score = ((signals['code_location']['value'] == 'found') +
+             {'high': 2, 'medium': 1, 'low': 0}[signals['acceptance_clarity']['value']] +
+             (signals['maintainer']['value'] == 'maintainer' and not meta))
+    signals['score'] = max(0, score - DEMOTION * len(demotion['reasons']))
     return signals
+
+
+# discover --signals --check-top N: the existing ownership readers, bounded, for the top N candidates only.
+CHECK_TOP_MAX = 5
+CHECK_PAGES = 1
+CHECK_PR_DETAILS = 4
+CHECK_READ_CAP = 30
+CHECK_TOP_NOTICE = ('Report only. Only the top N candidates were read (first timeline and comment page, at most '
+                    f'{CHECK_PR_DETAILS} cross-referenced PR details each, one GitHub GET per read without retries, '
+                    f'{CHECK_READ_CAP} in all); a demoted one moves below every other '
+                    'candidate that is not excluded or overlapping. An '
+                    'incomplete or clean check is unknown, never proof that an issue is free or unfixed.')
+
+
+class _ReadCap:
+    def __init__(self, client, cap):
+        self.client, self.cap, self.reads = client, cap, 0
+
+    def request(self, endpoint):
+        if self.reads >= self.cap:
+            raise core.ProtocolError('read_cap', f'Total --check-top read cap of {self.cap} reached')
+        self.reads += 1
+        # One transport attempt per counted read: GitHub.request would retry transient errors up to three times.
+        return getattr(self.client, 'request_once', self.client.request)(endpoint)
+
+
+def assignees(issue):
+    return [core.safe_text(user['login'], 100) for user in (issue.get('assignees') or [])[:10]
+            if isinstance(user, dict) and isinstance(user.get('login'), str)]
+
+
+def check_top(result, client, n, now):
+    """Check only the top n; demote on two precise detectors only: a merged same-repository PR with an exact reference,
+    or a current assignee. Claim comments stay report-only (inspect --ownership); untrusted prose never demotes."""
+    from .ownership import ownership_signals
+    source, capped, head = result['repository'], _ReadCap(client, CHECK_READ_CAP), result['issues'][:n]
+    for issue in head:
+        before = capped.reads
+        report = ownership_signals(source, issue['number'], capped, now, max_pages=CHECK_PAGES,
+                                   max_pr_details=CHECK_PR_DETAILS)
+        fixed = [pr['url'] for pr in report['resolution_signals']['possibly_already_fixed']
+                 if pr['repository'].casefold() == source.casefold()]
+        reasons = (['possibly already fixed by a merged same-repository PR: ' + ', '.join(fixed[:3])] if fixed else []) + (
+            ['assigned to ' + ', '.join(issue['signals']['assignees'][:3])] if issue['signals']['assignees'] else [])
+        issue['top_check'] = {'complete': report['complete'], 'errors': list(dict.fromkeys(report['errors'])),
+                              'reads': capped.reads - before, 'demotions': reasons}
+    # Known-bad below unknown, through the one discover sort key shared with --repo-dir local work: a demoted issue
+    # moves below every other candidate but stays above excluded or overlapping issues; nothing below the top n is read.
+    result['issues'].sort(key=lambda item: core.issue_order(item, True))
+    result['ordering'] = core.KNOWN_BAD_ORDERING
+    return {'requested': n, 'checked': len(head), 'reads': capped.reads, 'read_cap': CHECK_READ_CAP,
+            'complete': all(item['top_check']['complete'] for item in head), 'notice': CHECK_TOP_NOTICE}

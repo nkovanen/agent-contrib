@@ -496,6 +496,102 @@
           }
         }
       }
+    },
+    "draft_update": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "contract_sha256",
+        "mandate_sha256",
+        "credential_actor_id",
+        "repository_id",
+        "pr_number",
+        "pr_id",
+        "from_head",
+        "event"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 24,
+          "maxLength": 200
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mandate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "credential_actor_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "repository_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pr_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pr_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "from_head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reference",
+            "text_sha256",
+            "binding_sha256"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100000
+            },
+            "text_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "binding_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
     }
   },
   "title": "Agent Contribution host context 0.2",

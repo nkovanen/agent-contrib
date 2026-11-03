@@ -156,12 +156,14 @@ class PRBodyTests(unittest.TestCase):
     def test_schema_02_real_path_does_not_claim_the_work_is_unauthorized(self):
         task, client = candidate_task()
         client.compare_status = 'ahead'
+        client.commit = 'b' * 40  # a different tip: equal commits can only be identical (FR1-04)
         body, verification = prbody.pr_body(task, None, None, client)
         self.assertIn('Current implement action is not authorized', verification['stage_blockers']['implementation'])
         for text in ['mandate', 'not authorized', '`implementation_ready`', '`draft_create_ready`', '`completion_ready`']:
             self.assertNotIn(text, body)
         self.assertIn(prbody.AUTHORITY_OMITTED, body)
-        self.assertIn('- source: Reviewed source commit is not in current source default-branch history\n', body)
+        self.assertIn('- source: Reviewed source commit is not in current source default-branch history: base '
+                      f'{task["source"]["commit"]} is ahead of acme/photos default branch main at {"b" * 40}\n', body)
         self.assertIn('- evidence: No technical execution evidence provided\n', body)
 
     def test_schema_02_keeps_source_identity_blockers_reported_by_authorization(self):

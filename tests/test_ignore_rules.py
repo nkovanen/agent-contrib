@@ -45,6 +45,27 @@ class IgnoreRuleTests(unittest.TestCase):
         self.assertEqual(self.git('status', '--porcelain'), '', 'precondition: status hides both')
         self.assert_seen('.github/.gitignore')
 
+    def test_an_ignored_untracked_gitattributes_cannot_reshape_the_content_check(self):
+        # FR2-01: '.*' + '!.gitignore' ignores a new src/.gitattributes, which would make CRLF bytes look clean.
+        pathlib.Path(self.root, '.github', 'evil.yml').unlink()
+        pathlib.Path(self.root, '.github').rmdir()
+        pathlib.Path(self.root, '.gitignore').write_text('.*\n!.gitignore\n')
+        pathlib.Path(self.root, 'src', 'fixture.txt').write_bytes(b'line1\nline2\n')
+        self.git('add', '.gitignore', 'src/fixture.txt')
+        self.git('commit', '-q', '-m', 'ignore dotfiles')
+        refresh_checkout_evidence(self.evidence, self.git)
+        self.task['scope']['allowed_paths'].append('.gitignore')
+        digest = core.canonical_hash(self.task)
+        for record in (self.evidence, self.evidence['independent_review'], self.evidence['human_signoff']):
+            record['contract_sha256'] = digest
+        self.assertTrue(core.verify(self.task, self.evidence, self.root, self.client)['evidence_valid'])
+        pathlib.Path(self.root, 'src', '.gitattributes').write_text('fixture.txt eol=crlf\n')
+        pathlib.Path(self.root, 'src', 'fixture.txt').write_bytes(b'line1\r\nline2\r\n')
+        self.git('add', 'src/fixture.txt')  # refreshes stat; the blob is unchanged after clean conversion
+        self.assertEqual(self.git('status', '--porcelain', '--untracked-files=all'), '', 'precondition: hidden')
+        self.assertIn('src/.gitattributes', core.untracked_paths(self.root))
+        self.assert_seen('src/.gitattributes')
+
     def test_committed_gitignore_still_applies(self):
         pathlib.Path(self.root, '.github', 'evil.yml').unlink()
         pathlib.Path(self.root, '.github').rmdir()

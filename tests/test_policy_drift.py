@@ -161,7 +161,10 @@ class WorkflowDriftTests(unittest.TestCase):
         import importlib.resources
         text = ' '.join(importlib.resources.files('agent_contribute').joinpath('instructions.md').read_text('utf-8').split())
         quick = text[text.index('## Quick path'):text.index('## Repository policy review')]
-        self.assertIn('Before any authorization or publication, `agent-contrib drift task.json --policy-sha256 HASH` '
-                      '(the reviewed `inventory_sha256`) must report no drift.', quick)
+        self.assertIn('Run `agent-contrib drift task.json` before asking for any authorization, with '
+                      '`--policy-sha256 HASH`.', quick)
+        self.assertIn('Rerun `drift` first', quick)
+        self.assertIn('`agent-contrib drift task.json --policy-sha256 HASH`, with the `inventory_sha256` recorded in '
+                      '`ai-policy-review`, re-reads the inventory', text)
         self.assertIn('`policy_drifted` must be `false`; `true` means re-review, and `null` (an incomplete read) is '
                       'unresolved.', text)

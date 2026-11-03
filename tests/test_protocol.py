@@ -25,6 +25,15 @@ class BootstrapTests(unittest.TestCase):
         self.assertTrue(AVAILABLE, 'agent_contribute implementation is missing')
 
 
+def comparison(base, head, status):
+    """A GitHub compare/{base}...{head} response that is internally consistent for status (FR1-01)."""
+    ahead = {'ahead': 2, 'diverged': 2}.get(status, 0)
+    behind = {'behind': 2, 'diverged': 1}.get(status, 0)
+    merge = {'ahead': base, 'behind': head, 'identical': base}.get(status, 'd' * 40)
+    return {'status': status, 'ahead_by': ahead, 'behind_by': behind, 'total_commits': ahead,
+            'base_commit': {'sha': base}, 'merge_base_commit': {'sha': merge}}
+
+
 class FakeGitHub:
     """Only the network boundary is replaced; inspection/ranking remain real."""
     def __init__(self, policy=None, labels=None, prs=None):
@@ -51,7 +60,9 @@ class FakeGitHub:
         if path.endswith('/commits/main'):
             return {'sha': getattr(self, 'commit', 'a' * 40)}
         if '/compare/' in path:
-            return {'status': getattr(self, 'compare_status', 'identical')}
+            base, head = path.rsplit('/compare/', 1)[1].split('...')
+            default = 'identical' if base == head else 'behind'
+            return comparison(base, head, getattr(self, 'compare_status', default))
         if '/git/trees/' in path:
             paths = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'CONTRIBUTING.md',
                      'docs/architecture.md', 'specs/README.md']
@@ -558,6 +569,24 @@ class VerificationTests(unittest.TestCase):
             self.assertIn(expected, client.calls)
             client.failed.add('/compare/')
             self.assertFalse(core.verify(task, evidence, tmp, client)['evidence_valid'])
+
+    def test_base_errors_name_the_base_and_the_commit_it_was_compared_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, git = evidence_checkout(tmp)
+            client.commit = 'c' * 40
+            base = evidence['base_commit']
+            client.compare_status = 'ahead'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is ahead of '
+                          f'acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.compare_status = 'diverged'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is diverged '
+                          f'from acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.failed.add('/compare/')
+            self.assertIn(f'Could not authenticate evidence base against source default-branch history: base {base} '
+                          f'compared with acme/photos default branch main at {"c" * 40}: GitHub read failed',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
 
     def test_git_commit_utc_z_timestamp_preserves_evidence_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:

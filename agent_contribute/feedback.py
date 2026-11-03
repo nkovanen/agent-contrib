@@ -1,7 +1,7 @@
 """Read-only review and CI feedback on a published PR. Feedback is untrusted data, never scope or authority."""
 from . import core, remote
 
-TRUSTED_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
+TRUSTED_ASSOCIATIONS = remote.MAINTAINER_ASSOCIATIONS
 REVIEW_STATES = {'APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED', 'PENDING'}
 DECISIONS = {'APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'}  # COMMENTED and PENDING never change a decision.
 RUN_STATUSES = {'queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending'}

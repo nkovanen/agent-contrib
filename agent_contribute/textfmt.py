@@ -95,6 +95,28 @@ def _discover(result):
         out.append(f'Overlapping issues: {sum(bool(issue.get("duplicates")) for issue in issues)} of {len(issues)}; '
                    f'excluded issues: {sum(bool(issue.get("exclusions")) for issue in issues)} of {len(issues)} '
                    '(all issues, including omitted)')
+    check = result.get('top_check')
+    if isinstance(check, dict):
+        # Discovery completeness and the opted-in check are separate; an incomplete check alone exits 1.
+        out.append(f'Top check: complete {_flag(check.get("complete"))}; checked {line(check.get("checked"), 10)} of '
+                   f'{line(check.get("requested"), 10)}; {line(check.get("reads"), 10)} GitHub reads '
+                   f'(cap {line(check.get("read_cap"), 10)})')
+        checked = [(issue.get('reference', ''), issue['top_check']) for issue in issues if isinstance(issue.get('top_check'), dict)]
+        out += _list('Top check demotions', (f'{line(ref, 200)}: {reason}' for ref, item in checked
+                                             for reason in item.get('demotions', [])))
+        out += _list('Top check errors', (f'{line(ref, 200)}: {error}' for ref, item in checked
+                                          for error in item.get('errors', [])))
+    report = (result.get('repository_signals') or {}).get('responsiveness')
+    if isinstance(report, dict):
+        out.append(f'Responsiveness: {line(report.get("value", "unknown"), 20)} (complete {_flag(report.get("complete"))}): '
+                   f'{line(report.get("explanation", ""))}')
+    local = result.get('local_work')
+    if isinstance(local, dict):
+        numbers = [item.get('number') for item in local.get('issues', []) if isinstance(item, dict)]
+        out.append(f'Local work: {len(numbers)} issue(s) referenced by {line(local.get("commits_scanned"), 10)} scanned '
+                   f'local commit(s) (complete {_flag(local.get("complete"))})' +
+                   (': ' + line(', '.join(f'#{number}' for number in numbers[:50])) if numbers else ''))
+        out += _list('Local work errors', local.get('errors', []))
     return out + _list('Errors', result.get('errors', []))
 
 
@@ -111,11 +133,28 @@ def _scalars(result):
     return [f'{key}: {line(value)}' for key, value in result.items() if isinstance(value, (str, int, bool)) or value is None]
 
 
+def _authorization_request(result):
+    out = ['Ready for issuance: ' + _flag(result.get('ready_for_issuance')),
+           'Issued: no (unsigned request; not a mandate; grants nothing)',
+           'Contract SHA-256: ' + line(result.get('contract_sha256', ''), 64)]
+    out.append('Requested actions (the host chooses the mandate actions): ' +
+               (', '.join(line(action, 50) for action in result.get('requested_actions', [])) or 'none'))
+    # Derived fields only fresh reads resolve; the human-only fields always await the host, even when ready.
+    return (out + _list('Preflight errors', result.get('preflight_errors', [])) +
+            _list('Unresolved derived fields', result.get('unresolved_fields', [])) +
+            _list('Human-only fields, filled only by the host', result.get('human_only_fields', [])))
+
+
 def _scope_check(result):
     out = _scalars(result) + [f'Changed paths: {len(result.get("changed_paths", []))}']
     out += _list('Violations', (f'{line(item.get("path", ""), 200)} -- {line(item.get("rule", ""), 200)}'
                                 for item in result.get('violations', [])))
     return out + _list('Warnings', result.get('warnings', [])) + _list('Errors', result.get('errors', []))
+
+
+def _lint(result):
+    return (_scalars(result) + _list('Schema errors', result.get('schema_errors', [])) +
+            _list('Review errors', result.get('review_errors', [])))
 
 
 def _drift(result):
@@ -234,7 +273,7 @@ def render(command, result, stage=None):
                 f"{', '.join(result['supported_host_context_versions'])}; JSON output is canonical)\n\n"
                 + result['workflow_markdown'])
     body = {'verify': _verify, 'discover': _discover, 'inspect': _inspect, 'scope-check': _scope_check,
-            'drift': _drift}.get(command)
+            'drift': _drift, 'lint': _lint, 'authorization-request': _authorization_request}.get(command)
     if body is None:
         out = _scalars(result) + _policy(result)
     else:

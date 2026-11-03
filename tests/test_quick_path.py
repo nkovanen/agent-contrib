@@ -33,6 +33,20 @@ class QuickPathTests(unittest.TestCase):
         self.assertLess(section.index("inspect 'owner/repo#N'"), section.index("prepare 'owner/repo#N'"))
         self.assertLess(section.index("prepare 'owner/repo#N'"), section.index('authorization-request'))
 
+    def test_repository_policy_step_names_its_command_and_sections(self):
+        # Dogfood 3 F43/F44: the step must say where it is and which command feeds it. Since policy-v2 the
+        # repository policy report is default-on, so the step must not tell agents to pass the ignored --ai-policy.
+        section = ' '.join(quick_path().split())
+        self.assertIn("agent-contrib inspect 'owner/repo#N' --ownership", section)
+        self.assertIn('the policy report is always added', section)
+        self.assertNotIn('--ai-policy', section)
+        text = resource('instructions.md')
+        for heading in ('Start with discovery, then choose a contract version', 'Repository requirements'):
+            with self.subTest(heading=heading):
+                self.assertIn('"' + heading.split(',')[0] + '"', section)
+                self.assertIn('\n## ' + heading, text)
+        self.assertIn('`ai-policy-review`', section)
+
     def test_quick_path_states_every_stop_point_and_defers_to_the_detail(self):
         section = ' '.join(quick_path().split())
         self.assertIn('**Stop and report', section)
@@ -78,6 +92,22 @@ class QuickPathGateTests(unittest.TestCase):
         self.assertIn('`completion_ready: true`', final)
         self.assertIn('pending acceptance', final)
         self.assertIn('Never mark the PR ready, merge or release', final)
+
+
+class DriftAndObservationTests(unittest.TestCase):
+    """A2-10: the workflow names drift where a stale contract matters, and the observation flags as report-only."""
+    def test_quick_path_runs_drift_before_authorization_and_publication(self):
+        self.assertIn('Run `agent-contrib drift task.json` before asking for any authorization', steps()[5])
+        self.assertIn('Rerun `drift` first', steps()[7])
+        self.assertIn('`--observe-ci`/`--observe-signatures` are optional reports', steps()[7])
+
+    def test_detail_explains_drift_and_report_only_observations(self):
+        text = ' '.join(resource('instructions.md').split())
+        for phrase in ('`drifted: true` means re-review and re-prepare the contract',
+                       'exit 1 with `complete: false` means the change is unknown, which is not a pass',
+                       'They never change gates or the exit code'):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
 
 
 class DeduplicationTests(unittest.TestCase):

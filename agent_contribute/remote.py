@@ -1,9 +1,20 @@
 """Strict shape checks for remote fields the report commands consume. Wrong types raise; nothing becomes empty."""
+import datetime as dt
 
 from .core import MAX_PAGES, SHA, ProtocolError, parse_repository, require
 
 ASSOCIATIONS = {'COLLABORATOR', 'CONTRIBUTOR', 'FIRST_TIMER', 'FIRST_TIME_CONTRIBUTOR', 'MANNEQUIN', 'MEMBER',
                 'NONE', 'OWNER'}
+# Author associations treated as maintainers by report-only signals and feedback.
+MAINTAINER_ASSOCIATIONS = {'OWNER', 'MEMBER', 'COLLABORATOR'}
+
+
+def days(value, now):
+    """Whole days from an ISO timestamp to now, at least 0; None when missing or malformed (report-only ages)."""
+    try:
+        return max(0, (now - dt.datetime.fromisoformat(value.replace('Z', '+00:00'))).days)
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        return None
 
 
 def bad(what):
@@ -68,7 +79,8 @@ def counted_pages(client, endpoint, key, parse, *, page, count, noun, oversize, 
     records, errors, seen, total = [], [], set(), None
     for number in range(1, MAX_PAGES + 1):
         try:
-            data = require(client.request(f'{endpoint}?per_page=100&page={number}'), dict, page)
+            separator = '&' if '?' in endpoint else '?'  # an endpoint may carry its own query (filter=all)
+            data = require(client.request(f'{endpoint}{separator}per_page=100&page={number}'), dict, page)
             if check_page is not None:
                 check_page(data, errors)
             value = data.get('total_count')

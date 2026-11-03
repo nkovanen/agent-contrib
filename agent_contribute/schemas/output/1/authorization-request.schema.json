@@ -43,6 +43,7 @@
       "maxLength": 2147483647
     },
     "unresolved_fields": {
+      "description": "Derived fields that fresh trusted reads could not resolve; never the human-only fields",
       "type": "array",
       "items": {
         "type": "string",
@@ -226,12 +227,25 @@
       "description": "Binding fields; null fields are filled only by the human/host"
     },
     "human_only_fields": {
+      "description": "mandate_fields paths left null for the human/host to fill, even in a ready request",
       "type": "array",
       "items": {
         "type": "string",
         "maxLength": 2147483647
       },
       "maxItems": 1000
+    },
+    "requested_actions": {
+      "description": "The contract's requested actions; the human/host chooses mandate_fields.actions",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "implement",
+          "create_draft"
+        ]
+      },
+      "maxItems": 2
     },
     "provenance": {
       "$ref": "#/$defs/authorization_provenance"
@@ -254,6 +268,7 @@
     "exact_head_pr_history",
     "mandate_fields",
     "human_only_fields",
+    "requested_actions",
     "provenance"
   ],
   "additionalProperties": false,

@@ -309,6 +309,19 @@ class ScopeCheckTests(unittest.TestCase):
             self.assertEqual(result['errors'], ['Base commit is missing or not an ancestor of HEAD'])
             self.assertTrue(workspace.scope_check(task, tmp, evidence['base_commit'])['within_scope'])
 
+    def test_untracked_nested_repository_is_a_future_gitlink(self):
+        # FR2-03: git add src/vendor would create a gitlink, so scope-check refuses it like a staged one.
+        with tempfile.TemporaryDirectory() as tmp:
+            task, _, _, _ = self.checkout(tmp)
+            nested = pathlib.Path(tmp, 'src', 'vendor')
+            subprocess.run(['git', 'init', '-q', str(nested)], check=True)
+            subprocess.run(['git', '-C', str(nested), '-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q',
+                            '--allow-empty', '-m', 'nested'], check=True)
+            result = workspace.scope_check(task, tmp)
+            self.assertFalse(result['within_scope'])
+            self.assertEqual(result['errors'],
+                             ['Submodule/gitlink evidence is unsupported; no submodule commands were run'])
+
     def test_invalid_contract_reads_no_checkout(self):
         with patch.object(core, 'git_read') as git_read:
             result = workspace.scope_check({'schema_version': '0.1'}, '.')
