@@ -174,7 +174,7 @@ def _ownership(report):
                                                                      'rejected_approaches')]
     if report.get('complete') is not True:
         out.append('Ownership report incomplete; absence unknown')
-    elif not sections and not any(lists):  # absence only when every list in the report is empty (review TO-01)
+    elif not any(lists):  # absence only when every list in the report is empty (review TO-01)
         out.append('No linked PRs, prior fixes, claims or assignments found')
     return out + sections + _list('Ownership errors', report.get('errors', []))
 
