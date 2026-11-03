@@ -86,3 +86,12 @@ source-linked requirements ledger and evidence at the required stages. This
 ledger is untrusted, self-attested data; it cannot override readiness gates,
 issue authority, waive skips or prove human consent. Linked repository
 instructions remain subject to the same untrusted-input boundary.
+
+
+Jar report dictionaries supplied by native library callers are data, not
+attestations of a source read. Pending preparation validates their full shape,
+state/digest consistency and source pin, and shapes an unauthorized draft; it
+cannot authenticate a well-formed fabricated inspection. Public policy inventory
+and live jar enforcement establish their own pinned reads through the supplied
+GitHub client. Fresh live verification remains required for every action. This
+boundary does not authenticate a caller-replaced client or sandbox native code.

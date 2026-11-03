@@ -6,7 +6,7 @@ import pathlib
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import core, outputs, policy
+from agent_contribute import core, outputs, policy, tipjar
 from tests.test_tipjar_policy import JarGitHub
 
 
@@ -35,7 +35,8 @@ class TipjarCompatibilityTests(unittest.TestCase):
         with patch.object(policy, 'MAX_REPORT_BYTES', len(json.dumps(baseline, ensure_ascii=True).encode()) + 100):
             result = policy.report('acme/photos', after['source']['commit'], after['instructions'], client,
                                    tipjar_report=after['tipjar'], hashes=hashes)
-        self.assertEqual(result['tipjar'], after['tipjar'])
+        self.assertTrue(tipjar.same_declaration(result['tipjar'], after['tipjar']))
+        self.assertEqual(result['tipjar']['commit'], after['tipjar']['commit'])
         self.assertEqual(hashes[2], old_hash, 'jar output must not change historical prose-only hash computation')
 
     def test_welcomed_output_matches_published_task3_schema(self):

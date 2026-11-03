@@ -736,10 +736,8 @@ def discover_with_snapshot(repository, client=None, *, signals=False, assignees=
 
 def prepare(inspected, schema_version='0.1', client=None):
     from .tipjar import preparation_errors
-    jar_errors = preparation_errors(inspected.get('tipjar'))
-    if not jar_errors and any(inspected['tipjar'].get(key) != inspected['source'].get(key)
-                              for key in ('repository', 'commit', 'default_branch')):
-        jar_errors.append('Tipjar source identity does not match inspection; refresh inspection')
+    # This only shapes a pending draft; fresh verify establishes source authority.
+    jar_errors = preparation_errors(inspected.get('tipjar'), source=inspected.get('source', {}))
     if jar_errors:
         raise ProtocolError('tipjar_blocked', '; '.join(jar_errors))
     if schema_version == '0.2':

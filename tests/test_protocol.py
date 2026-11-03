@@ -69,7 +69,7 @@ class FakeGitHub:
             return {'full_name': 'human/photos', 'default_branch': 'main', 'fork': True,
                     'has_issues': False, 'parent': {'full_name': 'acme/photos'}}
         if path.endswith('/commits/main'):
-            return {'sha': getattr(self, 'commit', 'a' * 40)}
+            return {'sha': getattr(self, 'commit', 'a' * 40), 'commit': {'tree': {'sha': 'c' * 40}}}
         if '/compare/' in path:
             base, head = path.rsplit('/compare/', 1)[1].split('...')
             default = 'identical' if base == head else 'behind'

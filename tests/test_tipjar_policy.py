@@ -102,7 +102,8 @@ class TipjarPolicyTests(unittest.TestCase):
         inspected = core.inspect_issue('acme/photos#12', client)
         result = policy.for_inspected(inspected, client)
         self.assertEqual(result['inventory_format'], 3)
-        self.assertEqual(result['tipjar'], inspected['tipjar'])
+        self.assertTrue(tipjar.same_declaration(result['tipjar'], inspected['tipjar']))
+        self.assertEqual(result['tipjar']['commit'], inspected['tipjar']['commit'])
         self.assertEqual(result['tipjar']['manifest']['status'], 'welcome')
 
     def test_selection_runs_after_scans_before_limits(self):

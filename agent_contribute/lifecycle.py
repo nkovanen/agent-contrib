@@ -9,7 +9,7 @@ from . import authorization, cigate, core, dispositions, draft_updates
 
 def prepare_v2(inspected, client):
     from .tipjar import preparation_errors
-    jar_errors = preparation_errors(inspected.get('tipjar'))
+    jar_errors = preparation_errors(inspected.get('tipjar'), source=inspected.get('source', {}))
     if jar_errors:
         raise core.ProtocolError('tipjar_blocked', '; '.join(jar_errors))
     source = inspected['source']

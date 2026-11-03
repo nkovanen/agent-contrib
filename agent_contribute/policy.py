@@ -616,12 +616,11 @@ def _relative_what(url, base_path):
 
 def report(repository, commit, instructions, client, *, default_branch=None, hashes=None, tipjar_report=None):
     """Read-only policy report for the issue source repository at its observed commit; never raises on reads.
-    A dict passed as hashes receives historical format 1/2 and current inventory digests."""
+    A dict passed as hashes receives historical format 1/2 and current inventory digests.
+    tipjar_report is retained for API compatibility; pinned declarations are always reread through client."""
     from .tipjar import inspect_jar
-    if (not isinstance(tipjar_report, dict) or
-            (tipjar_report.get('repository'), tipjar_report.get('commit')) != (repository, commit) or
-            default_branch is not None and tipjar_report.get('default_branch') != default_branch):
-        tipjar_report = inspect_jar(repository, client, commit=commit)
+    # Caller dictionaries cannot authenticate pinned source policy. Keep the argument for API compatibility.
+    tipjar_report = inspect_jar(repository, client, commit=commit)
     state = _Report(client)
     if default_branch is None:
         try:
