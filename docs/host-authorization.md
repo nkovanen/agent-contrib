@@ -66,8 +66,11 @@ sections are omitted until available; `null` is not an absent section.
 the same sections, byte for byte, so a mandate's hash does not depend on the
 wrapper. It adds an optional, host-issued `overlap_dispositions` record (#7).
 It can waive only a topical overlap whose bound observations still hold (see
-[overlap dispositions](#overlap-dispositions-host-context-02)). Any other
-version, or a 0.1 document carrying the section, fails closed.
+[overlap dispositions](#overlap-dispositions-host-context-02)). It also adds an
+optional `draft_update` record (#21). This version only parses and
+binding-checks that record and authorizes nothing with it (see
+[draft update rounds](#draft-update-rounds-host-context-02)). Any other
+version, or a 0.1 document carrying either section, fails closed.
 
 | Section | Issuer and purpose |
 | --- | --- |
@@ -165,6 +168,45 @@ an unexpired mandate after revocation and replacement; a second draft creation;
 an approval arriving through an agent-callable API; and the post-expiry journey,
 where a timely draft created under the original mandate is still recognized and
 completed with a current sign-off while new actions stay refused.
+
+## Draft update rounds (host-context 0.2)
+
+A `draft_update` record (#21) opens one update round for a recognized draft. It
+is bound to the contract, the unchanged original mandate, the credential actor,
+the repository, the claimed PR's number and ID, and `from_head`: the live head
+the human saw. It has its own ID, nonce, interval (at most 24 hours) and event
+binding. Its ID, nonce and event reference must differ from those of the
+mandate, the final sign-off and any overlap dispositions.
+
+**This version is inert.** `verify` reports the record as
+`draft_update.status: not_evaluated` (bindings valid) or `invalid`. It never
+changes a gate, blocker, `next_action`, exit status or GitHub read, and
+`candidate_head` is always `null`. Hosts must not issue rounds as publication
+authority until a version evaluates them.
+
+Hosts that will issue rounds follow these requirements, from the
+[design](design/2026-11-02-draft-updates.md#host-lifecycle-normative-issuer-requirements-for-draft_update):
+
+1. **Status** per record hash: `active`, `reserved(F→E)`, `consumed`,
+   `revoked` or `superseded`. Expiry ends permission for new actions only.
+2. **One current-round pointer** per (contract, mandate, PR). Only the record it
+   points to is operative for any gate. A `superseded` record is archival only.
+   Opening a round supersedes the previous one and voids any unconsumed final
+   sign-off for the previous head. Only the host moves the pointer.
+3. **One push per round, under an exclusive durable reservation.**
+   - Before any remote operation, record `reserved(F→E)` under a lock keyed to
+     the round. `E` is the `candidate_head` of a `verify` result the host
+     produced itself; it is never reread from worker-controlled files.
+   - Re-prove `F → E` (ancestor, distinct, no merge commits).
+   - Push exactly `E` with a lease on `F`.
+   - Fail closed on uncertain outcomes and reconcile from the live head. A
+     reservation never returns to `active` or admits another head.
+   - Every submission, including a retry, needs the original deadline, the
+     current pointer and non-revocation.
+4. **Final sign-off** follows an observed recognition of exactly `E` under the
+   current, consumed round.
+5. **Audit** against the retained exact chain `A`, then each consumed round's
+   `F → E`. The live head must equal the last retained `E`.
 
 ## Overlap dispositions (host-context 0.2)
 

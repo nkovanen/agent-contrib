@@ -1,0 +1,612 @@
+{
+  "description": "Frozen 2026-11-02 snapshot of public issue titles, labels and signal inputs from dogfood 2 (validation-runs/rsi-20261102/dogfood-2/evaluation.md), with the evaluator's verdicts. Synthetic bodies reproduce each issue's code-location and clarity inputs. A regression for the documented demotion rules, not a claim about live repository state.",
+  "repositories": {
+    "pallets/click": {
+      "evaluated_top8_before": [
+        2154,
+        2303,
+        2645,
+        3847,
+        1574,
+        2360,
+        2361,
+        2402
+      ],
+      "issues": [
+        {
+          "number": 2154,
+          "title": "xdg-open zombie process remains by default in WSL2 after click.launch()",
+          "labels": [
+            "docs"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "marginal",
+          "counts_for_precision": true
+        },
+        {
+          "number": 2303,
+          "title": "Context different in `click.pass_context`  and `shell_complete`",
+          "labels": [
+            "shell completion"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2645,
+          "title": "Eager open/close of a LazyFile for error handling can make fifo reading fail",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "contested",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3847,
+          "title": "More private utilities that need to be marked and public api deprecated",
+          "labels": [
+            "typing"
+          ],
+          "maintainer": true,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 3,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1574,
+          "title": "Context.params isn't setup in the MultiCommand.list_commands method",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2360,
+          "title": "[Feature] embedding Click inside asyncio-based apps",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2361,
+          "title": "[Feature] for embedding Click with custom stdout/stderr instances",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2402,
+          "title": "resolve_command fails if cmd is None",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "good",
+          "counts_for_precision": true
+        },
+        {
+          "number": 2676,
+          "title": "Support for Automatically Parsing Negative Number Arguments",
+          "labels": [
+            "docs"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2771,
+          "title": "Allow `nargs=-1` in options with a non-whitespace separator",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2823,
+          "title": "Meta Issue for Project Opinions",
+          "labels": [
+            "docs"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2834,
+          "title": "Meta Issue for Future Parser Changes",
+          "labels": [
+            "docs",
+            "parsing"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2847,
+          "title": "Long option completion with = broken",
+          "labels": [
+            "shell completion"
+          ],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2853,
+          "title": "The call stack is displayed when an exception is returned when an invalid parameter is displayed during command line association.",
+          "labels": [
+            "parsing"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3097,
+          "title": "WIP: Help page customization low level api",
+          "labels": [
+            "help output"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        }
+      ]
+    },
+    "BurntSushi/ripgrep": {
+      "evaluated_top8_before": [
+        278,
+        2528,
+        2552,
+        3372,
+        3434,
+        3494,
+        1221,
+        1353
+      ],
+      "issues": [
+        {
+          "number": 278,
+          "title": "filters don't work correctly when a search path is specified",
+          "labels": [
+            "bug",
+            "icebox",
+            "gitignore"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2528,
+          "title": "\\K does not appear to work with --multiline",
+          "labels": [
+            "bug"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2552,
+          "title": "a broken symlink results in ripgrep emitting an error even if the symlink is ignored",
+          "labels": [
+            "bug"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "marginal",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3372,
+          "title": "Panic in windows cmd.exe with piped input",
+          "labels": [],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3434,
+          "title": "rg reads outer repo gitignore even though it ignores it",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "good",
+          "counts_for_precision": true
+        },
+        {
+          "number": 3494,
+          "title": "x86_64-unknown-linux-musl binaries occasionally segfault during very-large searches",
+          "labels": [],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1221,
+          "title": "globset (and thus ripgrep) interpret braces ({}) as alternative (\"a or b\") whereas git doesn't",
+          "labels": [
+            "bug"
+          ],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1353,
+          "title": "traversing large amounts of symlinks is sub-optimal",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1368,
+          "title": "support empty alternate glob patterns",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1610,
+          "title": "Add preprocessor log to debug output",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1634,
+          "title": "expose optional match offsets in grep-searcher::SinkMatch",
+          "labels": [
+            "enhancement",
+            "question",
+            "libripgrep"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1981,
+          "title": "potential missed optimization in extracting a capture group",
+          "labels": [],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2080,
+          "title": "create a bot to bleat about long lines in pull requests",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": true,
+          "location": true,
+          "clarity": "low",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2092,
+          "title": "Searching incomplete gzip file behaves differently between one file and multiple files",
+          "labels": [],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        }
+      ]
+    },
+    "honojs/hono": {
+      "evaluated_top8_before": [
+        5571,
+        1018,
+        1186,
+        1954,
+        2334,
+        2343,
+        2649,
+        3202
+      ],
+      "issues": [
+        {
+          "number": 5571,
+          "title": "methodOverride returns 500 for a body-bearing POST overridden to GET",
+          "labels": [],
+          "maintainer": false,
+          "location": true,
+          "clarity": "high",
+          "before_score": 3,
+          "verdict": "contested",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1018,
+          "title": "req.parseBody should allow multiple keys (and converted to array)",
+          "labels": [],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1186,
+          "title": " React hooks not working inside TSX/JSX file.",
+          "labels": [],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 1954,
+          "title": "`cache` option for `Suspense`",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2334,
+          "title": "Redirect respecting sub-routes",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2343,
+          "title": "c.json returning empty string for undefined values",
+          "labels": [
+            "enhancement",
+            "bug",
+            "v5"
+          ],
+          "maintainer": true,
+          "location": true,
+          "clarity": "low",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 2649,
+          "title": "executionCtx getter throws on Bun",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3202,
+          "title": "Infer correct types when creating `MiddlewareHandler` dynamically",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3360,
+          "title": "JSON.stringify replacer option",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3407,
+          "title": "`trimTrailingSlash` doesn't work on paths with `*`",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3483,
+          "title": "Move Node.js serveStatic to this repo",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3817,
+          "title": "HMR for server routes",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": false,
+          "clarity": "high",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 3965,
+          "title": "Support for defining custom context helper methods",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": false,
+          "location": true,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "unjudged",
+          "counts_for_precision": false
+        },
+        {
+          "number": 5106,
+          "title": "v5 features list",
+          "labels": [
+            "v5"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        },
+        {
+          "number": 4177,
+          "title": "AI-Powered Automatic Issue Triage",
+          "labels": [
+            "enhancement"
+          ],
+          "maintainer": true,
+          "location": false,
+          "clarity": "medium",
+          "before_score": 2,
+          "verdict": "bad",
+          "counts_for_precision": false
+        }
+      ]
+    }
+  }
+}

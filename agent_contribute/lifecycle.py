@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 
-from . import authorization, core, dispositions
+from . import authorization, core, dispositions, draft_updates
 
 
 def prepare_v2(inspected, client):
@@ -141,6 +141,10 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result.update(contract_sha256=digest, source_identity={key: source[key] for key in
                   ('repository', 'repository_id', 'owner_id', 'issue', 'issue_id')}, live_complete=False)
     errors.extend(core.reviewed_contract_errors(task, '0.2'))
+    # Contract-only route checks hold with or without a mandate (A2-02); authorization.check repeats them for its
+    # own historical validity, so its copies are not listed twice below.
+    route = authorization.route_errors(task)
+    errors.extend(route)
     current = None
     live_duplicates = []
     try:
@@ -164,13 +168,14 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         comparison = core.require(client.request('repos/' + source['repository'] + '/compare/' +
                                   current['source']['commit'] + '...' + source['commit']), dict, 'reviewed base comparison')
         if comparison.get('status') not in ('behind', 'identical'):
-            errors.append('Reviewed source commit is not in current source default-branch history')
+            errors.append('Reviewed source commit is not in current source default-branch history: ' +
+                          core.base_relation(task, source['commit'], current['source']['commit'], comparison.get('status')))
         live_duplicates = [dict(item, repository=source['repository']) for item in current['duplicates']]
     except core.ProtocolError as exc:
         errors.append('Live GitHub refresh failed: ' + str(exc))
     authority = authorization.check(task, host_context, client, now)
     result.update(user_authorization=authority, mandate_sha256=authority['mandate_sha256'])
-    historical_errors = list(errors) + authority['errors']
+    historical_errors = list(errors) + [error for error in authority['errors'] if error not in route]
     action_errors = historical_errors + authority['current_errors']
     disposition, waived, observed = None, set(), []
     if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2':
@@ -269,4 +274,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
         disposition['errors'] = list(dict.fromkeys(disposition['errors'] + expired))
         result['overlap_dispositions'] = disposition
         result['waived_duplicates'] = disposition['waived']
+    if isinstance(host_context, dict) and host_context.get('schema_version') == '0.2' and 'draft_update' in host_context:
+        # Slice 1 is inert: reported after every blocking read, never consulted by a gate.
+        result['draft_update'] = draft_updates.evaluate(task, host_context, authority, dt.datetime.now(dt.timezone.utc))
     return result

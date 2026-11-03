@@ -1,5 +1,5 @@
-"""Worktree content is compared byte for byte: attribute conversions (ident, eol, working-tree-encoding) cannot
-make different bytes equal to the commit (R1-19)."""
+"""Worktree content must equal, byte for byte, either the committed blob or exactly what checkout writes for it
+(R1-19, G-17): attribute conversions cannot hide an edit, and an untouched converted checkout stays clean."""
 import pathlib
 import tempfile
 import unittest
@@ -34,19 +34,44 @@ def convert(root, git, worktree):
 
 
 class LegacyAttributeTests(unittest.TestCase):
-    def test_converted_worktree_bytes_are_a_change_in_every_gate(self):
-        for name, (attributes, committed, worktree) in VARIANTS.items():
+    def setup_variant(self, root, name):
+        attributes, committed, _ = VARIANTS[name]
+        task, client, evidence, git = evidence_checkout(root)
+        commit_attributes(root, git, attributes, committed)
+        refresh_checkout_evidence(evidence, git)
+        task['scope']['allowed_paths'] += ['.gitattributes', 'settings.py']
+        digest = core.canonical_hash(task)
+        for record in (evidence, evidence['independent_review'], evidence['human_signoff']):
+            record['contract_sha256'] = digest
+        # What a fresh checkout writes: the smudged bytes (expanded $Id$, CRLF, UTF-16).
+        pathlib.Path(root, 'settings.py').unlink()
+        git('checkout', '--', 'settings.py')
+        return task, client, evidence, git
+
+    def test_untouched_checkouts_with_committed_conversions_are_clean(self):
+        # G-17: legitimate ident, eol=crlf and working-tree-encoding checkouts must be able to produce evidence.
+        for name in VARIANTS:
             with self.subTest(variant=name), tempfile.TemporaryDirectory() as root:
-                task, client, evidence, git = evidence_checkout(root)
-                commit_attributes(root, git, attributes, committed)
-                refresh_checkout_evidence(evidence, git)
-                task['scope']['allowed_paths'] += ['.gitattributes', 'settings.py']
-                digest = core.canonical_hash(task)
-                for record in (evidence, evidence['independent_review'], evidence['human_signoff']):
-                    record['contract_sha256'] = digest
-                if name == 'ident':  # control: the committed state itself verifies
-                    self.assertTrue(core.verify(task, evidence, root, client)['evidence_valid'])
-                convert(root, git, worktree)
+                task, client, evidence, git = self.setup_variant(root, name)
+                written = pathlib.Path(root, 'settings.py').read_bytes()
+                self.assertNotEqual(written, git('cat-file', 'blob', 'HEAD:settings.py').encode(),
+                                    'precondition: checkout converted the bytes')
+                result = core.verify(task, evidence, root, client)
+                self.assertTrue(result['evidence_valid'], result['evidence_errors'])
+                self.assertNotIn('settings.py', workspace.scope_check(task, root, 'HEAD')['changed_paths'])
+                self.assertIs(workspace.evidence_skeleton(task, root, evidence['base_commit'])['worktree_clean'], True)
+
+    def test_edits_hidden_by_or_added_to_a_conversion_are_changes(self):
+        # R1-19: code inside $Id: ...$ collapses on clean; a byte added to a converted file differs too.
+        edits = {'ident': INJECTED.encode(), 'eol': b'VALUE = 1\r\nEVIL = 1\r\n',
+                 'encoding': 'VALUE = 1\nEVIL = 1\n'.encode('utf-16-le')}
+        for name, worktree in edits.items():
+            with self.subTest(variant=name), tempfile.TemporaryDirectory() as root:
+                task, client, evidence, git = self.setup_variant(root, name)
+                pathlib.Path(root, 'settings.py').write_bytes(worktree)
+                if name == 'ident':
+                    git('add', 'settings.py')  # the clean conversion maps the edit back to the committed blob
+                    self.assertEqual(git('status', '--porcelain'), '', 'precondition: Git hides the edit')
                 self.assertIn(DIRTY, core.verify(task, evidence, root, client)['evidence_errors'])
                 self.assertIn('settings.py', workspace.scope_check(task, root, 'HEAD')['changed_paths'])
                 self.assertIs(workspace.evidence_skeleton(task, root, evidence['base_commit'])['worktree_clean'], False)
@@ -93,17 +118,14 @@ class LegacyAttributeTests(unittest.TestCase):
                 workspace.evidence_skeleton(task, root, evidence['base_commit'])
             self.assertEqual(caught.exception.code, 'unsafe_git_attributes')
 
-    def test_git_older_than_2_40_fails_closed(self):
+    def test_no_attribute_source_override_or_git_version_gate_is_needed(self):
+        # G-18: the comparison works on Git older than 2.40 (no --attr-source, no version probe).
         with tempfile.TemporaryDirectory() as root:
             task, client, evidence, git = evidence_checkout(root)
-            original = core.git_read
-
-            def old_git(directory, *args, **options):
-                return 'git version 2.39.3 (Apple Git-145)' if args == ('--version',) else original(directory, *args, **options)
-            with patch.object(core, 'git_read', side_effect=old_git):
-                with self.assertRaises(core.ProtocolError) as caught:
-                    core.worktree_changes(root, evidence['git_head'])
-            self.assertEqual(caught.exception.code, 'git_too_old')
+            with patch.object(core.subprocess, 'run', wraps=core.subprocess.run) as run:
+                core.worktree_changes(root, evidence['git_head'])
+            argv = [arg for call in run.call_args_list for arg in call.args[0]]
+            self.assertFalse([arg for arg in argv if arg.startswith('--attr-source') or arg == '--version'])
 
 
 class CandidateAttributeTests(unittest.TestCase):

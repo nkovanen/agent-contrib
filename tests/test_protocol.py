@@ -557,6 +557,24 @@ class VerificationTests(unittest.TestCase):
             client.failed.add('/compare/')
             self.assertFalse(core.verify(task, evidence, tmp, client)['evidence_valid'])
 
+    def test_base_errors_name_the_base_and_the_commit_it_was_compared_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            task, client, evidence, git = evidence_checkout(tmp)
+            client.commit = 'c' * 40
+            base = evidence['base_commit']
+            client.compare_status = 'ahead'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is ahead of '
+                          f'acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.compare_status = 'diverged'
+            self.assertIn(f'Evidence base is not in current source default-branch history: base {base} is diverged '
+                          f'from acme/photos default branch main at {"c" * 40}',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+            client.failed.add('/compare/')
+            self.assertIn(f'Could not authenticate evidence base against source default-branch history: base {base} '
+                          f'compared with acme/photos default branch main at {"c" * 40}: GitHub read failed',
+                          core.verify(task, evidence, tmp, client)['evidence_errors'])
+
     def test_git_commit_utc_z_timestamp_preserves_evidence_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:
             task, client, evidence, git = evidence_checkout(tmp)

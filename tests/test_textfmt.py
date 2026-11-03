@@ -134,12 +134,61 @@ class TextFormatTests(unittest.TestCase):
         self.assertIn('  acme/photos#8 [candidate] overlaps 1, excluded no, score 2: Overlaps\n', plain)
         self.assertNotIn('\nscore 9', plain)
 
+    def test_discovery_text_shows_opt_in_repository_reports(self):
+        # Dogfood 3 F23: --responsiveness printed nothing in text; --repo-dir local work likewise.
+        result = {'complete': True, 'errors': [], 'issues': [],
+                  'repository_signals': {'responsiveness': {'complete': True, 'value': 'measured',
+                                                            'explanation': '26 of 87 external PRs\nwere merged'}},
+                  'local_work': {'complete': False, 'commits_scanned': 500, 'issues': [{'number': 3, 'commits': ['a' * 40]},
+                                                                                      {'number': 4, 'commits': []}],
+                                 'errors': ['More than 500 local commits']}}
+        text = textfmt.render('discover', result)
+        self.assertIn('Responsiveness: measured (complete yes): 26 of 87 external PRs were merged\n', text)
+        self.assertIn('Local work: 2 issue(s) referenced by 500 scanned local commit(s) (complete no): #3, #4\n'
+                      'Local work errors (1):\n  - More than 500 local commits\n', text)
+        plain = textfmt.render('discover', {'complete': True, 'errors': [], 'issues': []})
+        self.assertNotIn('Responsiveness', plain)
+        self.assertNotIn('Local work', plain)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
         text = textfmt.render('inspect', result)
         self.assertIn('Approval: candidate', text)
         self.assertIn('Overlapping PRs (1):\n  - https://github.com/acme/photos/pull/30: Explicit reference to this issue', text)
+
+
+
+class AuthorizationRequestTextTests(unittest.TestCase):
+    """A2-08: the Quick-path request shows why it is not ready, not only the scalar flag."""
+    def request(self, **changes):
+        from agent_contribute import authrequest
+        from tests.test_authorization import candidate_task
+        task, client = candidate_task()
+        task['execution'].update(changes)
+        return authrequest.build(task, client)
+
+    def test_not_ready_lists_preflight_errors_and_unresolved_fields(self):
+        result = self.request(mode='pending', head_ref='bad..ref')
+        result['preflight_errors'].append(FORGED)
+        result['unresolved_fields'] = ['credential_actor_id', 'authority']
+        text = textfmt.render('authorization-request', result)
+        self.assertIn('Ready for issuance: no\n', text)
+        self.assertIn('Issued: no (unsigned request; not a mandate; grants nothing)\n', text)
+        self.assertIn('  - Execution mode is pending\n', text)
+        self.assertIn('  - Invalid reviewed Git ref: head_ref\n', text)
+        self.assertIn('Unresolved fields (2):\n  - credential_actor_id\n  - authority\n', text)
+        self.assertIn('Contract SHA-256: ' + result['contract_sha256'] + '\n', text)
+        self.assertNotIn('\n  execution_ready: yes', text)  # forged remote text stays on its own bullet
+        self.assertNotIn('\x1b', text)
+
+    def test_ready_request_says_so_without_error_lists(self):
+        result = self.request()
+        result.update(ready_for_issuance=True, preflight_errors=[], unresolved_fields=[])
+        text = textfmt.render('authorization-request', result)
+        self.assertIn('Ready for issuance: yes\n', text)
+        self.assertNotIn('Preflight errors', text)
+        self.assertNotIn('Unresolved fields', text)
 
 
 if __name__ == '__main__':

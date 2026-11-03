@@ -24,6 +24,14 @@ channel or runtime model provider is added.
   agree; `--release` needs a dated CHANGELOG heading; `--tag` checks the tag),
   and a proposed PyPI trusted-publishing workflow with build provenance in
   `docs/examples/release-pypi.yml`, which runs only after a maintainer adopts it.
+- `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
+  referenced by local commits that are not in the source default branch, read
+  with the hardened Git reader and capped at 500 commits, 64 KiB per commit and
+  4 MiB in total, checked by object size before any message is read; messages
+  come from raw commit objects, and a shallow checkout or a NUL byte in a
+  message is incomplete. With `--signals`,
+  referenced issues rank below the other candidates that are not excluded or
+  overlapping.
 - Host-context schema **0.2** with reviewed overlap dispositions (#7). The 0.1
   sections are unchanged, plus an optional host-issued `overlap_dispositions`
   record. It is bound to the contract, mandate and credential, and pins each
@@ -37,6 +45,11 @@ channel or runtime model provider is added.
   `overlap_dispositions` and `waived_duplicates`, and are named in text output.
   Host issuer requirements are documented. A 0.1 document carrying the section
   and any other version fail closed.
+- Host-context 0.2 also accepts an optional, strictly validated `draft_update`
+  record (#21, slice 1: inert). `verify` reports it as `draft_update`, with
+  status `not_evaluated` or `invalid`. It never changes a gate, blocker,
+  `next_action`, exit status or GitHub read, and the mandate hash is unchanged.
+  Host requirements for update rounds are documented.
 - A default-on, report-only `repository_policy` in `discover`, `inspect` and
   `prepare` output (#8, part; dogfood E-01 to E-05). The earlier scanner found
   nothing on pallets/click, BurntSushi/ripgrep and honojs/hono, although each
@@ -74,6 +87,9 @@ channel or runtime model provider is added.
   binding pre-filled from the contract and live reads and every human-only field
   `null`. It validates the full schema before any read, labels its diagnostics
   untrusted, contains no display summary and cannot pass as host context.
+- `lint task.json` (F17): offline contract check against the bundled schema and
+  the reviewed-contract rules, with no GitHub or Git reads; exit 0 only for a
+  schema-valid reviewed contract.
 - `scope-check` (#15): offline check of committed, staged, unstaged and untracked
   paths with the same scope evaluator as `verify`.
 - `evidence init` (#14): an evidence skeleton with only observed Git facts and
@@ -115,9 +131,26 @@ channel or runtime model provider is added.
   `--repo-dir`, signature-header presence for at most 1000 commits in
   `base_commit..git_head`, never truncated; no gpg, ssh-keygen or
   `verify-commit` runs) and `--report-budget` / `--min-remaining` (#27, part).
-  An opted-in report that is incomplete exits 1 where documented. `discover
+  `--cache` (#27) reuses file contents at a pinned commit of a public
+  repository from the user cache, keyed by Git blob SHA and re-verified
+  against the live tree on every hit; trees and all mutable reads stay live
+  and output is unchanged. An opted-in report that is incomplete exits 1
+  where documented. `discover
   --signals` also lists `code_location.named_paths_missing`: file paths the
   issue names that are not in the snapshot tree, compared exactly (F13).
+- `discover --signals` reports each issue's `labels` and a `demotion` breakdown,
+  and lowers the score by 2 for each documented label group (on hold, needs a
+  decision, not planned, explicit major-version bucket; negated labels do not
+  match) and for meta, tracking, roadmap or WIP titles, whose maintainer point
+  is no longer counted (E-08, E-09). Default discover output and ordering are
+  unchanged. An offline regression replays the dogfood-2 click, ripgrep and
+  hono rankings; precision@5 is unchanged on it (1/5, 1/5, 0/5).
+  `discover --signals --check-top N` (1-5) reads bounded ownership signals for
+  the top N only (one timeline and comment page, 4 PR details each, 30 reads in
+  all). A merged same-repository fix or a current assignee moves a checked
+  issue below every other candidate that is not excluded or
+  overlapping, with the reason listed; claim comments never demote. With
+  `--check-top`, `signals.assignees` reports current assignees. Report only.
 - `--format text` summaries (#24, part); JSON stays canonical and unchanged.
 - `--help` describes every command and option, input constraints and exit status.
 - Installed workflow: a source-linked requirements ledger, precommit gates,
@@ -142,10 +175,29 @@ channel or runtime model provider is added.
 
 ### Changed
 
+- `--observe-ci` and `--observe-signatures` share one target/head prelude.
+  With an evidence head but an invalid target repository,
+  `ci_observation.head_sha` is now `null`, like `signature_observation`, since
+  nothing was observed at that head. A missing `execution` object no longer
+  raises in the CI observer. Readiness and exit codes are unchanged (A2-05).
+- The installed workflow runs `drift` before any authorization request and
+  before publication, and names `--observe-ci`/`--observe-signatures` as
+  report-only (A2-10).
+- `--format text authorization-request` lists its preflight errors and
+  unresolved fields, so a request that is not ready says why (A2-08).
 - Ownership `possibly_already_fixed` counts only merged PRs in the issue's own
   repository; merged PRs elsewhere move to `downstream_references` (E-11: a
   downstream workaround was reported as a possible fix). Cross-referenced PRs
   also report a sanitized `title` and `base_ref`.
+- The workflow recommends deterministic, countable acceptance criteria over
+  wall-clock limits unless the repository defines the benchmark (F26).
+- Text `discover` shows a responsiveness line with `--responsiveness` (F23) and
+  a local-work line with `--repo-dir`.
+- The workflow's Quick path step 3 names the repository policy step's sections
+  (F43, F44).
+- Evidence-base and reviewed-source history errors name the base SHA, the
+  repository, its default branch and the tip commit it was compared with, plus
+  the comparison status or read error (F19). Conditions are unchanged.
 - The prerequisite blocker names each failing prerequisite, for example
   `Prerequisites are not satisfied with evidence: P1 (pending), P4 (satisfied
   without evidence)`. The condition is unchanged.
@@ -170,6 +222,15 @@ channel or runtime model provider is added.
 
 ### Security
 
+- Scope judges each changed symlink by where it points (G-08), in `verify`
+  evidence checks and `scope-check`. The committed (or staged, or worktree)
+  target is read without following it and resolved lexically from the link's
+  directory through every link hop, directory links included. A target that is
+  absolute, uses a backslash or a drive letter, escapes the repository, points
+  at the repository root, exceeds 4096 bytes or 40 hops, contains a NUL byte,
+  is not valid UTF-8, cannot be read, or resolves outside
+  `allowed_paths` or into `prohibited_paths` is a scope violation that names the
+  reason. A link to an allowed file still passes.
 - Reject JSON strings containing a lone surrogate escape (`"\ud800"`) and
   numbers that overflow to infinity (`1e999`) as `invalid_json` in GitHub
   responses, contracts, evidence and host context. A lone surrogate used to
@@ -224,15 +285,15 @@ channel or runtime model provider is added.
   never starts a command inside a populated submodule with that submodule's own
   config. Previously scope-check reported the gitlink but still ran a
   submodule-configured clean filter.
-- The worktree content comparison is byte for byte: it reads attributes from
-  the empty tree (`--attr-source`, Git 2.40 or newer, otherwise
-  `git_too_old`) with `core.autocrlf=false`, and every read forces
-  `core.attributesFile` to `/dev/null`. A non-empty `.git/info/attributes`,
-  which `--attr-source` does not cover, is refused (`unsafe_git_attributes`).
-  `ident`, `eol`/`text` and `working-tree-encoding` conversions can no longer
-  make an edited file (for example code added inside `$Id: ...$`) match the
-  commit. Checkouts whose files differ from their blobs only by such a
-  conversion (for example CRLF working copies) now report as changed (R1-19).
+- Every tracked file's worktree bytes must equal either its committed blob or
+  exactly what checkout writes for it (`git cat-file --filters`, with
+  `core.autocrlf=false` and `core.eol=lf`). `ident`, `eol`/`text` and
+  `working-tree-encoding` conversions therefore cannot hide an edit (for
+  example code added inside `$Id: ...$`), while an untouched checkout with
+  legitimate committed conversions (an expanded `$Id`, CRLF `.bat` files,
+  UTF-16 sources) stays clean. Every read ignores `core.attributesFile`; a
+  non-empty `.git/info/attributes` is refused (`unsafe_git_attributes`). No
+  Git version beyond those already required is needed (R1-19, G-17, G-18).
 - Worktree content is compared with HEAD (and, for `scope-check`, the base)
   through a fresh temporary index outside the checkout, so a hand-edited stat
   cache in `.git/index` cannot hide an edit. The checkout's index is used only
@@ -246,8 +307,16 @@ channel or runtime model provider is added.
 
 ### Fixed
 
+- An unwritable temporary root is skipped in favour of `/tmp` or `/var/tmp`,
+  and a temporary directory that still cannot be created reports
+  `temp_dir_error` instead of an unstructured input error (G-20).
 - Every Git read sets `GIT_ATTR_NOSYSTEM=1`, so a system-wide gitattributes file
   cannot shape how checkout files are compared (G-19).
+- Schema 0.2 `verify` lists contract route errors (pending mode, invalid or
+  equal refs, a different target or head repository) in its errors and every
+  stage's blockers even without a host context, as `authorization-request`
+  already did. With a mandate they appear once. Only blockers are added
+  (A2-02).
 - The temporary index for the content check is created under a temporary root
   whose real path is outside the worktree and its Git directories (falling
   back from `TMPDIR` to `/tmp` or `/var/tmp`, else `unsafe_temp_dir`), so a
@@ -281,6 +350,8 @@ channel or runtime model provider is added.
   0.1 and 0.2, host-context 0.1 and 0.2. Unknown versions fail closed; nothing is
   migrated. `prepare` still defaults to 0.1.
 - Schema 0.1 changes, all fail-closed or message-only:
+  - `verify` rejects evidence whose implementation adds a symlink that resolves
+    outside the contract scope (G-08); a symlink to an in-scope file still passes.
   - `verify --repo-dir` from a subdirectory or Git directory now fails with an
     evidence error instead of reading part of the checkout.
   - An unborn, deleted or non-commit HEAD now fails with `unborn_head`.
@@ -290,9 +361,10 @@ channel or runtime model provider is added.
     `unsafe_git_config`.
   - Files hidden only by `.git/info/exclude` or `core.excludesFile` now make
     evidence dirty.
-  - Files that equal their blob only after an attribute or autocrlf conversion
-    now make evidence dirty; a non-empty `.git/info/attributes` fails with
-    `unsafe_git_attributes`; Git older than 2.40 fails with `git_too_old`.
+  - A file whose bytes match neither its blob nor its checkout output (for
+    example an edit hidden by `ident`, or a CRLF copy produced only by a local
+    `core.autocrlf`) now makes evidence dirty; a non-empty
+    `.git/info/attributes` fails with `unsafe_git_attributes`.
   - Malformed or missing PR `body`/`head`/`head.ref` fields now make discovery
     and verification scans incomplete instead of empty.
   - Lone-surrogate strings and overflowing numbers now fail as `invalid_json`;

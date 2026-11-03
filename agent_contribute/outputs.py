@@ -9,7 +9,7 @@ from . import core
 
 VERSION = '1'
 SCHEMAS = ('audit', 'authorization-request', 'discover', 'drift', 'error', 'evidence-init', 'feedback', 'inspect', 'instructions',
-           'ownership', 'pr-body', 'prepare', 'scope-check', 'skill', 'verify')
+           'lint', 'ownership', 'pr-body', 'prepare', 'scope-check', 'skill', 'verify')
 DIRECTORY = f'schemas/output/{VERSION}'
 
 

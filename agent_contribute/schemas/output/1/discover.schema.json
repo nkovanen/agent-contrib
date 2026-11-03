@@ -180,6 +180,45 @@
         },
         "signals": {
           "$ref": "#/$defs/issue_signals"
+        },
+        "top_check": {
+          "type": "object",
+          "properties": {
+            "complete": {
+              "type": "boolean",
+              "description": "False when a read failed or a page, PR-detail or total read cap was reached"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2147483647
+            },
+            "reads": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "GitHub reads made for this issue; at most 30"
+            },
+            "demotions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 2,
+              "description": "Merged same-repository fix or current assignee; claim comments never demote"
+            }
+          },
+          "required": [
+            "complete",
+            "errors",
+            "reads",
+            "demotions"
+          ],
+          "additionalProperties": false,
+          "description": "Present only for the top N candidates checked by --check-top; report only"
         }
       },
       "required": [
@@ -485,6 +524,52 @@
           "additionalProperties": false,
           "description": "Added by --responsiveness"
         },
+        "top_check": {
+          "type": "object",
+          "properties": {
+            "requested": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "at most 5"
+            },
+            "checked": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "at most 5"
+            },
+            "reads": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "at most 30"
+            },
+            "read_cap": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "at most 30"
+            },
+            "complete": {
+              "type": "boolean",
+              "description": "Every checked issue was read completely; false sets exit 1"
+            },
+            "notice": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "requested",
+            "checked",
+            "reads",
+            "read_cap",
+            "complete",
+            "notice"
+          ],
+          "additionalProperties": false,
+          "description": "Present with --check-top N: bounded ownership reads for the top N; a demoted one moves below every other candidate that is not excluded or overlapping"
+        },
+        "local_work": {
+          "$ref": "#/$defs/local_work"
+        },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
         },
@@ -572,6 +657,9 @@
         },
         "api_budget": {
           "$ref": "#/$defs/api_budget"
+        },
+        "local_work": {
+          "$ref": "#/$defs/local_work"
         }
       },
       "required": [
@@ -804,10 +892,89 @@
           ],
           "additionalProperties": false
         },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "maxItems": 100,
+          "description": "Issue label names (sanitized), as used by the demotion rules"
+        },
+        "assignees": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "maxItems": 10,
+          "description": "Present only with --check-top: current assignee logins from the issue list payload (sanitized, at most 10)"
+        },
+        "demotion": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": [
+                "demoted",
+                "none"
+              ]
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2147483647
+              },
+              "maxItems": 5,
+              "description": "One entry per matched label group or meta-like title"
+            }
+          },
+          "required": [
+            "value",
+            "reasons"
+          ],
+          "additionalProperties": false,
+          "description": "Documented label and title demotions; each subtracts 2 from the score"
+        },
+        "local_work": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": [
+                "referenced",
+                "none",
+                "unknown"
+              ]
+            },
+            "commits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "maxItems": 10
+            },
+            "explanation": {
+              "type": "string",
+              "maxLength": 2147483647
+            }
+          },
+          "required": [
+            "value",
+            "commits",
+            "explanation"
+          ],
+          "additionalProperties": false,
+          "description": "Present with --repo-dir; a referenced issue ranks below other candidates that are not excluded or overlapping"
+        },
         "score": {
           "type": "integer",
           "minimum": 0,
-          "description": "code_location found (1) + acceptance clarity (0-2) + maintainer author (1)"
+          "description": "code_location found (1) + acceptance clarity (0-2) + maintainer author (1, not for a meta-like title) - 2 per demotion, floored at 0"
         }
       },
       "required": [
@@ -815,6 +982,8 @@
         "acceptance_clarity",
         "activity",
         "maintainer",
+        "labels",
+        "demotion",
         "score"
       ],
       "additionalProperties": false,
@@ -1556,6 +1725,94 @@
       ],
       "additionalProperties": false,
       "description": "Default-on, report-only policy inventory and hints; never a verdict"
+    },
+    "local_work": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean",
+          "description": "False when the checkout or base could not be read or the commit limit was reached; sets exit 1"
+        },
+        "head": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "minLength": 40,
+          "maxLength": 40
+        },
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$",
+          "minLength": 40,
+          "maxLength": 40,
+          "description": "Source default-branch commit of the snapshot"
+        },
+        "commits_scanned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commit_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "commits": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$",
+                  "minLength": 40,
+                  "maxLength": 40
+                },
+                "maxItems": 10
+              }
+            },
+            "required": [
+              "number",
+              "commits"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2147483647
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2147483647
+          },
+          "maxItems": 2147483647
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "complete",
+        "head",
+        "base",
+        "commits_scanned",
+        "commit_limit",
+        "issues",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false,
+      "description": "Present with --repo-dir: issues referenced by local commits not in the source default branch; report only"
     }
   }
 }

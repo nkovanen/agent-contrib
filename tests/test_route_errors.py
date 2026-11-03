@@ -63,5 +63,40 @@ class RouteErrorsTests(unittest.TestCase):
         self.assertEqual(task, before)
 
 
+
+class VerifyRouteTests(unittest.TestCase):
+    """A2-02: verify lists contract route errors with or without a mandate, once each, and never fewer blockers."""
+    ROUTE = ['Execution mode is pending', 'Invalid reviewed Git ref: head_ref']
+
+    def verify(self, with_context):
+        task, client = candidate_task()
+        task['execution'].update(mode='pending', head_ref='bad..ref')
+        context = host_context(task) if with_context else None
+        with patch.object(core.dt, 'datetime', Clock):
+            return core.verify(task, client=client, host_context=context)
+
+    def test_route_errors_without_a_mandate(self):
+        result = self.verify(False)
+        for stage in ('implementation', 'draft', 'completion'):
+            for error in self.ROUTE:
+                self.assertEqual(result['stage_blockers'][stage].count(error), 1, (stage, error))
+        self.assertIn('Missing human/host mandate', result['stage_blockers']['implementation'])
+        self.assertFalse(result['implementation_ready'])
+
+    def test_route_errors_with_a_mandate_are_listed_once(self):
+        result = self.verify(True)
+        for error in self.ROUTE:
+            self.assertEqual(result['stage_blockers']['implementation'].count(error), 1, error)
+            self.assertIn(error, result['user_authorization']['errors'])  # the authorization result is unchanged
+        self.assertFalse(result['user_authorization']['historical_valid'])
+
+    def test_valid_route_adds_nothing(self):
+        task, client = candidate_task()
+        with patch.object(core.dt, 'datetime', Clock):
+            result = core.verify(task, client=client)
+        self.assertEqual(authorization.route_errors(task), [])
+        self.assertFalse(any(error in self.ROUTE for error in result['errors']))
+
+
 if __name__ == '__main__':
     unittest.main()

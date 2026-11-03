@@ -161,7 +161,8 @@ class PRBodyTests(unittest.TestCase):
         for text in ['mandate', 'not authorized', '`implementation_ready`', '`draft_create_ready`', '`completion_ready`']:
             self.assertNotIn(text, body)
         self.assertIn(prbody.AUTHORITY_OMITTED, body)
-        self.assertIn('- source: Reviewed source commit is not in current source default-branch history\n', body)
+        self.assertIn('- source: Reviewed source commit is not in current source default-branch history: base '
+                      f'{task["source"]["commit"]} is ahead of acme/photos default branch main at {"a" * 40}\n', body)
         self.assertIn('- evidence: No technical execution evidence provided\n', body)
 
     def test_schema_02_keeps_source_identity_blockers_reported_by_authorization(self):
