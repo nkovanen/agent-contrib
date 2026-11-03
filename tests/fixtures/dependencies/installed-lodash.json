@@ -1,0 +1,7 @@
+{
+  "name": "lodash",
+  "version": "4.17.21",
+  "main": "lodash.js",
+  "repository": "git+https://github.com/lodash/lodash.git",
+  "homepage": "https://lodash.com/"
+}

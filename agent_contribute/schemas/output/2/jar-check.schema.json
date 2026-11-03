@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:jar-check",
+  "title": "jar-check result",
+  "description": "Offline maintainer manifest validation; failures use the error envelope.",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "maxLength": 2147483647,
+      "description": "Explicit local file path"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "welcome",
+        "closed"
+      ],
+      "description": "Validated invitation state; grants no authority"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "minLength": 64,
+      "maxLength": 64,
+      "description": "SHA-256 of exact UTF-8 file bytes"
+    },
+    "notice": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Invitation and authority boundary"
+    },
+    "valid": {
+      "type": "boolean",
+      "const": true,
+      "description": "Valid against the packaged manifest parser; never execution or publication permission"
+    }
+  },
+  "required": [
+    "path",
+    "state",
+    "sha256",
+    "notice",
+    "valid"
+  ],
+  "additionalProperties": false
+}

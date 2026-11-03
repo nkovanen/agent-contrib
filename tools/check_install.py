@@ -21,31 +21,63 @@ import venv
 
 RESOURCE_PATHS = (
     "task.schema.json",
+    "receipt.schema.json",
     "tipjar.schema.json",
     "evidence.schema.json",
     "schemas/0.2/task.schema.json",
     "schemas/0.2/evidence.schema.json",
     "schemas/host-context/0.1.schema.json",
     "schemas/host-context/0.2.schema.json",
+    "instructions.md",
+    "adapters/agent-contribute/SKILL.md",
     "schemas/output/1/audit.schema.json",
     "schemas/output/1/authorization-request.schema.json",
+    "schemas/output/1/dependencies.schema.json",
     "schemas/output/1/discover.schema.json",
     "schemas/output/1/drift.schema.json",
     "schemas/output/1/error.schema.json",
     "schemas/output/1/evidence-init.schema.json",
     "schemas/output/1/feedback.schema.json",
+    "schemas/output/1/find.schema.json",
+    "schemas/output/1/impact.schema.json",
+    "schemas/output/1/init.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
+    "schemas/output/1/jar-check.schema.json",
     "schemas/output/1/jar.schema.json",
     "schemas/output/1/lint.schema.json",
     "schemas/output/1/ownership.schema.json",
     "schemas/output/1/pr-body.schema.json",
     "schemas/output/1/prepare.schema.json",
+    "schemas/output/1/receipt.schema.json",
     "schemas/output/1/scope-check.schema.json",
+    "schemas/output/1/session.schema.json",
     "schemas/output/1/skill.schema.json",
     "schemas/output/1/verify.schema.json",
-    "instructions.md",
-    "adapters/agent-contribute/SKILL.md",
+    "schemas/output/2/audit.schema.json",
+    "schemas/output/2/authorization-request.schema.json",
+    "schemas/output/2/dependencies.schema.json",
+    "schemas/output/2/discover.schema.json",
+    "schemas/output/2/drift.schema.json",
+    "schemas/output/2/error.schema.json",
+    "schemas/output/2/evidence-init.schema.json",
+    "schemas/output/2/feedback.schema.json",
+    "schemas/output/2/find.schema.json",
+    "schemas/output/2/impact.schema.json",
+    "schemas/output/2/init.schema.json",
+    "schemas/output/2/inspect.schema.json",
+    "schemas/output/2/instructions.schema.json",
+    "schemas/output/2/jar-check.schema.json",
+    "schemas/output/2/jar.schema.json",
+    "schemas/output/2/lint.schema.json",
+    "schemas/output/2/ownership.schema.json",
+    "schemas/output/2/pr-body.schema.json",
+    "schemas/output/2/prepare.schema.json",
+    "schemas/output/2/receipt.schema.json",
+    "schemas/output/2/scope-check.schema.json",
+    "schemas/output/2/session.schema.json",
+    "schemas/output/2/skill.schema.json",
+    "schemas/output/2/verify.schema.json",
 )
 
 
@@ -87,6 +119,7 @@ def installed_check(source):
     for name in RESOURCE_PATHS:
         assert resources.joinpath(name).read_bytes() == (source / "agent_contribute" / name).read_bytes(), name
     # Development tools such as the task-selection benchmark never ship in the wheel.
+    assert not [str(file) for file in dist.files if str(file).startswith("web/") or str(file).startswith("tests/web/")]
     assert not [str(file) for file in dist.files if str(file).startswith("tools/") or "benchmark" in str(file)]
     assert [str(file) for file in dist.files if file.name == "SKILL.md"] == [
         "agent_contribute/adapters/agent-contribute/SKILL.md"]
@@ -124,31 +157,143 @@ def installed_check(source):
     assert instructions["supported_schema_versions"] == ["0.1", "0.2"]
     assert instructions["supported_host_context_versions"] == ["0.1", "0.2"]
     assert instructions["automatic_updates"] is False
-    assert instructions["output_schema_version"] == "1"
-    assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:1:verify"
+    assert instructions["output_schema_version"] == "2"
+    assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:2:verify"
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
+    session_schema = json.loads(cli("schema", "session"))
+    discovery_path = Path.cwd() / "discovery.json"
+    discovery_path.write_text(json.dumps(json.loads(
+        (source / "tests/fixtures/discover/plain.json").read_text("utf-8"))["result"]), encoding="utf-8")
+    session_path = Path.cwd() / "session.json"
+    proposal = json.loads(cli("session", discovery_path, "--max-tasks", "3", "--minutes", "60",
+                              "--output", session_path))
+    assert proposal["status"] == "proposed" and proposal["actions_authorized"] is False
+    assert not core.schema_errors(proposal, session_schema)
+    assert json.loads(session_path.read_text("utf-8")) == proposal
+    original_session = session_path.read_bytes()
+    cli("session", discovery_path, "--max-tasks", "3", "--minutes", "60", "--output", session_path, expected=1)
+    assert session_path.read_bytes() == original_session
     manifest_schema = json.loads(resources.joinpath("tipjar.schema.json").read_text("utf-8"))
     assert manifest_schema["properties"]["schema_version"]["const"] == "0.1"
     assert not core.schema_errors({"schema_version": "0.1", "status": "welcome"}, manifest_schema)
     assert core.schema_errors({"schema_version": "999", "status": "welcome"}, manifest_schema)
     jar_schema = json.loads(cli("schema", "jar"))
-    assert jar_schema["$id"] == "urn:agent-contrib:output:1:jar"
+    assert jar_schema["$id"] == "urn:agent-contrib:output:2:jar"
     assert "inspection only" in " ".join(cli("jar", "--help").split())
     failed_jar = json.loads(cli("jar", "acme/project", expected=1))
     assert failed_jar["state"] == "unknown" and failed_jar["complete"] is False
     assert failed_jar["manifest"] is None and failed_jar["commit"] is None
     assert not core.schema_errors(failed_jar, jar_schema)
 
+    # Offline maintainer onboarding works without GitHub authentication or tools.
+    for state in ('welcome', 'closed'):
+        manifest_path = Path.cwd() / ('onboarding-' + state + '.json')
+        created = json.loads(run([tipjar, 'init', '--status', state, '--output', manifest_path],
+                                 cwd=Path.cwd(), env=env))
+        assert created['state'] == state
+        assert created['sha256'] == hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        assert not core.schema_errors(created, json.loads(cli('schema', 'init')))
+        checked = json.loads(run([tipjar, 'jar-check', manifest_path], cwd=Path.cwd(), env=env))
+        assert checked['valid'] is True and checked['state'] == state
+        assert checked['sha256'] == created['sha256']
+        assert not core.schema_errors(checked, json.loads(cli('schema', 'jar-check')))
+        assert json.loads(cli('init', '--status', state, '--output', manifest_path,
+                              expected=1))['error']['code'] == 'file_error'
+    invalid_manifest = Path.cwd() / 'onboarding-invalid.json'
+    invalid_manifest.write_bytes(b'\xffPRIVATE')
+    invalid = cli('jar-check', invalid_manifest, expected=1)
+    assert json.loads(invalid)['error']['code'] == 'invalid_tipjar'
+    assert 'PRIVATE' not in invalid
+    find_schema = json.loads(cli("schema", "find"))
+    assert find_schema["properties"]["format"]["const"] == "find-jars-report/1"
+    assert "--owner" in cli("find", "--help")
+    failed_find = json.loads(cli("find", expected=1))
+    assert failed_find["complete"] is False and failed_find["observations"] == []
+    assert failed_find["search"]["total_count"] is None
+    assert not core.schema_errors(failed_find, find_schema)
+
     # The additive alias must use the same workflow and fail-closed gates.
     assert run([tipjar, "--version"], cwd=Path.cwd(), env=env).strip() == "0.3.0"
     assert json.loads(run([tipjar, "instructions"], cwd=Path.cwd(), env=env)) == instructions
     assert "COMMAND" in run([tipjar, "--help"], cwd=Path.cwd(), env=env)
+    assert "--owner" in run([tipjar, "find", "--help"], cwd=Path.cwd(), env=env)
+    assert json.loads(run([tipjar, "schema", "find"], cwd=Path.cwd(), env=env)) == find_schema
+    invalid_find = json.loads(run([tipjar, "--report-budget", "find", "--owner", "a user:bad"],
+                                 cwd=Path.cwd(), env=env, expected=2))
+    assert invalid_find["error"]["code"] == "usage"
+
+    # Offline dependency discovery must work without git, gh or a package resolver.
+    manifest = Path.cwd() / "package.json"
+    manifest.write_text('{"dependencies":{"example":"git+https://github.com/example/library.git#v1"}}',
+                        encoding="utf-8")
+    if hasattr(os, "O_NOFOLLOW") and os.open in os.supports_dir_fd:
+        dependency_report = json.loads(run([tipjar, "dependencies", manifest], cwd=Path.cwd(), env=env))
+        assert dependency_report["repositories"] == ["example/library"]
+        assert dependency_report["dependencies"][0]["revision"] == "v1"
+        assert dependency_report["resolution_complete"] is True
+        manifest.write_text('{"dependencies":{"ordinary":"^1"}}', encoding="utf-8")
+        metadata = Path.cwd() / "node_modules" / "ordinary" / "package.json"
+        metadata.parent.mkdir(parents=True)
+        metadata.write_text('{"name":"ordinary","version":"1.2.3",'
+                            '"repository":{"url":"https://github.com/example/library.git"}}', encoding="utf-8")
+        installed_report = json.loads(run([tipjar, "dependencies", manifest, "--installed"],
+                                          cwd=Path.cwd(), env=env))
+        assert installed_report["repositories"] == ["example/library"]
+        observed = installed_report["dependencies"][0]["installed"]
+        assert (observed["name"], observed["version"]) == ("ordinary", "1.2.3")
+    else:
+        refused = json.loads(run([tipjar, "dependencies", manifest], cwd=Path.cwd(), env=env, expected=1))
+        assert refused["error"]["code"] == "dependency_input"
+    # Exercise the installed receipt parser offline with explicit synthetic public metadata.
+    from agent_contribute import receipts
+    class ReceiptFixture:
+        def request(self, endpoint):
+            repo = {"id": 101, "full_name": "acme/photos", "private": False, "visibility": "public"}
+            if endpoint == "repos/acme/photos":
+                return repo
+            assert endpoint == "repos/acme/photos/pulls/30"
+            return {"id": 700, "number": 30, "html_url": "https://github.com/acme/photos/pull/30",
+                    "state": "open", "draft": True, "merged": False, "merged_at": None,
+                    "closed_at": None, "merge_commit_sha": None, "merged_by": None,
+                    "user": {"id": 7, "login": "builder", "type": "User"},
+                    "head": {"sha": "a" * 40, "ref": "agent/work"},
+                    "base": {"sha": "b" * 40, "ref": "main", "repo": repo}}
+    recorded = Path.cwd() / "synthetic-receipt.json"
+    recorded.write_text(json.dumps(receipts.observe("acme/photos#30", ReceiptFixture())), encoding="utf-8")
+    impact = json.loads(run([tipjar, "impact", recorded, recorded], cwd=Path.cwd(), env=env))
+    assert impact["unique_prs"] == 1 and impact["counts"] == {"open": 1, "closed": 0, "merged": 0}
+    assert impact["repositories_represented"] == 1 and "repositories_helped" not in impact
+    assert impact["trust"] == "self-reported recorded observations"
+    assert json.loads(cli("schema", "receipt"))["$id"] == "urn:agent-contrib:output:2:receipt"
+    assert json.loads(cli("schema", "impact"))["$id"] == "urn:agent-contrib:output:2:impact"
 
     # Exercise real installed entry points, including small buffered JSON errors.
     for name, entrypoint in (
             ("console", [console]),
             ("tipjar", [tipjar]),
             ("module", [sys.executable, "-I", "-m", "agent_contribute"])):
+        # Every installed spelling exercises the complete new command surface offline.
+        def entry(*args, expected=0):
+            return json.loads(run([*entrypoint, *args], cwd=Path.cwd(), env=env, expected=expected))
+        local_jar = Path.cwd() / f"{name}-jar.json"
+        created = entry("init", "--status", "welcome", "--output", local_jar)
+        assert entry("jar-check", local_jar)["sha256"] == created["sha256"]
+        dependency_args = ("dependencies", manifest)
+        if hasattr(os, "O_NOFOLLOW") and os.open in os.supports_dir_fd:
+            assert entry(*dependency_args)["resolution_complete"] is False
+            assert entry(*dependency_args, "--installed")["repositories"] == ["example/library"]
+        else:
+            assert entry(*dependency_args, expected=1)["error"]["code"] == "dependency_input"
+        assert entry("impact", recorded, recorded)["unique_prs"] == 1
+        failed_receipt = Path.cwd() / f"{name}-missing-receipt.json"
+        assert "error" in entry("receipt", "acme/photos#30", "--output", failed_receipt, expected=1)
+        assert not failed_receipt.exists()
+        assert entry("find", expected=1)["complete"] is False
+        session_output = Path.cwd() / f"{name}-proposal.json"
+        proposal = entry("session", discovery_path, "--max-tasks", "1", "--minutes", "30",
+                         "--output", session_output)
+        assert proposal["actions_authorized"] is False
+        assert not core.schema_errors(proposal, session_schema)
         for args in (("instructions",), ("unknown-command",)):
             reader, writer = os.pipe()
             os.close(reader)
@@ -260,9 +405,12 @@ def main():
                     "tools/benchmark/README.md",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
                     "docs/examples/release-pypi.yml", "docs/output-reference.md",
+                    "tests/fixtures/dependencies/requirements.txt",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
                         if file.is_file() and file.suffix in (".py", ".json") and "__pycache__" not in file.parts)
+        expected.update("web/" + name for name in ("index.html", "style.css", "app.js", "model.js", "jar.svg", "README.md"))
+        expected.update("tests/web/" + name for name in ("model.test.cjs", "browser.html", "browser.test.js"))
         expected.update("agent_contribute/" + name for name in RESOURCE_PATHS)
         assert expected <= names, f"Missing sdist files: {sorted(expected - names)}"
         print("Rebuilding wheel from the sdist...", flush=True)

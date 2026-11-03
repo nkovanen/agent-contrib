@@ -22,7 +22,7 @@ def validate(repositories):
     return names
 
 
-def discover_many(repositories, client=None, *, signals=False, responsiveness=False, limit=None):
+def discover_many(repositories, client=None, *, signals=False, responsiveness=False, limit=None, welcomed_only=False):
     limit = core.validate_discovery_limit(limit)
     names = validate(repositories)
     client = client or core.GitHub()
@@ -30,12 +30,14 @@ def discover_many(repositories, client=None, *, signals=False, responsiveness=Fa
     for name in names:
         try:
             options = {key: True for key, value in (('signals', signals), ('responsiveness', responsiveness)) if value}
+            if welcomed_only:
+                options['welcomed_only'] = True
             result = core.discover(name, client, **options)
         except core.ProtocolError as exc:  # one failure never aborts or completes another repository
             result = {'requested_repository': name, 'complete': False, 'errors': [str(exc)], 'issues': []}
         results.append(result)
         errors += [f'{name}: {error}' for error in result.get('errors', [])]
-        for issue in result.get('issues', []):
+        for issue in result.get('issues', []) if result.get('selection', {}).get('included') is True else []:
             candidates.append({'repository': name, 'reference': issue['reference'], 'number': issue['number'],
                                'excluded': bool(issue['exclusions']), 'overlapping': bool(issue['duplicates']),
                                'low_likelihood': issue['ranking']['success_likelihood']['value'] == 'low',

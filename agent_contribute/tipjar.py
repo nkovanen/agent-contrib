@@ -76,17 +76,17 @@ def read_jar(repository: str, client=None, *, commit: str | None = None, metadat
         if not branch.strip() or len(branch) > 1024 or any(ord(c) < 32 or ord(c) == 127 for c in branch):
             raise core.ProtocolError('api_shape', 'Invalid GitHub default branch')
         result['default_branch'] = branch
-        expected_tree = None
-        if commit is None:
-            resolved = core.require(get(f'repos/{canonical}/commits/{quote(branch, safe="")}'),
-                                    dict, 'default branch commit')
-            result['commit'] = _sha(resolved.get('sha'))
-            expected_tree = _sha(core.require(core.require(resolved.get('commit'), dict, 'commit').get('tree'),
-                                             dict, 'commit tree').get('sha'))
-        pinned = result['commit']
-        tree = core.require(get(f'repos/{canonical}/git/trees/{pinned}?recursive=1'), dict, 'pinned tree')
+        reference = commit if commit is not None else quote(branch, safe='')
+        resolved = core.require(get(f'repos/{canonical}/commits/{reference}'), dict, 'pinned commit')
+        pinned = _sha(resolved.get('sha'))
+        if commit is not None and pinned != commit:
+            raise core.ProtocolError('api_shape', 'Mismatched pinned GitHub commit')
+        result['commit'] = pinned
+        expected_tree = _sha(core.require(core.require(resolved.get('commit'), dict, 'commit').get('tree'),
+                                         dict, 'commit tree').get('sha'))
+        tree = core.require(get(f'repos/{canonical}/git/trees/{expected_tree}?recursive=1'), dict, 'pinned tree')
         tree_sha = _sha(tree.get('sha'))
-        if tree.get('truncated') is not False or expected_tree is not None and tree_sha != expected_tree:
+        if tree.get('truncated') is not False or tree_sha != expected_tree:
             raise core.ProtocolError('api_shape', 'Incomplete or mismatched pinned GitHub tree')
         entries = core.require(tree.get('tree'), list, 'tree entries')
         core.tree_entries(entries)  # validates kinds/modes and rejects duplicate paths
@@ -126,8 +126,72 @@ def read_jar(repository: str, client=None, *, commit: str | None = None, metadat
 inspect_jar = read_jar
 
 
+def _complete_report(report):
+    """Validate report data, not its authenticity; live callers must establish their own pin."""
+    from .outputs import output_schema
+    if core.schema_errors(report, output_schema('jar')) or report['complete'] is not True:
+        return False
+    try:
+        core.parse_repository(report['repository'])
+        _sha(report['commit'])
+        branch = report['default_branch']
+        if not isinstance(branch, str) or not branch.strip() or any(ord(c) < 32 or ord(c) == 127 for c in branch):
+            return False
+        if not report['notice'].strip() or dt.datetime.fromisoformat(report['fetched_at']).utcoffset() is None:
+            return False
+        if report['errors']:
+            return False
+        if report['state'] == 'undeclared':
+            return report['manifest'] is None and report['sha256'] is None and report['blob_sha'] is None
+        if report['state'] not in ('welcome', 'closed') or report['sha256'] is None or report['blob_sha'] is None:
+            return False
+        manifest = parse_manifest(json.dumps(report['manifest'], ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
+        return manifest['status'] == report['state']
+    except (core.ProtocolError, ValueError, TypeError, UnicodeError):
+        return False
+
+
 def same_declaration(before: dict, after: dict) -> bool:
-    """Compare complete declaration state and exact bytes, independent of branch advancement."""
-    return (before.get('complete') is True and after.get('complete') is True
-            and before.get('state') in ('welcome', 'closed', 'undeclared')
-            and all(before.get(key) == after.get(key) for key in ('repository', 'state', 'sha256')))
+    """Compare structurally complete declarations; matching data alone authenticates neither report."""
+    return (_complete_report(before) and _complete_report(after) and
+            all(before[key] == after[key] for key in
+                ('repository', 'default_branch', 'path', 'state', 'sha256', 'blob_sha', 'manifest')))
+
+
+def preparation_errors(report: dict, *, source=None) -> list[str]:
+    """Validate pending-draft input offline. A caller report is not proof of a source read."""
+    if not _complete_report(report):
+        return ['Tipjar source declaration is unknown; refresh and review source policy']
+    if source is not None and (not isinstance(source, dict) or
+            any(report[key] != source.get(key) for key in ('repository', 'commit', 'default_branch'))):
+        return ['Tipjar source identity does not match inspection; refresh inspection']
+    if report['state'] == 'closed':
+        return ['Tipjar source is closed to agent contributions']
+    return []
+
+
+def live_errors(task: dict, current: dict, client) -> list[str]:
+    """Establish current and historical source declarations through the client's pinned reader."""
+    source = task['source']
+    supplied = current.get('tipjar')
+    errors = preparation_errors(supplied, source=current.get('source', {}))
+    report = inspect_jar(source['repository'], client)
+    errors.extend(preparation_errors(report, source=current.get('source', {})))
+    if report.get('default_branch') != source['default_branch']:
+        errors.append('Tipjar source default branch changed; refresh and review contract')
+    if not same_declaration(supplied, report):
+        errors.append('Tipjar supplied declaration does not match the freshly read source')
+    baseline = inspect_jar(source['repository'], client, commit=source['commit'])
+    errors.extend('Baseline: ' + error for error in preparation_errors(baseline))
+    if not same_declaration(baseline, report):
+        errors.append('Tipjar declaration changed or baseline unresolved; refresh and review contract')
+    return list(dict.fromkeys(errors))
+
+
+def selection(report: dict, welcomed_only=False) -> dict:
+    allowed = not preparation_errors(report)
+    included = allowed and (not welcomed_only or report['state'] == 'welcome')
+    reason = ('declared welcome; policy review required' if included and report['state'] == 'welcome' else
+              'undeclared; explicit targeting requires policy review' if included else
+              'undeclared; excluded by welcome filter' if allowed else '; '.join(preparation_errors(report)))
+    return {'mode': 'welcomed-only' if welcomed_only else 'explicit', 'included': included, 'reason': reason}

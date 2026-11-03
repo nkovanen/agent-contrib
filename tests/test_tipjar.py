@@ -26,7 +26,8 @@ def responses(raw=RAW, entries=None):
                               'fork': True, 'has_issues': False, 'parent': {'full_name': 'other/parent'},
                               'private': False, 'visibility': 'public'},
         'repos/acme/project/commits/main': {'sha': COMMIT, 'commit': {'tree': {'sha': TREE}}},
-        f'repos/acme/project/git/trees/{COMMIT}?recursive=1': {
+        f'repos/acme/project/commits/{COMMIT}': {'sha': COMMIT, 'commit': {'tree': {'sha': TREE}}},
+        f'repos/acme/project/git/trees/{TREE}?recursive=1': {
             'sha': TREE, 'truncated': False, 'tree': entries if entries is not None else [
                 {'path': '.tipjar.json', 'type': 'blob', 'mode': '100644', 'sha': blob}]},
         f'repos/acme/project/contents/.tipjar.json?ref={COMMIT}': {
@@ -165,7 +166,7 @@ class PinnedReadTests(unittest.TestCase):
             self.assert_unknown(responses(entries=entries))
         for field, value in [('truncated', True), ('truncated', None), ('tree', None), ('sha', 'bad')]:
             data = responses(entries=[])
-            data[f'repos/acme/project/git/trees/{COMMIT}?recursive=1'][field] = value
+            data[f'repos/acme/project/git/trees/{TREE}?recursive=1'][field] = value
             self.assert_unknown(data)
 
     def assert_unknown(self, data):
@@ -206,7 +207,7 @@ class PinnedReadTests(unittest.TestCase):
         result = tipjar.read_jar('acme/project', client, commit=COMMIT,
                                 metadata=client.data['repos/acme/project'])
         self.assertEqual(result['state'], 'welcome')
-        self.assertEqual(len(client.calls), 2)
+        self.assertEqual(len(client.calls), 3)
         result = tipjar.read_jar('acme/project', Fake(), commit='main')
         self.assertFalse(result['complete'])
 
@@ -248,6 +249,52 @@ class PinnedReadTests(unittest.TestCase):
         self.assertFalse(tipjar.same_declaration(before, after))
 
 
+class CanonicalTreeTests(unittest.TestCase):
+    def client(self):
+        data = responses()
+        commit_endpoint = f'repos/acme/project/commits/{COMMIT}'
+        data[commit_endpoint] = copy.deepcopy(data['repos/acme/project/commits/main'])
+        commit_tree = f'repos/acme/project/git/trees/{COMMIT}?recursive=1'
+        canonical_tree = f'repos/acme/project/git/trees/{TREE}?recursive=1'
+        data[commit_tree] = copy.deepcopy(data[canonical_tree])
+        # GitHub accepts a commit parameter here but echoes that parameter as sha.
+        data[commit_tree]['sha'] = COMMIT
+        return Fake(data)
+
+    def test_default_and_historical_reads_query_the_commit_objects_canonical_tree(self):
+        for historical, supplied_metadata in ((False, False), (True, False), (True, True)):
+            client = self.client()
+            options = {'commit': COMMIT} if historical else {}
+            if supplied_metadata:
+                options['metadata'] = client.data['repos/acme/project']
+            with self.subTest(historical=historical, supplied_metadata=supplied_metadata):
+                result = tipjar.read_jar('acme/project', client, **options)
+                self.assertEqual((result['state'], result['complete']), ('welcome', True))
+                expected = ([] if supplied_metadata else ['repos/acme/project']) + [
+                    'repos/acme/project/commits/' + (COMMIT if historical else 'main'),
+                    f'repos/acme/project/git/trees/{TREE}?recursive=1',
+                    f'repos/acme/project/contents/.tipjar.json?ref={COMMIT}']
+                self.assertEqual(client.calls, expected)
+                self.assertLessEqual(len(client.calls), 4)
+
+    def test_historical_commit_identity_mismatch_stops_before_tree(self):
+        client = self.client()
+        client.data[f'repos/acme/project/commits/{COMMIT}']['sha'] = 'd' * 40
+        result = tipjar.read_jar('acme/project', client, commit=COMMIT)
+        self.assertEqual((result['state'], result['complete']), ('unknown', False))
+        self.assertFalse(any('/git/trees/' in call for call in client.calls))
+
+    def test_canonical_tree_must_be_complete_and_match_exact_identity(self):
+        for field, value in [('sha', None), ('sha', COMMIT), ('sha', 'd' * 40),
+                             ('truncated', None), ('truncated', True), ('tree', None)]:
+            client = self.client()
+            client.data[f'repos/acme/project/git/trees/{TREE}?recursive=1'][field] = value
+            with self.subTest(field=field, value=value):
+                result = tipjar.read_jar('acme/project', client, commit=COMMIT)
+                self.assertEqual((result['state'], result['complete']), ('unknown', False))
+                self.assertFalse(any('/contents/' in call for call in client.calls))
+
+
 class CacheTrustTests(unittest.TestCase):
     def test_cache_only_shortcuts_verified_content_and_rereads_live_tree(self):
         from tests.test_cache import gh, without_times
@@ -270,9 +317,25 @@ class CacheTrustTests(unittest.TestCase):
                 self.assertEqual(len(calls), 4)
                 # An old verified cached jar cannot hide a live malformed tree.
                 calls.clear()
-                fake.data[f'repos/acme/project/git/trees/{COMMIT}?recursive=1']['truncated'] = True
+                fake.data[f'repos/acme/project/git/trees/{TREE}?recursive=1']['truncated'] = True
                 self.assertEqual(tipjar.read_jar('acme/project', core.GitHub())['state'], 'unknown')
                 self.assertEqual(len(calls), 3)
+
+    def test_malformed_or_mismatched_commit_cannot_enable_canonical_tree_cache_hit(self):
+        for value in [None, {}, {'sha': COMMIT, 'commit': None},
+                      {'sha': COMMIT, 'commit': {'tree': {'sha': None}}},
+                      {'sha': 'd' * 40, 'commit': {'tree': {'sha': TREE}}}]:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+                store = cache.Cache(directory)
+                self.addCleanup(store.close)
+                data = responses()
+                store.observe('repos/acme/project', data['repos/acme/project'])
+                store.observe(f'repos/acme/project/commits/{COMMIT}', value)
+                tree_endpoint = f'repos/acme/project/git/trees/{TREE}?recursive=1'
+                store.observe(tree_endpoint, data[tree_endpoint])
+                contents = f'repos/acme/project/contents/.tipjar.json?ref={COMMIT}'
+                store.observe(contents, data[contents])
+                self.assertIsNone(store.lookup(contents))
 
     def test_branch_advancement_after_pin_does_not_switch_content_ref(self):
         class Moving(Fake):

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:1:init",
+  "title": "init result",
+  "description": "Offline maintainer manifest creation; failures use the error envelope.",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "maxLength": 2147483647,
+      "description": "Explicit local file path"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "welcome",
+        "closed"
+      ],
+      "description": "Validated invitation state; grants no authority"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "minLength": 64,
+      "maxLength": 64,
+      "description": "SHA-256 of exact UTF-8 file bytes"
+    },
+    "notice": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Invitation and authority boundary"
+    },
+    "next_steps": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "string",
+        "maxLength": 1000
+      },
+      "description": "Local editing, validation and review guidance"
+    }
+  },
+  "required": [
+    "output",
+    "state",
+    "sha256",
+    "notice",
+    "next_steps"
+  ],
+  "additionalProperties": false
+}

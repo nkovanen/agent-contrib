@@ -1,0 +1,10 @@
+{
+  "name": "give-back-example",
+  "dependencies": {
+    "parser": "git+https://github.com/Example/Parser.git#v2",
+    "registry-only": "^1.2.0",
+    "elsewhere": "git+https://gitlab.com/team/lib.git"
+  },
+  "devDependencies": {"parser-tools": "git@github.com:example/parser.git#tools"},
+  "optionalDependencies": {"other": "https://github.com/example/Other.git"}
+}

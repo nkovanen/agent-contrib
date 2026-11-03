@@ -34,6 +34,7 @@ def _coverage(kind, loaded, tree):
 
 
 def audit(repository, client=None, *, print_policy=False):
+    client = client or core.GitHub()
     result, snapshot = core.discover_with_snapshot(repository, client)
     report = {key: result.get(key) for key in ('requested_repository', 'issue_source_repository',
                                                'proposed_target_repository', 'resolution_provenance')}
@@ -41,6 +42,10 @@ def audit(repository, client=None, *, print_policy=False):
                   warning='Read-only report. Suggestions are non-binding; nothing is written to the repository.')
     if snapshot is None:
         return report
+    from . import policy as policy_inventory
+    report['tipjar'] = snapshot['tipjar']
+    report['repository_policy'] = policy_inventory.report(snapshot['repository'], snapshot['commit'],
+        snapshot['instructions'], client, default_branch=snapshot['default_branch'], tipjar_report=snapshot['tipjar'])
     issues = result['issues']
     policy = {'state': snapshot['policy_state'], 'path': '.agent-contrib.json', 'commit': snapshot['commit']}
     labels = [label.get('name') for label in snapshot['labels']]

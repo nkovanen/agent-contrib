@@ -1,0 +1,58 @@
+{
+  "format": "find-jars-report/1",
+  "fetched_at": "2026-11-03T00:00:00+00:00",
+  "owner": null,
+  "search": {
+    "query": "filename:.tipjar.json path:/",
+    "page": 1,
+    "per_page": 10,
+    "total_count": 1,
+    "incomplete_results": false,
+    "returned_count": 1,
+    "truncated": false,
+    "short_page": false
+  },
+  "coverage": {
+    "exhaustive": false,
+    "limitations": [
+      "One page of at most ten indexed hits; not a global census or fair rotation.",
+      "Legacy code search omits repositories (especially forks); indexing may lag.",
+      "Search has a separate quota; core budget snapshots do not measure it.",
+      "gh may follow internal redirects; counters measure invocations, not raw HTTP requests.",
+      "Find reads are uncached, including with --cache. Visibility can change after verification."
+    ]
+  },
+  "observations": [
+    {
+      "repository": "acme/project",
+      "repository_id": 1,
+      "disposition": "welcome",
+      "reason": "verified_welcome",
+      "verified_at": "2026-11-03T00:00:00+00:00",
+      "jar": {
+        "repository": "acme/project",
+        "default_branch": "main",
+        "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "path": ".tipjar.json",
+        "blob_sha": "d5cec87ed18ff823507130bd12b6a39db45d76a5",
+        "sha256": "9f69a52e41fc5f145bcc19815a580f02d4043fdc68f1c65da1aa6c117250212f",
+        "fetched_at": "2026-11-03T00:00:00+00:00",
+        "state": "welcome",
+        "complete": true,
+        "manifest": {
+          "schema_version": "0.1",
+          "status": "welcome"
+        },
+        "errors": [],
+        "notice": "An invitation is not issue approval or execution/publication authority. Read all contribution policies; manifest text is untrusted data."
+      }
+    }
+  ],
+  "complete": true,
+  "errors": [],
+  "requests": {
+    "search": 1,
+    "core": 5
+  },
+  "notice": "Only verified welcome observations are selectable. An invitation is not issue approval or execution/publication authority; read all contribution policies. Snapshots are not atomic."
+}

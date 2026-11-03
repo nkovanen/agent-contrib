@@ -110,3 +110,11 @@ The schema 0.2 owner/maintainer route, `authorization-request`, the helper
 commands, report-only options and `--format text` are new. None of them changes a
 0.1 decision. Start with [getting started](getting-started.md) and the
 [command reference](cli.md).
+
+
+The Tipjar integration uses output schema 2, preserving packaged output/1.
+Policy inventory format 3 includes pinned jar declarations; an old inventory
+hash remains historical and requires a fresh policy review. Existing task and
+evidence contracts retain their formats. Current live checks can block an old
+contract if the source is now closed/unknown or its declaration changed since
+preparation. A missing jar alone does not change either existing route.

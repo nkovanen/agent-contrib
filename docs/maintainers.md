@@ -127,8 +127,50 @@ prevents final completion. See [the host handoff](host-authorization.md).
 A root `.tipjar.json` can declare an invitation for useful **agent work**.
 It does not accept money, approve issues, execute commands or grant publication
 authority. The candidate's `agent-contrib jar owner/repo` inspects this file;
-normal discover/prepare/verify do not yet read or enforce it. Old clients do not
-enforce it either: state refusals plainly in ordinary contribution documentation.
+discovery, preparation and live gates enforce closed/unknown declarations on the
+actual issue source, with no fork or approval override. Welcome is only an
+invitation; wanted/boundaries remain policy-review data. Old clients do not
+enforce it: state refusals plainly in ordinary contribution documentation.
+
+### Two-minute setup (offline)
+
+Use a reviewed v0.3.0 candidate containing these commands; the published v0.2.0
+has no `tipjar` alias or jar commands. No GitHub authentication is needed to
+create and check a local file. Choose a state explicitly:
+
+```sh
+# Welcome useful agent work; creates a new file, never overwrites one.
+tipjar init --status welcome --output .tipjar.json
+# Edit wanted and boundaries to match your actual policies before publishing.
+tipjar jar-check .tipjar.json
+```
+
+The welcome template marks its wanted-work entry `EDIT before publishing`.
+Replace it with concrete work you want, such as a broken documentation example
+or a small bug with a regression. Review each boundary: keep the scope bounded,
+require your contribution guide, and preserve separate human authorization for
+local execution and publication. Validation checks structure, not whether these
+statements accurately express your policy. It never approves an issue or task.
+
+To decline agent contributions, start with an explicit closed template instead:
+
+```sh
+# Alternative to the welcome command, in a directory without .tipjar.json:
+tipjar init --status closed --output .tipjar.json
+tipjar jar-check .tipjar.json
+```
+
+An existing file or symlink is refused; edit your existing file deliberately,
+then check it again. You may use a staging path with `--output` and place the
+reviewed file at the repository root as `.tipjar.json` later. Init reports the
+chosen state, exact byte SHA-256, path and next steps. Check reports the edited
+file's state and exact byte SHA-256 without printing its contents. Neither command
+reads GitHub, changes remote policy, publishes a file or grants authority.
+See [offline manifest commands](cli.md#offline-manifest-setup-and-validation).
+Keep refusals in CONTRIBUTING.md as well: older clients do not read or enforce
+jars, and this branch's remote jar behavior is inspection only.
+
+Copyable welcome example (replace the preferences with your own):
 
 ```json
 {
@@ -139,8 +181,17 @@ enforce it either: state refusals plainly in ordinary contribution documentation
 }
 ```
 
-For an opt-out use `{"schema_version":"0.1","status":"closed"}`. Both optional
-arrays may be omitted. Only the four illustrated fields are allowed. Each array
+Copyable closed example:
+
+```json
+{
+  "schema_version": "0.1",
+  "status": "closed",
+  "boundaries": ["Agent-generated contributions are not accepted; read CONTRIBUTING.md"]
+}
+```
+
+Both optional arrays may be omitted. Only the four illustrated fields are allowed. Each array
 has at most 16 distinct, nonblank strings of 1–500 Unicode code points without
 C0 or DEL controls. Nonblank uses the explicit Unicode White_Space set in the
 [manifest contract](superpowers/specs/2026-11-03-tipjar-design.md#manifest-01),
@@ -156,3 +207,22 @@ must be reviewed with the existing source-linked requirements ledger. Links and
 commands in text remain data and are never automatically followed or executed.
 See [jar inspection](cli.md#jar-inspection-candidate-inspection-only) for states,
 provenance, fresh-read limits and current no-jar route limitations.
+
+
+### Let the bounded finder observe your jar
+
+Add the supported `.tipjar.json` to the repository root on its default branch,
+alongside ordinary contribution policies. A minimal invitation is:
+
+```json
+{"schema_version":"0.1","status":"welcome"}
+```
+
+Optionally include `wanted` and `boundaries` arrays as described above. Verify
+with `tipjar jar owner/repo`; direct inspection does not wait for indexing.
+`tipjar find --owner owner` verifies at most ten indexed hits from public active
+repositories. It does not register a project or promise index coverage.
+Indexing may lag, especially for forks. No adoption or external invitation is
+established by this implementation. Older clients do not enforce jars, so state
+refusals in ordinary contribution docs too. An invitation never waives
+contradictory policy or grants execution/publication authority.

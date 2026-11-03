@@ -122,7 +122,7 @@ class SchemaCommandTests(unittest.TestCase):
         code, result = invoke('instructions')
         self.assertEqual(code, 0)
         self.assertEqual(result['output_schema_version'], outputs.VERSION)
-        self.assertEqual(result['resources']['output_schemas'], 'agent_contribute/schemas/output/1')
+        self.assertEqual(result['resources']['output_schemas'], 'agent_contribute/schemas/output/2')
         self.assertIn('agent-contrib schema', result['workflow_markdown'])
 
     def test_every_command_has_a_schema(self):
@@ -214,7 +214,11 @@ class SchemaFileTests(unittest.TestCase):
             valid = 'a' * int(length.group(1)) if length else 'usage'
             if pattern.startswith('^H-'):  # stable policy hint IDs (N12)
                 valid = 'H-' + 'a' * int(length.group(1))
-            for value, expected in ((valid, True), ('-' + valid, False), (valid + '-', False), (valid + '\n', False),
+            if pattern.startswith('^[0-9]{4}-'):
+                valid = '2026-11-03T12:00:00Z'
+            elif '/[A-Za-z0-9]' in pattern:
+                valid = 'acme/photos'
+            for value, expected in ((valid, True), ('!' + valid, False), (valid + '!', False), (valid + '\n', False),
                                     ('\n' + valid, False), ('!' + valid + '!', False)):
                 with self.subTest(pattern=pattern, value=value):
                     bundled = not core.schema_errors(value, {'type': 'string', **schema})
@@ -372,7 +376,7 @@ class DiagnosticVolumeTests(unittest.TestCase):
                 if name_rule.search(key) and 'items' in item:
                     found += 1
                     with self.subTest(name=name, path=path):
-                        if name == 'jar' and key == 'errors':
+                        if key == 'errors' and (name == 'jar' or name == 'find' and path == '$.$defs.jar_result.errors' or '.tipjar.' in path or path.endswith('.baseline.errors') or path.endswith('.current.errors')):
                             self.assertEqual(item['maxItems'], 1)
                             self.assertEqual(item['items']['maxLength'], 300)
                             continue  # single-file inspection has one bounded failure, no paginated diagnostics

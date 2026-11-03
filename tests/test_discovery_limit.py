@@ -170,7 +170,8 @@ class DiscoveryLimitTests(unittest.TestCase):
         self.assertEqual([i['number'] for i in limited['issues']], [2])
         self.assertEqual(limited['local_work'], full['local_work'])
         self.assertEqual(limited['top_check']['checked'], 2)
-        self.assertEqual(limited['repository_policy'], full['repository_policy'])
+        from tests.test_cache import without_times
+        self.assertEqual(without_times(limited['repository_policy']), without_times(full['repository_policy']))
         self.assertEqual(limited_client.calls, full_client.calls)
 
     def test_hidden_incomplete_top_check_keeps_nonzero_exit_and_text_status(self):

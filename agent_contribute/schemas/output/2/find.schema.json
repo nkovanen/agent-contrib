@@ -1,0 +1,444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:find",
+  "title": "find result",
+  "description": "Bounded public invitation batch (find-jars-report/1), not exhaustive coverage or authority.",
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "find-jars-report/1"
+    },
+    "fetched_at": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "owner": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 39
+    },
+    "search": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "page": {
+          "type": "integer",
+          "const": 1
+        },
+        "per_page": {
+          "type": "integer",
+          "const": 10
+        },
+        "total_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "incomplete_results": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "returned_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "truncated": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "short_page": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "query",
+        "page",
+        "per_page",
+        "total_count",
+        "incomplete_results",
+        "returned_count",
+        "truncated",
+        "short_page"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "exhaustive": {
+          "type": "boolean",
+          "const": false
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "exhaustive",
+        "limitations"
+      ],
+      "additionalProperties": false
+    },
+    "observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "repository_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "welcome",
+              "closed",
+              "undeclared",
+              "excluded",
+              "unknown"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "jar": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/jar_result"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "repository",
+          "repository_id",
+          "disposition",
+          "reason",
+          "verified_at",
+          "jar"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647
+    },
+    "requests": {
+      "type": "object",
+      "properties": {
+        "search": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "core": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "search",
+        "core"
+      ],
+      "additionalProperties": false
+    },
+    "notice": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "api_budget": {
+      "$ref": "#/$defs/api_budget"
+    }
+  },
+  "required": [
+    "format",
+    "fetched_at",
+    "owner",
+    "search",
+    "coverage",
+    "observations",
+    "complete",
+    "errors",
+    "requests",
+    "notice"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "tipjar_manifest": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "welcome",
+            "closed"
+          ]
+        },
+        "wanted": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    },
+    "jar_result": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Actual repository inspected; no parent or owner inheritance"
+        },
+        "default_branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 40,
+          "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+        },
+        "path": {
+          "type": "string",
+          "const": ".tipjar.json"
+        },
+        "blob_sha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 40,
+          "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+          "description": "Exact decoded-byte digest, even when validation fails; not by itself trusted provenance"
+        },
+        "fetched_at": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "welcome",
+            "closed",
+            "undeclared",
+            "unknown"
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "manifest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/tipjar_manifest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "notice": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "repository",
+        "default_branch",
+        "commit",
+        "path",
+        "blob_sha",
+        "sha256",
+        "fetched_at",
+        "state",
+        "complete",
+        "manifest",
+        "errors",
+        "notice"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

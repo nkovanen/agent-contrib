@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-contrib:output:2:lint",
+  "title": "lint result",
+  "description": "Offline contract check: bundled task schema, then the reviewed-contract rules. No GitHub or Git reads; never readiness or authorization.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 20,
+      "description": "The contract's schema_version when it is a string, else null"
+    },
+    "schema_valid": {
+      "type": "boolean"
+    },
+    "schema_errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647
+    },
+    "review_errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2147483647
+      },
+      "maxItems": 2147483647,
+      "description": "Reviewed-contract blockers; empty when the schema is invalid"
+    },
+    "reviewed": {
+      "type": "boolean",
+      "description": "Schema valid with no review errors; sets the exit status"
+    },
+    "contract_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$",
+      "minLength": 64,
+      "maxLength": 64,
+      "description": "Canonical contract hash; null when the schema is invalid"
+    },
+    "network": {
+      "type": "string",
+      "maxLength": 2147483647
+    }
+  },
+  "required": [
+    "schema_version",
+    "schema_valid",
+    "schema_errors",
+    "review_errors",
+    "reviewed",
+    "contract_sha256",
+    "network"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "api_budget": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/rate_limit_snapshot"
+        },
+        "used_during_command": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "after.used - before.used; null when the snapshots cannot be compared"
+        },
+        "delta_unknown_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why used_during_command is null",
+          "maxLength": 2147483647
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "used_during_command",
+        "delta_unknown_reason",
+        "note"
+      ],
+      "additionalProperties": false,
+      "description": "Added by --report-budget; report only"
+    },
+    "rate_limit_snapshot": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "remaining": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "used": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reset": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Reset time, epoch seconds"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the snapshot failed; null when it succeeded",
+          "maxLength": 2147483647
+        }
+      },
+      "required": [
+        "limit",
+        "remaining",
+        "used",
+        "reset",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Core REST rate-limit snapshot; the counters are null when error is set"
+    }
+  }
+}

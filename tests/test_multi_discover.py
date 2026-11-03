@@ -39,6 +39,7 @@ class MultiDiscoverTests(unittest.TestCase):
             direct = core.discover('acme/photos', FakeGitHub())
             for value in (result, direct):
                 value.pop('fetched_at')
+                value['tipjar'].pop('fetched_at')
                 for read in value['resolution_provenance']['metadata_reads']:
                     read.pop('fetched_at')
             self.assertEqual(result, direct)
