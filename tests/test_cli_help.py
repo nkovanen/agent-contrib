@@ -37,7 +37,7 @@ class HelpTests(unittest.TestCase):
                     missing.append(' '.join(path + [action.option_strings[0] if action.option_strings else action.dest]))
         walk(built_parser(), [])
         self.assertIn('evidence init', commands)
-        self.assertEqual(len(commands), 16)  # includes authorization-request and schema
+        self.assertEqual(len(commands), 17)  # includes authorization-request, schema and lint
         self.assertEqual(missing, [])
 
     def test_top_level_help_lists_described_commands_and_exit_status(self):
@@ -61,10 +61,11 @@ class GlobalOptionPlacementTests(unittest.TestCase):
         return code, json.loads(output.getvalue())
 
     def test_global_option_after_subcommand_names_the_fix(self):
-        hint = ('global options --format, --report-budget and --min-remaining go before the subcommand, '
+        hint = ('global options --format, --report-budget, --min-remaining and --cache go before the subcommand, '
                 'for example: agent-contrib --format text verify task.json')
         for args in [('discover', 'acme/photos', '--format', 'text'), ('verify', 'task.json', '--format=text'),
-                     ('discover', 'acme/photos', '--report-budget'), ('drift', 'task.json', '--min-remaining', '5')]:
+                     ('discover', 'acme/photos', '--report-budget'), ('drift', 'task.json', '--min-remaining', '5'),
+                     ('inspect', 'acme/photos#1', '--cache')]:
             with self.subTest(args=args):
                 code, result = self.invoke(*args)
                 self.assertEqual(code, 2)

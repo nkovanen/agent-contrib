@@ -24,20 +24,22 @@ format and command exit status. Help/version output is unchanged.
 | `agent-contrib discover owner/repo --responsiveness` | One extra read of recently closed PRs, reported as `repository_signals.responsiveness`; issues and ordering unchanged |
 | `agent-contrib audit owner/repo [--print-policy]` | Read-only maintainer report: policy validity, labels, instruction coverage, issue-quality and overlap counts, non-binding suggestions |
 | `agent-contrib inspect 'owner/repo#123'` | Detailed issue snapshot, source policy, instructions, exclusions and PR matches |
-| `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft; an existing output file is never overwritten |
+| `agent-contrib prepare 'owner/repo#123' --output task.json` | A new schema `0.1` draft with a `pending` `ai-policy-review` prerequisite; an existing output file is never overwritten |
 | `agent-contrib verify task.json` | Schema, current source/approval/overlap and execution-readiness checks; no commands executed |
 | `agent-contrib verify task.json --evidence evidence.json --repo-dir checkout` | Also validates supplied evidence against the local checkout and live source |
 | `agent-contrib authorization-request task.json` | Schema 0.2 only: an unsigned request with every mandate binding pre-filled from the contract and live reads and every human-only field `null`. Grants nothing; exit 1 when not ready |
+| `agent-contrib lint task.json` | Offline contract check: bundled task schema, then the reviewed-contract rules `verify` applies first; exit 0 only for a schema-valid reviewed contract. No GitHub or Git reads |
 | `agent-contrib scope-check task.json --repo-dir checkout [--base REV]` | Offline check of committed, staged, unstaged and untracked paths against the contract scope; exit 1 lists each violation. Never evidence |
 | `agent-contrib evidence init task.json --repo-dir checkout --base REV --output evidence.json` | A new evidence skeleton with observed Git facts and contract IDs; results stay unfilled and the file fails validation until completed |
 | `agent-contrib pr-body task.json [--evidence e.json --repo-dir checkout] [--closes] [--assistant TEXT] --output body.md` | A new Markdown PR description built from the contract, evidence and a fresh read-only `verify` run |
 | `agent-contrib feedback 'owner/repo#PR' [--expected-head SHA]` | Read-only review state, review/issue comments and failing or pending check runs for a published PR |
 | `agent-contrib inspect 'owner/repo#123' --ownership` or `agent-contrib ownership 'owner/repo#123'` | Opt-in, report-only timeline and comment signals: cross-referenced PRs, assignments, claims and possible prior fixes |
-| `agent-contrib inspect 'owner/repo#123' --ai-policy` | Adds located excerpts of AI-contribution statements from the loaded instruction files |
+| `repository_policy` (always added by `discover`, `inspect` and `prepare`) | Report-only policy inventory and hints; never a verdict. `--ai-policy` is syntax-compatible only |
 | `agent-contrib drift task.json` | Read-only report of what changed since preparation: issue, instruction files, branch, policy and open-PR overlap |
 | `agent-contrib verify task.json --evidence e.json --observe-ci` | Also reports GitHub check runs and combined status for the evidence head; never changes gates or exit code |
 | `agent-contrib verify task.json --evidence e.json [--repo-dir checkout] --observe-signatures` | Also reports GitHub's signature verification for the evidence head, required-signature rulesets on the base branch and local signature-header presence; never verifies locally or changes gates or exit code |
 | `agent-contrib --report-budget [--min-remaining N] COMMAND ...` | Adds the core REST rate-limit budget before and after a GitHub-reading command; optionally refuses to start below N |
+| `agent-contrib --cache COMMAND ...` | Reuses verified file contents at pinned commits of public repositories from the user cache; every other read stays live and output is unchanged |
 | `agent-contrib instructions` | Installed workflow Markdown, CLI version, schema support and update behavior |
 | `agent-contrib skill --output SKILL.md` | Canonical adapter export, CLI version and SHA-256 |
 | `agent-contrib schema COMMAND` | The JSON Schema of COMMAND's JSON output; see [Output schemas](#output-schemas) |
@@ -67,13 +69,14 @@ closed. `core.ignoreCase=true` is refused on a case-sensitive filesystem, where
 it would hide case twins, and accepted where the filesystem really ignores case.
 Worktree content is compared with a commit through a fresh temporary index
 outside the checkout, so the checkout's stat cache is never trusted; every
-tracked file is hashed on each run. That comparison is byte for byte: attributes
-come from the empty tree and `core.autocrlf` is off, so `ident`, `eol`/`text`
-and `working-tree-encoding` conversions never make different bytes equal the
-commit, and a checkout with converted (for example CRLF) working copies reports
-them as changed. It needs Git 2.40 or newer (`git_too_old` otherwise). A
-non-empty `.git/info/attributes` is refused with `unsafe_git_attributes`, and
-`core.attributesFile` is always ignored.
+tracked file is hashed on each run. Each file's bytes must equal either the
+committed blob or exactly what checkout writes for it (`cat-file --filters`,
+using the committed `.gitattributes` with `core.autocrlf=false` and
+`core.eol=lf`). So `ident`, `eol`/`text` and `working-tree-encoding` cannot hide
+an edit, and an untouched checkout with those conversions stays clean. A CRLF
+copy produced only by a local `core.autocrlf` reports as changed. A non-empty
+`.git/info/attributes` is refused with `unsafe_git_attributes`;
+`core.attributesFile` and system attributes are always ignored.
 
 `agent-contrib --help` and `agent-contrib COMMAND --help` describe each command
 and option of the installed version. Exit status is 0 when a command succeeds and
@@ -159,8 +162,20 @@ The prerequisite blocker lists each prerequisite that is not `satisfied` with
 non-blank evidence, as `ID (status)` or `ID (satisfied without evidence)`.
 
 `instructions.resources` lists both task/evidence versions and host-context
-schemas 0.1 and 0.2. With a host-context 0.2 document, `verify` adds
-`overlap_dispositions` and `waived_duplicates`. The status is:
+schemas 0.1 and 0.2.
+
+When a host-context 0.2 document carries a `draft_update` record (#21), `verify`
+adds a `draft_update` report. Its status is `not_evaluated` (the record's
+contract, mandate, credential, repository, PR, event, interval and identity
+bindings check out) or `invalid`. The report also has `sha256`, `from_head`,
+`current` (whether the interval contains the verification time), `errors` and a
+note. `candidate_head` is always `null` in this version. The record is parsed
+only: no gate, blocker, `next_action`, exit status or GitHub read changes, and
+without the section the output is byte-identical. See
+[host authorization](host-authorization.md#draft-update-rounds-host-context-02).
+
+With a host-context 0.2 document, `verify` adds `overlap_dispositions` and
+`waived_duplicates`. The status is:
 - `absent`: no record;
 - `invalid`: a schema, binding or expiry error. Nothing is waived. A record
   rejected on its own checks makes no extra read, but one that expires during
@@ -210,6 +225,18 @@ validation summary. The host renders the complete contract from the file it
 hashes, issues the record, and the worker relays it unchanged. The request is not
 host context: piping it to `verify --host-context-stdin` fails schema validation.
 
+## Offline contract lint
+
+`lint task.json` reads one contract and nothing else. It validates it against
+the bundled task schema for its `schema_version` (unknown versions fail), and
+for a schema-valid contract it applies the same reviewed-contract rules that
+`verify` checks: reviewed status with no open questions, required fields,
+concrete repository-relative scope, unique IDs, a definition of done covering
+every criterion and validation, complete prepared discovery and satisfied
+prerequisites. `reviewed` (and exit 0) means only that the contract is ready
+for `verify`. It says nothing about the live issue, approval, overlap,
+authorization or evidence, and it never runs validation argv.
+
 ## Offline scope check
 
 `scope-check` evaluates the working diff against the contract's
@@ -244,6 +271,21 @@ unchanged. It makes no GitHub calls, so it can run as a pre-commit hook. Exit 0
 means "no scope violation found", not evidence, readiness or authorization.
 Each violation names the path and either the first matching prohibited pattern
 or `not in allowed_paths`.
+
+A changed path that is a symlink is also judged by its target, the same way in
+`verify` and `scope-check`. The target comes from the commit, the index or the
+worktree that holds the link, read without following it. It is resolved
+lexically from the link's directory, expanding every link hop, including links
+to directories, up to 40 hops. The link is a violation, with the reason as its
+rule, when the target is absolute (`/x` or `C:/x`), contains a backslash,
+escapes the repository, points at the repository root, is longer than 4096
+bytes, contains a NUL byte, is not valid UTF-8, cannot be read (for example a
+permission error on a hop), loops, or resolves to a path outside `allowed_paths` or matching
+`prohibited_paths` (for example `symlink to AGENTS.md: not in allowed_paths`).
+A link to an allowed file passes; a scope pass does not prove the target exists.
+Git records no path beyond a symlink, so a
+file written through a linked directory appears at its real path and is judged
+there.
 
 ## Evidence skeleton
 
@@ -336,13 +378,91 @@ without extra API calls. Without the flag, output and ordering are unchanged.
   issue list payload; malformed fields are `null`.
 - `maintainer`: whether the issue author's association is OWNER, MEMBER or
   COLLABORATOR.
+- `labels`: the issue's label names (sanitized, at most 100).
+- `demotion`: documented, report-only demotions with one reason each. A label
+  matches a phrase when the phrase's words appear as whole words in the
+  lower-cased label name, with punctuation and separators read as spaces
+  (`Status: On-Hold` matches `on hold`; `blockedness` matches nothing). Each
+  group counts once:
+  - on hold or deferred: `icebox`, `on hold`, `blocked`, `deferred`,
+    `postponed`, `frozen`;
+  - needs a decision or design discussion: `needs decision`, `needs design`,
+    `needs discussion`, `discussion`, `question`, `rfc`, `proposal`;
+  - not planned or not this project: `not planned`, `out of scope`,
+    `upstream`, `third party`, `wont do`;
+  - major-version or breaking-change bucket: only an explicit bucket, where the
+    label or its last `:` or `/` part is exactly `breaking`, `breaking change`,
+    `breaking changes`, `vN` or `vN.x` (`v5`, `kind/breaking`, `target: v6`).
+    `non-breaking`, `v5-compat` and `bug: v5 regression` are not buckets.
+  A phrase right after `non`, `not`, `no` or `un` does not match, so
+  `not blocked` and `no discussion needed` are not demotions.
+  A title counts as meta-like when it starts with `meta`, `wip`, `tracking`,
+  `tracker`, `roadmap`, `rfc`, `umbrella` or `epic` followed by `:`, `]`, `)` or
+  `-`, or contains `meta issue`, `tracking issue`, `umbrella issue`, `roadmap`
+  or `features list`. These rules come from dogfood evidence where icebox'd,
+  maintainer-reserved `v5`, question-labelled and tracking issues ranked first.
+  They are heuristics: a label can be stale, and titles can mislead.
 - `score`: one point for found locations, up to two for clarity, one for a
-  maintainer author.
+  maintainer author unless the title is meta-like, minus two per demotion,
+  never below zero.
 
-Ordering stays exclusions first, then overlaps, then low success likelihood;
+`--check-top N` (1-5, with `--signals` and one repository) then reads the
+existing ownership signals (as `inspect --ownership`) for only the top N
+candidates. Each check reads the first timeline and comment page and at most 4
+cross-referenced PR details, and all checks together make at most 30 reads.
+Each read is one GitHub GET with no retry, so a transient failure marks the
+check incomplete instead of making extra requests.
+Reaching a cap, or a failed read, marks that check `complete: false`, and an
+incomplete `top_check` exits 1. A checked issue is demoted when it has a
+merged same-repository PR that references it exactly ("possibly already
+fixed") or a current assignee. Claim comments never demote: comment prose is
+untrusted and easy to misread (quoted instructions, code examples, other
+issues), so claims stay visible only in the report-only `inspect --ownership`
+output. A demoted issue then moves below every other candidate that is not
+excluded or overlapping (known bad below unknown); relative order is otherwise
+kept and issues below the top N are never read. Each
+demotion is listed in the issue's `top_check.demotions`. No maintainer
+"reserved" or "rejected" detector exists, so none is used. A clean or
+incomplete check proves nothing, gates and overlap are unchanged, and the
+reads appear in `--report-budget`. In live runs with N=5 it made 13-18 reads
+and demoted ripgrep #2528 and hono #1018, both judged bad by that evaluator, to ranks 59 and 183.
+Precision@5 stayed 1/5, 1/5 and 0/5 for click, ripgrep and hono: the issues
+that moved up (ripgrep #1221, hono #2649) were judged bad too.
+
+`tests/test_ranking_eval.py` replays a frozen dogfood-2 snapshot (public titles,
+labels and signal inputs for click, ripgrep and hono, with the dogfood
+evaluator's judgements; the evaluator was a model, Claude Opus 5.5, and no
+separate human review was done) and checks precision@5 and the ranks of known bad labelled or meta issues offline.
+The demotions move those issues out of the top ranks but do not raise
+precision@5 on that snapshot (click 1/5, ripgrep 1/5, hono 0/5 before and
+after): most remaining false candidates are design debates, already fixed or
+not this project's bug, with no label or title cue.
+
+Ordering stays exclusions first, then overlaps; with `--repo-dir` or
+`--check-top` the next key is known-bad issues (locally referenced or demoted by
+the check), which rank below every other candidate. Then low success likelihood;
 only then does a higher `score` come first, with the issue number as the final
 tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
+
+`discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
+`local_work` object for unpublished local work. It lists the issue numbers
+referenced as `#N` or `owner/repo#N` (the source repository only)
+in the messages of commits reachable from the checkout's HEAD but not from the
+snapshot's source default-branch commit. It lists the newest 500 commits at most,
+checks each commit object's size before reading any message, and reads only
+whole messages: a commit larger than 64 KiB is skipped, and reading stops once
+messages would exceed 4 MiB in total. Reads use the hardened Git reader after the
+worktree-root and checkout-config checks. A missing base commit (the CLI never
+fetches), a shallow checkout (a shallow boundary can hide commits), an unsafe
+config, a subdirectory, more than 500 commits, a skipped message or a message
+containing a NUL byte make it incomplete, which exits 1. Messages are read from
+the raw commit objects (`git cat-file --batch`), never reformatted, and commit
+headers such as the author are not parsed. With `--signals`, each issue gets `signals.local_work`
+(`referenced`, `none` or `unknown`), and a referenced issue ranks below every
+other candidate that is not excluded or overlapping. Its score, gates and
+exclusions are unchanged. Without `--signals` the issue order is unchanged. A
+reference is not proof that the work is done.
 
 ## Repository responsiveness
 
@@ -414,13 +534,16 @@ approval, overlap or readiness decision changes in any schema version.
 Reads: the issue timeline and comments (complete pagination; timeline events
 without IDs are deduplicated by content), then a fresh `pulls/{n}` read for
 each cross-referenced PR (at most 50, otherwise incomplete). Each PR reports
-repository, repository ID, number, state, draft, merged, merge/close times and
-`exact_reference`: whether the PR text references this issue exactly (local
+repository, repository ID, number, sanitized `title`, `base_ref`, state, draft, merged,
+merge/close times and `exact_reference`: whether the PR text references this issue exactly (local
 `#N` only in the issue's own repository, `owner/repo#N` or the issue URL), with
 the same parser as overlap detection.
 
 - `resolution_signals.possibly_already_fixed`: merged PRs with an exact
-  reference. `rejected_approaches`: closed, unmerged PRs with an exact reference.
+  reference whose base repository is the issue's own repository (any base
+  branch; check `base_ref`). `downstream_references`: merged PRs with an exact
+  reference in other repositories, such as downstream workarounds; they never
+  indicate a fix. `rejected_approaches`: closed, unmerged PRs with an exact reference.
 - `assignment_history`, `connected_events` and `referencing_commits` from the
   timeline.
 - `claims`: comments matching a fixed set of claim patterns ("I'm working on",
@@ -439,25 +562,92 @@ read makes the signals `complete: false` and `resolution_signals.status:
 unknown`; an unknown is never "not fixed". With
 `--ownership`, exit 1 also covers incomplete signals.
 
-## AI-contribution statements (opt-in)
+## Repository policy report (default-on, report only)
 
-`inspect --ai-policy` adds `ai_policy` without changing any other field. It
-scans the instruction files `inspect` already loaded, line by line, for a fixed
-set of patterns (AI-generated, AI-assisted, LLM, large language model,
-generative AI, artificial intelligence, Copilot, ChatGPT, machine-generated, "no
-AI", AI tools/agents/contributions/code). Each hit gives the path, line number,
-the file's SHA-256, the matched patterns and a one-line `untrusted_excerpt` of
-at most 300 characters (`excerpt_truncated` marks a shortened excerpt). At most
-200 excerpts are returned (`excerpts_capped: true` beyond that). Only the first
-2000 characters of each line are scanned; `lines_partially_scanned` counts
-longer lines.
+`discover` (once per repository), `inspect` and `prepare` add `repository_policy`
+in the CLI output. The report changes no core result, contract field,
+`instructions_sha256` or exit code. Separately, `prepare` now writes a pending
+`ai-policy-review` prerequisite into new contracts; existing contracts are unchanged. `--ai-policy` is syntax-compatible only: it is
+accepted and changes nothing. The earlier unreleased `ai_policy` excerpts and
+the `agent_contribute.aipolicy` module no longer exist.
 
-`ai_policy_review` is always `required`. `coverage` is `incomplete` when any
-instruction read failed, the 60-file cap was hit, excerpts were capped or any
-line was only partially scanned. The CLI does not interpret the prose: a hit is a signal to read the
-file in context, and zero hits do not mean AI contributions are welcome. A
-machine-readable maintainer opt-out (a new policy version) is a separate,
-not-yet-implemented design.
+- **Inventory.** The issue source repository (never a requested fork) at the
+  observed commit. It covers the loaded instruction files plus policy-named
+  files at any depth. A name matches when it equals a prefix or continues it
+  after `.`, `-`, `_` or a space, case-insensitively: `contributing`,
+  `contribute`, `ai`, `llm`, `agents`, `claude`, `gemini`,
+  `copilot-instructions`, `pull_request_template`, `code_of_conduct`,
+  `code-of-conduct`, `security`, `support`, `governance`, and a root `readme`.
+  So `CONTRIBUTING.en.md`, `AI_USAGE_RULES.md`, `SECURITY-POLICY.md` and
+  `README.development.md` all match. Also matched: `.cursorrules`,
+  `.cursor/rules/*`, `llms.txt`, `.github/PULL_REQUEST_TEMPLATE/*`, and files
+  under `contributing/`, `contributors/`, `contribute/`, `policy/` or
+  `policies/` directories.
+  - Paths are classified in full and displayed shortened to 500 characters,
+    with `path_truncated`.
+  - Core instruction paths of 500 or more characters may already have been
+    shortened, so they are listed as an unresolved identity.
+  - The owner's `.github` repository (root, `.github/`, `docs/`) is read at its
+    default-branch commit. Contents are read by commit SHA, and the decoded
+    bytes must hash to the tree's Git blob SHA.
+- **Formats.** `.md`, `.markdown`, `.rst`, `.txt` and extensionless files are
+  scanned. Other document formats with a policy name (`.adoc`, `.pdf`, `.html`,
+  `.docx`, `.odt`, `.org`, `.textile`, `.rtf`, `.mdx`) are listed in
+  `unassessed` as `unsupported format`. Code, data and image files are not
+  policy candidates.
+- **`sources_scanned`.** Origin, repository, path, commit, SHA-256 of the file
+  bytes, scan kind, and notes such as `paragraphs with non-Latin script not
+  assessed: N`. The vocabulary is English only.
+- **`unassessed`.** Policy-like links from any scanned file, including READMEs
+  (`referenced, not assessed`; links to a scanned file at the same revision are
+  omitted). Also unsupported formats, failed reads, an owner `.github`
+  repository that is `not found or inaccessible` (never "absent"), and content
+  that did not match the pinned tree entry.
+- **`hints`.** Attention labels, not classifications:
+  - `possible_agent_restriction`, `possible_ai_restriction` and
+    `possible_pr_restriction`: an agent/automation, AI or pull-request term
+    within 12 words of a restriction word.
+  - `ai_mention`: any AI or agent term.
+
+  Paragraphs are joined across wrapped lines, and headings are kept as context.
+  HTML comments are scanned, and entities, tags, fullwidth forms and zero-width
+  characters are normalized. Adding sentences or paragraphs before or after a
+  passage never removes its hint kinds. Inserting words between the matched
+  terms can move them out of the 12-word window, and so can added text that
+  turns an existing line into a heading. Excerpts are sanitized and at most 300
+  characters.
+- **`limits_reached` and `reads`.** At most 25 logical GitHub requests per
+  report (each with the client's usual three attempts), 12 source and 8 owner
+  policy files, 200 kB per file and 1 MB scanned, all counted in UTF-8 bytes. The report keeps 100 hints,
+  50 unassessed entries and 256 kB serialized, and identifiers are truncated
+  with `what_truncated`. Anything dropped is counted in `limits_reached`. To
+  fit the size bound, hints go first, then unassessed entries, then long source
+  paths are shortened, and finally source records are left out. Each step is
+  recorded as a `report size: ...` limit.
+- **Identity.** Every source, omitted candidate and unassessed entry has
+  `identity_sha256`, a hash of its original repository and path (or URL) as
+  read from GitHub. Displayed paths can be shortened (`path_truncated`,
+  `what_truncated`) or sanitized of control and format characters
+  (`path_sanitized`, `what_sanitized`), so two entries can look alike. The
+  identity, not the display text, is what deduplication and `inventory_sha256`
+  use.
+- **`omitted_sources` and `hides_sources`.** A policy candidate that a file,
+  byte or request limit left unread is named in `omitted_sources` (at most 50,
+  with its repository, path, kind and reason; overflow is counted). Each
+  `limits_reached` entry says whether it `hides_sources`; hint limits do not.
+  `limits_hide_sources` is true when any limit hides a source or reference. The
+  workflow then treats repository policy as unresolved until every omitted
+  candidate is read manually or shown inapplicable.
+- **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
+  comments, other repositories, non-Latin text.
+- **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained
+  unassessed identifiers and the limits. It excludes commit SHAs, so unrelated
+  pushes do not change it. No verifier checks it; the workflow records it in
+  prerequisite `ai-policy-review`.
+
+There is deliberately no `coverage`, `complete` or `clear` field. Hints are
+noisy on purpose. The installed workflow's mandatory policy review decides what
+they mean, and that review is not verifier-enforced.
 
 ## Drift since preparation
 
@@ -572,8 +762,66 @@ cause no GitHub read.
 optional budget reads do not turn those failures into success. `--min-remaining N` refuses to start (error `rate_limit_budget`, exit 1)
 when the budget is unknown or below N, before any command read. The CLI does not
 estimate a command's cost; choose N yourself. Offline commands reject the flag.
-Without the flag, no rate-limit read happens and output is unchanged. Response
-caching is a deferred design.
+Without the flag, no rate-limit read happens and output is unchanged.
+
+## Content cache (opt-in)
+
+`--cache` before a command reuses file contents that GitHub returned for a
+pinned commit, so repeated `discover`, `inspect`, `prepare`, `verify` and
+`drift` runs skip re-reading the same instruction and policy files. The cache is
+content-addressed and self-verifying, and it never changes output, gates or exit
+status.
+
+- Only `repos/{owner}/{repo}/contents/{path}?ref={40-hex commit}` reads are
+  served from it, and only for a repository whose live metadata earlier in the
+  same command said both `"private": false` and `"visibility": "public"`. Private, internal or unobserved
+  repositories always read live.
+- The expected Git blob SHA for the path comes from the **live** recursive tree
+  read at that commit. Trees, metadata, issues, PRs, labels, permissions, branch
+  heads, comparisons, checks and every other read are never cached.
+- Entries are the decoded file bytes, named by blob SHA. A stored response must
+  carry that SHA and hash to it. Every hit recomputes the Git blob hash
+  (SHA-1 of `blob <length>\0<bytes>`) and must match the live tree; a
+  mismatching, oversized, symlinked, foreign-owned or non-regular entry (such
+  as a FIFO, opened nonblocking) is deleted and read live. Identical files at different paths share one entry.
+- The directory is `$XDG_CACHE_HOME/agent-contrib` (an absolute
+  `XDG_CACHE_HOME`), otherwise `~/.cache/agent-contrib`.
+  - It is opened once by walking every component of the absolute path from `/`
+    without following symlinks: a symlink anywhere in the path disables the
+    cache. Ancestors must already exist; only the cache directory itself is
+    created (0700), after every ancestor passed.
+  - The configured path is read lexically. `os.path.abspath` collapses `..`
+    before the walk, so `a/link/../c` means `a/c`, even where a shell following
+    `link` would land elsewhere.
+  - Every ancestor must be owned by root or by you, and not group- or
+    other-writable. The only exception is a root-owned sticky directory, such
+    as `/tmp`. Ancestors you own must carry no POSIX ACL.
+  - The cache directory itself must be yours, mode exactly 0700, with no POSIX
+    ACL.
+  - Any doubt disables the cache for that run; it is never an error and, by
+    design, prints no diagnostic, so output stays identical. If warm runs never
+    get faster, check these rules for your `XDG_CACHE_HOME`. Platforms
+    without `os.listxattr`, where ACLs cannot be ruled out, disable it too.
+  - **Default Ubuntu homes disable the cache:** umask 002 makes `~/.cache`
+    0775. To enable it, point `XDG_CACHE_HOME` at a private 0700 directory, for
+    example `mkdir -m 700 ~/.agent-contrib-cache` and then
+    `XDG_CACHE_HOME=~/.agent-contrib-cache agent-contrib --cache …`. Every
+    ancestor of that directory must meet the rules above.
+  - Every read, write, rename, scan and delete then works relative to that
+    open directory, so renaming or replacing its name afterwards cannot
+    redirect them.
+  - Writes are atomic and private (0600), and eviction touches only valid
+    entry names and the CLI's own temporary files. A temporary file older than
+    one hour, left by a crashed store, is removed. Younger ones count toward the
+    total but are never deleted, since they may belong to a concurrent store.
+  - Without POSIX ownership checks or `dir_fd` support, the cache is bypassed.
+- Entries are at most 8 MiB. After each store the total is brought under
+  256 MiB by deleting the oldest entries. Entries another invocation removes
+  meanwhile are skipped, so concurrent commands may exceed the total briefly,
+  but once they finish the last eviction pass has seen every stored entry. Delete the directory to clear it; any cache error falls back
+  to the live read.
+- `--report-budget` counts only the live reads that remain. The cache is active
+  for one invocation; library callers never inherit it.
 
 ## Several repositories
 
@@ -609,7 +857,8 @@ It is a summary: discovery shows at most 20 issues per repository, each with its
 overlapping-PR count, whether it is excluded and (with `--signals`) its score,
 followed by overlapping and excluded counts over all issues; lists show at
 most 50 entries and long remote lines are shortened. Omitted list entries are
-counted. Multi-repository discovery includes every repository's completeness and
+counted. Discovery adds one line each for `--responsiveness` and `--repo-dir` local
+work when requested. Multi-repository discovery includes every repository's completeness and
 errors. Verification shows the gates and blockers. With an explicit
 `verify --stage X`, text starts with stage X, its exit gate and its blockers;
 the other stages appear only as blocker counts, because they do not decide that
@@ -618,13 +867,15 @@ line reads `not evaluated; see Errors` and the schema errors follow. JSON still
 contains every stage. `scope-check` lists each violating path
 and rule, warnings and errors. `drift` lists the reasons that set `drifted`, then
 informational changes (an advanced default branch, PRs no longer open) apart.
-`instructions` prints a version line and then the
+`authorization-request` shows whether the request is ready for issuance, that it
+is unsigned and grants nothing, the contract hash, and each preflight error and
+unresolved field. `instructions` prints a version line and then the
 workflow Markdown unchanged, so it can be read without unwrapping JSON. Other
 commands show top-level scalar fields; use JSON for full nested results, instructions and provenance.
 Remote text is sanitized to a single line so it cannot add fake gate headings.
 Default JSON bytes are unchanged. Parse-time usage errors still use structured
 JSON when argument parsing has not produced a valid format selection.
-A global option (`--format`, `--report-budget`, `--min-remaining`) placed after
+A global option (`--format`, `--report-budget`, `--min-remaining`, `--cache`) placed after
 the subcommand is still a usage error (exit 2); its message says to move the
 option before the subcommand.
 
@@ -831,6 +1082,20 @@ One of `inspect_result`, `issue_unresolved`.
 | `resources.output_schemas` | string | Package directory of these output schemas; agent-contrib schema COMMAND prints one |
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
+
+### `lint`
+
+`agent-contrib schema lint` · Offline contract check: bundled task schema, then the reviewed-contract rules. No GitHub or Git reads; never readiness or authorization.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | string or null | The contract's schema_version when it is a string, else null |
+| `schema_valid` | boolean |  |
+| `schema_errors` | string[] |  |
+| `review_errors` | string[] | Reviewed-contract blockers; empty when the schema is invalid |
+| `reviewed` | boolean | Schema valid with no review errors; sets the exit status |
+| `contract_sha256` | string or null | Canonical contract hash; null when the schema is invalid |
+| `network` | string |  |
 
 ### `ownership`
 
@@ -1046,6 +1311,11 @@ A repository in a multi-repository run whose discovery raised
 | `complete` | boolean |  |
 | `ranking` | `ranking` |  |
 | `signals` | `issue_signals` (optional) |  |
+| `top_check` | object (optional) | Present only for the top N candidates checked by --check-top; report only |
+| `top_check.complete` | boolean | False when a read failed or a page, PR-detail or total read cap was reached |
+| `top_check.errors` | string[] |  |
+| `top_check.reads` | integer | GitHub reads made for this issue; at most 30 |
+| `top_check.demotions` | string[] | Merged same-repository fix or current assignee; claim comments never demote |
 
 #### `discover_multi`
 
@@ -1104,7 +1374,16 @@ One repository was resolved and read
 | `warning` | string |  |
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
+| `top_check` | object (optional) | Present with --check-top N: bounded ownership reads for the top N; a demoted one moves below every other candidate that is not excluded or overlapping |
+| `top_check.requested` | integer | at most 5 |
+| `top_check.checked` | integer | at most 5 |
+| `top_check.reads` | integer | at most 30 |
+| `top_check.read_cap` | integer | at most 30 |
+| `top_check.complete` | boolean | Every checked issue was read completely; false sets exit 1 |
+| `top_check.notice` | string |  |
+| `local_work` | `local_work` (optional) |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
 
 #### `discover_unresolved`
 
@@ -1122,6 +1401,7 @@ The repository could not be resolved or its snapshot read
 | `repository_signals` | object (optional) | Added by --responsiveness |
 | `repository_signals.responsiveness` | `responsiveness` |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `local_work` | `local_work` (optional) |  |
 
 #### `duplicate`
 
@@ -1257,20 +1537,8 @@ The issue was read
 | `resolution_provenance` | `resolution_provenance` |  |
 | `reference` | string | owner/repo#number as requested |
 | `ownership_signals` | `ownership_signals` (optional) | Added by --ownership |
-| `ai_policy` | object (optional) | Added by --ai-policy: located AI-contribution statements, signals only |
-| `ai_policy.ai_policy_review` | "required" |  |
-| `ai_policy.coverage` | "complete" \| "incomplete" |  |
-| `ai_policy.excerpts_capped` | boolean |  |
-| `ai_policy.lines_partially_scanned` | integer |  |
-| `ai_policy.excerpts` | object[] |  |
-| `ai_policy.excerpts[].path` | string |  |
-| `ai_policy.excerpts[].line` | integer |  |
-| `ai_policy.excerpts[].instruction_sha256` | string |  |
-| `ai_policy.excerpts[].patterns` | string[] |  |
-| `ai_policy.excerpts[].untrusted_excerpt` | string |  |
-| `ai_policy.excerpts[].excerpt_truncated` | boolean |  |
-| `ai_policy.notice` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
 
 #### `instruction_file`
 
@@ -1305,7 +1573,16 @@ Added by --signals; report-only heuristics, never approval
 | `maintainer` | object |  |
 | `maintainer.value` | "maintainer" \| "other" \| "unknown" |  |
 | `maintainer.explanation` | string |  |
-| `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1) |
+| `labels` | string[] | Issue label names (sanitized), as used by the demotion rules |
+| `assignees` | string[] (optional) | Present only with --check-top: current assignee logins from the issue list payload (sanitized, at most 10) |
+| `demotion` | object | Documented label and title demotions; each subtracts 2 from the score |
+| `demotion.value` | "demoted" \| "none" |  |
+| `demotion.reasons` | string[] | One entry per matched label group or meta-like title |
+| `local_work` | object (optional) | Present with --repo-dir; a referenced issue ranks below other candidates that are not excluded or overlapping |
+| `local_work.value` | "referenced" \| "none" \| "unknown" |  |
+| `local_work.commits` | string[] |  |
+| `local_work.explanation` | string |  |
+| `score` | integer | code_location found (1) + acceptance clarity (0-2) + maintainer author (1, not for a meta-like title) - 2 per demotion, floored at 0 |
 
 #### `issue_unresolved`
 
@@ -1331,6 +1608,23 @@ Completeness of one paginated GitHub list read
 | `complete` | boolean |  |
 | `pages` | integer |  |
 | `errors` | string[] |  |
+
+#### `local_work`
+
+Present with --repo-dir: issues referenced by local commits not in the source default branch; report only
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `complete` | boolean | False when the checkout or base could not be read or the commit limit was reached; sets exit 1 |
+| `head` | string or null |  |
+| `base` | string or null | Source default-branch commit of the snapshot |
+| `commits_scanned` | integer |  |
+| `commit_limit` | integer |  |
+| `issues` | object[] |  |
+| `issues[].number` | integer |  |
+| `issues[].commits` | string[] |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `metadata_read`
 
@@ -1363,6 +1657,8 @@ Report-only ownership and resolution signals; never change gates
 | `cross_referenced_prs[].merged_at` | string or null |  |
 | `cross_referenced_prs[].closed_at` | string or null |  |
 | `cross_referenced_prs[].exact_reference` | boolean | The PR text references this issue exactly |
+| `cross_referenced_prs[].title` | string |  |
+| `cross_referenced_prs[].base_ref` | string |  |
 | `assignment_history` | object[] |  |
 | `assignment_history[].event` | "assigned" \| "unassigned" |  |
 | `assignment_history[].assignee` | string |  |
@@ -1394,6 +1690,8 @@ Report-only ownership and resolution signals; never change gates
 | `resolution_signals.possibly_already_fixed[].merged_at` | string or null |  |
 | `resolution_signals.possibly_already_fixed[].closed_at` | string or null |  |
 | `resolution_signals.possibly_already_fixed[].exact_reference` | boolean | The PR text references this issue exactly |
+| `resolution_signals.possibly_already_fixed[].title` | string |  |
+| `resolution_signals.possibly_already_fixed[].base_ref` | string |  |
 | `resolution_signals.rejected_approaches` | object[] | Closed unmerged PRs referencing the issue exactly |
 | `resolution_signals.rejected_approaches[].repository` | string |  |
 | `resolution_signals.rejected_approaches[].repository_id` | integer |  |
@@ -1405,7 +1703,22 @@ Report-only ownership and resolution signals; never change gates
 | `resolution_signals.rejected_approaches[].merged_at` | string or null |  |
 | `resolution_signals.rejected_approaches[].closed_at` | string or null |  |
 | `resolution_signals.rejected_approaches[].exact_reference` | boolean | The PR text references this issue exactly |
+| `resolution_signals.rejected_approaches[].title` | string |  |
+| `resolution_signals.rejected_approaches[].base_ref` | string |  |
 | `resolution_signals.status` | "complete" \| "unknown" |  |
+| `resolution_signals.downstream_references` | object[] | Merged PRs with an exact reference in other repositories; never a fix |
+| `resolution_signals.downstream_references[].repository` | string |  |
+| `resolution_signals.downstream_references[].repository_id` | integer |  |
+| `resolution_signals.downstream_references[].number` | integer |  |
+| `resolution_signals.downstream_references[].url` | string |  |
+| `resolution_signals.downstream_references[].state` | "open" \| "closed" |  |
+| `resolution_signals.downstream_references[].draft` | boolean |  |
+| `resolution_signals.downstream_references[].merged` | boolean |  |
+| `resolution_signals.downstream_references[].merged_at` | string or null |  |
+| `resolution_signals.downstream_references[].closed_at` | string or null |  |
+| `resolution_signals.downstream_references[].exact_reference` | boolean | The PR text references this issue exactly |
+| `resolution_signals.downstream_references[].title` | string |  |
+| `resolution_signals.downstream_references[].base_ref` | string |  |
 | `blocking_if_adopted` | string[] | Preview of what would block if these signals became gates; nothing blocks now |
 | `notice` | string |  |
 
@@ -1432,6 +1745,7 @@ A draft was written; it grants no authorization
 | `contract.schema_version` | "0.1" \| "0.2" |  |
 | `warning` | string |  |
 | `api_budget` | `api_budget` (optional) |  |
+| `repository_policy` | `repository_policy` (optional) | Default-on, report-only; never a verdict |
 
 #### `ranking`
 
@@ -1473,6 +1787,60 @@ Core REST rate-limit snapshot; the counters are null when error is set
 | `has_issues` | boolean |  |
 | `parent` | object (optional) | Immediate fork parent, when it was read |
 | `parent.full_name` | string |  |
+
+#### `repository_policy`
+
+Default-on, report-only policy inventory and hints; never a verdict
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `report` | "policy-report/1" |  |
+| `review_obligation` | string |  |
+| `sources_scanned` | object[] |  |
+| `sources_scanned[].origin` | "repository" \| "owner-github" |  |
+| `sources_scanned[].repository` | string |  |
+| `sources_scanned[].path` | string |  |
+| `sources_scanned[].path_truncated` | boolean |  |
+| `sources_scanned[].commit` | string |  |
+| `sources_scanned[].sha256` | string |  |
+| `sources_scanned[].kind` | "ai_policy" \| "agent_instructions" \| "contributing" \| "pr_template" \| "community" \| "readme" \| "instruction" |  |
+| `sources_scanned[].notes` | string[] |  |
+| `sources_scanned[].path_sanitized` | boolean |  |
+| `sources_scanned[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `unassessed` | object[] |  |
+| `unassessed[].what` | string |  |
+| `unassessed[].reason` | string |  |
+| `unassessed[].from` | string or null |  |
+| `unassessed[].line` | integer or null |  |
+| `unassessed[].link_text` | string or null |  |
+| `unassessed[].what_truncated` | boolean |  |
+| `unassessed[].what_sanitized` | boolean |  |
+| `unassessed[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `omitted_sources` | object[] |  |
+| `omitted_sources[].repository` | string |  |
+| `omitted_sources[].path` | string |  |
+| `omitted_sources[].path_truncated` | boolean |  |
+| `omitted_sources[].kind` | "ai_policy" \| "agent_instructions" \| "contributing" \| "pr_template" \| "community" \| "readme" \| "instruction" |  |
+| `omitted_sources[].reason` | "file limit" \| "scan byte limit" \| "request limit" |  |
+| `omitted_sources[].path_sanitized` | boolean |  |
+| `omitted_sources[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `limits_reached` | object[] |  |
+| `limits_reached[].limit` | string |  |
+| `limits_reached[].not_reported` | integer |  |
+| `limits_reached[].hides_sources` | boolean |  |
+| `limits_hide_sources` | boolean | A limit hid a policy candidate or reference, or omitted_sources is non-empty |
+| `never_inspected` | string[] |  |
+| `hints` | object[] |  |
+| `hints[].kind` | "possible_agent_restriction" \| "possible_ai_restriction" \| "possible_pr_restriction" \| "ai_mention" |  |
+| `hints[].line` | integer |  |
+| `hints[].heading` | string |  |
+| `hints[].untrusted_excerpt` | string |  |
+| `hints[].source` | integer |  |
+| `hints[].id` | string | H1, H2, ... in report order |
+| `reads` | object |  |
+| `reads.requests` | integer |  |
+| `reads.limit` | integer |  |
+| `inventory_sha256` | string |  |
 
 #### `resolution_provenance`
 
@@ -1679,6 +2047,7 @@ Schema 0.2: a schema-valid contract was checked. live_provenance is absent when 
 | `signature_observation` | `signature_observation` (optional) |  |
 | `overlap_dispositions` | `verify_overlap_dispositions` (optional) | Present only for a host-context 0.2 document |
 | `waived_duplicates` | `verify_waived_overlap`[] (optional) | Overlaps removed from blocking by a host disposition (also in overlap_dispositions.waived); duplicates still lists them |
+| `draft_update` | `verify_draft_update` (optional) | Present only when a host-context 0.2 document carries draft_update |
 
 #### `verify_0_2_rejected`
 
@@ -1738,6 +2107,21 @@ Normalized mandate binding; null unless the mandate is historically valid
 | `status` | "queued" \| "in_progress" \| "completed" \| "waiting" \| "requested" \| "pending" |  |
 | `conclusion` | "success" \| "failure" \| "neutral" \| "cancelled" \| "skipped" \| "timed_out" \| "action_required" \| "stale" \| "startup_failure" \| null | Null unless status is completed |
 | `url` | string | Empty when GitHub gave none |
+
+#### `verify_draft_update`
+
+Host-context 0.2 draft_update report (#21, slice 1): parsed and binding-checked only; never consulted by a gate
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `status` | "not_evaluated" \| "invalid" | not_evaluated: bindings valid, but this version evaluates no update and authorizes nothing; invalid: schema or binding errors |
+| `trust` | "host-asserted" |  |
+| `sha256` | string or null | Canonical hash of the draft_update section; null when the host context is invalid |
+| `from_head` | string or null | The record's from_head; null when the host context is invalid |
+| `candidate_head` | null | Reserved for the validated candidate head of a later version; always null here |
+| `current` | boolean | Whether the record's interval contains the verification time |
+| `errors` | string[] |  |
+| `note` | string |  |
 
 #### `verify_live_provenance`
 

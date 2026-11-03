@@ -30,6 +30,12 @@ class WorkflowTextTests(unittest.TestCase):
         self.assertNotIn('record the review in the contract', text)
         self.assertNotIn('existing review notes', text)
 
+    def test_acceptance_criteria_guidance_avoids_wall_clock_bounds(self):
+        # Dogfood 1 F26: a 'within 2.0 seconds' criterion flaked and missed a memory blow-up.
+        text = ' '.join(workflow().split())
+        self.assertIn('Prefer deterministic, countable criteria', text)
+        self.assertIn('wall-clock', text)
+
     def test_local_only_and_coordinator_rules(self):
         text = workflow()
         self.assertIn('**Local-only work.**', text)
@@ -150,7 +156,8 @@ class LocalOnlyPins(LifecycleFixture):
         self.evidence['base_commit'] = stacked
         result = self.verify()
         self.assertFalse(result['technical_evidence_valid'])
-        self.assertIn('Could not authenticate evidence base against source default-branch history',
+        self.assertIn('Could not authenticate evidence base against source default-branch history: base ' + stacked +
+                      ' compared with acme/photos default branch main at ' + self.client.commit + ': GitHub read failed',
                       result['evidence_errors'])
         self.evidence['base_commit'] = self.task['source']['commit']
         result = self.verify()
