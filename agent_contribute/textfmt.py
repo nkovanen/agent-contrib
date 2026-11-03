@@ -191,8 +191,14 @@ def _drift(result):
     policy_drift = result.get('repository_policy_drift') or {}
     if policy_drift.get('policy_drifted') is True:
         named = [item.get('what', '') for kind in ('changed', 'added', 'removed') for item in policy_drift.get(kind) or []]
-        reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
-                                                        'recorded inventory_sha256 differs (no per-source baseline)'))
+        recorded, current = policy_drift.get('recorded_inventory_format'), policy_drift.get('current_inventory_format')
+        if recorded is not None and recorded != current:
+            reasons.append(f'Policy inventory changed: recorded inventory_sha256 is inventory format {line(recorded, 10)}, '
+                           f'current format is {line(current, 10)}; re-review and record the new hash' +
+                           (' (' + ', '.join(line(path, 200) for path in named[:10]) + ')' if named else ''))
+        else:
+            reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
+                                                            'recorded inventory_sha256 differs (no per-source baseline)'))
     elif policy_drift and policy_drift.get('policy_drifted') is None:
         info.append('Policy inventory could not be compared: the current read is incomplete or limited')
     if branch.get('advanced'):
@@ -214,7 +220,7 @@ def _policy(result):
             "GitHub reads, not policy."] + (
         [f'  Limits hide policy sources ({len(report.get("omitted_sources", []))} omitted candidates listed): repository '
          'policy is unresolved until each is read manually or shown inapplicable.'] if report.get('limits_hide_sources') else []
-    ) + _policy_hints(report)
+    ) + _policy_hints(report) + _policy_unassessed(report)
 
 
 POLICY_HINT_LINES = 5
@@ -255,6 +261,27 @@ def _policy_hints(report):
         out.append(f'  (+{len(stop) - POLICY_HINT_LINES} more hinted lines with restrictions in JSON '
                    'repository_policy.hinted_lines)')
     return out + lost + _vocabulary(report)
+
+
+POLICY_UNASSESSED_LINES = 5
+POLICY_UNASSESSED_CHARS = 150
+
+
+def _policy_unassessed(report):
+    """The references and files the tool did not assess, which the host must read itself (G3)."""
+    entries = report.get('unassessed') or []
+    out = []
+    for entry in entries[:POLICY_UNASSESSED_LINES]:
+        what = line(entry.get('what', '?'), 1000)
+        cut = len(what) > POLICY_UNASSESSED_CHARS or entry.get('what_truncated') is True
+        origin = f' from {line(entry["from"], 100)}' if entry.get('from') else ''
+        at = f':{line(entry["line"], 10)}' if origin and entry.get('line') is not None else ''
+        out.append(f'  ? {what[:POLICY_UNASSESSED_CHARS]}{"..." if cut else ""} ({line(entry.get("reason", "?"), 60)})'
+                   f'{origin}{at}')
+    if len(entries) > POLICY_UNASSESSED_LINES:
+        out.append(f'  (+{len(entries) - POLICY_UNASSESSED_LINES} more unassessed references in JSON '
+                   'repository_policy.unassessed)')
+    return out
 
 
 def _vocabulary(report):

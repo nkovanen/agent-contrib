@@ -1660,6 +1660,11 @@
           ],
           "additionalProperties": false
         },
+        "inventory_format": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version of the inventory_sha256 input; 1 was the unversioned hash of earlier 0.3.0 candidates"
+        },
         "inventory_sha256": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$",
@@ -1808,6 +1813,7 @@
         "never_inspected",
         "hints",
         "reads",
+        "inventory_format",
         "inventory_sha256",
         "hinted_lines",
         "project_vocabulary",

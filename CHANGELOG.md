@@ -234,6 +234,11 @@ channel or runtime model provider is added.
   excerpt keeps its restriction word near the start. Text output counts dropped
   restriction hints, and says "No restriction hints retained" when limits
   caused losses (RP-26).
+- Text output of `discover`, `inspect` and `prepare` also lists up to five
+  unassessed policy references and files (target, reason, `from` file and
+  line; sanitized, shortened to 150 characters) and points to JSON for the
+  rest. Before, it printed only their count, so a text-mode agent could not
+  see which pages the review obligation asks it to read (G3, evaluation 3).
 - Repository policy hints (N-04, external evaluation 2): hints are ordered
   agent, PR eligibility, AI, then PR restrictions with AI context, PR
   restrictions in policy files, other PR restrictions, restrictions from nested
@@ -458,6 +463,15 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- `repository_policy` adds `inventory_format` (currently 2), and the format is
+  part of the `inventory_sha256` input, so every inventory hash differs from
+  earlier 0.3.0 candidate builds (format 1, unversioned). `drift
+  --policy-sha256` reports `current_inventory_format` and
+  `recorded_inventory_format`. A format-1 hash of the same pinned snapshot is
+  recognized and reported as a format change rather than blamed on a moved
+  owner `.github` repository; an unknown hash's note names a different
+  inventory format as one possible cause. Both still count as drift (exit 1)
+  (N11).
 - `repository_policy.inventory_sha256` now also covers the pinned blob id of
   every unread policy candidate (RP-28) and the owner `.github` lookup outcome
   (`owner_lookup`, RP-29), so it differs from earlier 0.3.0 candidate builds.
