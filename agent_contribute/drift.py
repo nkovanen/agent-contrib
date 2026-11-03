@@ -132,14 +132,31 @@ def _policy_drift(expected, current, baseline, source, client, errors):
                            'recorded hash (the owner .github repository may have moved, or the review used another '
                            'snapshot).')
         return result
-    def entries(rep):
-        return {s['identity_sha256']: s for s in rep['sources_scanned']}
-    old, new = entries(then), entries(now)
-    pick = lambda s: {k: s[k] for k in ('identity_sha256', 'repository', 'path', 'sha256')}
-    result['added'] = [pick(new[i]) for i in sorted(set(new) - set(old))]
-    result['removed'] = [pick(old[i]) for i in sorted(set(old) - set(new))]
-    result['changed'] = [{'identity_sha256': i, 'repository': new[i]['repository'], 'path': new[i]['path'],
-                          'stored_sha256': old[i]['sha256'], 'current_sha256': new[i]['sha256']}
-                         for i in sorted(set(old) & set(new)) if old[i]['sha256'] != new[i]['sha256']]
+    old, new = _inventory_entries(then), _inventory_entries(now)
+    result['added'] = [dict(new[i], identity_sha256=i) for i in sorted(set(new) - set(old))]
+    result['removed'] = [dict(old[i], identity_sha256=i) for i in sorted(set(old) - set(new))]
+    result['changed'] = [{'identity_sha256': i, 'what': new[i]['what'],
+                          'stored': {k: old[i][k] for k in ('state', 'fingerprint')},
+                          'current': {k: new[i][k] for k in ('state', 'fingerprint')}}
+                         for i in sorted(set(old) & set(new))
+                         if (old[i]['state'], old[i]['fingerprint']) != (new[i]['state'], new[i]['fingerprint'])]
     return result
+
+
+def _inventory_entries(rep):
+    """identity -> {what, state, fingerprint} for every inventoried candidate, read or unread (RP-28): scanned
+    sources by content SHA-256, unread files and omissions by pinned Git blob id, references by identity alone."""
+    entries = {}
+    for s in rep['sources_scanned']:
+        what = s['path'] if s['origin'] == 'repository' else f"{s['repository']}:{s['path']}"
+        entries.setdefault(s['identity_sha256'], {'what': what, 'state': 'scanned', 'fingerprint': s['sha256']})
+    for u in rep['unassessed']:
+        entries.setdefault(u['identity_sha256'], {'what': u['what'], 'state': 'unassessed: ' + u['reason'],
+                                                  'fingerprint': u['blob_sha']})
+    for o in rep['omitted_sources']:
+        owner = o['repository'].rsplit('/', 1)[-1] == '.github'  # owner .github entries display with their repository
+        what = f"{o['repository']}:{o['path']}" if owner else o['path']
+        entries.setdefault(o['identity_sha256'], {'what': what, 'state': 'omitted: ' + o['reason'],
+                                                  'fingerprint': o['blob_sha']})
+    return entries
 

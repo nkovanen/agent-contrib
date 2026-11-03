@@ -323,7 +323,7 @@ class _Report:
         self.requests += 1
         return self.client.request(endpoint)
 
-    def note(self, what, reason, origin=None, line=None, link_text=None, key=None):
+    def note(self, what, reason, origin=None, line=None, link_text=None, key=None, blob=None):
         """key is the original identity (repository and path, or URL); what is display text, possibly altered."""
         raw = str(what)
         what = core.safe_text(raw, len(raw))
@@ -334,19 +334,21 @@ class _Report:
         if len(self.unassessed) >= MAX_UNASSESSED:  # count, do not retain: bounded memory and linear time (RP-16)
             self.limit('unassessed entries')
             return
-        self.keys.append(key)
+        blob = _blob_id(blob)
+        self.keys.append((key, blob))
         self.unassessed.append({'what': what[:IDENTIFIER_CHARS], 'reason': reason, 'from': origin, 'line': line,
                                 'link_text': core.safe_text(link_text, EXCERPT_CHARS) if link_text else None,
                                 'what_truncated': len(what) > IDENTIFIER_CHARS, 'what_sanitized': what != raw,
-                                'identity_sha256': _identity(key)})
+                                'identity_sha256': _identity(key), 'blob_sha': blob})
 
-    def omit(self, repository, path, kind, reason):
+    def omit(self, repository, path, kind, reason, blob=None):
         """A policy candidate a limit kept unread: named (bounded), never only counted (RP-19)."""
         if len(self.omitted) >= MAX_OMITTED:
             self.limit('omitted sources not listed')
             return
         self.omitted.append({'repository': repository, **_display(path), 'kind': kind or 'instruction',
-                             'reason': reason, 'identity_sha256': _identity((repository.casefold(), path))})
+                             'reason': reason, 'identity_sha256': _identity((repository.casefold(), path)),
+                             'blob_sha': _blob_id(blob)})
 
     def limit(self, name, count=1):
         self.limits[name] = self.limits.get(name, 0) + count
@@ -363,11 +365,11 @@ class _Report:
                 blobs[core.require(entry.get('path'), str, 'tree path')] = entry.get('sha')
         return blobs
 
-    def add(self, origin, repository, path, commit, digest, kind, text, size):
+    def add(self, origin, repository, path, commit, digest, kind, text, size, blob=None):
         """size is the source's UTF-8 byte count, the unit of the 1 MB scan bound (RP-18)."""
         if self.scanned_bytes + size > MAX_SCANNED_BYTES:
             self.limit('scanned bytes')
-            self.omit(repository, path, kind, 'scan byte limit')
+            self.omit(repository, path, kind, 'scan byte limit', blob)
             return
         self.scanned_bytes += size
         result = scan(text, path)
@@ -388,22 +390,22 @@ class _Report:
                 raise core.ProtocolError('file_encoding', 'not base64')
             data = base64.b64decode(''.join(core.require(value.get('content'), str, 'content').split()), validate=True)
         except _Limit:
-            self.omit(repository, path, kind, 'request limit')
+            self.omit(repository, path, kind, 'request limit', blob)
             return
         except (core.ProtocolError, ValueError, binascii.Error):
-            self.note(label, 'read failed', key=key)
+            self.note(label, 'read failed', key=key, blob=blob)
             return
         if len(data) > MAX_FILE_BYTES:
-            self.note(label, 'exceeds 200 kB', key=key)
+            self.note(label, 'exceeds 200 kB', key=key, blob=blob)
         elif not _pinned(blob, value.get('sha'), data):
-            self.note(label, 'content did not match the pinned tree entry', key=key)
+            self.note(label, 'content did not match the pinned tree entry', key=key, blob=blob)
         else:
             try:
                 text = data.decode('utf-8')
             except UnicodeError:
-                self.note(label, 'not UTF-8 text', key=key)
+                self.note(label, 'not UTF-8 text', key=key, blob=blob)
                 return
-            self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data))
+            self.add(origin, repository, path, commit, hashlib.sha256(data).hexdigest(), kind, text, len(data), blob)
 
     def read_candidates(self, origin, repository, commit, blobs, skip, cap, limit_name, allowed=lambda path: True):
         found = []
@@ -414,17 +416,22 @@ class _Report:
                 continue
             if _format(path) not in SCANNED_FORMATS:
                 self.note(path if origin == 'repository' else f'{repository}:{path}', 'unsupported format',
-                          key=(repository.casefold(), path))
+                          key=(repository.casefold(), path), blob=blob)
                 continue
             # Nested security/governance files are read after top-level ones and rank lower; never skipped (RP-25).
             found.append((KIND_ORDER.index(kind), kind == 'community' and not _top_level(path), path, blob, kind))
         found.sort()
         for _, _, path, blob, kind in found[:cap]:
             self.fetch(origin, repository, commit, path, blob, kind)
-        for _, _, path, _, kind in found[cap:]:
-            self.omit(repository, path, kind, 'file limit')
+        for _, _, path, blob, kind in found[cap:]:
+            self.omit(repository, path, kind, 'file limit', blob)
         if len(found) > cap:
             self.limit(limit_name, len(found) - cap)
+
+
+def _blob_id(blob):
+    """A tree entry's Git blob id when well formed, else None."""
+    return blob if isinstance(blob, str) and re.fullmatch('[0-9a-f]{40}', blob) else None
 
 
 def _identity(key):
@@ -593,8 +600,9 @@ def report(repository, commit, instructions, client, *, default_branch=None):
             # Original identities, never display text, which may be shortened or sanitized (RP-23).
             'sources': sorted([s['origin'], s['identity_sha256'], s['sha256']] for s in result['sources_scanned']),
             # Full identities, not the shortened display text (RP-20); state.keys is aligned with retained entries.
+            # Unread candidates count with their pinned blob, so an edit to an unread file changes the hash (RP-28).
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
-            'omitted_sources': sorted([o['identity_sha256'], o['reason']] for o in result['omitted_sources']),
+            'omitted_sources': sorted([o['identity_sha256'], o['reason'], o['blob_sha']] for o in result['omitted_sources']),
             'limits_reached': result['limits_reached']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result

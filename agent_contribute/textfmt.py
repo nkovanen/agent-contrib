@@ -146,7 +146,7 @@ def _drift(result):
     reasons += ['Overlapping PR added: ' + line(url, 200) for url in overlap.get('added', [])]
     policy_drift = result.get('repository_policy_drift') or {}
     if policy_drift.get('policy_drifted') is True:
-        named = [item.get('path', '') for kind in ('changed', 'added', 'removed') for item in policy_drift.get(kind) or []]
+        named = [item.get('what', '') for kind in ('changed', 'added', 'removed') for item in policy_drift.get(kind) or []]
         reasons.append('Policy inventory changed: ' + (', '.join(line(path, 200) for path in named[:10]) if named else
                                                         'recorded inventory_sha256 differs (no per-source baseline)'))
     elif policy_drift and policy_drift.get('policy_drifted') is None:

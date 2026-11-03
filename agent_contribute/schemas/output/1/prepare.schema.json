@@ -463,6 +463,16 @@
                 "minLength": 64,
                 "maxLength": 64,
                 "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
               }
             },
             "required": [
@@ -473,7 +483,8 @@
               "link_text",
               "what_truncated",
               "what_sanitized",
-              "identity_sha256"
+              "identity_sha256",
+              "blob_sha"
             ],
             "additionalProperties": false
           }
@@ -524,6 +535,16 @@
                 "minLength": 64,
                 "maxLength": 64,
                 "description": "SHA-256 of the original repository/path or URL; display text may be shortened or sanitized"
+              },
+              "blob_sha": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{40}$",
+                "minLength": 40,
+                "maxLength": 40,
+                "description": "The pinned Git blob id of an unread file; null for references"
               }
             },
             "required": [
@@ -533,7 +554,8 @@
               "kind",
               "reason",
               "path_sanitized",
-              "identity_sha256"
+              "identity_sha256",
+              "blob_sha"
             ],
             "additionalProperties": false
           }

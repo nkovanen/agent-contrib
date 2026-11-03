@@ -544,6 +544,10 @@ the `agent_contribute.aipolicy` module no longer exist.
   candidate is read manually or shown inapplicable.
 - **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
   comments, other repositories, non-Latin text.
+- **Unread candidates.** Unassessed and omitted file entries carry `blob_sha`,
+  the pinned Git blob id from the tree, so an edit to an unread policy file
+  (such as `AI_POLICY.adoc` or an oversized `AI_POLICY.md`) changes the
+  inventory hash.
 - **`inventory_sha256`.** A hash of the scanned sources' bytes, the retained
   unassessed identifiers and the limits. It excludes commit SHAs, so unrelated
   pushes do not change it. No verifier checks it; the workflow records it in
@@ -601,8 +605,10 @@ before any read.
   counts as drift, exit 1), and `null` when the current read is incomplete or a
   limit hides sources (incomplete, exit 1).
 - When the inventory rebuilt at the contract's pinned commit reproduces HASH
-  (`baseline_verified`), `added`, `removed` and `changed` list source identities
-  (`identity_sha256`, repository, path, byte SHA-256). Otherwise they are `null`:
+  (`baseline_verified`), `added`, `removed` and `changed` list every inventoried
+  candidate by `identity_sha256` and `what`, with its `state` (`scanned`,
+  `unassessed: <reason>` or `omitted: <reason>`) and `fingerprint` (content
+  SHA-256 when scanned, pinned blob id when unread). Otherwise they are `null`:
   the owner `.github` repository is read at its current tip, so a baseline cannot
   always be rebuilt, and no deltas are invented.
 
@@ -905,20 +911,23 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 | `repository_policy_drift.baseline_verified` | boolean |  |
 | `repository_policy_drift.added` | object[] or null |  |
 | `repository_policy_drift.added[].identity_sha256` | string |  |
-| `repository_policy_drift.added[].repository` | string |  |
-| `repository_policy_drift.added[].path` | string |  |
-| `repository_policy_drift.added[].sha256` | string |  |
+| `repository_policy_drift.added[].what` | string |  |
+| `repository_policy_drift.added[].state` | string |  |
+| `repository_policy_drift.added[].fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
 | `repository_policy_drift.removed` | object[] or null |  |
 | `repository_policy_drift.removed[].identity_sha256` | string |  |
-| `repository_policy_drift.removed[].repository` | string |  |
-| `repository_policy_drift.removed[].path` | string |  |
-| `repository_policy_drift.removed[].sha256` | string |  |
+| `repository_policy_drift.removed[].what` | string |  |
+| `repository_policy_drift.removed[].state` | string |  |
+| `repository_policy_drift.removed[].fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
 | `repository_policy_drift.changed` | object[] or null |  |
 | `repository_policy_drift.changed[].identity_sha256` | string |  |
-| `repository_policy_drift.changed[].repository` | string |  |
-| `repository_policy_drift.changed[].path` | string |  |
-| `repository_policy_drift.changed[].stored_sha256` | string |  |
-| `repository_policy_drift.changed[].current_sha256` | string |  |
+| `repository_policy_drift.changed[].what` | string |  |
+| `repository_policy_drift.changed[].stored` | object |  |
+| `repository_policy_drift.changed[].stored.state` | string |  |
+| `repository_policy_drift.changed[].stored.fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
+| `repository_policy_drift.changed[].current` | object |  |
+| `repository_policy_drift.changed[].current.state` | string |  |
+| `repository_policy_drift.changed[].current.fingerprint` | string or null | Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references |
 | `repository_policy_drift.note` | string |  |
 
 ### `error`
@@ -1656,6 +1665,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `unassessed[].what_truncated` | boolean |  |
 | `unassessed[].what_sanitized` | boolean |  |
 | `unassessed[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `unassessed[].blob_sha` | string or null | The pinned Git blob id of an unread file; null for references |
 | `omitted_sources` | object[] |  |
 | `omitted_sources[].repository` | string |  |
 | `omitted_sources[].path` | string |  |
@@ -1664,6 +1674,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `omitted_sources[].reason` | "file limit" \| "scan byte limit" \| "request limit" |  |
 | `omitted_sources[].path_sanitized` | boolean |  |
 | `omitted_sources[].identity_sha256` | string | SHA-256 of the original repository/path or URL; display text may be shortened or sanitized |
+| `omitted_sources[].blob_sha` | string or null | The pinned Git blob id of an unread file; null for references |
 | `limits_reached` | object[] |  |
 | `limits_reached[].limit` | string |  |
 | `limits_reached[].not_reported` | integer |  |

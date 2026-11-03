@@ -448,7 +448,8 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(result['unassessed'][0], {'what': 'acme/photos', 'reason': 'repository tree not read',
                                                    'from': None, 'line': None, 'link_text': None,
                                                    'what_truncated': False, 'what_sanitized': False,
-                                                   'identity_sha256': core.canonical_hash('acme/photos')})
+                                                   'identity_sha256': core.canonical_hash('acme/photos'),
+                                                   'blob_sha': None})
 
 
 class BoundTests(unittest.TestCase):

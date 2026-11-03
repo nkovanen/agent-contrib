@@ -432,26 +432,28 @@
                 "minLength": 64,
                 "maxLength": 64
               },
-              "repository": {
+              "what": {
                 "type": "string",
                 "maxLength": 2147483647
               },
-              "path": {
+              "state": {
                 "type": "string",
-                "maxLength": 500
+                "maxLength": 2147483647
               },
-              "sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$",
-                "minLength": 64,
-                "maxLength": 64
+              "fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64,
+                "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
               }
             },
             "required": [
               "identity_sha256",
-              "repository",
-              "path",
-              "sha256"
+              "what",
+              "state",
+              "fingerprint"
             ],
             "additionalProperties": false
           }
@@ -471,26 +473,28 @@
                 "minLength": 64,
                 "maxLength": 64
               },
-              "repository": {
+              "what": {
                 "type": "string",
                 "maxLength": 2147483647
               },
-              "path": {
+              "state": {
                 "type": "string",
-                "maxLength": 500
+                "maxLength": 2147483647
               },
-              "sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$",
-                "minLength": 64,
-                "maxLength": 64
+              "fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64,
+                "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
               }
             },
             "required": [
               "identity_sha256",
-              "repository",
-              "path",
-              "sha256"
+              "what",
+              "state",
+              "fingerprint"
             ],
             "additionalProperties": false
           }
@@ -510,33 +514,60 @@
                 "minLength": 64,
                 "maxLength": 64
               },
-              "repository": {
+              "what": {
                 "type": "string",
                 "maxLength": 2147483647
               },
-              "path": {
-                "type": "string",
-                "maxLength": 500
+              "stored": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 64,
+                    "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+                  }
+                },
+                "required": [
+                  "state",
+                  "fingerprint"
+                ],
+                "additionalProperties": false
               },
-              "stored_sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$",
-                "minLength": 64,
-                "maxLength": 64
-              },
-              "current_sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$",
-                "minLength": 64,
-                "maxLength": 64
+              "current": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 2147483647
+                  },
+                  "fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 64,
+                    "description": "Content SHA-256 of a scanned source, or the pinned Git blob id of an unread file; null for references"
+                  }
+                },
+                "required": [
+                  "state",
+                  "fingerprint"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
               "identity_sha256",
-              "repository",
-              "path",
-              "stored_sha256",
-              "current_sha256"
+              "what",
+              "stored",
+              "current"
             ],
             "additionalProperties": false
           }

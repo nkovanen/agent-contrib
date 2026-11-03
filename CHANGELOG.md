@@ -305,6 +305,12 @@ channel or runtime model provider is added.
 
 ### Compatibility notes
 
+- `repository_policy.inventory_sha256` now also covers the pinned blob id of
+  every unread policy candidate (RP-28), so it differs from earlier 0.3.0
+  candidate builds. Only newly
+  recorded review hashes are affected. The policy hash is not part of
+  `instructions_sha256`, so existing contracts and their verification decisions
+  are unchanged.
 - Schema 0.1 `verify` on a draft whose execution mode is `pending` and whose
   target is blank now reports "Execution target not yet chosen (execution mode
   is pending)" instead of "Execution target repository is invalid". The

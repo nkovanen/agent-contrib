@@ -96,17 +96,18 @@ class PolicyDriftTests(unittest.TestCase):
         self.assertIs(report['policy_drifted'], True)
         self.assertIs(result['drifted'], True)
         self.assertFalse(result['instructions']['changed'], 'instructions_sha256 alone would miss this edit')
-        self.assertEqual([item['path'] for item in report['changed']], ['SECURITY.md'])
+        self.assertEqual([item['what'] for item in report['changed']], ['SECURITY.md'])
         self.assertEqual(report['changed'][0]['identity_sha256'], core.canonical_hash(['acme/photos', 'SECURITY.md']))
-        self.assertNotEqual(report['changed'][0]['stored_sha256'], report['changed'][0]['current_sha256'])
+        self.assertEqual(report['changed'][0]['stored']['state'], 'scanned')
+        self.assertNotEqual(report['changed'][0]['stored']['fingerprint'], report['changed'][0]['current']['fingerprint'])
 
     def test_added_and_removed_policy_sources_are_listed(self):
         self.client.advance({'AI_POLICY.md': 'No LLM output.'})
         code, result = run(self.client, 'drift', self.path, '--policy-sha256', self.recorded)
         self.assertEqual(code, 1)
         report = result['repository_policy_drift']
-        self.assertEqual([item['path'] for item in report['added']], ['AI_POLICY.md'])
-        self.assertEqual([item['path'] for item in report['removed']], ['SECURITY.md'])
+        self.assertEqual([item['what'] for item in report['added']], ['AI_POLICY.md'])
+        self.assertEqual([item['what'] for item in report['removed']], ['SECURITY.md'])
 
     def test_an_unknown_recorded_hash_is_drift_without_invented_deltas(self):
         code, result = run(self.client, 'drift', self.path, '--policy-sha256', 'f' * 64)
