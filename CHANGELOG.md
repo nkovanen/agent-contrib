@@ -29,6 +29,12 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
+  isolated Python child that is terminated and reaped on timeout. Strict UTF-8
+  JSON, EOF, the 8 MiB bound and five-second deadline remain required. Narrow
+  Windows/macOS input and installed offline CLI smoke jobs do not validate the
+  entire Git, cache or evidence stack on those platforms.
+
 - Tipjar identity for gifting useful agent work, with a `tipjar` console alias
   for the existing CLI. `agent-contrib`, the distribution and Python module,
   canonical Skill, repository URLs and output identifiers remain compatible.
