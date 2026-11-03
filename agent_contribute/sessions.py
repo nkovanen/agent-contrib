@@ -92,11 +92,13 @@ def _validate(report):
         _display(repository, len(repository['issues']))
     if 'repositories' not in report:
         return list(rows.values())
+    included_rows = {key: row for key, row in rows.items()
+                     if row[2].get('selection', {}).get('included', True)}
     ordered, seen = [], set()
     for candidate in report['candidates']:
         key = (candidate['repository'].casefold(), candidate['reference'])
-        if key in seen or key not in rows:
-            _invalid('Duplicate or missing merged candidate identity')
+        if key in seen or key not in included_rows:
+            _invalid('Duplicate, excluded or missing merged candidate identity')
         seen.add(key)
         row = rows[key]
         repository, issue = row[2:]
@@ -108,12 +110,13 @@ def _validate(report):
         if any(candidate[field] != value for field, value in expected.items()):
             _invalid('Merged candidate conflicts with its source issue')
         ordered.append(row)
-    if seen != set(rows):
-        _invalid('Merged candidate list omits retained source issues')
+    if seen != set(included_rows):
+        _invalid('Merged candidate list omits retained included source issues')
     _display(report, len(ordered))
     if report['complete'] != all(r['complete'] for r in repositories):
         _invalid('Conflicting multi-repository completeness')
-    return ordered
+    # Keep excluded diagnostic rows visible after the merged candidate order.
+    return ordered + [row for key, row in rows.items() if key not in included_rows]
 
 
 def plan(path, *, max_tasks, minutes):
@@ -129,6 +132,13 @@ def plan(path, *, max_tasks, minutes):
     candidates, tasks = [], []
     for repository_index, issue_index, repository, issue in rows:
         reasons = []
+        jar = repository.get('tipjar')
+        if jar is not None and (jar['state'] == 'unknown' or jar['complete'] is not True):
+            reasons.append('source_jar_unknown')
+        elif jar is not None and jar['state'] == 'closed':
+            reasons.append('source_jar_closed')
+        elif repository.get('selection', {}).get('included') is False:
+            reasons.append('source_selection_excluded')
         if repository['complete'] is not True or repository['errors']:
             reasons.append('repository_incomplete')
         provenance = repository['provenance']

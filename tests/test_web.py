@@ -56,3 +56,25 @@ process.stdout.write(JSON.stringify(values.map(value=>{
                     self.assertIsNone(actual)
                 else:
                     self.assertEqual(actual, expected)
+
+    @unittest.skipUnless(shutil.which('node'), 'Node required for static web model tests')
+    def test_real_find_nullable_diagnostics_keep_identifiable_repositories(self):
+        from agent_contribute.find import find_jars
+        from tests.test_find import Fake, hit, page
+        root = Path(__file__).resolve().parents[1]
+        private = hit('hidden/private', 7, 8)
+        private['repository']['private'] = True
+        for extra, complete in ((None, False), (private, True)):
+            with self.subTest(private=extra is not None):
+                report = find_jars(Fake(search=page([hit(), extra])))
+                script = """const fs=require('node:fs'), m=require('./web/model');
+const result=m.parseSnapshot(fs.readFileSync(0,'utf8'));
+process.stdout.write(JSON.stringify({repositories:result.reports.map(x=>x.repository),
+  complete:result.complete, skipped:result.skippedUnidentifiable, errors:result.errors}));"""
+                result = subprocess.run(['node', '-e', script], cwd=root,
+                                        input=json.dumps(report), capture_output=True,
+                                        text=True, timeout=20)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout), {
+                    'repositories': ['acme/project'], 'complete': complete,
+                    'skipped': 1, 'errors': []})

@@ -17,12 +17,24 @@ frame.addEventListener('load',async () => {
     }
     await importValue(snapshot(row));
     check(doc.querySelectorAll('.card').length===1 && doc.querySelector('.card h3').textContent==='sample/project','file input loads local snapshot');
-    check($('dataset-description').textContent.includes('Discovery incomplete'),'incomplete discovery coverage stays visible');
+    check(!$('dataset-description').textContent.includes('coverage reported complete'),'incomplete discovery coverage stays visible');
     check(doc.querySelector('.tag').textContent==='<img src=x onerror=alert(1)>' && !doc.querySelector('.card img'),'hostile HTML stays literal');
     for (const jar of [false,0,'',true,[],42]) {
       await importValue(snapshot(jar));
       check($('import-status').textContent.includes('Could not import') && doc.querySelector('.card h3').textContent==='sample/project','invalid jar '+JSON.stringify(jar)+' preserves collection');
     }
+    for (const [name,complete,skipped,error] of [['find-complete',true,0,false],['find-partial-null',false,1,false],['find-private-null',true,1,false],['find-search-error',false,0,true]]) {
+      const canonical=await (await fetch('fixtures/'+name+'.json')).json();
+      await importValue(canonical);
+      check(doc.querySelectorAll('.card').length===1 && doc.querySelector('.card h3').textContent==='acme/project','canonical '+name+' retains identified repository');
+      check($('dataset-description').textContent.includes('Partial indexed batch') && !$('dataset-description').textContent.includes('coverage reported complete'),'canonical '+name+' never claims exhaustive coverage');
+      check($('dataset-description').textContent.includes(complete ? 'Batch reads reported complete' : 'Batch reported incomplete'),'canonical '+name+' distinguishes read completeness');
+      check($('import-status').textContent.includes(skipped+' unidentifiable'),'canonical '+name+' counts suppressed identities');
+      check(Boolean($('import-errors').textContent)===error,'canonical '+name+' separates search errors');
+    }
+    const invalidNull=await (await fetch('fixtures/find-partial-null.json')).json(); invalidNull.observations[1].jar=false;
+    await importValue(invalidNull);
+    check($('import-status').textContent.includes('Could not import') && doc.querySelector('.card h3').textContent==='acme/project','malformed null diagnostic preserves canonical collection');
     const dropped={...row,repository:'sample/dropped'};
     await importValue({format:'find-jars-report/1',complete:true,observations:[{repository:dropped.repository,disposition:'welcome',jar:dropped}]},true);
     check(doc.querySelector('.card h3').textContent==='sample/dropped','dropzone loads local snapshot');

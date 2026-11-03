@@ -52,7 +52,15 @@ UTF-8 and unsupported manifest schemas. Example **fictional** snapshot:
 ```
 
 A snapshot is untrusted data, not verified permission. The overall `complete`
-flag refers to discovery coverage; each observation has its own completeness.
+flag reports whether this bounded batch finished its reads without unresolved
+observations/errors. It never means exhaustive discovery: indexed coverage is
+always partial, including when `complete` is true. Each jar has its own read
+completeness. Search errors appear separately from coverage and batch-read status.
+Canonical null repository observations (malformed or privacy-suppressed hits)
+are counted as skipped, without inventing names or displaying their identity
+metadata. An invalid null diagnostic still rejects the entire import and leaves
+the prior collection intact. Search diagnostics are bounded to 200 strings of
+at most 500 codepoints; unknown diagnostic text is not displayed.
 Incomplete jars cannot be welcomed. Unknown and excluded observations offer only
 reinspection; closed declarations stop work. Source URLs are generated from
 validated GitHub repository/commit identities; imported URLs are never used.

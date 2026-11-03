@@ -50,4 +50,21 @@ assert.equal(m.parseSnapshot(JSON.stringify(snapshot([{repository:'sample/tools'
 assert.throws(()=>m.makeManifest('welcome','x'.repeat(32769),''));
 const astralLines=Array.from({length:8},(_,i)=>String(i)+'😀'.repeat(499)).join('\n')+'\nDocumentation refresh';
 assert.equal(m.makeManifest('welcome',astralLines,'').wanted.length,9);
+const canonical = name => JSON.parse(fs.readFileSync(__dirname+'/fixtures/'+name+'.json','utf8'));
+const partial = m.parseSnapshot(JSON.stringify(canonical('find-partial-null')));
+assert.equal(partial.reports.length,1);
+assert.equal(partial.reports[0].repository,'acme/project');
+assert.equal(partial.skippedUnidentifiable,1);
+assert.equal(partial.complete,false);
+const privateBatch = m.parseSnapshot(JSON.stringify(canonical('find-private-null')));
+assert.equal(privateBatch.reports.length,1);
+assert.equal(privateBatch.skippedUnidentifiable,1);
+assert.ok(!JSON.stringify(privateBatch).includes('hidden/private'));
+assert.deepEqual(m.parseSnapshot(JSON.stringify(canonical('find-search-error'))).errors,['search_incomplete']);
+for (const change of [{disposition:'welcome'},{jar:report},{repository_id:42},{jar:false},{repository:undefined},{reason:42}]) {
+  const invalid=canonical('find-partial-null'); Object.assign(invalid.observations[1],change);
+  assert.throws(()=>m.parseSnapshot(JSON.stringify(invalid)));
+}
+assert.throws(()=>m.parseSnapshot(JSON.stringify({...canonical('find-complete'),coverage:{exhaustive:true}})));
+assert.throws(()=>m.parseSnapshot(JSON.stringify({...canonical('find-complete'),errors:[42]})));
 console.log('Tipjar model regressions passed');
