@@ -222,6 +222,8 @@ channel or runtime model provider is added.
 
 ### Security
 
+- A claimed draft whose GitHub creation time is still in the future is not
+  recognized, even inside the mandate interval (FR1-03).
 - Schema 0.2 exempts the own draft from overlap only when the open-PR scan lists
   it with the same numeric ID that exact-head history and detail report; a
   conflicting or missing scan ID keeps it blocking (FR1-02).
