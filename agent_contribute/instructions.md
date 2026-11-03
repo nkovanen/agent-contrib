@@ -96,9 +96,10 @@ so the host agent, the user and the independent reviewer are responsible for it.
    `gh api 'repos/OWNER/REPO/contents/PATH?ref=COMMIT'`; a limit that names no
    file (such as `unassessed entries`) requires listing the pinned tree
    yourself. A hint-only limit (`hides_sources: false`) hides no source, but
-   every listed source must still be read. A generic
-   `never_inspected` category or an owner `.github` lookup that failed does not
-   block on its own; dispose of an unrelated link as inapplicable only from its
+   every listed source must still be read. A generic `never_inspected` category
+   or an owner `.github` lookup that found nothing (`owner_lookup.status`
+   `not_found_or_inaccessible`) does not block on its own, but an `unavailable`
+   lookup is a hiding limit; dispose of an unrelated link as inapplicable only from its
    actual context.
 4. **STOP** upstream work when any relevant rule is prohibited or unresolved.
    Report the excerpts and the reason to the user. The user's local

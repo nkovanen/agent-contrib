@@ -147,8 +147,10 @@ class GitHub:
                     continue
                 # Never echo gh stderr: authentication errors can contain credentials. Only the status is classified.
                 if re.search(r'\bHTTP 404\b', error):
-                    raise ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or path '
-                                        'does not exist or is not visible to this gh account')
+                    missing = ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404): the repository, issue or '
+                                            'path does not exist or is not visible to this gh account')
+                    missing.http_status = 404  # lets report-only callers tell absence from an operational failure
+                    raise missing
                 if re.search(r'\bHTTP 401\b', error):
                     raise ProtocolError('api_error', 'GitHub GET was not authenticated (HTTP 401); check gh auth status')
                 raise ProtocolError('api_error', 'GitHub GET failed; check gh auth, access and rate limits')

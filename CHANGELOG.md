@@ -306,8 +306,10 @@ channel or runtime model provider is added.
 ### Compatibility notes
 
 - `repository_policy.inventory_sha256` now also covers the pinned blob id of
-  every unread policy candidate (RP-28), so it differs from earlier 0.3.0
-  candidate builds. Only newly
+  every unread policy candidate (RP-28) and the owner `.github` lookup outcome
+  (`owner_lookup`, RP-29), so it differs from earlier 0.3.0 candidate builds.
+  An owner lookup that fails other than with HTTP 404 is now a hiding limit,
+  so it is unknown rather than "absent". Only newly
   recorded review hashes are affected. The policy hash is not part of
   `instructions_sha256`, so existing contracts and their verification decisions
   are unchanged.

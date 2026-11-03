@@ -776,6 +776,34 @@
           ],
           "additionalProperties": false,
           "description": "Lines whose only hints are mentions made of the project name (for example agent in acme/agent-kit); never restrictions"
+        },
+        "owner_lookup": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "maxLength": 2147483647
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "read",
+                "not_found_or_inaccessible",
+                "unavailable",
+                "not_read_request_limit",
+                "not_applicable"
+              ]
+            }
+          },
+          "required": [
+            "repository",
+            "status"
+          ],
+          "additionalProperties": false,
+          "description": "Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted."
         }
       },
       "required": [
@@ -791,7 +819,8 @@
         "reads",
         "inventory_sha256",
         "hinted_lines",
-        "project_vocabulary"
+        "project_vocabulary",
+        "owner_lookup"
       ],
       "additionalProperties": false,
       "description": "Default-on, report-only policy inventory and hints; never a verdict"

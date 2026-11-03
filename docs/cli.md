@@ -544,6 +544,12 @@ the `agent_contribute.aipolicy` module no longer exist.
   candidate is read manually or shown inapplicable.
 - **`never_inspected`.** A fixed list: wikis, external websites, images and PDFs,
   comments, other repositories, non-Latin text.
+- **`owner_lookup`.** The owner `.github` lookup outcome: `read`,
+  `not_found_or_inaccessible` (HTTP 404), `unavailable` (any other failure,
+  recorded as the hiding limit `owner lookup` because its policy files are
+  unknown), `not_read_request_limit` or `not_applicable`. It is part of
+  `inventory_sha256`, so a change such as readable to not found is drift, and
+  `drift --policy-sha256` treats an `unavailable` lookup as incomplete.
 - **Unread candidates.** Unassessed and omitted file entries carry `blob_sha`,
   the pinned Git blob id from the tree, so an edit to an unread policy file
   (such as `AI_POLICY.adoc` or an oversized `AI_POLICY.md`) changes the
@@ -1707,6 +1713,9 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `project_vocabulary.lines[].source` | integer |  |
 | `project_vocabulary.lines[].line` | integer |  |
 | `project_vocabulary.lines_not_listed` | integer |  |
+| `owner_lookup` | object or null | Outcome of the owner .github lookup; unavailable (not a 404) is a hiding limit. Null when not attempted. |
+| `owner_lookup.repository` | string |  |
+| `owner_lookup.status` | "read" \| "not_found_or_inaccessible" \| "unavailable" \| "not_read_request_limit" \| "not_applicable" |  |
 
 #### `resolution_provenance`
 

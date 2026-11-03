@@ -39,8 +39,10 @@ class FakeGitHub:
         if any(key in endpoint for key in self.failed):
             raise core.ProtocolError('api_error', 'GitHub read failed')
         path = endpoint.split('?')[0]
-        if path.split('/')[2:3] == ['.github']:  # no owner .github repository (policy report reads)
-            raise core.ProtocolError('api_error', 'GitHub read failed')
+        if path.split('/')[2:3] == ['.github']:  # no owner .github repository (policy report reads): HTTP 404
+            missing = core.ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404)')
+            missing.http_status = 404
+            raise missing
         if path == 'repos/acme/photos':
             return {'full_name': 'acme/photos', 'default_branch': 'main', 'fork': False, 'has_issues': True}
         if path == 'repos/human/photos':

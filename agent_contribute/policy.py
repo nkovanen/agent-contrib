@@ -29,7 +29,8 @@ MAX_OMITTED = 50
 # Limits after which a policy candidate or reference may be unread or unlisted; hint limits hide no source.
 HIDING_LIMITS = {'requests', 'policy files', 'owner policy files', 'scanned bytes', 'unassessed entries',
                  'omitted sources not listed', 'report size: unassessed entries', 'report size: omitted sources',
-                 'report size: sources not listed', 'restriction hints', 'report size: restriction hints'}
+                 'report size: sources not listed', 'restriction hints', 'report size: restriction hints',
+                 'owner lookup'}
 STOP_HINTS = ('possible_agent_restriction', 'possible_ai_restriction', 'possible_pr_restriction')
 POLICY_KINDS = ('ai_policy', 'agent_instructions', 'contributing', 'pr_template')
 EXCERPT_CHARS = 300
@@ -314,6 +315,7 @@ class _Report:
         self.sources, self.texts, self.unassessed, self.limits = [], [], [], {}
         self.seen, self.keys = set(), []  # every identity noted; identities of retained entries (aligned)
         self.omitted, self.scanned = [], set()  # scanned: original (repository, path) identities
+        self.owner_lookup = None
         self.scanned_bytes = 0
 
     def get(self, endpoint):
@@ -479,9 +481,13 @@ class _Limit(Exception):
 
 
 def _owner(state, repository):
+    """Read the owner .github repository. The lookup outcome is part of the inventory (RP-29): 'read',
+    'not_found_or_inaccessible' (HTTP 404), 'unavailable' (any other failure: unknown, so a hiding limit),
+    'not_read_request_limit' or 'not_applicable' (the source is itself the owner .github repository)."""
     owner = repository.split('/')[0]
     name = f'{owner}/.github'
     if repository.casefold() == name.casefold():
+        state.owner_lookup = {'repository': name, 'status': 'not_applicable'}
         return None
     try:
         meta = core.require(state.get(f'repos/{name}'), dict, 'owner .github metadata')
@@ -492,11 +498,19 @@ def _owner(state, repository):
             raise core.ProtocolError('api_shape', 'Invalid owner commit')
         blobs = state.tree(name, commit)
     except _Limit:
+        state.owner_lookup = {'repository': name, 'status': 'not_read_request_limit'}
         state.note(name, 'not read: request limit')
         return None
-    except core.ProtocolError:
-        state.note(name, 'owner .github repository not found or inaccessible')
+    except core.ProtocolError as exc:
+        if getattr(exc, 'http_status', None) == 404:
+            state.owner_lookup = {'repository': name, 'status': 'not_found_or_inaccessible'}
+            state.note(name, 'owner .github repository not found or inaccessible')
+        else:
+            state.owner_lookup = {'repository': name, 'status': 'unavailable'}
+            state.note(name, 'owner .github lookup failed (not a 404); its policy files are unknown')
+            state.limit('owner lookup')
         return None
+    state.owner_lookup = {'repository': name, 'status': 'read'}
     located = lambda path: '/' not in path or path.split('/')[0] in ('.github', 'docs')
     state.read_candidates('owner-github', name, commit, blobs, set(), MAX_OWNER_FILES, 'owner policy files', located)
     return name, commit, branch
@@ -589,6 +603,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
               'limits_hide_sources': False,
               'never_inspected': list(NEVER_INSPECTED),
               'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints, 1)],
+              'owner_lookup': state.owner_lookup,
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:
         result['hinted_lines'], result['project_vocabulary'] = _group(result['hints'], terms, vocabulary)
@@ -603,7 +618,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
             # Unread candidates count with their pinned blob, so an edit to an unread file changes the hash (RP-28).
             'unassessed': sorted(json.dumps(key) for key in state.keys[:len(result['unassessed'])]),
             'omitted_sources': sorted([o['identity_sha256'], o['reason'], o['blob_sha']] for o in result['omitted_sources']),
-            'limits_reached': result['limits_reached']})
+            'limits_reached': result['limits_reached'], 'owner_lookup': result['owner_lookup']})
         if len(json.dumps(result, ensure_ascii=True).encode()) <= MAX_REPORT_BYTES:
             return result
         # Shrink until the serialized report fits, recording every reduction (RP-18).

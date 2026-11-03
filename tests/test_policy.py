@@ -41,7 +41,10 @@ class PolicyGitHub:
         self.calls.append(endpoint)
         path, _, query = endpoint.partition('?')
         if path == 'repos/acme/.github' and self.owner_error:
-            raise core.ProtocolError('api_error', self.owner_error)
+            failure = core.ProtocolError('api_error', self.owner_error)
+            if '404' in self.owner_error:
+                failure.http_status = 404
+            raise failure
         for name, repo in self.repos.items():
             if path == f'repos/{name}':
                 return {'full_name': name, 'default_branch': repo['branch'], 'fork': False, 'has_issues': True}
@@ -62,7 +65,9 @@ class PolicyGitHub:
                 return {'encoding': 'base64', 'content': base64.b64encode(text.encode()).decode(),
                         'sha': blob_sha(repo['files'][file_path]) if (name, file_path) not in self.served else blob_sha(text)}
         if path.startswith('repos/acme/'):
-            raise core.ProtocolError('api_error', 'GitHub GET failed')
+            missing = core.ProtocolError('api_error', 'GitHub GET found nothing (HTTP 404)')
+            missing.http_status = 404
+            raise missing
         raise AssertionError(endpoint)
 
 
@@ -282,7 +287,10 @@ class InventoryTests(unittest.TestCase):
             with self.subTest(error):
                 result, _ = report({'README.md': 'x'}, owner_error=error)
                 owner = [u for u in result['unassessed'] if u['what'] == 'acme/.github']
-                self.assertEqual(owner[0]['reason'], 'owner .github repository not found or inaccessible')
+                expected = ('owner .github repository not found or inaccessible' if '404' in error else
+                            'owner .github lookup failed (not a 404); its policy files are unknown')
+                self.assertEqual(owner[0]['reason'], expected)
+                self.assertIs(result['limits_hide_sources'], '404' not in error, 'an operational failure is unknown')
                 self.assertNotIn('absent', json.dumps(result))
 
     def test_unsupported_formats_and_policy_links_are_unassessed(self):
