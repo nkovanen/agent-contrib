@@ -109,6 +109,9 @@ class DecisionTests(unittest.TestCase):
             with self.subTest(status=status):
                 self.assertEqual(state([suite(1, status=status)], [run(1, status=status, conclusion=None)]), 'pending')
         self.assertEqual(state([suite(1)], [run(1, conclusion='action_required')]), 'pending')
+        # A run still in progress inside a suite already reported completed: the run alone keeps it pending.
+        for status in ('queued', 'in_progress'):
+            self.assertEqual(state([suite(1)], [run(1), run(2, status=status, conclusion=None)]), 'pending')
 
     def test_rerequested_suite_with_an_old_success_is_pending(self):
         # CI-02: the rerequest queues the suite; the old run still reads completed/success.
