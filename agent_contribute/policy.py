@@ -152,20 +152,35 @@ def _groups(tokens):
     return found
 
 
-def _near(anchors, restrict):
+def _pair(anchors, restrict):
+    """(anchor, nearest-window restriction index) for the first anchor with a restriction in range, or None."""
     for anchor in anchors:
         at = bisect.bisect_left(restrict, anchor - WINDOW)
         if at < len(restrict) and restrict[at] <= anchor + WINDOW:
-            return anchor
+            return anchor, restrict[at]
     return None
 
 
-def _excerpt(text, offset):
+def _near(anchors, restrict):
+    pair = _pair(anchors, restrict)
+    return pair and pair[0]
+
+
+PREDICATE_WITHIN = 170  # characters from the excerpt start within which the restriction word must end (RP-26)
+
+
+def _excerpt(text, offset, focus_end=None):
+    """(excerpt, truncated). Starts about 100 characters before the anchor, but late enough that the restriction
+    word (ending at focus_end) lies within the first PREDICATE_WITHIN characters, so a short view keeps it."""
     start = max(0, offset - 100)
-    if start and not text[start - 1].isspace():  # begin at the next word, never mid-word
-        space = text.find(' ', start, offset)
-        start = offset if space < 0 else space + 1
-    return ' '.join(text[start:start + EXCERPT_CHARS * 4].split())[:EXCERPT_CHARS]
+    if focus_end is not None and focus_end - start > PREDICATE_WITHIN:
+        start = max(0, focus_end - PREDICATE_WITHIN)
+    limit = min(offset, focus_end) if focus_end is not None else offset
+    if start and not text[start - 1].isspace() and start < limit:  # begin at the next word, never mid-word
+        space = text.find(' ', start, limit)
+        start = limit if space < 0 else space + 1
+    collapsed = ' '.join(text[start:start + EXCERPT_CHARS * 4].split())
+    return collapsed[:EXCERPT_CHARS], bool(text[:start].strip()) or len(collapsed) > EXCERPT_CHARS
 
 
 def _paragraphs(text):
@@ -223,16 +238,21 @@ def scan(text, path):
         normalized = normalize(block)
         if _non_latin(normalized):
             non_latin += 1
-        tokens = [(m.start(), m.group().casefold()) for m in TOKEN.finditer(normalized)]
+        matches = list(TOKEN.finditer(normalized))
+        tokens = [(m.start(), m.group().casefold()) for m in matches]
         found = _groups(tokens)
-        candidates = [('possible_agent_restriction', _near(found['agent'], found['restrict'])),
-                      ('possible_ai_restriction', _near(found['ai'], found['restrict'])),
-                      ('possible_pr_restriction', _near(found['pr'], found['restrict'])),
-                      ('ai_mention', min(found['ai'] + found['agent']) if found['ai'] or found['agent'] else None)]
-        for kind, anchor in candidates:
-            if anchor is not None:
+        mention = min(found['ai'] + found['agent']) if found['ai'] or found['agent'] else None
+        candidates = [('possible_agent_restriction', _pair(found['agent'], found['restrict'])),
+                      ('possible_ai_restriction', _pair(found['ai'], found['restrict'])),
+                      ('possible_pr_restriction', _pair(found['pr'], found['restrict'])),
+                      ('ai_mention', None if mention is None else (mention, None))]
+        for kind, pair in candidates:
+            if pair is not None:
+                anchor, restriction = pair
+                excerpt, truncated = _excerpt(normalized, matches[anchor].start(),
+                                              None if restriction is None else matches[restriction].end())
                 hints.append({'kind': kind, 'line': line, 'heading': core.safe_text(heading, 120),
-                              'untrusted_excerpt': _excerpt(normalized, tokens[anchor][0]),
+                              'untrusted_excerpt': excerpt, 'excerpt_truncated': truncated,
                               'ai_context': bool(found['ai'] or found['agent']),
                               'eligibility': kind == 'possible_pr_restriction' and
                               _near(found['pr'], found['elig']) is not None})

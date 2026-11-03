@@ -34,7 +34,7 @@ class HintNoiseTests(unittest.TestCase):
         self.assertEqual({p[1] for p in pr[2:]}, {'README.md', 'SECURITY.md'}, 'PR-only hints elsewhere come last')
         self.assertEqual(order[-1][0], 'ai_mention')
         self.assertFalse([h for h in result['hints'] if set(h) - {'id', 'kind', 'line', 'heading', 'untrusted_excerpt',
-                                                                  'source'}])
+                                                                  'excerpt_truncated', 'source'}])
 
     def test_pr_hints_in_policy_files_outrank_earlier_non_policy_sources(self):
         instructions = [{'path': 'README.md', 'sha256': '1' * 64, 'untrusted_text': 'Pull requests are only merged weekly.'}]
@@ -276,3 +276,40 @@ class NestedCommunityTests(unittest.TestCase):
     def test_owner_nested_community_files_are_scanned(self):
         rp, _ = report({}, {'docs/x/SECURITY.md': 'No AI reports.', 'docs/SUPPORT.md': 'x'})
         self.assertEqual({s['path'] for s in rp['sources_scanned']}, {'docs/x/SECURITY.md', 'docs/SUPPORT.md'})
+
+
+class RetainedHintTextTests(unittest.TestCase):
+    """RP-26: the text view never implies that dropped restriction hints did not exist."""
+    def base(self, **extra):
+        return dict({'sources_scanned': [], 'unassessed': [], 'omitted_sources': [], 'hints': [], 'limits_reached': [],
+                     'limits_hide_sources': False}, **extra)
+
+    def test_no_retained_restriction_hints_after_losses(self):
+        rp = self.base(limits_reached=[{'limit': 'report size: restriction hints', 'not_reported': 3,
+                                        'hides_sources': True}], limits_hide_sources=True)
+        text = textfmt.render('inspect', {'repository_policy': rp})
+        self.assertIn('No restriction hints retained', text)
+        self.assertIn('3 restriction hints not retained because of limits', text)
+        self.assertNotIn('No restriction hints; this is not permission.', text)
+
+    def test_dropped_restriction_hints_are_counted_next_to_the_shown_ones(self):
+        text = '\n\n'.join('No AI-generated contribution number %d.' % n for n in range(60))
+        rp, _ = report({'CONTRIBUTING.md': text}, {})
+        view = textfmt.render('inspect', {'repository_policy': rp})
+        self.assertIn('(+95 more restriction hints in JSON repository_policy.hints)', view)
+        self.assertIn('20 restriction hints not retained because of limits', view)
+
+    def test_excerpts_keep_the_restriction_predicate_and_are_marked_when_cut(self):
+        filler = ' '.join('x' * 24 for _ in range(10))
+        paragraph = 'w ' * 200 + f'AI {filler} forbidden here. ' + 'tail ' * 200
+        hint = [h for h in policy.scan(paragraph, 'CONTRIBUTING.md')['hints'] if h['kind'] == 'possible_ai_restriction'][0]
+        self.assertIn('forbidden', hint['untrusted_excerpt'])
+        self.assertTrue(hint['excerpt_truncated'])
+        rp, _ = report({'CONTRIBUTING.md': paragraph}, {})
+        line = next(l for l in textfmt.render('inspect', {'repository_policy': rp}).splitlines() if l.startswith('  ! '))
+        self.assertTrue(line.endswith('...'), line)
+        self.assertIn('forbidden', line)
+
+    def test_short_excerpts_are_not_marked(self):
+        hint = policy.scan('No AI-generated code.', 'CONTRIBUTING.md')['hints'][0]
+        self.assertFalse(hint['excerpt_truncated'])

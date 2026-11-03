@@ -1602,6 +1602,10 @@
                 "type": "string",
                 "maxLength": 4,
                 "description": "H1, H2, ... in report order"
+              },
+              "excerpt_truncated": {
+                "type": "boolean",
+                "description": "The excerpt omits text before or after it"
               }
             },
             "required": [
@@ -1610,7 +1614,8 @@
               "heading",
               "untrusted_excerpt",
               "source",
-              "id"
+              "id",
+              "excerpt_truncated"
             ],
             "additionalProperties": false
           }

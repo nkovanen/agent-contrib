@@ -155,6 +155,10 @@ channel or runtime model provider is added.
   Policy line, plus a count of the rest. Before, only counts were shown, so
   text-mode agents never saw the sentence that justifies a stop (N-01).
   HTML comment markers are left out of these text excerpts; JSON is unchanged.
+  Shortened excerpts end with `...` and hints carry `excerpt_truncated`. An
+  excerpt keeps its restriction word near the start. Text output counts dropped
+  restriction hints, and says "No restriction hints retained" when limits
+  caused losses (RP-26).
 - Repository policy hints (N-04, external evaluation 2): hints are ordered
   agent, PR eligibility, AI, then PR restrictions with AI context, PR
   restrictions in policy files, other PR restrictions, restrictions from nested

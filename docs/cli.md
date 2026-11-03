@@ -497,7 +497,9 @@ the `agent_contribute.aipolicy` module no longer exist.
   passage never removes its hint kinds. Inserting words between the matched
   terms can move them out of the 12-word window, and so can added text that
   turns an existing line into a heading. Excerpts are sanitized and at most 300
-  characters.
+  characters, start late enough that the restriction word lies within their
+  first 170 characters, and carry `excerpt_truncated` when text before or after
+  was left out.
 
   Hints are ordered for attention: agent, then PR eligibility rules (a PR term
   near "maintainers", "members", "collaborators", "limited", "restricted",
@@ -542,8 +544,10 @@ the `agent_contribute.aipolicy` module no longer exist.
 With `--format text`, the Policy line is followed by up to five restriction
 hints in attention order, for example `! possible_ai_restriction
 pallets/.github:CONTRIBUTING.md:22 -- AI-generated PRs and issues are closed on
-sight...`, and a count of the rest. With none it says "No restriction hints;
-this is not permission."
+sight...`, and a count of the rest. Shortened excerpts end with `...`. Restriction
+hints that limits dropped are counted separately. With none it says "No
+restriction hints; this is not permission.", or "No restriction hints retained"
+when limits dropped hints or hid sources.
 
 There is deliberately no `coverage`, `complete` or `clear` field. Hints are
 noisy on purpose. The installed workflow's mandatory policy review decides what
@@ -1665,6 +1669,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `hints[].untrusted_excerpt` | string |  |
 | `hints[].source` | integer |  |
 | `hints[].id` | string | H1, H2, ... in report order |
+| `hints[].excerpt_truncated` | boolean | The excerpt omits text before or after it |
 | `reads` | object |  |
 | `reads.requests` | integer |  |
 | `reads.limit` | integer |  |
