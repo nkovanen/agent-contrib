@@ -6,7 +6,7 @@ import io
 import unittest
 from unittest.mock import patch
 
-from agent_contribute import cli, core, textfmt
+from agent_contribute import cli, core, dispositions, textfmt
 from tests import test_lifecycle
 from tests.test_authorization import NOW, event_binding
 
@@ -364,6 +364,11 @@ class ScanIdentityTests(WaiverFixture):
                 result = self.verify(evidence=False)
                 self.assert_blocked(result, 'Overlap disposition stale for PR #31: scan identity')
                 self.assertFalse(result['draft_create_ready'])
+
+    def test_a_caller_without_scan_identities_never_waives(self):
+        evaluate = dispositions.evaluate
+        with patch.object(dispositions, 'evaluate', side_effect=lambda *args: evaluate(*args[:6])):
+            self.assert_blocked(self.verify(evidence=False), 'Overlap disposition stale for PR #31: scan identity')
 
     def test_a_conflicting_scan_id_blocks_the_whole_creation_journey(self):
         self.show(dict(copy.deepcopy(self.pr), id=98765), details=[self.pr])
