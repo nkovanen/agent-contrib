@@ -38,6 +38,7 @@ sections are grouped by task.
   - [API budget (opt-in)](#api-budget-opt-in)
   - [Content cache (opt-in)](#content-cache-opt-in)
   - [Text output (unreleased)](#text-output-unreleased)
+- [Offline manifest setup and validation](#offline-manifest-setup-and-validation)
 - [Jar inspection (candidate, inspection only)](#jar-inspection-candidate-inspection-only)
 - [Command index](#command-index)
 
@@ -1236,6 +1237,9 @@ tipjar jar-check .tipjar.json
 tipjar --format text jar-check .tipjar.json
 tipjar schema init
 tipjar schema jar-check
+# Equivalent through the original command name:
+agent-contrib init --status closed --output closed-example.json
+agent-contrib jar-check closed-example.json
 ```
 
 `init` requires both `--status welcome|closed` and `--output FILE`. It creates only

@@ -34,6 +34,12 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Offline maintainer onboarding: `tipjar init --status welcome|closed --output FILE`
+  exclusively creates an editable invitation template; `tipjar jar-check FILE`
+  validates bounded local bytes through the packaged parser without echoing
+  manifest text. Both report exact byte hashes, reject GitHub-only flags and
+  grant no approval or execution/publication authority.
+
 - Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
   isolated Python child that is terminated and reaped on timeout. Strict UTF-8
   JSON, EOF, the 8 MiB bound and five-second deadline remain required. Narrow
