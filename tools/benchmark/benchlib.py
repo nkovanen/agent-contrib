@@ -18,6 +18,12 @@ FORMAT = 'agent-contrib-benchmark/2'
 EXTERNAL = {'CONTRIBUTOR', 'FIRST_TIME_CONTRIBUTOR', 'FIRST_TIMER', 'NONE'}  # explicit, never "not a maintainer"
 MERGE_CLOSE_TOLERANCE = dt.timedelta(hours=24)
 NEGATIVE_REASONS = {'not_planned', 'duplicate'}
+# registered: the 2026-11-03 amended pre-registration, the primary analysis. The others are named
+# sensitivity analyses: weak-reason lets a qualifying PR make a positive despite an unknown close
+# reason (the definition scored first, in 5e77096), and raw also keeps fixes already in flight at T.
+LABEL_SCHEMES = {'registered': {'claimed_excluded': True, 'unknown_reason_positive': False},
+                 'weak-reason': {'claimed_excluded': True, 'unknown_reason_positive': True},
+                 'raw': {'claimed_excluded': False, 'unknown_reason_positive': True}}
 
 
 class BenchmarkError(Exception):
@@ -54,16 +60,18 @@ def evidence(events, current):
             'current': {key: current.get(key) for key in ('state', 'closed_at', 'state_reason')}}
 
 
-def classify(record, cutoff, horizon_days, repository, *, open_prs=frozenset(), claimed_excluded=True):
+def classify(record, cutoff, horizon_days, repository, *, open_prs=frozenset(), claimed_excluded=True,
+             unknown_reason_positive=False):
     """Outcome in (T, T + horizon] from stored evidence.
 
     positive: the issue is closed at the horizon by a same-repository PR that was merged inside the
       window within 24 hours of the close, referenced by the horizon, written by an explicitly
       external (CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER or NONE) human user, and not
-      already linked or open at the cutoff. The close reason must be completed or unknown.
+      already linked or open at the cutoff. The close reason must be completed (or, only with
+      unknown_reason_positive, unknown).
     negative: still open at the horizon, or closed with an explicit not_planned/duplicate reason.
     excluded: everything else that closed: maintainer or bot fixes, unknown authorship, unlinked
-      closes, unknown reasons without a qualifying PR, and fixes already in flight at the cutoff."""
+      closes, unknown reasons, and fixes already in flight at the cutoff."""
     start = when(cutoff)
     end = start + dt.timedelta(days=horizon_days)
     state_at_cutoff, state, closing = 'open', 'open', None
@@ -95,6 +103,8 @@ def classify(record, cutoff, horizon_days, repository, *, open_prs=frozenset(), 
             result['evidence'].update(pr=ref['pr'], merged_at=ref['merged_at'], referenced_at=ref['at'])
             if claimed_excluded and (when(ref['at']) <= start or ref['pr'] in open_prs):
                 return dict(result, outcome='excluded', reason='fixed by a PR already linked or open at the cutoff')
+            if reason is None and not unknown_reason_positive:
+                return dict(result, outcome='excluded', reason='closed by a qualifying PR with an unknown close reason')
             return dict(result, outcome='positive', reason='closed by a new external merged PR')
     if reason is None:
         return dict(result, outcome='excluded', reason='closed with an unknown reason and no qualifying PR')
@@ -141,6 +151,12 @@ def reconstruct(item, events, cutoff):
             'author_association': item.get('author_association'), 'html_url': item['html_url']}
 
 
+def scheme_title(scheme):
+    if scheme == 'registered':
+        return 'Labels: registered (the pre-registered primary analysis)'
+    return f'Labels: {scheme} (sensitivity analysis, not the registered result)'
+
+
 def validate(snapshot):
     """Refuse anything the scorer cannot score honestly."""
     if snapshot.get('format') != FORMAT:
@@ -160,12 +176,13 @@ def validate(snapshot):
     return snapshot
 
 
-def labels(snapshot, *, claimed_at_cutoff=False):
-    """Scoring label per issue. claimed_at_cutoff=True keeps fixes already in flight at T as positive."""
+def labels(snapshot, *, scheme='registered'):
+    """Scoring label per issue under one of LABEL_SCHEMES; registered is the primary analysis."""
+    if scheme not in LABEL_SCHEMES:
+        raise BenchmarkError(f'Unknown label scheme {scheme!r}')
     open_prs = {pr['number'] for pr in snapshot['open_prs_at_cutoff']}
     return {issue['number']: classify(issue['evidence'], snapshot['cutoff'], snapshot['horizon_days'],
-                                      snapshot['repository'], open_prs=open_prs,
-                                      claimed_excluded=not claimed_at_cutoff)['outcome']
+                                      snapshot['repository'], open_prs=open_prs, **LABEL_SCHEMES[scheme])['outcome']
             for issue in snapshot['issues']}
 
 

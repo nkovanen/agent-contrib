@@ -1,6 +1,7 @@
 """Score discover's ranking against benchmark snapshots. Offline: no network.
 
-    python tools/benchmark/score.py tools/benchmark/data/*.json [--k 5 10] [--bodies DIR] [--raw-labels] [--json]
+    python tools/benchmark/score.py tools/benchmark/data/*.json [--k 5 10] [--bodies DIR]
+        [--labels registered|weak-reason|raw] [--json]
 
 Every snapshot is validated and every replay must be complete and return exactly the snapshot's
 issues, or scoring stops with an error. --bodies DIR reads <snapshot-name>.bodies.json files written
@@ -25,8 +26,8 @@ def summarize(runs, k, reps, seed):
     return result
 
 
-def score(paths, ks, bodies_dir=None, reps=2000, seed=0, raw_labels=False):
-    report = {'snapshots': [], 'variants': {}}
+def score(paths, ks, bodies_dir=None, reps=2000, seed=0, scheme='registered'):
+    report = {'labels': scheme, 'snapshots': [], 'variants': {}}
     runs = {'default': [], 'signals': []}
     for path in paths:
         snapshot = benchlib.validate(core.strict_json(pathlib.Path(path).read_text('utf-8')))
@@ -34,7 +35,7 @@ def score(paths, ks, bodies_dir=None, reps=2000, seed=0, raw_labels=False):
         if bodies_dir:
             source = pathlib.Path(bodies_dir) / (pathlib.Path(path).stem + '.bodies.json')
             bodies = core.strict_json(source.read_text('utf-8'))
-        labels = benchlib.labels(snapshot, claimed_at_cutoff=raw_labels)
+        labels = benchlib.labels(snapshot, scheme=scheme)
         counts = {name: sum(value == name for value in labels.values()) for name in ('positive', 'negative', 'excluded')}
         report['snapshots'].append({'repository': snapshot['repository'], 'cutoff': snapshot['cutoff'],
                                     'horizon_days': snapshot['horizon_days'], 'issues': len(labels), **counts})
@@ -50,7 +51,7 @@ def fmt(value):
 
 
 def table(report):
-    lines = ['| Variant | k | Precision@k, unjudged as misses (95% sensitivity) | Upper bound | Judged coverage | '
+    lines = [benchlib.scheme_title(report['labels']), '', '| Variant | k | Precision@k, unjudged as misses (95% sensitivity) | Upper bound | Judged coverage | '
              'Condensed P@k | Recall@k | Random null median (95%) |', '| --- | --- | --- | --- | --- | --- | --- | --- |']
     for name, results in report['variants'].items():
         for k, r in results.items():
@@ -71,10 +72,11 @@ def main():
     parser.add_argument('--bodies')
     parser.add_argument('--reps', type=int, default=2000)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--raw-labels', action='store_true', help='Keep fixes already in flight at T as positive')
+    parser.add_argument('--labels', choices=list(benchlib.LABEL_SCHEMES), default='registered',
+                        help='registered is the primary analysis; the others are sensitivity analyses')
     parser.add_argument('--json', action='store_true')
     args = parser.parse_args()
-    report = score(args.snapshots, args.k, args.bodies, args.reps, args.seed, args.raw_labels)
+    report = score(args.snapshots, args.k, args.bodies, args.reps, args.seed, args.labels)
     print(json.dumps(report, indent=1) if args.json else table(report))
 
 

@@ -131,7 +131,7 @@ def collect(repository, cutoff, horizon_days, client, *, max_issues, max_search_
         bodies[str(item['number'])] = item.get('body') or ''
     if dropped:
         notes.append(f'{dropped} issues were closed at the cutoff (reopened only after it) and were dropped')
-    # PR membership and titles at T matter only where a PR can create an overlap; verify those.
+    # Verify PRs whose current title overlaps; a since-renamed title is not reconstructed (BM-02, open).
     relevant = overlapping_prs(repository, issues, prs)
     verified, removed = [], 0
     for pr in prs:

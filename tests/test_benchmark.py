@@ -71,8 +71,13 @@ class EvidenceAndLabelTests(unittest.TestCase):
         bare = event('closed', '2026-05-10T10:00:05Z')
         self.assertEqual(label([bare])['reason'], 'closed with an unknown reason and no qualifying PR')
         self.assertEqual(label([bare])['outcome'], 'excluded')
+        # Registered labels (the 2026-11-03 amendment): an unknown close reason never makes a positive.
         unknown = label([pr_ref(7, '2026-05-10T10:00:00Z'), bare])
-        self.assertEqual((unknown['outcome'], unknown['reason_known']), ('positive', False))
+        self.assertEqual((unknown['outcome'], unknown['reason_known']), ('excluded', False))
+        self.assertEqual(unknown['reason'], 'closed by a qualifying PR with an unknown close reason')
+        weak = bench.classify(evidence_of([pr_ref(7, '2026-05-10T10:00:00Z'), bare]), T, 90, REPO,
+                              unknown_reason_positive=True)
+        self.assertEqual((weak['outcome'], weak['reason_known']), ('positive', False))
         # The issue's current reason describes the same close only if that close is the current one.
         current = {'state': 'closed', 'closed_at': '2026-05-10T10:00:05Z', 'state_reason': 'not_planned'}
         self.assertEqual(label([pr_ref(7, '2026-05-10T10:00:00Z'), bare], current)['outcome'], 'negative')
@@ -107,6 +112,25 @@ class EvidenceAndLabelTests(unittest.TestCase):
                                                    'merged_at': '2026-05-10T10:00:00Z',
                                                    'author_association': 'CONTRIBUTOR', 'user_type': 'User'})
         self.assertNotIn('login', json.dumps(stored))
+
+
+class LabelSchemeTests(unittest.TestCase):
+    def test_registered_labels_are_primary_and_sensitivity_schemes_are_named(self):
+        bare = event('closed', '2026-05-10T10:00:05Z')
+        snap = {'repository': REPO, 'cutoff': T, 'horizon_days': 90, 'open_prs_at_cutoff': [{'number': 8}],
+                'issues': [{'number': 1, 'evidence': evidence_of([pr_ref(7, '2026-05-10T10:00:00Z'), CLOSE])},
+                           {'number': 2, 'evidence': evidence_of([pr_ref(7, '2026-05-10T10:00:00Z'), bare])},
+                           {'number': 3, 'evidence': evidence_of([pr_ref(8, '2026-05-10T10:00:00Z'), CLOSE])}]}
+        expected = {'registered': {1: 'positive', 2: 'excluded', 3: 'excluded'},
+                    'weak-reason': {1: 'positive', 2: 'positive', 3: 'excluded'},
+                    'raw': {1: 'positive', 2: 'positive', 3: 'positive'}}
+        self.assertEqual(bench.labels(snap), expected['registered'])
+        for scheme, outcomes in expected.items():
+            with self.subTest(scheme=scheme):
+                self.assertEqual(bench.labels(snap, scheme=scheme), outcomes)
+        self.assertEqual(list(bench.LABEL_SCHEMES), ['registered', 'weak-reason', 'raw'])
+        with self.assertRaises(bench.BenchmarkError):
+            bench.labels(snap, scheme='lenient')
 
 
 class PullRequestMembershipTests(unittest.TestCase):
@@ -286,6 +310,16 @@ class ToolTests(unittest.TestCase):
         self.assertEqual((default['precision_lower'], default['coverage']), (1.0, 1.0))
         self.assertIn('null', default)
         self.assertIn('| default | 1 |', scorer.table(report))
+        self.assertEqual(report['labels'], 'registered')
+        self.assertIn('Labels: registered (the pre-registered primary analysis)', scorer.table(report))
+        # Issue 3 becomes an unknown-reason close by a qualifying PR: excluded only under registered labels.
+        snap['issues'][2]['evidence'] = evidence_of([pr_ref(78, '2026-05-10T10:00:00Z'),
+                                                     event('closed', '2026-05-10T10:00:05Z')])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.write(tmp, snap)
+            registered, raw = (scorer.score([path], [1], reps=50, scheme=scheme) for scheme in ('registered', 'raw'))
+        self.assertEqual((registered['snapshots'][0]['positive'], raw['snapshots'][0]['positive']), (1, 2))
+        self.assertIn('Labels: raw (sensitivity analysis, not the registered result)', scorer.table(raw))
 
     def test_experiment_qualifies_only_above_the_permutation_null(self):
         experiment = load_tool('experiment')
@@ -299,6 +333,15 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(by_variant['recent']['population'], {'snapshots': 1, 'issues': 40, 'judged': 40,
                                                               'positives': 10})
         self.assertIn('| held-out | recent | 4 |', experiment.table(rows))
+        self.assertEqual({row['labels'] for row in rows}, {'registered'})
+        self.assertIn('Labels: registered (the pre-registered primary analysis)', experiment.table(rows))
+        unknown = snapshot(issues)
+        unknown['issues'][0]['evidence'] = evidence_of([pr_ref(78, '2026-05-10T10:00:00Z'),
+                                                        event('closed', '2026-05-10T10:00:05Z')])
+        registered, weak = (experiment.evaluate({'held-out': [unknown]}, ['default'], [4], reps=20, scheme=scheme)
+                            for scheme in ('registered', 'weak-reason'))
+        self.assertEqual((registered[0]['population']['positives'], weak[0]['population']['positives']), (10, 11))
+        self.assertIn('Labels: weak-reason (sensitivity analysis, not the registered result)', experiment.table(weak))
 
 
 class CollectorTests(unittest.TestCase):

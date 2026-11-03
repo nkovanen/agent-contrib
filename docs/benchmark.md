@@ -108,59 +108,134 @@ conservative; none was chosen with any result in view.
   are committed under `tools/benchmark/data/` only while the total stays under
   about 2 MB.
 
-## Results: expanded corpus (format 2, scored 2026-11-03 under the amended protocol)
+## Results: expanded corpus (format 2, scored 2026-11-03)
 
 **Collection.**
 - All 20 planned snapshots were collected (3369 reads, read-only), with nothing
   skipped or replaced.
 - The run paused once for the hourly rate-limit reset, because other users of
   the token had pulled the shared limit to the 1000 floor.
-- 7 of the 16 test snapshots, and hono and black in the tuning set, hit the
-  150-issue cap. They keep the most recently created issues, which is recorded
-  in each snapshot's notes.
+- 12 of the 16 test snapshots (both cutoffs of axios, clap, fzf, pydantic, bat
+  and cobra), and hono and black in the tuning set, hit the 150-issue cap. They
+  keep the most recently created issues, which is recorded in each snapshot's
+  notes. Axios at 2026-03-01 hit the cap and then kept 148, after dropping two
+  issues that were closed at T.
 
 **Where the data is.** The 4 tuning snapshots (0.5 MB) are committed under
 `tools/benchmark/data/`. The 16 test snapshots (2.07 MB) would exceed the size
 limit, so they are kept in the validation run (`benchmark/expanded/`), named
 `owner__repo__cutoff.json`.
 
-| Split | Snapshots | Issues | Judged | Positive (raw) |
-| --- | --- | --- | --- | --- |
-| tune (click, ripgrep, hono, black @ 2026-03-01) | 4 | 518 | 462 | 21 (31) |
-| test (8 repositories × 2 cutoffs) | 16 | 2123 | 1952 | 41 (60) |
+### Registration discrepancy (review BM-07)
 
-Primary metric: test-set precision, with unjudged slots counted as misses.
+The amendment above says an unknown close reason can never make an issue
+positive. The labelling code committed before collection (b4098af) did
+something weaker: a qualifying new external merged PR made an issue positive
+even when the close reason was unknown. The first version of this page
+(5e77096) reported that weaker labelling as the primary result without noting
+the difference. Neither the registration nor the code changed after results
+were seen; they disagreed from the start.
+
+The registration text above stands as written (`--raw-labels` there is now
+`--labels raw`). The results are now separated:
+
+- **registered** (`--labels registered`, the default): the amendment applied
+  literally. This is the primary, pre-registered analysis.
+- **weak-reason** (`--labels weak-reason`): an unknown close reason with a
+  qualifying PR still counts as positive. These are the numbers first published
+  in 5e77096. Sensitivity analysis only.
+- **raw** (`--labels raw`): weak-reason, and fixes already in flight at T also
+  count as positive. Sensitivity analysis only.
+
+All three were re-scored offline from the stored snapshots, with seed 0 and
+2000 replicates. The weak-reason and raw tables reproduce the 5e77096 tables
+row for row.
+
+| Labels | Split | Snapshots | Issues | Judged | Positive | Snapshots without a positive |
+| --- | --- | --- | --- | --- | --- | --- |
+| registered | tune | 4 | 518 | 454 | 13 | |
+| registered | test | 16 | 2123 | 1941 | 30 | 9 |
+| weak-reason | tune | 4 | 518 | 462 | 21 | |
+| weak-reason | test | 16 | 2123 | 1952 | 41 | 6 |
+| raw | test | 16 | 2123 | 1971 | 60 | 4 |
+
+The registered labels drop 11 test positives and 8 tuning positives, all of
+them closes with no recorded reason. That missing reason is an unknown, not
+evidence that the close was wrong.
+
+### Registered analysis (primary)
+
+Test-set precision over the first k recommendations, with unjudged slots
+counted as misses.
 
 | Variant | k | Precision (95% bootstrap) | Upper bound | Coverage | Recall@k | Random null median (95%) | Qualifies |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| (a) default | 5 | 0.01 (0.00–0.03) | 0.09 | 0.93 | 0.01 | 0.01 (0.00–0.05) | no |
-| (a) default | 10 | 0.01 (0.00–0.02) | 0.06 | 0.95 | 0.01 | 0.02 (0.00–0.04) | no |
-| (b) signals | 5 | 0.00 (0.00–0.03) | 0.05 | 0.95 | 0.00 | 0.01 (0.00–0.05) | no |
-| (b) signals | 10 | 0.01 (0.00–0.03) | 0.07 | 0.94 | 0.06 | 0.02 (0.00–0.04) | no |
-| (d) recent activity | 5 | 0.05 (0.01–0.10) | 0.18 | 0.88 | 0.19 | 0.01 (0.00–0.05) | no |
-| (d) recent activity | 10 | **0.03 (0.01–0.06)** | 0.13 | 0.90 | 0.20 | 0.02 (0.00–0.04) | **no** |
+| (a) default | 5 | 0.013 (0.000–0.025) | 0.09 | 0.93 | 0.02 | 0.013 (0.000–0.038) | no |
+| (a) default | 10 | 0.006 (0.000–0.019) | 0.06 | 0.95 | 0.02 | 0.013 (0.000–0.031) | no |
+| (b) signals | 5 | 0.000 (0.000–0.025) | 0.05 | 0.95 | 0.00 | 0.013 (0.000–0.038) | no |
+| (b) signals | 10 | 0.013 (0.000–0.025) | 0.07 | 0.94 | 0.16 | 0.013 (0.000–0.031) | no |
+| (d) recent activity | 5 | 0.038 (0.000–0.088) | 0.18 | 0.86 | 0.13 | 0.013 (0.000–0.038) | no |
+| (d) recent activity | 10 | **0.025 (0.006–0.050)** | 0.13 | 0.89 | 0.15 | 0.013 (0.000–0.031) | **no** |
 
 **Decision: no ranking change.** Under the pre-registered rule, (d) needed the
-2.5th percentile of its test precision@10 (0.01) to lie above the null's 97.5th
-percentile (0.04). It does not.
+2.5th percentile of its test precision@10 (0.006) to lie above the null's 97.5th
+percentile (0.031). It does not. No variant qualifies on any split or k.
 
-The raw-label sensitivity run agrees: (d) scores 0.06 (0.03–0.10) against a
-null of 0.03 (0.01–0.05), which still overlaps, and no variant qualifies on any
-split. Full tables, including tuning, raw labels and all splits, are in the
-validation run (`benchmark/expanded-results*.md`).
+### Sensitivity analyses (not the registered result)
 
-**What the results do and do not say.**
+Test-set precision@10 for (d) recent activity; full tables for every variant,
+split and k are in the validation run (`benchmark/bm-round2/results-*.md`).
 
-- (d) has the best point estimates on every split, and finds about 20% of test
-  positives in its top 10, against 0–6% for (a) and (b). That is a consistent
-  direction, but not the pre-registered evidence, so this candidate stays open.
-  Deciding it would need a larger or longer-horizon corpus, or a paired test
-  against default.
+| Labels | Precision@10 (95% bootstrap) | Random null median (95%) | Qualifies |
+| --- | --- | --- | --- |
+| weak-reason (published in 5e77096) | 0.031 (0.006–0.063) | 0.019 (0.000–0.038) | no |
+| raw | 0.056 (0.025–0.100) | 0.025 (0.006–0.050) | no |
+
+No variant qualifies under either sensitivity labelling, so the decision does
+not depend on the labelling choice.
+
+### What the results do and do not say
+
+- (d) has the best precision@10 point estimate on every split under every
+  labelling. That is a direction, not the pre-registered evidence, so this
+  candidate stays open. (Recall@10 is a mean over only the 7 test snapshots
+  with a registered positive, so it is noisy and not compared here.) Deciding it would need a larger or longer-horizon
+  corpus, or a paired test against default.
 - Default and `--signals` cannot be told apart from random ordering here. Their
-  intervals sit at or below the null median. This is not a claim that they are
-  equivalent to random.
-- Positives are rare: 41 among 2123 test issues, and 6 of 16 test snapshots have
-  none. Every interval reflects that.
+  point estimates are at or below the null median; their intervals are wide and
+  reach above it. This is not a claim that they are equivalent to random.
+- Positives are rare: 30 among 2123 test issues under registered labels, and 9
+  of 16 test snapshots have none. Every interval reflects that.
+
+### Unresolved limitation: PR history hidden by renames (review BM-02)
+
+The collector reads a PR's events only when its **current** title overlaps a
+kept issue. For those PRs it drops any that were closed at T and reverses later
+renames. The other candidates keep their current titles, unverified. In this
+corpus that is 636 of 1066 test candidates and 88 of 178 tuning candidates. A
+PR that overlapped an issue at T but was renamed afterwards to an unrelated
+title was never selected, so its old title is not reconstructed. Fixing this
+needs the events of every candidate, about 724 to 1448 more reads, which have
+not been made.
+
+What this can and cannot change:
+
+- **Labels: no change in this corpus.** Unverified PRs enter only through the
+  in-flight exclusion. Re-labelling with only verified PRs as open at T changes
+  no label under the registered or weak-reason scheme, on either split. Raw
+  labels do not use PR membership.
+- **Ranking: possible missed overlaps.** An unverified PR's current title
+  overlaps no kept issue, so the replay never gets a false overlap from one.
+  It can miss an overlap that a since-renamed title caused at T. The replay
+  then ranks such an issue higher than `discover` would have at T. Default,
+  `--signals` and (d) all apply the same overlap key before their own ordering,
+  so all three shift together. The permutation null does not use overlaps.
+- **Direction.** It depends on what happened to the hidden issues. If an
+  external contributor later landed one, the replay overstates the precision of
+  all three variants against the null; otherwise it understates it. The
+  incidence is unknown, because the skipped event histories were not read, so
+  either sign could move a variant towards or away from qualifying. It is
+  recorded as an open limitation, not a resolved one.
 
 ## Reproduce
 
@@ -170,5 +245,5 @@ E=/path/to/validation-run/benchmark/expanded   # test snapshots (not committed)
 python tools/benchmark/score.py $D/*.json --k 5 10
 python tools/benchmark/experiment.py --tune $D/*.json \
   --heldout $(ls $E/*.json | grep -v -e pallets__ -e BurntSushi__ -e honojs__ -e psf__) \
-  --variants default signals recent --k 5 10 [--raw-labels]
+  --variants default signals recent --k 5 10 [--labels registered|weak-reason|raw]
 ```
