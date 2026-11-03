@@ -29,6 +29,12 @@ channel or runtime model provider is added.
 
 ### Added
 
+- Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
+  isolated Python child that is terminated and reaped on timeout. Strict UTF-8
+  JSON, EOF, the 8 MiB bound and five-second deadline remain required. Narrow
+  Windows/macOS input and installed offline CLI smoke jobs do not validate the
+  entire Git, cache or evidence stack on those platforms.
+
 - `discover --limit N` (#1): display at most 1–1000 final ranked candidates
   after full scans and reports. Multi-repository runs share one global budget.
   Optional `display` fields in the unreleased output/1 schema report observed,

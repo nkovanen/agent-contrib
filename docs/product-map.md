@@ -90,7 +90,7 @@ Details: [getting started](getting-started.md), [command reference](cli.md), [up
 - [~] E1 `verify --observe-ci` (report only) and opt-in required CI checks for schema 0.2 completion: `ci_requirements` (check name plus app ID) gate `completion_ready` at the exact head ([#17](https://github.com/nkovanen/agent-contrib/issues/17), [design](design/2026-11-03-ci-gating.md)). Missing: pre-filling requirements and drift coverage (slice 3)
 - [~] E2 `verify --observe-signatures`, report only: GitHub verification of the evidence head, required-signature rulesets and local signature-header presence ([#18](https://github.com/nkovanen/agent-contrib/issues/18)). Missing: contract-required verified heads and SSH-signed evidence attestations
 - [~] F5 `authorization-request` and normative [host issuer requirements](host-authorization.md#host-issuer-requirements) ([#23](https://github.com/nkovanen/agent-contrib/issues/23)). Missing: a native issuer in Claude Code or Paseo
-- [~] G2 Literal POSIX path decisions pinned ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: Windows host-context input and Windows/macOS CI
+- [~] G2 Literal POSIX path decisions pinned; bounded host-context stdin transport and narrow Windows/macOS CI added ([#25](https://github.com/nkovanen/agent-contrib/issues/25)). Missing: full Git, cache and evidence workflow portability validation
 
 ## Planned
 
