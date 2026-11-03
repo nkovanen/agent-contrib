@@ -102,7 +102,7 @@ class Cache:
             if isinstance(value, dict) and value.get('truncated') is False and isinstance(value.get('tree'), list):
                 from . import core  # deferred: core imports this module
                 try:  # one malformed entry makes the whole tree uncacheable, so every content read stays live
-                    kinds = [core.tree_entry(entry)[1] for entry in value['tree']]
+                    kinds = [kind for _, kind in core.tree_entries(value['tree'])]
                 except core.ProtocolError:
                     return
                 self.blobs[key] = {entry['path']: entry['sha'] for entry, kind in zip(value['tree'], kinds)

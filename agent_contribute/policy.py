@@ -369,8 +369,7 @@ class _Report:
         if data.get('truncated') is not False:
             raise core.ProtocolError('partial_tree', 'Repository tree is truncated')
         blobs = {}
-        for entry in entries:
-            path, kind = core.tree_entry(entry)
+        for entry, (path, kind) in zip(entries, core.tree_entries(entries)):
             if kind == 'blob':
                 blobs[path] = entry.get('sha')
         self.trees[repository.casefold()] = blobs

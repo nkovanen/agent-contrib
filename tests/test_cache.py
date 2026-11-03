@@ -279,6 +279,18 @@ class AllowlistTests(CacheTestCase):
                 self.assertEqual(self.entries(), [])
                 self.assertIsNone(store.lookup(self.contents()))
 
+    def test_a_tree_repeating_a_path_is_not_cacheable(self):
+        # FR1-09: with the conflicting entry first, the genuine blob ID used to win and the contents were cached.
+        fake = ContentGitHub()
+        store = cache.Cache(str(self.root))
+        store.observe('repos/acme/photos', fake.request('repos/acme/photos'))
+        tree = fake.request(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1')
+        tree['tree'].insert(0, {'path': 'AGENTS.md', 'type': 'blob', 'mode': '100644', 'sha': 'e' * 40})
+        store.observe(f'repos/acme/photos/git/trees/{COMMIT}?recursive=1', tree)
+        store.observe(self.contents(), fake.request(self.contents()))
+        self.assertEqual(self.entries(), [])
+        self.assertIsNone(store.lookup(self.contents()))
+
     def test_only_blob_entries_name_cacheable_contents(self):
         # A valid submodule entry carrying a blob's SHA is not file content at that path.
         fake = ContentGitHub()

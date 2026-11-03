@@ -225,6 +225,14 @@ def tree_entry(entry):
     return path, kind
 
 
+def tree_entries(entries):
+    """tree_entry for every entry; a path listed twice is malformed, never resolved by list order (FR1-09)."""
+    parsed = [tree_entry(entry) for entry in entries]
+    if len({path for path, _ in parsed}) != len(parsed):
+        raise ProtocolError('api_shape', 'Repeated GitHub tree path')
+    return parsed
+
+
 def require(value, expected, description):
     if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
         raise ProtocolError('api_shape', 'Invalid GitHub ' + description)
@@ -341,7 +349,7 @@ def repository_snapshot(repository, client, meta=None, commit=None):
         entries = require(tree.get('tree'), list, 'tree entries')
         if tree.get('truncated') is not False:
             raise ProtocolError('partial_tree', 'Repository tree is truncated or completeness is unknown')
-        paths = [path for path, kind in map(tree_entry, entries) if kind == 'blob']
+        paths = [path for path, kind in tree_entries(entries) if kind == 'blob']
         snapshot['blob_paths'] = paths
         snapshot['spec_paths'] = [safe_text(p, 500) for p in paths if
                                   re.search(r'(?i)(^|/)(specs?|docs)(/|\.)', p) and p.endswith('.md')]

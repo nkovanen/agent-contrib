@@ -256,7 +256,8 @@ class PRBodyTests(unittest.TestCase):
         for name, entry in {'type missing': {'path': '.github/PULL_REQUEST_TEMPLATE.md'},
                             'type unknown': {'path': '.github/PULL_REQUEST_TEMPLATE.md', 'type': 'unknown'},
                             'mode contradicts type': {'path': 'docs', 'type': 'tree', 'mode': '100644'},
-                            'empty path': {'path': '', 'type': 'blob'}}.items():
+                            'empty path': {'path': '', 'type': 'blob'},
+                            'repeated path': {'path': 'AGENTS.md', 'type': 'blob', 'sha': 'e' * 40}}.items():
             def request(endpoint, entry=entry):
                 value = original(endpoint)
                 if '/git/trees/' in endpoint:

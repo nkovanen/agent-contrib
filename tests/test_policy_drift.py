@@ -163,17 +163,39 @@ class PolicyDriftTests(unittest.TestCase):
         # The source snapshot and the policy inventory each read the tree; neither may skip a malformed entry.
         original = self.client.request
 
-        def request(endpoint):
-            value = original(endpoint)
-            if '/git/trees/' + PINNED in endpoint:
-                value['tree'].append({'path': 'AI_POLICY.md', 'type': 'unknown'})
-            return value
-        with patch.object(self.client, 'request', side_effect=request):
-            inspected = core.inspect_issue('acme/photos#12', self.client)
-            self.assertIs(inspected['complete'], False)
-            self.assertIn('Invalid GitHub tree entry type, mode or path', ' '.join(inspected['errors']))
-            report = policy.report('acme/photos', PINNED, [], self.client, default_branch='main')
-            self.assertIn('repository tree not read', [item['reason'] for item in report['unassessed']])
+        cases = {'malformed entry': ({'path': 'AI_POLICY.md', 'type': 'unknown'},
+                                     'Invalid GitHub tree entry type, mode or path'),
+                 'repeated path': ({'path': 'SECURITY.md', 'type': 'blob', 'sha': 'f' * 40},  # FR1-09
+                                   'Repeated GitHub tree path')}
+        for name, (entry, message) in cases.items():
+            def request(endpoint, entry=entry):
+                value = original(endpoint)
+                if '/git/trees/' + PINNED in endpoint:
+                    value['tree'].insert(0, dict(entry))
+                return value
+            with self.subTest(case=name), patch.object(self.client, 'request', side_effect=request):
+                inspected = core.inspect_issue('acme/photos#12', self.client)
+                self.assertIs(inspected['complete'], False)
+                self.assertIn(message, ' '.join(inspected['errors']))
+                report = policy.report('acme/photos', PINNED, [], self.client, default_branch='main')
+                self.assertIn('repository tree not read', [item['reason'] for item in report['unassessed']])
+
+    def test_conflicting_blob_ids_for_one_path_make_policy_drift_unknown_in_either_order(self):
+        # FR1-09: the reviewed ID listed last used to win, so drift reported an unchanged inventory and exit 0.
+        self.client.advance({'SECURITY.md': 'Report privately.'})
+        original = self.client.request
+        for position in ('first', 'last'):
+            def request(endpoint, position=position):
+                value = original(endpoint)
+                if '/git/trees/' + LATER in endpoint:
+                    conflict = {'path': 'SECURITY.md', 'type': 'blob', 'mode': '100644', 'sha': 'f' * 40}
+                    value['tree'].insert(0 if position == 'first' else len(value['tree']), conflict)
+                return value
+            with self.subTest(position=position), patch.object(self.client, 'request', side_effect=request):
+                code, result = run(self.client, 'drift', self.path, '--policy-sha256', self.recorded)
+                self.assertEqual(code, 1)
+                self.assertIs(result['complete'], False)
+                self.assertIsNone(result['repository_policy_drift']['policy_drifted'])
 
     def test_hidden_sources_make_the_policy_check_incomplete(self):
         with patch.object(policy, 'MAX_SOURCE_FILES', 0):

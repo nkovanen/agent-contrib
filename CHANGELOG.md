@@ -325,7 +325,10 @@ channel or runtime model provider is added.
   report an unchanged, complete inventory and exit 0 (FR1-08). The same check
   applies to the `--cache` tree (a malformed entry makes the whole tree
   uncacheable, so content reads stay live) and to the `pr-body` template
-  lookup (reported as unknown, never as no template).
+  lookup (reported as unknown, never as no template). A tree that lists one
+  path twice is malformed in every reader, whatever the order: with
+  conflicting blob IDs the last one used to win, so drift could report an
+  unchanged inventory and exit 0 (FR1-09).
 - A claimed draft whose GitHub creation time is still in the future is not
   recognized, even inside the mandate interval (FR1-03).
 - Schema 0.2 exempts the own draft from overlap only when the open-PR scan lists
