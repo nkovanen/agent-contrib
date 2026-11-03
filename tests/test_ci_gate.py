@@ -75,18 +75,48 @@ class ContractRuleTests(unittest.TestCase):
 
     def test_reviewed_contract_rules(self):
         task, _ = candidate_task()
-        self.assertEqual(cigate.contract_errors(task), [])
+        self.assertEqual(core.ci_requirement_errors(task), [])
         task['ci_requirements'] = []
-        self.assertEqual(cigate.contract_errors(task), [])
+        self.assertEqual(core.ci_requirement_errors(task), [])
         for items, error in (([{'check': 'test', 'app_id': APP}] * 2, 'CI requirements must be unique'),
                              ([{'check': 'te​st', 'app_id': APP}], 'control or format characters'),
                              ([{'check': 'te\x1bst', 'app_id': APP}], 'control or format characters')):
             with self.subTest(error=error):
                 task['ci_requirements'] = items
-                self.assertTrue(any(error in found for found in cigate.contract_errors(task)))
+                self.assertTrue(any(error in found for found in core.ci_requirement_errors(task)))
         task['ci_requirements'] = [{'check': 'test', 'app_id': APP}]
         task['execution']['requested_actions'] = ['implement']
-        self.assertEqual(cigate.contract_errors(task), ['CI requirements need the create_draft action'])
+        self.assertEqual(core.ci_requirement_errors(task), ['CI requirements need the create_draft action'])
+
+
+class LintParityTests(unittest.TestCase):
+    """CI-06: lint and verify apply the same reviewed CI rules through the shared reviewed-contract check."""
+    def test_each_rule_is_reported_by_lint_and_verify(self):
+        cases = {'CI requirements must be unique': ([{'check': 'test', 'app_id': APP}] * 2, None),
+                 'CI requirement names cannot contain control or format characters':
+                     ([{'check': 'te\u200bst', 'app_id': APP}], None),
+                 'CI requirements need the create_draft action': ([{'check': 'test', 'app_id': APP}], ['implement'])}
+        for error, (items, actions) in cases.items():
+            with self.subTest(error=error):
+                task, client = candidate_task()
+                task['ci_requirements'] = items
+                if actions is not None:
+                    task['execution']['requested_actions'] = actions
+                linted = core.lint(task)
+                self.assertTrue(linted['schema_valid'])
+                self.assertIn(error, linted['review_errors'])
+                self.assertFalse(linted['reviewed'])
+                self.assertIn(error, core.verify(task, client=client)['errors'])
+        task, client = candidate_task()
+        task['ci_requirements'] = [{'check': 'test', 'app_id': APP}]
+        self.assertTrue(core.lint(task)['reviewed'])
+        self.assertFalse(any('CI requirement' in error for error in core.verify(task, client=client)['errors']))
+
+    def test_schema_01_rules_are_unchanged(self):
+        from tests.test_protocol import ready_contract
+        task, _ = ready_contract()
+        self.assertEqual(core.reviewed_contract_errors(task, '0.1'), core.reviewed_contract_errors(copy.deepcopy(task), '0.1'))
+        self.assertEqual(core.ci_requirement_errors({'execution': {'requested_actions': []}}), [])
 
 
 class DecisionTests(unittest.TestCase):

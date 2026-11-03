@@ -5,8 +5,6 @@ check, from that app, on the head is completed with success; every check suite o
 completed; at least one such run exists; and both reads are complete, consistent and below GitHub's suite window.
 There is no latest-attempt selection. Design: docs/design/2026-11-03-ci-gating.md.
 """
-import unicodedata
-
 from . import core, remote
 
 MAX_REQUIREMENTS = 20
@@ -24,22 +22,6 @@ NOTICE = ('Observation of the check runs GitHub currently retains for the exact 
 
 def requirements(task):
     return task.get('ci_requirements') or []
-
-
-def contract_errors(task):
-    """Reviewed-contract rules the schema cannot express; a missing or empty list adds nothing."""
-    items = requirements(task)
-    if not items:
-        return []
-    errors = []
-    pairs = [(item['check'], item['app_id']) for item in items]
-    if len(set(pairs)) != len(pairs):
-        errors.append('CI requirements must be unique')
-    if any(unicodedata.category(char) in ('Cc', 'Cf') for check, _ in pairs for char in check):
-        errors.append('CI requirement names cannot contain control or format characters')
-    if 'create_draft' not in task['execution']['requested_actions']:
-        errors.append('CI requirements need the create_draft action')
-    return errors
 
 
 def _positive(value, what):

@@ -141,7 +141,6 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     result.update(contract_sha256=digest, source_identity={key: source[key] for key in
                   ('repository', 'repository_id', 'owner_id', 'issue', 'issue_id')}, live_complete=False)
     errors.extend(core.reviewed_contract_errors(task, '0.2'))
-    errors.extend(cigate.contract_errors(task))
     # Contract-only route checks hold with or without a mandate (A2-02); authorization.check repeats them for its
     # own historical validity, so its copies are not listed twice below.
     route = authorization.route_errors(task)
