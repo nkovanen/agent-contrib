@@ -9,9 +9,11 @@ project's rules and open pull requests, and turns the chosen issue into a review
 task contract. Your agent implements and publishes only after a human authorizes
 each step; the CLI itself never writes to GitHub.
 
-Discoverable repository jars welcoming agent contributions are planned, not
-implemented. You can already choose a repository without a jar through the
-existing authorized fork/local workflow; an absent jar grants no approval.
+The candidate can inspect a repository's root invitation with
+`tipjar jar owner/repo`. This slice is **inspection only**: discover, prepare and
+verify do not yet read or enforce jars; welcome-only discovery is planned.
+You can explicitly target a repository without a jar through existing discovery
+and pending preparation. An absent jar is undeclared and grants no approval.
 Explicit repository bans remain binding. Source approval, local execution
 permission and publication authority remain separate.
 
@@ -48,10 +50,10 @@ command. The distribution remains `agent-contrib`, the Python module remains
 `agent_contribute`, and the single canonical Skill remains `agent-contribute`.
 Help, output identifiers and repository URLs retain their existing names.
 
-Once the candidate is merged into `main` (until then `main` is the v0.2 line),
-`@main` instead of the SHA installs it too; `main` moves, so pin a full SHA for a
-reproducible install. The Skill runs the first `agent-contrib` on PATH, so set
-PATH where your agent starts and restart the agent.
+Current `main` contains the unreleased v0.3.0 candidate, including the
+`tipjar` alias. Installing `@main` selects that moving candidate; pin a reviewed
+full commit SHA for a reproducible install. The Skill runs the first
+`agent-contrib` on PATH, so set PATH where your agent starts and restart the agent.
 
 Add the Skill (for Codex, use `$HOME/.agents/skills/agent-contribute` instead):
 
@@ -141,6 +143,7 @@ an audit trail, not cryptographic consent ([host authorization](docs/host-author
 | Command | Purpose |
 | --- | --- |
 | `dependencies` | Offline GitHub give-back candidates from local dependency declarations ([workflow](docs/dependencies.md)) |
+| `jar` | Inspect one pinned root invitation; inspection only, no authority |
 | `discover` | Rank issues of one repository, or 2–20 repositories |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs |
 | `prepare` | Write a draft contract (schema 0.1, or 0.2 when selected) |

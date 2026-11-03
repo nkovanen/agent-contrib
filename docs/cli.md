@@ -38,6 +38,7 @@ sections are grouped by task.
   - [API budget (opt-in)](#api-budget-opt-in)
   - [Content cache (opt-in)](#content-cache-opt-in)
   - [Text output (unreleased)](#text-output-unreleased)
+- [Jar inspection (candidate, inspection only)](#jar-inspection-candidate-inspection-only)
 - [Command index](#command-index)
 
 ## Command index
@@ -54,6 +55,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 
 | Command | Purpose | Reads GitHub? | Exit codes |
 | --- | --- | --- | --- |
+| `jar` | Inspect a pinned root invitation directly, without parent tracker resolution | Yes | 0 welcome/closed/undeclared; 1 unknown |
 | `discover` | Rank open issues of one repository, or 2-20, with policy and overlap context | Yes | 0 complete; 1 incomplete (also an incomplete `--responsiveness`, `--check-top` or `--repo-dir` report) |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs | Yes | 0 complete; 1 incomplete (also incomplete `--ownership` signals) |
 | `prepare` | Write a draft task contract; grants nothing | Yes | 0 complete read and draft written; 1 otherwise |
@@ -1238,3 +1240,69 @@ candidates grant no approval or execution/publication permission.
 See [dependency give-back workflow](dependencies.md) for formats, provenance,
 limits and the explicit report-to-discover step. `schema dependencies` exposes
 the packaged output contract.
+
+## Jar inspection (candidate, inspection only)
+
+```sh
+agent-contrib jar acme/project
+agent-contrib --format text jar acme/project
+agent-contrib schema jar
+# Equivalent through the candidate alias:
+tipjar jar acme/project
+```
+
+The command inspects the named repository itself, even when its issue tracker is
+disabled. It never resolves a parent or inherits an owner jar. It pins the actual
+default-branch commit and a complete tree, and checks exact file bytes against
+the tree's Git blob identity. No issue, label or pull-request endpoints are read.
+There are at most four jar `gh api` invocations, without application retries;
+a transient failure immediately reports unknown. GitHub CLI may follow internal
+HTTP redirects, so this is not a cap on raw HTTP GETs. The reader rejects changed
+canonical repository identities and never follows application-returned URLs.
+With `--report-budget`, the before/after rate-limit invocations and their existing
+retries are additional to the four-invocation jar budget.
+This command stays fresh even when `--cache` is selected.
+
+Malformed repository arguments are usage errors (exit 2) before any GitHub read,
+including budget instrumentation. Existing commands keep their argument-exit
+behavior.
+
+The JSON is `tipjar-report/1` (output schema version 1). States:
+
+| State | Meaning | Exit |
+| --- | --- | --- |
+| `welcome` | Valid source invitation; policy review still required | 0 |
+| `closed` | Valid opt-out declaration | 0 |
+| `undeclared` | Complete pinned tree has no exact root jar | 0 |
+| `unknown` | Read, identity, file-kind or validation failure | 1 |
+
+Exit 0 reports a complete observation; it grants no permission. On early failure,
+unavailable branch/commit/blob/digest fields remain null. The exact byte SHA-256
+is retained when bytes were decoded, including invalid manifests or mismatched
+blobs; a digest alone does not establish trusted source provenance. Text output
+is abridged and sanitized; canonical JSON retains validated untrusted text.
+
+**Inspection only:** normal `discover`, `prepare` and `verify` do not yet read
+or enforce jars. Jar integration and `--welcomed-only` filtering among explicitly
+supplied repository names are planned. There is no global jar index.
+
+A repository without a jar is still manually targetable for assessment:
+
+```sh
+agent-contrib discover acme/project --signals
+agent-contrib inspect 'acme/project#12' --ownership
+agent-contrib prepare 'acme/project#12' --output task.json
+agent-contrib lint task.json
+agent-contrib verify task.json
+```
+
+Preparation produces a pending draft. Read all ordinary contribution policies,
+including refusals and unresolved requirements; wanted work is a preference,
+and boundaries remain untrusted requirements to review. Neither welcome nor
+absence changes source approval, local execution permission or publication
+authority. Schema 0.1 upstream mode still requires matching label approval;
+its existing fork route requires an available immediate GitHub fork and actual
+local execution authorization, and fork completion grants no upstream authority.
+Schema 0.2 still requires actual admin/maintain authority and host mandates.
+An arbitrary no-jar repository has no new outside-contributor upstream route
+in this slice.

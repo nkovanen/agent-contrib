@@ -266,6 +266,26 @@ One of `inspect_result`, `issue_unresolved`.
 | `output_schema_version` | string | Version of the output schemas, independent of task/evidence schema versions |
 | `automatic_updates` | false |  |
 
+### `jar`
+
+`agent-contrib schema jar` · Pinned repository invitation inspection (tipjar-report/1). Grants no approval or authority.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `default_branch` | string or null |  |
+| `commit` | string or null |  |
+| `path` | ".tipjar.json" |  |
+| `blob_sha` | string or null |  |
+| `sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `fetched_at` | string |  |
+| `state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `complete` | boolean |  |
+| `manifest` | `tipjar_manifest` or null |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
+| `api_budget` | `api_budget` (optional) |  |
+
 ### `lint`
 
 `agent-contrib schema lint` · Offline contract check: bundled task schema, then the reviewed-contract rules. No GitHub or Git reads; never readiness or authorization.
@@ -1188,6 +1208,15 @@ Open-PR scan of the proposed target repository when it differs from the issue so
 | `complete` | boolean |  |
 | `pages` | integer |  |
 | `errors` | string[] |  |
+
+#### `tipjar_manifest`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | "0.1" |  |
+| `status` | "welcome" \| "closed" |  |
+| `wanted` | string[] (optional) |  |
+| `boundaries` | string[] (optional) |  |
 
 #### `verify_0_1`
 
