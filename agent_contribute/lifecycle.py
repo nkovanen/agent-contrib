@@ -188,7 +188,7 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
             disposition = dict(dispositions.report(), status='invalid', errors=['Host context schema is invalid'])
         else:
             disposition, waived, observed = dispositions.evaluate(task, host_context, authority, current, client,
-                                                                  dt.datetime.now(dt.timezone.utc))
+                                                                  dt.datetime.now(dt.timezone.utc), scan_ids)
     # A disposition only ever removes the disposed topical entries; anything it observed blocks.
     waived_items = [item for item in live_duplicates + task['discovery']['duplicate_prs']
                     if item.get('repository') == source['repository'] and item['number'] in waived]

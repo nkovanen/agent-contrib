@@ -12,6 +12,7 @@ from agent_contribute import authorization, core, pr_identity
 from tests import test_lifecycle
 from tests.test_authorization import NOW, event_binding
 from tests.test_draft_update_v02 import update_for
+from tests.test_overlap_waivers import TIP, entry_for, pr_detail, record_for
 from tests.test_protocol import comparison
 
 OPEN_DRAFT = 'Claimed publication is not an open unmerged draft by the bound actor'
@@ -345,6 +346,32 @@ class RecognitionTests(unittest.TestCase):
                                                     'repository': 'acme/photos'}]
         self.rebind_all()
         self.assert_blocked(self.verify(), 'Unresolved overlapping PRs remain')
+
+    def test_a_disposition_waives_on_the_update_route_only_with_a_consistent_scan_identity(self):
+        # FR1-07 on the updated-draft route: the disposed PR's scan ID must equal the detail and the record.
+        competing = pr_detail()
+        self.client.details[31] = copy.deepcopy(competing)
+        self.client.overrides['repos/acme/photos/git/ref/heads/main'] = {
+            'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': TIP}}
+        self.context['overlap_dispositions'] = record_for(self.task, self.context, [entry_for(competing)])
+        self.context['final_signoff'] = test_lifecycle.signoff(self.task, self.context, self.evidence)
+        own = copy.deepcopy(self.client.prs[0])
+        self.client.prs = [own, copy.deepcopy(competing)]
+        result = self.verify()
+        self.assertEqual(self.report(result)['status'], 'recognized')
+        self.assertTrue(result['completion_ready'], result['stage_blockers']['completion'])
+        wrong = dict(copy.deepcopy(competing), id=98765)
+        missing = copy.deepcopy(competing)
+        missing.pop('id')
+        for name, listed in {'single conflict': [wrong], 'duplicate, conflict first': [wrong, competing],
+                             'duplicate, conflict last': [competing, wrong], 'missing id': [missing]}.items():
+            with self.subTest(case=name):
+                self.client.prs = [copy.deepcopy(own)] + copy.deepcopy(listed)
+                result = self.verify()
+                self.assertFalse(result['completion_ready'])
+                self.assertEqual(result['waived_duplicates'], [])
+                self.assertIn('Overlap disposition stale for PR #31: scan identity',
+                              result['overlap_dispositions']['errors'])
 
     def test_mandate_and_record_expiry_after_the_push_do_not_block_recognition(self):
         self.record = update_for(self.task, self.context, {'git_head': self.creation},

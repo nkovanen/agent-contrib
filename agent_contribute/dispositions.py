@@ -94,8 +94,12 @@ def _tip(source, ref, client):
     return target['sha']
 
 
-def evaluate(task, context, authority, current, client, now):
-    """Return (report, waived PR numbers, extra blocking entries). Only topical, fully re-observed overlaps waive."""
+def evaluate(task, context, authority, current, client, now, scan_ids=None):
+    """Return (report, waived PR numbers, extra blocking entries). Only topical, fully re-observed overlaps waive.
+
+    scan_ids maps each PR number in the open-PR scan to its numeric ID, or None when the ID is missing or the
+    number was repeated; a waiver needs that one scan ID to equal the fresh detail and the host record."""
+    scan_ids = scan_ids or {}
     result = report()
     record = context.get('overlap_dispositions')
     if record is None:
@@ -155,6 +159,9 @@ def evaluate(task, context, authority, current, client, now):
             ('reason', reasons == {finding['reason']} == {entry['match_reason']} and
              finding['reason'].startswith(TOPICAL)),
             ('pr_id', pr['id'] == entry['pr_id']),
+            # Exactly one positive scan ID for this number, equal to the detail and the record (FR1-07).
+            ('scan identity', type(scan_ids.get(number)) is int and scan_ids[number] > 0 and
+             scan_ids[number] == pr['id'] == entry['pr_id']),
             ('repository', pr['base']['repo']['id'] == entry['repository_id'] == source['repository_id']),
             ('url', pr['html_url'] == canonical.format(repository, number)),
             # entry author_id is never the actor (section check), so equality also excludes own PRs

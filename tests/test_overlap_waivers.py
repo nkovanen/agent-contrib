@@ -345,6 +345,40 @@ class ReconciliationTests(WaiverFixture):
         self.assertEqual(result['overlap_dispositions']['unused'], [])
 
 
+class ScanIdentityTests(WaiverFixture):
+    """FR1-07: the scan's numeric ID for the disposed PR must be exactly one positive ID equal to the fresh
+    detail and the host record; a missing, repeated or conflicting identity never waives."""
+
+    def scan_cases(self):
+        wrong = dict(copy.deepcopy(self.pr), id=98765)
+        missing = copy.deepcopy(self.pr)
+        missing.pop('id')
+        return {'single conflict': [wrong], 'duplicate, conflict first': [wrong, self.pr],
+                'duplicate, conflict last': [self.pr, wrong], 'missing id': [missing]}
+
+    def test_conflicting_missing_or_repeated_scan_ids_never_waive(self):
+        self.assert_waived(self.verify(evidence=False))
+        for name, listed in self.scan_cases().items():
+            with self.subTest(case=name):
+                self.show(*listed, details=[self.pr])
+                result = self.verify(evidence=False)
+                self.assert_blocked(result, 'Overlap disposition stale for PR #31: scan identity')
+                self.assertFalse(result['draft_create_ready'])
+
+    def test_a_conflicting_scan_id_blocks_the_whole_creation_journey(self):
+        self.show(dict(copy.deepcopy(self.pr), id=98765), details=[self.pr])
+        self.assertFalse(self.verify(evidence=False)['implementation_ready'])
+        self.assertFalse(self.verify()['draft_create_ready'])
+        test_lifecycle.IntegratedLifecycleTests.publish(self)
+        own = self.client.prs[0]
+        self.show(own, dict(copy.deepcopy(self.pr), id=98765), details=[own, self.pr])
+        self.client.history = [copy.deepcopy(own)]
+        self.context['final_signoff'] = test_lifecycle.signoff(self.task, self.context, self.evidence)
+        result = self.verify()
+        self.assertFalse(result['completion_ready'])
+        self.assertEqual(result['waived_duplicates'], [])
+
+
 class OwnWorkTests(WaiverFixture):
     def test_a_pr_by_the_credential_actor_is_never_waivable(self):
         own = pr_detail(user={'id': 7, 'login': 'human', 'type': 'User'})
