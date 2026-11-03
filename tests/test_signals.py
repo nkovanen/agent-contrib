@@ -187,6 +187,7 @@ class DiscoverSignalTests(unittest.TestCase):
         default['issues'].sort(key=lambda issue: issue['number'])
         for result in (stripped, default):
             result.pop('fetched_at')
+            result['tipjar'].pop('fetched_at')
             for read in result['resolution_provenance']['metadata_reads']:
                 read.pop('fetched_at')
         self.assertEqual(stripped, default)
@@ -523,6 +524,7 @@ class ResponsivenessTests(unittest.TestCase):
 def normalized(result):
     result = copy.deepcopy(result)
     result.pop('fetched_at', None)
+    result.get('tipjar', {}).pop('fetched_at', None)
     for read in result.get('resolution_provenance', {}).get('metadata_reads', []):
         read.pop('fetched_at')
     return result

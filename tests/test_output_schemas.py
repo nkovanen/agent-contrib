@@ -122,7 +122,7 @@ class SchemaCommandTests(unittest.TestCase):
         code, result = invoke('instructions')
         self.assertEqual(code, 0)
         self.assertEqual(result['output_schema_version'], outputs.VERSION)
-        self.assertEqual(result['resources']['output_schemas'], 'agent_contribute/schemas/output/1')
+        self.assertEqual(result['resources']['output_schemas'], 'agent_contribute/schemas/output/2')
         self.assertIn('agent-contrib schema', result['workflow_markdown'])
 
     def test_every_command_has_a_schema(self):
@@ -376,7 +376,7 @@ class DiagnosticVolumeTests(unittest.TestCase):
                 if name_rule.search(key) and 'items' in item:
                     found += 1
                     with self.subTest(name=name, path=path):
-                        if key == 'errors' and (name == 'jar' or name == 'find' and path == '$.$defs.jar_result.errors'):
+                        if key == 'errors' and (name == 'jar' or name == 'find' and path == '$.$defs.jar_result.errors' or '.tipjar.' in path or path.endswith('.baseline.errors') or path.endswith('.current.errors')):
                             self.assertEqual(item['maxItems'], 1)
                             self.assertEqual(item['items']['maxLength'], 300)
                             continue  # single-file inspection has one bounded failure, no paginated diagnostics

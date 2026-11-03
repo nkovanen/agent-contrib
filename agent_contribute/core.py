@@ -396,6 +396,10 @@ def repository_snapshot(repository, client, meta=None, commit=None):
     except ProtocolError as exc:
         snapshot['pr_index'] = []
         snapshot['errors'].append(str(exc))
+    from .tipjar import inspect_jar
+    snapshot['tipjar'] = inspect_jar(canonical, client, commit=commit, metadata=meta)
+    if not snapshot['tipjar']['complete']:
+        snapshot['errors'].extend('Tipjar: ' + error for error in snapshot['tipjar']['errors'])
     snapshot['instructions_sha256'] = canonical_hash([{k: item[k] for k in ('path', 'sha256')} for item in snapshot['instructions']])
     snapshot['complete'] = not snapshot['errors']
     return snapshot
@@ -539,7 +543,7 @@ def inspect_from_snapshot(snapshot, issue):
     return {'schema_version': VERSION, 'source': source,
             'untrusted_issue': {'title': safe_text(issue['title']), 'body': safe_text(issue['body']),
                                 'labels': [safe_text(label['name'], 100) for label in issue['labels']]},
-            'instructions': snapshot['instructions'], 'spec_paths': snapshot['spec_paths'],
+            'instructions': snapshot['instructions'], 'spec_paths': snapshot['spec_paths'], 'tipjar': snapshot['tipjar'],
             'approval': approval, 'duplicates': duplicates,
             'duplicate_scan': 'complete' if snapshot['pulls_scan']['complete'] and not errors else 'unknown',
             'complete': not errors, 'errors': errors, 'warnings': warnings, 'exclusions': exclusions,
@@ -606,7 +610,7 @@ def limit_discovery(result, limit, references=None):
     result['issues'] = shown
 
 
-def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None, limit=None):
+def discover(repository, client=None, *, signals=False, responsiveness=False, check_top=None, repo_dir=None, limit=None, welcomed_only=False):
     limit = validate_discovery_limit(limit)
     client = client or GitHub()
     result, snapshot = discover_with_snapshot(repository, client, signals=signals, assignees=bool(check_top))
@@ -621,6 +625,10 @@ def discover(repository, client=None, *, signals=False, responsiveness=False, ch
         # Only a complete source snapshot is read further; otherwise the report is unknown without a read.
         source = snapshot['repository'] if snapshot is not None and snapshot['complete'] else None
         result['repository_signals'] = {'responsiveness': report(source, client)}
+    from .tipjar import selection
+    result['selection'] = selection(result.get('tipjar'), welcomed_only)
+    if welcomed_only and not result['selection']['included']:
+        result['issues'] = []
     if limit is not None:
         limit_discovery(result, limit)
     return result
@@ -721,7 +729,7 @@ def discover_with_snapshot(repository, client=None, *, signals=False, assignees=
     extra = {'ordering': 'exclusions, overlaps, low likelihood, then higher signal score, then issue number'} if signals else {}
     return {**context, **extra, 'schema_version': VERSION, 'repository': source, 'commit': snapshot['commit'],
             'fetched_at': snapshot['fetched_at'], 'complete': not errors, 'errors': sorted(set(errors)),
-            'issues': issues, 'instructions': snapshot['instructions'], 'spec_paths': snapshot['spec_paths'],
+            'issues': issues, 'instructions': snapshot['instructions'], 'spec_paths': snapshot['spec_paths'], 'tipjar': snapshot['tipjar'],
             'provenance': {**{name: snapshot[name] for name in ('pulls_scan', 'labels_scan', 'policy_state')},
                            'proposed_target_pulls': target_scan},
             'issue_scan': {k: v for k, v in listing.items() if k != 'items'},
@@ -730,6 +738,11 @@ def discover_with_snapshot(repository, client=None, *, signals=False, assignees=
 
 
 def prepare(inspected, schema_version='0.1', client=None):
+    from .tipjar import preparation_errors
+    # This only shapes a pending draft; fresh verify establishes source authority.
+    jar_errors = preparation_errors(inspected.get('tipjar'), source=inspected.get('source', {}))
+    if jar_errors:
+        raise ProtocolError('tipjar_blocked', '; '.join(jar_errors))
     if schema_version == '0.2':
         from .lifecycle import prepare_v2
         return prepare_v2(inspected, client or GitHub())
@@ -1587,6 +1600,8 @@ def verify(task, evidence=None, repo_dir=None, client=None, *, host_context=None
             current['errors'].extend(scan['errors'])
             current['complete'] = current['complete'] and scan['complete']
             current['provenance']['proposed_target_pulls'] = scan
+        from .tipjar import live_errors
+        errors.extend(live_errors(task, current, client))
         result['live_provenance'] = current['provenance']
         result['source_resolution_provenance'] = current['resolution_provenance']
         result['approval'] = current['approval']

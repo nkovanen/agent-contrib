@@ -18,10 +18,15 @@ the data boundaries; unittest runs it when Node is available.
 
 ## Use a real snapshot
 
-**Pending preview:** this candidate CLI does not yet include the `tipjar find`
-exporter. The importer supports its forward-compatible format and the fictional
-example below; the matching finder must ship before the CLI export workflow is
-available. Choose or drop a compatible local `.json` file.
+In this unreleased preview, export a bounded public search batch with the candidate CLI:
+
+```sh
+tipjar find > jars.json
+```
+
+Choose or drop `jars.json` below. Search coverage is partial and indexing may lag;
+no adoption or exhaustive directory is established. A failed/incomplete batch may
+still retain observations; inspect its diagnostics before using it.
 This importer requires format `find-jars-report/1`, at most 1 MiB and 200
 observations. It ignores extra bounded metadata, rejects unknown formats,
 invalid identities, conflicting dispositions, duplicate repositories, invalid

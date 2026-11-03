@@ -29,7 +29,8 @@ class AuditTests(unittest.TestCase):
                                                              'architecture/spec index': 'loaded'})
         discover_client = FakeGitHub()
         core.discover('acme/photos', discover_client)
-        self.assertEqual(client.calls, discover_client.calls, 'audit must not add reads')
+        self.assertEqual(client.calls[:len(discover_client.calls)], discover_client.calls)
+        self.assertGreater(len(client.calls), len(discover_client.calls), 'audit now inventories policy sources')
         self.assertTrue(all(call.startswith('repos/') for call in client.calls))
 
     def test_valid_policy_with_missing_label(self):

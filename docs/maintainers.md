@@ -127,8 +127,10 @@ prevents final completion. See [the host handoff](host-authorization.md).
 A root `.tipjar.json` can declare an invitation for useful **agent work**.
 It does not accept money, approve issues, execute commands or grant publication
 authority. The candidate's `agent-contrib jar owner/repo` inspects this file;
-normal discover/prepare/verify do not yet read or enforce it. Old clients do not
-enforce it either: state refusals plainly in ordinary contribution documentation.
+discovery, preparation and live gates enforce closed/unknown declarations on the
+actual issue source, with no fork or approval override. Welcome is only an
+invitation; wanted/boundaries remain policy-review data. Old clients do not
+enforce it: state refusals plainly in ordinary contribution documentation.
 
 ### Two-minute setup (offline)
 

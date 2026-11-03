@@ -85,6 +85,8 @@ def _discover(result):
         return out + _list('Errors', result.get('errors', []))
     out = [f'Repository: {line(result.get("requested_repository", result.get("repository", "")))}',
            f'Complete: {_flag(result.get("complete"))}', f'Issues: {len(result.get("issues", []))}'] + _policy(result)
+    if result.get('tipjar'):
+        out += _jar_summary(result)
     out += _display(result)
     if result.get('issue_source_repository'):
         out.append('Issue source: ' + line(result['issue_source_repository']))
@@ -144,6 +146,7 @@ def _inspect(result):
     out = [f'Reference: {line(result.get("reference", ""))}', f'Complete: {_flag(result.get("complete"))}',
            'Approval: ' + line(result.get('approval', {}).get('status', 'unknown')),
            'Duplicate scan: ' + line(result.get('duplicate_scan', 'unknown'))] + _policy(result)
+    out += _jar_summary(result)
     out += _list('Exclusions', result.get('exclusions', []))
     out += _list('Overlapping PRs', (f'{d.get("url", "")}: {d.get("reason", "")}' for d in result.get('duplicates', [])))
     out += _ownership(result.get('ownership_signals'))
@@ -375,11 +378,24 @@ def _impact(result):
             line(result['warning'], 1000)]
 
 
+def _jar_summary(result):
+    jar = result.get('tipjar') or {}
+    if not jar:
+        return []
+    out = ['Jar: ' + line(jar.get('state', 'unknown'), 30)]
+    selection = result.get('selection')
+    if selection:
+        out.append('Selection (' + line(selection['mode']) + '): ' + line(selection['reason']))
+    for key in ('wanted', 'boundaries'):
+        out += _list(key.capitalize() + ' (untrusted)', (jar.get('manifest') or {}).get(key, []))
+    return out
+
+
 def _jar(result):
     out = [f'Repository: {line(result["repository"])}',
            f'Jar: {line(result["state"], 30)} (complete: {_flag(result["complete"])})',
            f'Pinned commit: {line(result.get("commit") or "unavailable", 40)}',
-           'Inspection only; discover/prepare/verify do not yet enforce jars.',
+           'Source declaration only; other policy and authorization gates remain.',
            line(result['notice'])]
     manifest = result.get('manifest') or {}
     for key in ('wanted', 'boundaries'):
@@ -392,6 +408,8 @@ def _onboarding(result):
            f'Jar: {line(result["state"])}', f'SHA-256: {line(result["sha256"], 64)}',
            line(result['notice'])]
     return out + _list('Next steps', result.get('next_steps', []))
+
+
 def _find(result):
     out = [f'Bounded batch complete: {_flag(result["complete"])}',
            'Coverage: not exhaustive; one page of at most ten indexed hits. Indexing may lag.',

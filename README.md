@@ -12,11 +12,15 @@ each step; the CLI itself never writes to GitHub.
 `tipjar find` verifies one batch of at most ten indexed public jar candidates.
 It is not an exhaustive directory. No adoption is established and there is no
 curated fallback list. Direct `tipjar jar owner/repo` reads without indexing.
-Normal discover/prepare/verify do not yet enforce jars; supplied-list
-welcome-only discovery is separate work. Explicit targeting remains available
-without a jar for assessment and pending preparation. Absence grants no approval;
-repository bans remain binding. Source approval, local execution permission and
-publication authority remain separate.
+The candidate can inspect a repository's root invitation with
+`tipjar jar owner/repo`. Discovery, preparation and live verification read the actual issue source’s
+pinned declaration. Closed or unknown jars block contribution readiness; use
+`tipjar discover acme/one acme/two --welcomed-only` to select declared welcomes
+among named repositories. All other policy and authority gates still apply.
+You can explicitly target a repository without a jar through existing discovery
+and pending preparation. An absent jar is undeclared and grants no approval.
+Explicit repository bans remain binding. Source approval, local execution
+permission and publication authority remain separate.
 
 **Versions.** v0.2.0 is the published release. This branch is the **v0.3.0
 candidate (unreleased)**: no v0.3.0 tag exists yet. Coming from 0.2? Read

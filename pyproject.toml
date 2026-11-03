@@ -37,4 +37,4 @@ include = ["agent_contribute*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-agent_contribute = ["*.schema.json", "instructions.md", "adapters/agent-contribute/SKILL.md", "schemas/0.2/*.schema.json", "schemas/host-context/*.schema.json", "schemas/output/1/*.schema.json"]
+agent_contribute = ["*.schema.json", "instructions.md", "adapters/agent-contribute/SKILL.md", "schemas/0.2/*.schema.json", "schemas/host-context/*.schema.json", "schemas/output/1/*.schema.json", "schemas/output/2/*.schema.json"]

@@ -1086,7 +1086,7 @@ Every command's JSON output has a packaged JSON Schema (draft 2020-12 subset).
 `agent-contrib schema COMMAND` prints it; `error` is the error envelope that
 replaces any command's result on a usage, input or protocol error, and
 `evidence-init` is `evidence init`. `instructions` reports the
-`output_schema_version` (currently `1`) and the package directory. Objects are
+`output_schema_version` (currently `2`) and the package directory. Objects are
 closed: a field is required unless marked optional, and fields not listed never
 appear. Output values do not carry the schema version; a shape change bumps the
 version together with the CLI's semantic version and changelog. Remote text in
@@ -1337,7 +1337,7 @@ Malformed repository arguments are usage errors (exit 2) before any GitHub read,
 including budget instrumentation. Existing commands keep their argument-exit
 behavior.
 
-The JSON is `tipjar-report/1` (output schema version 1). States:
+The JSON is `tipjar-report/1` (output schema version 2). States:
 
 | State | Meaning | Exit |
 | --- | --- | --- |
@@ -1352,9 +1352,57 @@ is retained when bytes were decoded, including invalid manifests or mismatched
 blobs; a digest alone does not establish trusted source provenance. Text output
 is abridged and sanitized; canonical JSON retains validated untrusted text.
 
-**Inspection only:** normal `discover`, `prepare` and `verify` do not yet read
-or enforce jars. Jar integration and `--welcomed-only` filtering among explicitly
-supplied repository names are planned. There is no global jar index.
+`discover`, `inspect`, `audit` and `prepare` include the actual issue source's
+pinned jar. Closed and unknown declarations block preparation and every live
+contribution gate, including approved-label, fork and host-mandate routes.
+A welcome never grants issue approval or execution/publication authority.
+Live gates reconstruct the jar at the contract's source commit: added, removed
+or byte-changed jars require refreshing and reviewing the contract. Branch
+advancement alone does not change an unchanged declaration. Instruction baseline
+hashes and task/evidence/host schemas keep their existing meanings.
+
+Find declared welcomes among names obtained from dependencies, bookmarks or a
+list you supply:
+
+```sh
+agent-contrib discover acme/one acme/two --welcomed-only --limit 10
+agent-contrib discover --repositories-file repos.txt --welcomed-only
+```
+
+The filter runs after full scans/ranking and before display limits. Excluded
+sources retain diagnostic states and scan provenance; unknown reads make the
+run incomplete. Complete undeclared or closed sources may yield an empty
+selection successfully. Default explicit discovery keeps no-jar candidates;
+closed/unknown raw findings are diagnostic and excluded from combined candidates.
+Selection means “declared welcome; policy review required.” No score, approval
+or overlap gate changes. There is no global jar index or owner-jar inheritance.
+
+Policy inventories use format 3 and include a reserved `tipjar` entry with full
+validated wanted/boundaries and pinned declaration state/digest, independent of
+prose-file limits. Ordinary source and owner prose remain binding; unresolved
+links and refusals cannot be waived by a welcome. Historical inventory 1/2 hashes
+remain recognizable in drift reports, but do not attest jar review. Standalone `jar` ignores `--cache`. Integrated jar reads use
+single-attempt requests and live tree checks; an opt-in cached content response
+is accepted only after its bytes match that pinned tree blob. Policy reads retain
+their own existing bounded budget in addition to jar reads.
+
+Caller-supplied report dictionaries are untrusted data. Public policy inventory
+builders reread the source jar at the requested commit (up to three additional
+`gh api` invocations). Live guards reread the current default-branch declaration
+(up to four) and the task's historical declaration (up to three), in addition to
+inspection and other command reads. The standalone four-invocation jar budget
+is not a bound on an entire integrated command. Failed or inconsistent pins
+remain blockers.
+
+The library's `core.prepare(inspected)` is an offline pending-draft transformation.
+It validates complete report shape, state/digest consistency and source pin
+identity, but cannot authenticate a well-formed caller-fabricated inspection.
+Direct lifecycle preparation has the same jar-data boundary, alongside its
+existing schema 0.2 identity reads. Use actual inspection data and fresh `verify`
+for enforcement; a shaped pending draft grants no action readiness or authority.
+These checks do not sandbox a native caller that replaces the GitHub client or
+changes the library itself.
+
 
 A repository without a jar is still manually targetable for assessment:
 

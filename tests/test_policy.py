@@ -37,6 +37,16 @@ class PolicyGitHub:
         self.served = {}
         self.forged = {}  # (repository, path) -> body served with the pinned tree's sha field unchanged
 
+    def request_once(self, endpoint):
+        result = self.request(endpoint)
+        if '/git/trees/' in endpoint and isinstance(result, dict):
+            result = __import__('copy').deepcopy(result)
+            result.setdefault('sha', 'c' * 40)
+            for entry in result.get('tree', []):
+                entry.setdefault('sha', 'b' * 40)
+                entry.setdefault('mode', '100644')
+        return result
+
     def request(self, endpoint):
         self.calls.append(endpoint)
         path, _, query = endpoint.partition('?')
@@ -491,7 +501,7 @@ class InventoryTests(unittest.TestCase):
         self.assertIn('unresolved', result['review_obligation'])
         self.assertIn('even when every count is zero', result['review_obligation'])
         forbidden = {'complete', 'coverage', 'stop', 'clear', 'allowed', 'permitted', 'verdict'}
-        self.assertFalse(forbidden & set(walk_keys(result)))
+        self.assertFalse(forbidden & set(walk_keys({k: v for k, v in result.items() if k != 'tipjar'})))
 
     def test_inventory_hash_tracks_content_and_references_not_commits(self):
         first, _ = report({'AI_POLICY.md': 'No LLM output.'})
@@ -582,11 +592,11 @@ class BoundTests(unittest.TestCase):
         owner = {f'docs/x{n}/CONTRIBUTING.md': 'x' for n in range(20)}
         files = {f'docs/{n}/CONTRIBUTING.md': 'x' for n in range(20)}
         result, client = report(files, owner)
-        self.assertLessEqual(len(client.calls), policy.MAX_REQUESTS)
-        self.assertEqual(result['reads'], {'requests': len(client.calls), 'limit': policy.MAX_REQUESTS})
+        self.assertLessEqual(len(client.calls), policy.MAX_REQUESTS + 4)  # pinned jar reads have a separate budget
+        self.assertEqual(result['reads'], {'requests': len(client.calls) - 2, 'limit': policy.MAX_REQUESTS})  # metadata/tree jar reads are separate
         with patch.object(policy, 'MAX_REQUESTS', 6):
             result, client = report(files, owner)
-        self.assertEqual(len(client.calls), 6)
+        self.assertEqual(len(client.calls), 8)  # plus independent pinned jar metadata/tree reads
         self.assertIn('requests', {item['limit'] for item in result['limits_reached']})
         owner = [u for u in result['unassessed'] if u['what'] == 'acme/.github']
         self.assertEqual(owner[0]['reason'], 'not read: request limit')

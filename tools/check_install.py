@@ -28,6 +28,8 @@ RESOURCE_PATHS = (
     "schemas/0.2/evidence.schema.json",
     "schemas/host-context/0.1.schema.json",
     "schemas/host-context/0.2.schema.json",
+    "instructions.md",
+    "adapters/agent-contribute/SKILL.md",
     "schemas/output/1/audit.schema.json",
     "schemas/output/1/authorization-request.schema.json",
     "schemas/output/1/dependencies.schema.json",
@@ -36,24 +38,46 @@ RESOURCE_PATHS = (
     "schemas/output/1/error.schema.json",
     "schemas/output/1/evidence-init.schema.json",
     "schemas/output/1/feedback.schema.json",
-    "schemas/output/1/init.schema.json",
-    "schemas/output/1/receipt.schema.json",
-    "schemas/output/1/impact.schema.json",
     "schemas/output/1/find.schema.json",
+    "schemas/output/1/impact.schema.json",
+    "schemas/output/1/init.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
-    "schemas/output/1/jar.schema.json",
     "schemas/output/1/jar-check.schema.json",
+    "schemas/output/1/jar.schema.json",
     "schemas/output/1/lint.schema.json",
     "schemas/output/1/ownership.schema.json",
     "schemas/output/1/pr-body.schema.json",
     "schemas/output/1/prepare.schema.json",
+    "schemas/output/1/receipt.schema.json",
     "schemas/output/1/scope-check.schema.json",
     "schemas/output/1/session.schema.json",
     "schemas/output/1/skill.schema.json",
     "schemas/output/1/verify.schema.json",
-    "instructions.md",
-    "adapters/agent-contribute/SKILL.md",
+    "schemas/output/2/audit.schema.json",
+    "schemas/output/2/authorization-request.schema.json",
+    "schemas/output/2/dependencies.schema.json",
+    "schemas/output/2/discover.schema.json",
+    "schemas/output/2/drift.schema.json",
+    "schemas/output/2/error.schema.json",
+    "schemas/output/2/evidence-init.schema.json",
+    "schemas/output/2/feedback.schema.json",
+    "schemas/output/2/find.schema.json",
+    "schemas/output/2/impact.schema.json",
+    "schemas/output/2/init.schema.json",
+    "schemas/output/2/inspect.schema.json",
+    "schemas/output/2/instructions.schema.json",
+    "schemas/output/2/jar-check.schema.json",
+    "schemas/output/2/jar.schema.json",
+    "schemas/output/2/lint.schema.json",
+    "schemas/output/2/ownership.schema.json",
+    "schemas/output/2/pr-body.schema.json",
+    "schemas/output/2/prepare.schema.json",
+    "schemas/output/2/receipt.schema.json",
+    "schemas/output/2/scope-check.schema.json",
+    "schemas/output/2/session.schema.json",
+    "schemas/output/2/skill.schema.json",
+    "schemas/output/2/verify.schema.json",
 )
 
 
@@ -95,6 +119,7 @@ def installed_check(source):
     for name in RESOURCE_PATHS:
         assert resources.joinpath(name).read_bytes() == (source / "agent_contribute" / name).read_bytes(), name
     # Development tools such as the task-selection benchmark never ship in the wheel.
+    assert not [str(file) for file in dist.files if str(file).startswith("web/") or str(file).startswith("tests/web/")]
     assert not [str(file) for file in dist.files if str(file).startswith("tools/") or "benchmark" in str(file)]
     assert [str(file) for file in dist.files if file.name == "SKILL.md"] == [
         "agent_contribute/adapters/agent-contribute/SKILL.md"]
@@ -132,8 +157,8 @@ def installed_check(source):
     assert instructions["supported_schema_versions"] == ["0.1", "0.2"]
     assert instructions["supported_host_context_versions"] == ["0.1", "0.2"]
     assert instructions["automatic_updates"] is False
-    assert instructions["output_schema_version"] == "1"
-    assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:1:verify"
+    assert instructions["output_schema_version"] == "2"
+    assert json.loads(cli("schema", "verify"))["$id"] == "urn:agent-contrib:output:2:verify"
     assert instructions["workflow_markdown"] == resources.joinpath("instructions.md").read_text("utf-8")
     session_schema = json.loads(cli("schema", "session"))
     discovery_path = Path.cwd() / "discovery.json"
@@ -153,7 +178,7 @@ def installed_check(source):
     assert not core.schema_errors({"schema_version": "0.1", "status": "welcome"}, manifest_schema)
     assert core.schema_errors({"schema_version": "999", "status": "welcome"}, manifest_schema)
     jar_schema = json.loads(cli("schema", "jar"))
-    assert jar_schema["$id"] == "urn:agent-contrib:output:1:jar"
+    assert jar_schema["$id"] == "urn:agent-contrib:output:2:jar"
     assert "inspection only" in " ".join(cli("jar", "--help").split())
     failed_jar = json.loads(cli("jar", "acme/project", expected=1))
     assert failed_jar["state"] == "unknown" and failed_jar["complete"] is False
@@ -239,14 +264,36 @@ def installed_check(source):
     assert impact["unique_prs"] == 1 and impact["counts"] == {"open": 1, "closed": 0, "merged": 0}
     assert impact["repositories_represented"] == 1 and "repositories_helped" not in impact
     assert impact["trust"] == "self-reported recorded observations"
-    assert json.loads(cli("schema", "receipt"))["$id"] == "urn:agent-contrib:output:1:receipt"
-    assert json.loads(cli("schema", "impact"))["$id"] == "urn:agent-contrib:output:1:impact"
+    assert json.loads(cli("schema", "receipt"))["$id"] == "urn:agent-contrib:output:2:receipt"
+    assert json.loads(cli("schema", "impact"))["$id"] == "urn:agent-contrib:output:2:impact"
 
     # Exercise real installed entry points, including small buffered JSON errors.
     for name, entrypoint in (
             ("console", [console]),
             ("tipjar", [tipjar]),
             ("module", [sys.executable, "-I", "-m", "agent_contribute"])):
+        # Every installed spelling exercises the complete new command surface offline.
+        def entry(*args, expected=0):
+            return json.loads(run([*entrypoint, *args], cwd=Path.cwd(), env=env, expected=expected))
+        local_jar = Path.cwd() / f"{name}-jar.json"
+        created = entry("init", "--status", "welcome", "--output", local_jar)
+        assert entry("jar-check", local_jar)["sha256"] == created["sha256"]
+        dependency_args = ("dependencies", manifest)
+        if hasattr(os, "O_NOFOLLOW") and os.open in os.supports_dir_fd:
+            assert entry(*dependency_args)["resolution_complete"] is False
+            assert entry(*dependency_args, "--installed")["repositories"] == ["example/library"]
+        else:
+            assert entry(*dependency_args, expected=1)["error"]["code"] == "dependency_input"
+        assert entry("impact", recorded, recorded)["unique_prs"] == 1
+        failed_receipt = Path.cwd() / f"{name}-missing-receipt.json"
+        assert "error" in entry("receipt", "acme/photos#30", "--output", failed_receipt, expected=1)
+        assert not failed_receipt.exists()
+        assert entry("find", expected=1)["complete"] is False
+        session_output = Path.cwd() / f"{name}-proposal.json"
+        proposal = entry("session", discovery_path, "--max-tasks", "1", "--minutes", "30",
+                         "--output", session_output)
+        assert proposal["actions_authorized"] is False
+        assert not core.schema_errors(proposal, session_schema)
         for args in (("instructions",), ("unknown-command",)):
             reader, writer = os.pipe()
             os.close(reader)
