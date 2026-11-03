@@ -1,4 +1,5 @@
 """One bounded public code-search batch; every invitation is verified independently."""
+import copy
 import datetime as dt
 import re
 from urllib.parse import urlencode
@@ -151,7 +152,10 @@ def _metadata(meta, candidate, branch=None):
 
 class _Reads:
     def __init__(self, client):
-        self.client = client
+        # A shallow client copy preserves the caller's cache preference and transport.
+        self.client = copy.copy(client) if hasattr(client, 'use_cache') else client
+        if hasattr(self.client, 'use_cache'):
+            self.client.use_cache = False
         self.counts = {'search': 0, 'core': 0}
 
     def request_once(self, endpoint):

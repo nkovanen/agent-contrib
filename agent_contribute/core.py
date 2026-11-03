@@ -123,12 +123,15 @@ def safe_text(value, limit=100000):
 
 class GitHub:
     """Only fixed GET endpoints; no gh aliases, shell, writes, or remote argv."""
+    def __init__(self, *, use_cache=True):
+        self.use_cache = use_cache
+
     def request_once(self, endpoint):
         """At most one gh api invocation, no application retry; gh may follow HTTP redirects."""
         return self.request(endpoint, attempts=1)
 
     def request(self, endpoint, attempts=3):
-        store = cache.active()  # opt-in --cache: verified file contents at a pinned commit only
+        store = cache.active() if getattr(self, 'use_cache', True) else None  # pinned public blobs only
         if store is not None:
             hit = store.lookup(endpoint)
             if hit is not None:
