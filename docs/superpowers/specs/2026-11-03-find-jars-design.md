@@ -31,7 +31,7 @@ retain them but mark anomalous short page/unknown. `incomplete_results=true` ret
 incomplete. For each hit require object, exact `name` and `path` `.tipjar.json`, valid 40-hex blob SHA, repository positive integer id,
 validated full_name, and owner positive integer id/login matching its full_name. Require search `private` boolean; true is excluded
 before further reads. An exact-path mismatch is a known nonroot/case exclusion, not an invitation. Other malformed hits are unknown;
-never follow returned URLs, fragments, text matches, branch references or content bytes. Recheck owner case-insensitively against the
+never follow returned URLs, fragments, text matches, branch references or content bytes in application logic. Recheck owner case-insensitively against the
 validated filter locally.
 
 Validate the entire bounded page before reading jars. Collapse identical hits by numeric repository id plus case-folded full_name;
@@ -42,8 +42,9 @@ inspection slot on duplicates or backfill filtered hits.
 
 For each remaining distinct candidate, one `request_once('repos/'+full_name)` reads metadata. Require matching repository/owner numeric
 ids and case-folded names, `private=false`, `visibility='public'`, `archived=false`, `disabled=false`, exact boolean flags and a valid
-default branch. Known private/archived/disabled is an exclusion; missing/malformed/changed identity is unknown. Do not follow renames,
-transfers, parents or tracker resolution. A fork declares only itself. Pass this validated metadata to `tipjar.read_jar` with no
+default branch. Known private/archived/disabled is an exclusion; missing/malformed/changed identity is unknown. Application logic does not
+follow renames, transfers, parents or tracker resolution; canonical-name and numeric-id checks reject renamed/transferred responses even
+after an internal gh redirect. A fork declares only itself. Pass this validated metadata to `tipjar.read_jar` with no
 explicit commit: reuse its default-branch pin, complete tree, strict parser, byte/hash checks and provenance. Never compare indexed SHA
 with current SHA as a freshness gate: stale index may legitimately lead to closed/undeclared/changed welcome. Unknown is never welcome.
 After a complete welcome read only, GET metadata once more and require unchanged identity, owner, default branch and public/active
@@ -51,15 +52,18 @@ eligibility. Changed branch or identity/read failure is unknown; known ineligibi
 output. Never display manifests from known private targets. Observations are snapshots, not atomic guarantees: branch/content or
 visibility can change after a read. Report verification times and pinned commit, not “live now”.
 
-At most 10 candidate inspections; each costs one metadata GET + at most three reader GETs with supplied metadata + at most one final
-metadata GET = five. Thus command work is <=51 logical GETs AND <=51 actual transport attempts (1 search, <=50 core), sequential, no
-retry/sleep/pagination/fallback/backfill. Use `request_once` throughout; request failures never fall back to retrying request. Retain
-existing 8 MiB response cap and 30-second per-attempt timeout; no disk cache for find reads, even under global `--cache`. Worst
-sequential timeout is 25.5 minutes. `--report-budget` adds existing before/after core snapshots outside that bound: <=6 further actual
-attempts (three per snapshot), <=57 overall; all-success is 53 overall at maximum work. Existing `--min-remaining` checks core only;
-neither it nor the core delta promises search quota. Search has its own tighter rate limit. Expose command attempt counts by
-search/core, never infer search availability from core counters or hide instrumentation in the 51-attempt claim. No rate-limit probe is
-required by default; auth/rate errors end the relevant read without retries.
+At most 10 candidate inspections; each uses one metadata call + at most three reader calls with supplied metadata + at most one final
+metadata call = five. Command work is <=51 logical GET calls and <=51 gh invocations (1 search, <=50 core), sequential, with no
+application retry/sleep/pagination/fallback/backfill. Use existing `request_once` throughout; failures never fall back to retrying
+request. These are invocation bounds, not raw HTTP GET bounds: gh may internally follow redirects; raw HTTP count is not instrumented
+and may exceed the invocation count. No new authentication/HTTP transport is introduced. Retain the existing 8 MiB response cap and
+30-second parent timeout covering each whole gh invocation; no disk cache for find reads, even under global `--cache`. Maximum summed
+command invocation timeout is 25.5 minutes, excluding other processing. `--report-budget` adds two logical snapshot reads with up to
+three gh invocations each: <=6 extra, <=57 total; all-success is 53 at maximum work. Existing `--min-remaining` checks core only;
+neither it nor the core delta promises search quota. Search has its own tighter rate limit. Report `requests` search/core counters
+count gh invocations, excluding instrumentation, never raw HTTP requests. No rate-limit probe is required by default; auth/rate errors
+end the relevant command read without application retries. Application code never follows returned URLs or adopts renamed/transferred
+identities; response-boundary checks enforce this even if gh has already followed an HTTP redirect.
 
 ## Output, exits and adoption
 
@@ -67,7 +71,7 @@ New closed command schema `find.schema.json` under the active output version at 
 alone does not bump it. Do not widen historical schemas. Reuse the shipped jar-report schema, without new fields. Report discriminator
 `find-jars-report/1` is independent of that output version. Required fields: `format`, `fetched_at`, `owner` (nullable), `search`
 (fixed query, page, per_page, nullable total_count/incomplete_results, returned_count, truncated, short_page), `coverage`
-(`exhaustive:false`, limitations), `observations`, `complete`, `errors`, `requests` (search/core attempts, instrumentation excluded),
+(`exhaustive:false`, limitations), `observations`, `complete`, `errors`, `requests` (search/core gh invocations, instrumentation excluded),
 `notice`. Unknown search values are null, never zero/false guesses. Each observation has nullable `repository` (validated full_name),
 `repository_id`, `disposition` (`welcome|closed|undeclared|excluded|unknown`), `reason` (fixed code, <=300 characters),
 `verified_at` (nullable metadata check time), and `jar` (unchanged jar report or null). Only disposition welcome is selectable. Keep invalid identities null and reasons as fixed codes; do
