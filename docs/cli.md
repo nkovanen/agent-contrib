@@ -572,7 +572,8 @@ unknown`; an unknown is never "not fixed". With
 in the CLI output. The report changes no core result, contract field,
 `instructions_sha256` or exit code. Separately, `prepare` now writes a pending
 `ai-policy-review` prerequisite into new contracts; existing contracts are unchanged. `--ai-policy` is deprecated: it is
-accepted, changes no output or exit status, and writes one notice line to stderr. The earlier unreleased `ai_policy` excerpts and
+accepted, changes no output or exit status, and writes one notice line to stderr (best effort: a missing,
+closed or readerless stderr changes nothing). The earlier unreleased `ai_policy` excerpts and
 the `agent_contribute.aipolicy` module no longer exist.
 
 - **Inventory.** The issue source repository (never a requested fork) at the

@@ -181,7 +181,9 @@ channel or runtime model provider is added.
   as derived fields, so a ready request no longer reads as having nothing left
   to fill (dogfood N6).
 - `--ai-policy` is deprecated: it still changes no output or exit status, and now
-  writes one notice line to stderr (dogfood N5).
+  writes one notice line to stderr (dogfood N5). The notice is best effort: a
+  missing, closed or readerless stderr is closed quietly, so interpreter
+  shutdown cannot turn the exit status into 120 (R13-01).
 - `--cache` on an offline command (`instructions`, `schema`, `skill`, `lint`,
   `scope-check`, `evidence init`) is now a usage error (exit 2), like
   `--report-budget`; it was silently accepted (dogfood N7).

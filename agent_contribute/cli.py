@@ -61,11 +61,19 @@ class Parser(argparse.ArgumentParser):
 def notice():
     """Best effort: a missing or closed stderr never changes stdout or the exit status. Not print(): the result
     is the CLI's only print() call."""
+    stream = sys.stderr
     try:
-        sys.stderr.write(AI_POLICY_NOTICE + '\n')
-        sys.stderr.flush()
+        stream.write(AI_POLICY_NOTICE + '\n')
+        stream.flush()
     except (AttributeError, OSError, ValueError):
-        pass
+        # As for a broken stdout: close the failed stream so interpreter shutdown cannot retry its buffered write
+        # and exit 120. Closing a closed stream is a no-op; a failed final flush still closes it.
+        try:
+            close = getattr(stream, 'close', None)
+            if close is not None:
+                close()
+        except (OSError, ValueError):
+            pass
 
 
 def create_new(path, text, what, newline=''):
