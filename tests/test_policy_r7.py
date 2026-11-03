@@ -203,6 +203,7 @@ class AbsoluteLinkTests(unittest.TestCase):
                     'http://www.github.com/acme/photos/blob/main/docs/rules.md?plain=1',
                     '//github.com/acme/photos/blob/main/docs/rules.md',
                     f'https://github.com/acme/photos/blob/{SOURCE_COMMIT}/docs/rules.md',
+                    f'https://github.com/acme/photos/blob/{SOURCE_COMMIT.upper()}/docs/rules.md',
                     'https://github.com/acme/photos/tree/main/docs/rules.md'):
             with self.subTest(url):
                 entry, limits, _ = self.links(url)
