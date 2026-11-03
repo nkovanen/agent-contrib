@@ -177,6 +177,19 @@ and 2 for usage errors. Details: [command reference](docs/cli.md).
 [Product map](docs/product-map.md) (shipped and planned) ·
 [architecture](docs/architecture.md) (how it is built).
 
+## Local directory demo
+
+Browse the fictional Tipjar directory, import a local find snapshot, or draft a
+repository invitation without any GitHub requests:
+
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1 --directory web
+```
+
+Open http://localhost:8765. See [web/README.md](web/README.md) for the snapshot
+contract, safe local behavior and optional static hosting instructions. The web
+assets ship in the source distribution; the Python library stays independent.
+
 ## Development
 
 ```sh
