@@ -263,7 +263,9 @@ channel or runtime model provider is added.
   the status: the echoed base commit, a merge base consistent with the status,
   and non-negative `ahead_by`/`behind_by`/`total_commits` that agree with it.
   A bare or contradictory `status` used to authenticate the reviewed source
-  commit and the evidence base (FR1-01).
+  commit and the evidence base (FR1-01). Equal commits must compare
+  `identical` and different commits must not (FR1-04), and a status that is
+  not a string is a malformed response rather than a crash (FR1-06).
 - Scope judges each changed symlink by where it points (G-08), in `verify`
   evidence checks and `scope-check`. The committed (or staged, or worktree)
   target is read without following it and resolved lexically from the link's

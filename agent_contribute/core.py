@@ -1091,9 +1091,11 @@ _COMPARE_SHAPES = {  # status: (ahead_by > 0, behind_by > 0, merge base); GitHub
 
 def compare_relation(client, repository, base, head):
     """The status of compare/{base}...{head}, accepted only when the response proves it (FR1-01): the echoed base
-    commit, a merge base consistent with the status, and non-negative counters that agree with it."""
+    commit, a merge base consistent with the status, and non-negative counters that agree with it. Equal commits
+    are identical and nothing else is (FR1-04); a status that is not a string is malformed (FR1-06)."""
     data = client.request(f'repos/{repository}/compare/{base}...{head}')
-    shape = _COMPARE_SHAPES.get(data.get('status')) if isinstance(data, dict) else None
+    status = data.get('status') if isinstance(data, dict) else None
+    shape = _COMPARE_SHAPES.get(status) if isinstance(status, str) else None
     counters = [data.get(key) for key in ('ahead_by', 'behind_by', 'total_commits')] if shape else []
     merge = data.get('merge_base_commit') if shape else None
     echoed = data.get('base_commit') if shape else None
@@ -1106,9 +1108,9 @@ def compare_relation(client, repository, base, head):
     if ((ahead > 0) != shape[0] or (behind > 0) != shape[1] or total != ahead or
             (expected_merge is not None and merge['sha'] != expected_merge) or
             (shape[2] is None and merge['sha'] in (base, head)) or
-            (data['status'] == 'identical' and base != head)):
+            (status == 'identical') != (base == head)):
         raise ProtocolError('api_shape', 'Inconsistent or partial GitHub commit comparison')
-    return data['status']
+    return status
 
 
 def base_relation(task, base, tip, status=None):
