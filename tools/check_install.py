@@ -39,6 +39,7 @@ RESOURCE_PATHS = (
     "schemas/output/1/init.schema.json",
     "schemas/output/1/receipt.schema.json",
     "schemas/output/1/impact.schema.json",
+    "schemas/output/1/find.schema.json",
     "schemas/output/1/inspect.schema.json",
     "schemas/output/1/instructions.schema.json",
     "schemas/output/1/jar.schema.json",
@@ -178,11 +179,23 @@ def installed_check(source):
     invalid = cli('jar-check', invalid_manifest, expected=1)
     assert json.loads(invalid)['error']['code'] == 'invalid_tipjar'
     assert 'PRIVATE' not in invalid
+    find_schema = json.loads(cli("schema", "find"))
+    assert find_schema["properties"]["format"]["const"] == "find-jars-report/1"
+    assert "--owner" in cli("find", "--help")
+    failed_find = json.loads(cli("find", expected=1))
+    assert failed_find["complete"] is False and failed_find["observations"] == []
+    assert failed_find["search"]["total_count"] is None
+    assert not core.schema_errors(failed_find, find_schema)
 
     # The additive alias must use the same workflow and fail-closed gates.
     assert run([tipjar, "--version"], cwd=Path.cwd(), env=env).strip() == "0.3.0"
     assert json.loads(run([tipjar, "instructions"], cwd=Path.cwd(), env=env)) == instructions
     assert "COMMAND" in run([tipjar, "--help"], cwd=Path.cwd(), env=env)
+    assert "--owner" in run([tipjar, "find", "--help"], cwd=Path.cwd(), env=env)
+    assert json.loads(run([tipjar, "schema", "find"], cwd=Path.cwd(), env=env)) == find_schema
+    invalid_find = json.loads(run([tipjar, "--report-budget", "find", "--owner", "a user:bad"],
+                                 cwd=Path.cwd(), env=env, expected=2))
+    assert invalid_find["error"]["code"] == "usage"
 
     # Offline dependency discovery must work without git, gh or a package resolver.
     manifest = Path.cwd() / "package.json"

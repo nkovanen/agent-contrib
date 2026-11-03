@@ -40,6 +40,7 @@ sections are grouped by task.
   - [Text output (unreleased)](#text-output-unreleased)
 - [Offline manifest setup and validation](#offline-manifest-setup-and-validation)
 - [Jar inspection (candidate, inspection only)](#jar-inspection-candidate-inspection-only)
+- [Find public invitations](#find)
 - [Command index](#command-index)
 
 ## Command index
@@ -59,6 +60,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 | `init` | Create an explicit-state local invitation template at a new path | No | 0 created; 1 file error; 2 usage |
 | `jar-check` | Validate a bounded local invitation without printing its text | No | 0 valid; 1 invalid/unreadable; 2 usage |
 | `session` | Offline proposed shortlist with stopping caps | No | 0 proposal created (possibly empty); 1 invalid input or output |
+| `find` | Verify one public invitation batch, at most ten indexed hits | Yes | 0 complete bounded batch; 1 unknown/search incomplete |
 | `jar` | Inspect a pinned root invitation directly, without parent tracker resolution | Yes | 0 welcome/closed/undeclared; 1 unknown |
 | `discover` | Rank open issues of one repository, or 2-20, with policy and overlap context | Yes | 0 complete; 1 incomplete (also an incomplete `--responsiveness`, `--check-top` or `--repo-dir` report) |
 | `inspect` | One issue: approval, instructions, exclusions, overlapping PRs | Yes | 0 complete; 1 incomplete (also incomplete `--ownership` signals) |
@@ -83,6 +85,7 @@ an incomplete report exit 1, as the table says. "Reads GitHub" means fixed
 
 | Command | Result |
 | --- | --- |
+| `agent-contrib find [--owner OWNER]` | Partial public invitation batch with pinned verification; no authority |
 | `agent-contrib discover owner/repo [--limit N]` | Repository resolution, policy/instruction context, ranked issues and overlap/completeness metadata |
 | `agent-contrib discover owner/a owner/b ... [--repositories-file FILE]` | Two to 20 repositories in one run, each with its own result, plus a merged candidate order |
 | `agent-contrib discover owner/repo --signals` | Same reads and fields, plus per-issue `signals` and a signal-aware `ordering` |
@@ -1381,3 +1384,60 @@ a proposed shortlist with per-task stopping caps. N is 1–20, M is 1–1440.
 Input is bounded to 8 MiB; no network or execution occurs, and actions remain
 unauthorized. The output file must not exist. `--format text` precedes `session`.
 See [the 60-minute example and host workflow](planning-sessions.md).
+
+## find
+
+```sh
+tipjar find
+tipjar find --owner acme
+agent-contrib --format text find --owner acme
+agent-contrib schema find
+```
+
+One authenticated legacy code-search page uses exactly
+`filename:.tipjar.json path:/`, optionally `user:OWNER`, with `per_page=10` and
+`page=1`. OWNER accepts the GitHub login grammar (1–39 ASCII letters, digits and
+hyphens, starting with a letter or digit), never arbitrary search qualifiers.
+There is no cursor, backfill, fallback query, sort promise or fair rotation.
+
+Each distinct eligible hit is checked against fresh repository/owner identities
+and public active metadata, then the pinned default-branch jar reader. Indexed
+blob SHAs are candidate hints: stale hits may now be closed or undeclared. A
+complete welcome gets a second metadata check; identity/default-branch changes
+make it unknown, and known private/archived/disabled targets are excluded. Known
+private names, ids and manifests are suppressed. A fork invites only itself.
+Only `disposition: welcome` is selectable; ordinary policy review and separate
+execution/publication authority still apply. There is no automatic issue proposal.
+
+Canonical output is `find-jars-report/1`, independent of output-schema version.
+`observations` contains `{repository, repository_id, disposition, reason,
+verified_at, jar}`. Jar reports retain their existing schema. Reasons are fixed
+codes; invalid identities and withheld private data are null. `requests.search`
+and `requests.core` count command gh invocations, excluding instrumentation.
+`search` records query, page, per_page, total_count, incomplete_results,
+returned_count, truncated and short_page. Unavailable search values are null.
+`coverage.exhaustive` is always false. Timestamps and pinned commits are
+observations, not atomic or “live now” guarantees.
+
+At most 51 command gh invocations (one search and up to fifty core), sequential,
+without application retries/sleeps/pagination; `--report-budget` adds two snapshots
+with up to three invocations each (53 all-success, at most 57). These are not raw
+HTTP counts: gh may internally follow redirects, which are not instrumented.
+Application code never follows returned URLs or adopts renamed/transferred
+identities. Each whole invocation retains the 30-second parent timeout and
+8 MiB response cap: summed command invocation timeouts are at most 25.5 minutes,
+excluding processing and optional instrumentation. Find reads remain uncached
+even with `--cache`. Search has a separate, tighter quota; `--min-remaining` and
+`api_budget` measure core only, never search availability. Authentication, quota
+or query errors are visible failures, without fallback or invented results.
+
+Exit 0 means this bounded batch is complete, including empty selection, known
+exclusions or intentional truncation. Unknowns, malformed search envelopes,
+short pages, server incompleteness or read errors give exit 1 while retaining
+other verified findings. Invalid usage gives exit 2 before budget reads. A
+complete batch is never a global census. Search omits many repositories,
+especially forks; indexing may lag. No adoption is established and there is no
+curated fallback list. Until indexed jars exist, explicitly name projects for
+existing assessment commands; absence grants nothing. Direct `tipjar jar
+owner/repo` works without indexing. The outside-contributor upstream-route gap
+remains separate work.

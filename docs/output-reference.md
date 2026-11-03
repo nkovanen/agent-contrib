@@ -238,6 +238,42 @@ One of `discover_result`, `discover_unresolved`, `discover_multi`.
 
 One of `feedback_report`, `feedback_unread`.
 
+### `find`
+
+`agent-contrib schema find` · Bounded public invitation batch (find-jars-report/1), not exhaustive coverage or authority.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `format` | "find-jars-report/1" |  |
+| `fetched_at` | string |  |
+| `owner` | string or null |  |
+| `search` | object |  |
+| `search.query` | string |  |
+| `search.page` | 1 |  |
+| `search.per_page` | 10 |  |
+| `search.total_count` | integer or null |  |
+| `search.incomplete_results` | boolean or null |  |
+| `search.returned_count` | integer or null |  |
+| `search.truncated` | boolean or null |  |
+| `search.short_page` | boolean or null |  |
+| `coverage` | object |  |
+| `coverage.exhaustive` | false |  |
+| `coverage.limitations` | string[] |  |
+| `observations` | object[] |  |
+| `observations[].repository` | string or null |  |
+| `observations[].repository_id` | integer or null |  |
+| `observations[].disposition` | "welcome" \| "closed" \| "undeclared" \| "excluded" \| "unknown" |  |
+| `observations[].reason` | string |  |
+| `observations[].verified_at` | string or null |  |
+| `observations[].jar` | `jar_result` or null |  |
+| `complete` | boolean |  |
+| `errors` | string[] |  |
+| `requests` | object |  |
+| `requests.search` | integer |  |
+| `requests.core` | integer |  |
+| `notice` | string |  |
+| `api_budget` | `api_budget` (optional) |  |
+
 ### `init`
 
 `agent-contrib schema init` · Offline maintainer manifest creation; failures use the error envelope.
@@ -964,6 +1000,23 @@ The repository or issue could not be resolved or read; nothing else is reported
 | `complete` | false |  |
 | `errors` | string[] |  |
 | `api_budget` | `api_budget` (optional) |  |
+
+#### `jar_result`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `repository` | string | Actual repository inspected; no parent or owner inheritance |
+| `default_branch` | string or null |  |
+| `commit` | string or null |  |
+| `path` | ".tipjar.json" |  |
+| `blob_sha` | string or null |  |
+| `sha256` | string or null | Exact decoded-byte digest, even when validation fails; not by itself trusted provenance |
+| `fetched_at` | string |  |
+| `state` | "welcome" \| "closed" \| "undeclared" \| "unknown" |  |
+| `complete` | boolean |  |
+| `manifest` | `tipjar_manifest` or null |  |
+| `errors` | string[] |  |
+| `notice` | string |  |
 
 #### `list_scan`
 
