@@ -58,4 +58,4 @@ jobs:
           python -m agent_contribute --help
           agent-contrib instructions > instructions.json
           tipjar schema verify > verify-schema.json
-          agent-contrib skill > skill.json
+          agent-contrib skill --output exported-SKILL.md > skill.json
