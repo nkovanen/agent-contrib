@@ -203,6 +203,8 @@ def check_publication(binding, publication_claim, expected_head, client):
             return blocked('Published head differs from the exact validated evidence HEAD')
         if not issued <= _timestamp(current['created_at']) < expires:
             return blocked('Pull request was created outside the publication mandate interval')
+        if _timestamp(current['created_at']) > dt.datetime.now(dt.timezone.utc):  # judged after the reads (FR1-03)
+            return blocked('Pull request creation time is in the future')
         result.update(status='own_draft', verified=True, own_pr={
             'repository': repository, 'repository_id': binding['target_repository_id'],
             **{key: current[key] for key in ('number', 'id', 'url', 'head_sha', 'head_ref',

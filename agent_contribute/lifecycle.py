@@ -147,8 +147,9 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     errors.extend(route)
     current = None
     live_duplicates = []
+    scan_ids = {}
     try:
-        current = core.inspect_issue(source['repository'] + '#' + str(source['issue']), client)
+        current = core.inspect_issue(source['repository'] + '#' + str(source['issue']), client, pr_ids=scan_ids)
         if 'source' not in current:
             raise core.ProtocolError('refresh_incomplete', 'Current issue/source could not be read completely')
         result.update(repository_approval=current['approval'], live_complete=current['complete'],
@@ -220,6 +221,11 @@ def verify(task, evidence=None, repo_dir=None, host_context=None, client=None):
     if not {'implement', 'create_draft'}.issubset(authority['actions']):
         stage_errors.append('Both implement and create_draft actions must be authorized')
     own = publication['own_pr'] if publication['verified'] else None
+    if own is not None and scan_ids.get(own['number']) != own['id']:
+        # The open scan must list the own draft with the same numeric ID before it is exempted (FR1-02).
+        publication['errors'].append('Open-PR scan and exact-head history disagree on the draft pull request '
+                                     'identity; repeat the complete read')
+        own = None
     blocking = without_own(all_duplicates, own)
     result['blocking_duplicates'] = blocking
     post_errors = stage_errors + publication['errors']

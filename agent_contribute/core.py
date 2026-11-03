@@ -427,7 +427,9 @@ def index_prs(prs):
         local = {int(n) for n in re.findall(r'(?<![A-Za-z0-9_/#])#([1-9][0-9]{0,9})(?![A-Za-z0-9_])', local_text)}
         local.update(int(n) for n in re.findall(r'(?i)\bGH-([1-9][0-9]{0,9})(?![0-9])', text))
         local.update(int(n) for n in re.findall(r'(?:^|[/_-])([1-9][0-9]{0,9})(?=[/_-]|$)', branch))
-        index.append({'number': number, 'url': safe_text(url, 500), 'references': references,
+        # The numeric ID is internal only (never output or copied into a contract): it reconciles identities (FR1-02).
+        index.append({'number': number, 'id': pr['id'] if type(pr.get('id')) is int and pr['id'] > 0 else None,
+                      'url': safe_text(url, 500), 'references': references,
                       'local': local, 'words': set(re.findall(r'[a-z][a-z0-9]{3,}', title.lower())),
                       'checklist': set(re.findall(r'\b[A-Z][A-Z0-9]{1,15}(?:-[A-Z0-9]{1,20}){1,5}\b', text))})
     return index
@@ -519,7 +521,8 @@ def inspect_from_snapshot(snapshot, issue):
                            'policy_state': snapshot['policy_state'], 'policy': snapshot['policy']}}
 
 
-def inspect_issue(reference, client=None):
+def inspect_issue(reference, client=None, *, pr_ids=None):
+    """pr_ids, when a dict, receives {number: numeric ID or None} for every open source PR the scan read."""
     repository, number = parse_issue(reference)
     client = client or GitHub()
     context, meta = resolve_repository(repository, client)
@@ -529,6 +532,8 @@ def inspect_issue(reference, client=None):
     try:
         source = context['issue_source_repository']
         snapshot = repository_snapshot(source, client, meta)
+        if pr_ids is not None:
+            pr_ids.update({entry['number']: entry['id'] for entry in snapshot['pr_index']})
         issue = issue_data(client.request(f'repos/{source}/issues/{number}'), number)
         result = inspect_from_snapshot(snapshot, issue)
         if source.casefold() != repository.casefold():
