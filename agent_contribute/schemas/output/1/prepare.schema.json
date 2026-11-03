@@ -631,8 +631,9 @@
               },
               "id": {
                 "type": "string",
-                "maxLength": 4,
-                "description": "H1, H2, ... in report order"
+                "pattern": "^H-[0-9a-f]{64}(?![\\s\\S])",
+                "maxLength": 66,
+                "description": "Stable ID: H- and the SHA-256 of (source identity_sha256, line, kind); unchanged by report order"
               },
               "excerpt_truncated": {
                 "type": "boolean",

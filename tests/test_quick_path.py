@@ -33,6 +33,18 @@ class QuickPathTests(unittest.TestCase):
         self.assertLess(section.index("inspect 'owner/repo#N'"), section.index("prepare 'owner/repo#N'"))
         self.assertLess(section.index("prepare 'owner/repo#N'"), section.index('authorization-request'))
 
+    def test_quick_path_names_lint_and_the_optional_aids(self):
+        # Dogfood 5 N13: lint, the ranking aids and the cache were reachable only through the detail sections.
+        section = ' '.join(quick_path().split())
+        self.assertLess(section.index('agent-contrib lint task.json'), section.index('agent-contrib verify task.json'))
+        self.assertGreater(section.index('agent-contrib lint task.json'), section.index("prepare 'owner/repo#N'"))
+        for option in ('--check-top N', '--repo-dir CHECKOUT', '--cache'):
+            with self.subTest(option=option):
+                self.assertIn(option, section)
+        start = section.index('--check-top N')
+        self.assertIn('optional', section[max(0, start - 60):start])
+        self.assertIn('optional', section[max(0, section.index('--cache') - 40):section.index('--cache')])
+
     def test_repository_policy_step_names_its_command_and_sections(self):
         # Dogfood 3 F43/F44: the step must say where it is and which command feeds it. Since policy-v2 the
         # repository policy report is default-on, so the step must not tell agents to pass the ignored --ai-policy.

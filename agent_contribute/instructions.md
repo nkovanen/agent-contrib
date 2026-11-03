@@ -11,20 +11,20 @@ results by the field names it defines instead of guessing: overlapping PRs are
 `stage_blockers`.
 
 ## Quick path: "Go help owner/repo"
-
 A summary of the sections below; it never overrides them. Global options such as
-`--report-budget` and `--format` go before the subcommand.
+`--report-budget`, `--format` and the optional `--cache` go before the subcommand.
 
 1. Record `agent-contrib --version` and the user's exact request.
 2. Run `agent-contrib --report-budget discover owner/repo --signals` (re-ranks, never
-   approves; `--responsiveness` samples outside merges). Before ranking or selecting,
-   complete the "Repository policy review" section below, `ai-policy-review` ("Start
-   with discovery" item 3) and "Repository requirements"; for a constrained policy,
-   first ask the user to commit to that mode. Drop excluded or overlapping issues.
+   approves; optional: `--responsiveness`, `--check-top N`, `--repo-dir CHECKOUT`).
+   Before ranking or selecting, complete the "Repository policy review" section below,
+   `ai-policy-review` ("Start with discovery" item 3) and "Repository requirements"; for
+   a constrained policy, first ask the user to commit to that mode. Drop excluded or
+   overlapping issues.
 3. Per shortlisted issue run `agent-contrib inspect 'owner/repo#N' --ownership` (claims,
    linked PRs, prior fixes; the policy report is always added).
-4. `agent-contrib prepare 'owner/repo#N' --output task.json` (0.1, or `--schema-version
-   0.2` for the same-repository owner/maintainer route); fill contract and ledger.
+4. `agent-contrib prepare 'owner/repo#N' --output task.json` (`--schema-version 0.2` for
+   the same-repository owner/maintainer route); fill it; `agent-contrib lint task.json`.
 5. `agent-contrib verify task.json` (0.1) or `agent-contrib verify task.json --stage
    implementation` (0.2) shows the hash and blockers; for 0.2, `agent-contrib
    authorization-request task.json` prepares the host request. Run `agent-contrib

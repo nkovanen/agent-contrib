@@ -215,6 +215,15 @@ channel or runtime model provider is added.
   possible prior fixes, downstream references, rejected approaches, open linked
   PRs, claims, assignments, completeness and errors (external evaluation 3, G1).
   JSON is unchanged.
+- Policy hint IDs are stable (dogfood N12): `hints[].id` is `H-` plus the full
+  SHA-256 of (source `identity_sha256`, line, kind) instead of the report
+  position (`H1`, `H2`, ...), so a disposition recorded by ID keeps naming the
+  same line when other sources or builds change the order. Report order is
+  unchanged. A shared ID fails closed as the hiding limit `hint_id_collision`.
+- The installed workflow's Quick path names `lint` before `verify`, the
+  optional `discover` ranking aids `--check-top N` and `--repo-dir CHECKOUT`,
+  and the optional `--cache` (dogfood N13).
+
 - The Quick path names the "Repository policy review" section explicitly instead
   of "the repository policy step below" (N3, dogfood 4).
 - The repository policy report adds `hinted_lines` (N2, dogfood 4), one
