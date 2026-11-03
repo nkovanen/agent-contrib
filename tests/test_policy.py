@@ -210,6 +210,67 @@ class RecallTests(unittest.TestCase):
         self.assertEqual(latin['non_latin_paragraphs'], 0)
 
 
+class StableHintIdTests(unittest.TestCase):
+    """N12: a hint's ID names (source identity, line, kind), so a recorded disposition keeps naming the same line
+    when other sources, hints or builds change the report order."""
+    ID = re.compile(r'H-[0-9a-f]{10}\Z')
+    FILES = {'AI_POLICY.md': 'Intro.\n\nAutonomous agents are not allowed.',
+             'CONTRIBUTING.md': 'Run tests.\n\nAI-generated pull requests are closed.\n\nWe use AI tools.'}
+
+    def by_line(self, result):
+        sources = result['sources_scanned']
+        return {(sources[h['source']]['origin'], sources[h['source']]['path'], h['line'], h['kind']): h['id']
+                for h in result['hints']}
+
+    def test_ids_derive_from_source_identity_line_and_kind(self):
+        result, _ = report(self.FILES, {'CONTRIBUTING.md': 'AI-generated pull requests are closed.'})
+        self.assertGreater(len(result['hints']), 3)
+        for hint in result['hints']:
+            source = result['sources_scanned'][hint['source']]
+            with self.subTest(hint=hint['id']):
+                self.assertRegex(hint['id'], self.ID)
+                self.assertEqual(hint['id'], policy.hint_id(source['identity_sha256'], hint['line'], hint['kind']))
+        ids = [h['id'] for h in result['hints']]
+        self.assertEqual(len(ids), len(set(ids)))
+        origins = {key[0] for key in self.by_line(result)}
+        self.assertEqual(origins, {'repository', 'owner-github'}, 'both origins carry hints, all with distinct IDs')
+        self.assertNotEqual(policy.hint_id('a' * 64, 3, 'ai_mention'), policy.hint_id('a' * 64, 3, 'possible_ai_restriction'))
+        self.assertNotEqual(policy.hint_id('a' * 64, 3, 'ai_mention'), policy.hint_id('a' * 64, 4, 'ai_mention'))
+        self.assertNotEqual(policy.hint_id('a' * 64, 3, 'ai_mention'), policy.hint_id('b' * 64, 3, 'ai_mention'))
+
+    def test_ids_survive_added_sources_and_reordering(self):
+        base, _ = report(self.FILES)
+        grown, _ = report(dict(self.FILES, **{'AGENTS.md': 'Agents must never open pull requests.\n\nAI is fine.'}))
+        before, after = self.by_line(base), self.by_line(grown)
+        self.assertTrue(set(before) < set(after))
+        self.assertEqual({key: after[key] for key in before}, before)
+        moved = [h['id'] for h in base['hints']] != [h['id'] for h in grown['hints']][:len(base['hints'])]
+        self.assertTrue(moved, 'the new restriction hint changes report positions, so positional IDs would shift')
+        with patch.object(policy, 'hint_id', side_effect=lambda *key: 'H-' + core.canonical_hash(list(key))[::-1][:10]):
+            other, _ = report(dict(self.FILES, **{'AGENTS.md': 'Agents must never open pull requests.\n\nAI is fine.'}))
+        strip = lambda result: [{k: v for k, v in h.items() if k != 'id'} for h in result['hints']]
+        self.assertEqual(strip(other), strip(grown), 'IDs never influence the report order')
+
+    def test_ids_match_the_published_schema_pattern(self):
+        from agent_contribute import outputs
+        result, _ = report(self.FILES)
+        schema = outputs.output_schema('inspect')['$defs']['repository_policy']['properties']['hints']['items']
+        id_schema = {'type': 'string', **schema['properties']['id']}
+        for value in [h['id'] for h in result['hints']] + ['H-0123456789-2', 'H-0123456789-100']:
+            with self.subTest(value=value):
+                self.assertEqual(core.schema_errors(value, id_schema), [])
+        for value in ('H1', 'H-0123456789\n', 'H-0123456789-', 'H-012345678', 'H-0123456789-1000', 'x' + 'H-0123456789'):
+            with self.subTest(value=value):
+                self.assertTrue(core.schema_errors(value, id_schema))
+
+    def test_a_colliding_id_is_made_unique_without_reordering(self):
+        with patch.object(policy, 'hint_id', return_value='H-0000000000'):
+            result, _ = report(self.FILES)
+        ids = [h['id'] for h in result['hints']]
+        self.assertEqual(ids[0], 'H-0000000000')
+        self.assertEqual(ids[1:], [f'H-0000000000-{n}' for n in range(2, len(ids) + 1)])
+
+
 class InventoryTests(unittest.TestCase):
     def test_policy_named_files_and_owner_defaults_are_read_at_pinned_commits(self):
         files = {'README.md': 'Photos.', 'AI_POLICY.md': 'Autonomous agents are not allowed.',

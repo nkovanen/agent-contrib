@@ -697,6 +697,12 @@ the `agent_contribute.aipolicy` module no longer exist.
   summarized in `project_vocabulary` with a count and bounded line list.
   Restriction hints are never summarized, and `hints` still lists every
   retained hint.
+- **Hint IDs.** `hints[].id` is `H-` plus the first 10 hex digits of the
+  SHA-256 of the canonical JSON `["policy-hint/1", source identity_sha256,
+  line, kind]`. It never depends on report position, so a disposition recorded
+  by ID keeps naming the same line when other sources or hints change the
+  order, or a later build reorders the report. An edit that moves the line
+  changes the ID. A repeated ID would get a `-2`, `-3` ... suffix in report order.
 - **`omitted_sources` and `hides_sources`.** A policy candidate that a file,
   byte or request limit left unread is named in `omitted_sources` (at most 50,
   with its repository, path, kind and reason; overflow is counted). Each
@@ -2049,7 +2055,7 @@ Default-on, report-only policy inventory and hints; never a verdict
 | `hints[].heading` | string |  |
 | `hints[].untrusted_excerpt` | string |  |
 | `hints[].source` | integer |  |
-| `hints[].id` | string | H1, H2, ... in report order |
+| `hints[].id` | string | Stable ID: H- and 10 hex digits of the SHA-256 of (source identity_sha256, line, kind); unchanged by report order |
 | `hints[].excerpt_truncated` | boolean | The excerpt omits text before or after it |
 | `reads` | object |  |
 | `reads.requests` | integer |  |

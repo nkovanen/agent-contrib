@@ -442,6 +442,23 @@ def _blob_id(blob):
     return blob if isinstance(blob, str) and re.fullmatch('[0-9a-f]{40}', blob) else None
 
 
+def hint_id(identity, line, kind):
+    """Stable hint ID (N12): from the source's identity_sha256, the line and the kind, never the report position,
+    so it survives other sources, other hints and builds that order the report differently."""
+    return 'H-' + core.canonical_hash(['policy-hint/1', identity, line, kind])[:10]
+
+
+def _with_ids(hints, sources):
+    """Hints in their report order, each with its stable ID. A repeated ID (never expected: a paragraph yields
+    each kind once) gets a -2, -3 ... suffix in report order, so IDs stay unique."""
+    seen, out = {}, []
+    for hint in hints:
+        base = hint_id(sources[hint['source']]['identity_sha256'], hint['line'], hint['kind'])
+        seen[base] = seen.get(base, 0) + 1
+        out.append(dict(hint, id=base if seen[base] == 1 else f'{base}-{seen[base]}'))
+    return out
+
+
 def _identity(key):
     """SHA-256 of an original identity: [repository, path] as read from GitHub, or a URL string."""
     return core.canonical_hash(key if isinstance(key, str) else list(key))
@@ -654,7 +671,7 @@ def report(repository, commit, instructions, client, *, default_branch=None):
               'unassessed': state.unassessed, 'omitted_sources': state.omitted, 'limits_reached': [],
               'limits_hide_sources': False,
               'never_inspected': list(NEVER_INSPECTED),
-              'hints': [dict(hint, id=f'H{n}') for n, hint in enumerate(hints, 1)],
+              'hints': _with_ids(hints, state.sources),
               'owner_lookup': state.owner_lookup,
               'reads': {'requests': state.requests, 'limit': MAX_REQUESTS}}
     while True:
