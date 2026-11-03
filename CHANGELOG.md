@@ -40,6 +40,11 @@ channel or runtime model provider is added.
   `overlap_dispositions` and `waived_duplicates`, and are named in text output.
   Host issuer requirements are documented. A 0.1 document carrying the section
   and any other version fail closed.
+- Host-context 0.2 also accepts an optional, strictly validated `draft_update`
+  record (#21, slice 1: inert). `verify` reports it as `draft_update`, with
+  status `not_evaluated` or `invalid`. It never changes a gate, blocker,
+  `next_action`, exit status or GitHub read, and the mandate hash is unchanged.
+  Host requirements for update rounds are documented.
 - A default-on, report-only `repository_policy` in `discover`, `inspect` and
   `prepare` output (#8, part; dogfood E-01 to E-05). The earlier scanner found
   nothing on pallets/click, BurntSushi/ripgrep and honojs/hono, although each
