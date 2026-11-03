@@ -446,9 +446,13 @@ tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
 
 `discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
-`local_work` object for unpublished local work. It lists the issue numbers
-referenced as `#N` or `owner/repo#N` (the source repository only)
-in the messages of commits reachable from the checkout's HEAD but not from the
+`local_work` object for unpublished local work. It lists the issue numbers that
+a closing keyword references: `fixes`, `fixed`, `fix`, `closes`, `closed`, `close`,
+`resolves`, `resolved` or `resolve` (any case, optionally with a colon), followed by
+`#N` or `owner/repo#N` for the source repository, or by a list such as
+`Fixes #1, #2 and #3`. `Refs #N` (partial work), PR numbers, other projects'
+`#N`, qualified references to other repositories and quoted mentions do not
+count. They are taken from the messages of commits reachable from the checkout's HEAD but not from the
 snapshot's source default-branch commit. It lists the newest 500 commits at most,
 checks each commit object's size before reading any message, and reads only
 whole messages: a commit larger than 64 KiB is skipped, and reading stops once

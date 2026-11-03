@@ -141,9 +141,10 @@ def require_outside_checkout(directory, output):
 MAX_LOCAL_COMMITS = 500
 MAX_COMMIT_BYTES = 65536
 MAX_LOCAL_BYTES = 4 * 1024 * 1024
-LOCAL_NOTICE = ('Report only. Issues referenced (#N or owner/repo#N for the source repository) by commits reachable '
-                'from the checkout HEAD but not from the source default-branch commit. A reference is not proof that '
-                'the work is done, and no reference is not proof that it is not.')
+LOCAL_NOTICE = ('Report only. Issues closed with fixes, closes or resolves (#N, or owner/repo#N for the source '
+                'repository) by commits reachable from the checkout HEAD but not from the source default-branch '
+                'commit. Refs and other mentions do not count. A closing reference is not proof that the work is '
+                'done, and none is not proof that it is not.')
 
 
 def local_issue_references(directory, repository, base):
@@ -223,9 +224,24 @@ def _raw_messages(directory, shas):
         yield expected, body.partition(b'\n\n')[2]
 
 
+# Dogfood 4 N4: only GitHub's closing keywords mark finished work. 'Refs #N', other projects' '#N', PR numbers and
+# quoted text do not. A keyword may introduce a list: 'Fixes #1, #2 and #3'.
+CLOSING = re.compile(r'(?i)(?<![A-Za-z0-9_-])(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?[ \t]{1,3}')
+# Matched only right after a keyword or list separator, so no lookbehind is needed.
+REFERENCE = re.compile(r'(?:([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}))?#([1-9][0-9]{0,9})(?![0-9A-Za-z_])')
+LIST_SEPARATOR = re.compile(r',[ \t]{0,3}(?:and[ \t]{1,3})?|[ \t]{1,3}and[ \t]{1,3}')
+
+
 def _issue_refs(text, repository):
-    qualified = re.compile(r'(?<![A-Za-z0-9_.\-/])([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99})#([1-9][0-9]{0,9})(?![0-9A-Za-z_])')
-    numbers = {int(number) for name, number in qualified.findall(text) if name.casefold() == repository.casefold()}
-    bare = qualified.sub('', text)
-    numbers.update(int(n) for n in re.findall(r'(?<![A-Za-z0-9_/#&])#([1-9][0-9]{0,9})(?![0-9A-Za-z_])', bare))
+    numbers = set()
+    for keyword in CLOSING.finditer(text):
+        position = keyword.end()
+        while (reference := REFERENCE.match(text, position)):
+            name, number = reference.groups()
+            if name is None or name.casefold() == repository.casefold():  # other repositories never count
+                numbers.add(int(number))
+            separator = LIST_SEPARATOR.match(text, reference.end())
+            if not separator:
+                break
+            position = separator.end()
     return numbers

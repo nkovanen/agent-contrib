@@ -83,6 +83,11 @@ def _discover(result):
     for issue in issues[:20]:
         notes = [line(item, 40) for item in issue.get('exclusions', [])]
         signals = issue.get('signals')
+        local = signals.get('local_work') if isinstance(signals, dict) else None
+        if isinstance(local, dict) and local.get('value') == 'referenced':
+            notes.append(f'demoted: closed by {len(local.get("commits") or [])} local commit(s)')
+        check = issue.get('top_check')
+        notes += ['demoted: ' + line(reason, 120) for reason in (check.get('demotions') or [] if isinstance(check, dict) else [])]
         score = f', score {line(signals.get("score"), 10)}' if isinstance(signals, dict) and 'score' in signals else ''
         reference = issue.get('reference', f'#{issue["number"]}')
         out.append(f'  {line(reference, 200)} [{line(issue.get("approval", {}).get("status", "unknown"), 20)}] '

@@ -53,7 +53,7 @@ class LocalWorkTests(unittest.TestCase):
     def test_references_to_the_same_repository_in_unpublished_commits_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            fix = commit(git, 'Bounds check\n\nFixes #12 and refs acme/photos#3; ACME/Photos#3 again')
+            fix = commit(git, 'Bounds check\n\nFixes #12 and closes acme/photos#3; fixes ACME/Photos#3 again')
             commit(git, 'Unrelated: other/repo#5, abc#7, https://x/#8, GH-9 and #0')
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual(report['issues'], [{'number': 3, 'commits': [fix]}, {'number': 12, 'commits': [fix]}])
@@ -61,6 +61,18 @@ class LocalWorkTests(unittest.TestCase):
             self.assertEqual(report['head'], git('rev-parse', 'HEAD'))
             # Commits already in the source default branch are not unpublished work.
             self.assertEqual(workspace.local_issue_references(tmp, 'acme/photos', fix)['issues'], [])
+
+    def test_only_closing_keyword_references_count(self):
+        # Dogfood 4 N4: every '#N' counted, including other projects, quoted text, examples and partial work.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            done = commit(git, 'Bounds check\n\nFixes #12, closes acme/photos#3. Resolved: #4\n'
+                               'Fixes #20, #21 and #22')
+            commit(git, "Port the ripgrep #278 workaround; test text \"I'm working on issue #999\"; cut '#1234567890'\n"
+                        'Refs #25 (part 1 of 3); see PR #2; Fixes other/repo#6; prefixes #30; fix-ups #31')
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual([item['number'] for item in report['issues']], [3, 4, 12, 20, 21, 22])
+            self.assertTrue(all(item['commits'] == [done] for item in report['issues']))
 
     def test_discover_signals_moves_locally_implemented_issues_below_other_candidates(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -76,8 +88,9 @@ class LocalWorkTests(unittest.TestCase):
             self.assertEqual([item['number'] for item in result['issues']], [3, 12])
             twelve = result['issues'][1]['signals']
             self.assertEqual(twelve['local_work'], {'value': 'referenced', 'commits': [fix],
-                                                    'explanation': 'Referenced by 1 local commit(s) not in the source '
-                                                                   'default branch; the work may already exist'})
+                                                    'explanation': 'Closed by 1 local commit(s) not in the source default '
+                                                                   'branch (fixes, closes or resolves); the work may '
+                                                                   'already exist'})
             self.assertEqual(twelve['score'], plain['issues'][0]['signals']['score'])
             self.assertEqual(result['issues'][0]['signals']['local_work']['value'], 'none')
             self.assertEqual(result['local_work']['issues'], [{'number': 12, 'commits': [fix]}])
@@ -97,7 +110,7 @@ class LocalWorkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
             for n in range(4):
-                commit(git, f'Step {n} for #12')
+                commit(git, f'Step {n}, fixes #12')
             with patch.object(workspace, 'MAX_LOCAL_COMMITS', 3):
                 report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
@@ -180,14 +193,14 @@ class LocalWorkTests(unittest.TestCase):
     def test_only_the_message_is_parsed_not_the_commit_headers(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            git('commit', '-q', '--allow-empty', '--author', 'Fixer #7 <fixer@example.org>', '-m', 'Refs #8')
+            git('commit', '-q', '--allow-empty', '--author', 'Fixer #7 <fixer@example.org>', '-m', 'Fixes #8')
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual([item['number'] for item in report['issues']], [8])
 
     def test_total_message_bytes_are_bounded(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            import_commits(git, [f'Step {n} #12 ' + 'y' * 60000 for n in range(72)])
+            import_commits(git, [f'Step {n} fixes #12 ' + 'y' * 60000 for n in range(72)])
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
             self.assertIn('Local commit messages exceed 4194304 bytes in total; only the newest commits within that '
