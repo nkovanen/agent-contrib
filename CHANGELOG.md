@@ -44,7 +44,11 @@ channel or runtime model provider is added.
   and a proposed PyPI trusted-publishing workflow with build provenance in
   `docs/examples/release-pypi.yml`, which runs only after a maintainer adopts it.
 - `discover --repo-dir CHECKOUT` (F12): a report-only `local_work` list of issues
-  referenced by local commits that are not in the source default branch, read
+  closed by local commits that are not in the source default branch. A commit
+  closes issue N only with a message line that is exactly `<keyword> #N` (or this
+  repository's `owner/repo#N`), using a GitHub closing keyword; nothing else on
+  the line, so mentions, lists, `Refs` and quoted examples never count (dogfood 4
+  N4, review R12). Text discover marks each demoted issue. It is read
   with the hardened Git reader and capped at 500 commits, 64 KiB per commit and
   4 MiB in total, checked by object size before any message is read; messages
   come from raw commit objects, and a shallow checkout or a NUL byte in a
@@ -254,6 +258,9 @@ channel or runtime model provider is added.
   `scope-check`, `evidence init`) is now a usage error (exit 2), like
   `--report-budget`; it was silently accepted (dogfood N7).
 
+- `discover --repo-dir` errors say the local-work report is incomplete and that
+  discover exits 1, and name a missing directory or a non-Git directory instead
+  of the evidence wording (dogfood 4 N8).
 - `--observe-ci` and `--observe-signatures` share one target/head prelude.
   With an evidence head but an invalid target repository,
   `ci_observation.head_sha` is now `null`, like `signature_observation`, since

@@ -478,15 +478,24 @@ tie-breaker. Signals are heuristics. They never approve, authorize or replace
 reading the issue.
 
 `discover owner/repo --repo-dir CHECKOUT` (one repository) adds a report-only
-`local_work` object for unpublished local work. It lists the issue numbers
-referenced as `#N` or `owner/repo#N` (the source repository only)
-in the messages of commits reachable from the checkout's HEAD but not from the
-snapshot's source default-branch commit. It lists the newest 500 commits at most,
+`local_work` object for unpublished local work. A commit closes issue N only when
+one line of its message, after stripping surrounding ASCII whitespace, is exactly
+`<keyword> #N` or `<keyword> owner/repo#N` for the source repository (owner and
+name in any case). The keyword is one of `fix`, `fixes`, `fixed`, `close`,
+`closes`, `closed`, `resolve`, `resolves` or `resolved`, in any case, optionally
+followed by a colon, then one space. Nothing else may be on the line, so lists
+(`Fixes #1, #2`), inline mentions, `Refs #N`, PR numbers, other repositories and
+quoted examples never count, and Markdown is not interpreted (a line that is
+exactly `Fixes #12` counts even inside a code block). The rule is conservative by
+design: under-counting only means an issue is not demoted. Only commits
+reachable from the checkout's HEAD but not from the snapshot's source
+default-branch commit are read. It lists the newest 500 commits at most,
 checks each commit object's size before reading any message, and reads only
 whole messages: a commit larger than 64 KiB is skipped, and reading stops once
 messages would exceed 4 MiB in total. Reads use the hardened Git reader after the
 worktree-root and checkout-config checks. A missing base commit (the CLI never
-fetches), a shallow checkout (a shallow boundary can hide commits), an unsafe
+fetches), a missing or non-Git `--repo-dir`, a shallow checkout (a shallow
+boundary can hide commits), an unsafe
 config, a subdirectory, more than 500 commits, a skipped message or a message
 containing a NUL byte make it incomplete, which exits 1. Messages are read from
 the raw commit objects (`git cat-file --batch`), never reformatted, and commit

@@ -213,7 +213,7 @@ class CheckTopTests(unittest.TestCase):
         from tests.test_local_work import checkout, commit
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            commit(git, 'Fix #1 and #4')
+            commit(git, 'Fix #1\nFix #4')  # one whole-line trailer per reference
             client = CheckGitHub()
             client.commit = base
             code, result = run(client, 'discover', 'acme/photos', '--signals', '--check-top', '2', '--repo-dir', tmp)

@@ -592,8 +592,8 @@ def local_work(result, snapshot, repo_dir, signals):
     for issue in result['issues']:
         found = commits.get(issue['number'])
         issue['signals']['local_work'] = (
-            {'value': 'referenced', 'commits': found, 'explanation': f'Referenced by {len(found)} local commit(s) not in '
-             'the source default branch; the work may already exist'} if found else
+            {'value': 'referenced', 'commits': found, 'explanation': f'Closed by {len(found)} local commit(s) not in the '
+             'source default branch (fixes, closes or resolves); the work may already exist'} if found else
             {'value': 'none' if report['complete'] else 'unknown', 'commits': [],
              'explanation': 'No local reference found' if report['complete'] else 'The checkout was not read completely'})
     result['issues'].sort(key=lambda item: issue_order(item, True))

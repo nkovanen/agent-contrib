@@ -53,7 +53,7 @@ class LocalWorkTests(unittest.TestCase):
     def test_references_to_the_same_repository_in_unpublished_commits_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            fix = commit(git, 'Bounds check\n\nFixes #12 and refs acme/photos#3; ACME/Photos#3 again')
+            fix = commit(git, 'Bounds check\n\nFixes #12\ncloses acme/photos#3\nfixes ACME/Photos#3')
             commit(git, 'Unrelated: other/repo#5, abc#7, https://x/#8, GH-9 and #0')
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual(report['issues'], [{'number': 3, 'commits': [fix]}, {'number': 12, 'commits': [fix]}])
@@ -61,6 +61,37 @@ class LocalWorkTests(unittest.TestCase):
             self.assertEqual(report['head'], git('rev-parse', 'HEAD'))
             # Commits already in the source default branch are not unpublished work.
             self.assertEqual(workspace.local_issue_references(tmp, 'acme/photos', fix)['issues'], [])
+
+    def test_only_whole_line_closing_trailers_count(self):
+        # Coordinator decision after review R12 round 2: a line that is exactly '<keyword> #N' (or this
+        # repository's owner/repo#N), nothing else. Conservative: under-counting only means no demotion.
+        positives = {'Fixes #12': 12, 'fix #13': 13, 'Closed: #14': 14, '  RESOLVES acme/photos#15\t': 15,
+                     'resolved ACME/Photos#16': 16, 'close #17\r': 17, 'fixed: #18': 18, 'Resolve #19': 19}
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            done = commit(git, 'Bounds check\n\n' + '\n'.join(positives))
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual({item['number']: item['commits'] for item in report['issues']},
+                             {number: [done] for number in positives.values()})
+
+    def test_anything_but_an_exact_trailer_line_never_counts(self):
+        # Dogfood 4 N4 and the review R12 attacks: inline mentions, lists, quotes, code and look-alikes.
+        negatives = ['Fixes #12, closes acme/photos#3', 'Fixes #3, #12', 'Fixes #3 and #12', 'Fixes other/repo#12',
+                     'Refs #12', 'See #12', 'Port the ripgrep #12 workaround', 'The example is "Fixes #12".',
+                     "Do not write 'Fixes #12' yet.", 'Document the syntax `Fixes #12`.', 'Document ``Fixes #12``.',
+                     '> Fixes #12', 'Fixes`example`#12', 'Fixes `example`#12', 'The example is \u00abFixes #12\u00bb.',
+                     'The example is \u201eFixes #12\u201c.', 'The example is " Fixes #12".', '\u201cFixes #12\u201d',
+                     'Fixes #12.', 'Fixes #12 (partly)', 'Fixes  #12', 'Fixes\t#12', 'Fixes:#12', 'prefixes #12',
+                     'Fixes #0', 'Fixes #12a', 'Fixes # 12', '\u00a0Fixes #12', 'Fixes #12\u00a0', 'Fixe #12',
+                     'fixing #12', 'Fixes #12345678901']
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            for line in negatives:
+                commit(git, 'Docs\n\n' + line)
+            report = workspace.local_issue_references(tmp, 'acme/photos', base)
+            self.assertEqual(report['issues'], [])
+            self.assertTrue(report['complete'])
+        self.assertEqual(workspace._issue_refs(('\u201c\u00ab' * 30000) + '\nFixes #7', 'acme/photos'), {7})
 
     def test_discover_signals_moves_locally_implemented_issues_below_other_candidates(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -76,8 +107,9 @@ class LocalWorkTests(unittest.TestCase):
             self.assertEqual([item['number'] for item in result['issues']], [3, 12])
             twelve = result['issues'][1]['signals']
             self.assertEqual(twelve['local_work'], {'value': 'referenced', 'commits': [fix],
-                                                    'explanation': 'Referenced by 1 local commit(s) not in the source '
-                                                                   'default branch; the work may already exist'})
+                                                    'explanation': 'Closed by 1 local commit(s) not in the source default '
+                                                                   'branch (fixes, closes or resolves); the work may '
+                                                                   'already exist'})
             self.assertEqual(twelve['score'], plain['issues'][0]['signals']['score'])
             self.assertEqual(result['issues'][0]['signals']['local_work']['value'], 'none')
             self.assertEqual(result['local_work']['issues'], [{'number': 12, 'commits': [fix]}])
@@ -97,7 +129,7 @@ class LocalWorkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
             for n in range(4):
-                commit(git, f'Step {n} for #12')
+                commit(git, f'Step {n}\n\nFixes #12')
             with patch.object(workspace, 'MAX_LOCAL_COMMITS', 3):
                 report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
@@ -107,12 +139,12 @@ class LocalWorkTests(unittest.TestCase):
             self.assertEqual(len(report['issues'][0]['commits']), 3)
             missing = workspace.local_issue_references(tmp, 'acme/photos', 'f' * 40)
             self.assertFalse(missing['complete'])
-            self.assertEqual(missing['errors'], ['Source default-branch commit ' + 'f' * 40 + ' is not in this checkout; '
+            self.assertEqual(missing['errors'], [workspace.LOCAL_UNREAD + 'Source default-branch commit ' + 'f' * 40 + ' is not in this checkout; '
                                                  'fetch it with your own tools (the CLI never fetches)'])
             git('config', 'gpg.program', 'touch /tmp/agent-contrib-pwned')
             unsafe = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(unsafe['complete'])
-            self.assertTrue(unsafe['errors'][0].startswith('Checkout Git config sets gpg.program'))
+            self.assertIn('Checkout Git config sets gpg.program', unsafe['errors'][0])
             git('config', '--unset', 'gpg.program')
             sub = pathlib.Path(tmp, 'sub')
             sub.mkdir()
@@ -122,7 +154,7 @@ class LocalWorkTests(unittest.TestCase):
         # Review R11-01: a 64 Ki character slice turned '#1234567890' into '#12' and buffered whole messages.
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            near = import_commits(git, ['x' * 65000 + ' Fixes #11'])
+            near = import_commits(git, ['x' * 65000 + '\nFixes #11'])
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual((report['complete'], report['issues']), (True, [{'number': 11, 'commits': [near]}]))
             long = import_commits(git, ['x' * 65532 + ' #1234567890'])
@@ -148,15 +180,15 @@ class LocalWorkTests(unittest.TestCase):
         # Review mutant C-M11: accept exactly 65,536 bytes, refuse 65,537, independent of the constant.
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            sha, size = self.raw_commit(git, 'Fix #1 ')
+            sha, size = self.raw_commit(git, 'Fix #1\n')
             pad = 65536 - size
             git('update-ref', git('symbolic-ref', 'HEAD'), base)
-            sha, size = self.raw_commit(git, 'Fix #1 ' + 'x' * pad)
+            sha, size = self.raw_commit(git, 'Fix #1\n' + 'x' * pad)
             self.assertEqual(size, 65536)
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual((report['complete'], report['issues']), (True, [{'number': 1, 'commits': [sha]}]))
             git('update-ref', git('symbolic-ref', 'HEAD'), base)
-            sha, size = self.raw_commit(git, 'Fix #1 ' + 'x' * (pad + 1))
+            sha, size = self.raw_commit(git, 'Fix #1\n' + 'x' * (pad + 1))
             self.assertEqual(size, 65537)
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
@@ -180,14 +212,14 @@ class LocalWorkTests(unittest.TestCase):
     def test_only_the_message_is_parsed_not_the_commit_headers(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            git('commit', '-q', '--allow-empty', '--author', 'Fixer #7 <fixer@example.org>', '-m', 'Refs #8')
+            git('commit', '-q', '--allow-empty', '--author', 'Fixer #7 <fixer@example.org>', '-m', 'Fixes #8')
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertEqual([item['number'] for item in report['issues']], [8])
 
     def test_total_message_bytes_are_bounded(self):
         with tempfile.TemporaryDirectory() as tmp:
             git, base = checkout(tmp)
-            import_commits(git, [f'Step {n} #12 ' + 'y' * 60000 for n in range(72)])
+            import_commits(git, [f'Step {n} ' + 'y' * 60000 + '\nFixes #12' for n in range(72)])
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
             self.assertIn('Local commit messages exceed 4194304 bytes in total; only the newest commits within that '
@@ -219,13 +251,52 @@ class LocalWorkTests(unittest.TestCase):
             report = workspace.local_issue_references(tmp, 'acme/photos', base)
             self.assertFalse(report['complete'])
             self.assertEqual(report['issues'], [])
-            self.assertEqual(report['errors'], ['Checkout is shallow, so local history may be missing; deepen it with '
+            self.assertEqual(report['errors'], [workspace.LOCAL_UNREAD + 'Checkout is shallow, so local history may be missing; deepen it with '
                                                 'your own tools (git fetch --unshallow) and retry'])
             client = SignalGitHub()
             client.commit = base
             code, result = run(client, 'discover', 'acme/photos', '--signals', '--repo-dir', tmp)
             self.assertEqual(code, 1)
             self.assertEqual({item['signals']['local_work']['value'] for item in result['issues']}, {'unknown'})
+
+    def test_unusable_repo_dir_says_the_local_report_is_incomplete(self):
+        # Dogfood 4 N8: '/nonexistent' reported the evidence wording 'Git evidence checkout read failed'.
+        prefix = 'Local work was not read, so the local_work report is incomplete (discover exits 1): '
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            missing = str(pathlib.Path(tmp, 'nonexistent'))
+            plain = pathlib.Path(tmp, 'README.md')
+            sub = pathlib.Path(tmp, 'sub')
+            sub.mkdir()
+            cases = [(missing, f'--repo-dir {missing} is not a directory'),
+                     (str(plain), f'--repo-dir {plain} is not a directory'),
+                     (str(sub), '--repo-dir must be the Git worktree top level, not a subdirectory or Git directory')]
+            with tempfile.TemporaryDirectory() as empty:
+                cases.append((empty, f'--repo-dir {empty} is not a Git checkout Git could read'))
+                for directory, reason in cases:
+                    with self.subTest(directory=directory):
+                        report = workspace.local_issue_references(directory, 'acme/photos', base)
+                        self.assertEqual((report['complete'], report['errors']), (False, [prefix + reason]))
+            client = SignalGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--repo-dir', missing)
+            self.assertEqual(code, 1)
+            self.assertEqual(result['local_work']['errors'], [prefix + f'--repo-dir {missing} is not a directory'])
+
+    def test_overlong_repo_dir_path_is_an_incomplete_report(self):
+        # Review R12-03: Path.is_dir raised ENAMETOOLONG and discarded the whole discovery.
+        with tempfile.TemporaryDirectory() as tmp:
+            git, base = checkout(tmp)
+            long = str(pathlib.Path(tmp, 'x' * 300))
+            report = workspace.local_issue_references(long, 'acme/photos', base)
+            self.assertFalse(report['complete'])
+            self.assertEqual(report['errors'], [workspace.LOCAL_UNREAD + f'--repo-dir {long} could not be inspected'])
+            client = SignalGitHub()
+            client.commit = base
+            code, result = run(client, 'discover', 'acme/photos', '--repo-dir', long)
+            self.assertEqual(code, 1)
+            self.assertTrue(result['issues'])
+            self.assertFalse(result['local_work']['complete'])
 
     def test_cli_exit_usage_and_no_gate_change(self):
         with tempfile.TemporaryDirectory() as tmp:

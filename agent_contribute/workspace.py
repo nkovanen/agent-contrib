@@ -1,5 +1,7 @@
 """Offline local-checkout helpers. No GitHub reads, no argv execution, never evidence."""
+import os
 import re
+import stat
 from pathlib import Path
 
 from . import core
@@ -148,17 +150,35 @@ def require_outside_checkout(directory, output):
 MAX_LOCAL_COMMITS = 500
 MAX_COMMIT_BYTES = 65536
 MAX_LOCAL_BYTES = 4 * 1024 * 1024
-LOCAL_NOTICE = ('Report only. Issues referenced (#N or owner/repo#N for the source repository) by commits reachable '
-                'from the checkout HEAD but not from the source default-branch commit. A reference is not proof that '
-                'the work is done, and no reference is not proof that it is not.')
+LOCAL_NOTICE = ('Report only. Issues closed by a whole message line such as "Fixes #N" (or owner/repo#N for the '
+                'source repository) in commits reachable from the checkout HEAD but not from the source '
+                'default-branch commit. Other mentions do not count. A closing line is not proof that the work is '
+                'done, and none is not proof that it is not.')
+
+
+LOCAL_UNREAD = 'Local work was not read, so the local_work report is incomplete (discover exits 1): '
 
 
 def local_issue_references(directory, repository, base):
     """F12: unpublished local work that may already implement an issue. Hardened reads only; nothing is fetched."""
     report = {'complete': False, 'head': None, 'base': base, 'commits_scanned': 0, 'commit_limit': MAX_LOCAL_COMMITS,
               'issues': [], 'errors': [], 'notice': LOCAL_NOTICE}
+    shown = core.safe_text(str(directory), 500)
     try:
-        core.require_worktree_root(directory)
+        try:  # os.stat, not Path.is_dir, whose error handling differs across Python versions
+            is_directory = stat.S_ISDIR(os.stat(directory).st_mode)
+        except (FileNotFoundError, NotADirectoryError):
+            is_directory = False
+        except (OSError, ValueError):  # for example a component longer than the filesystem allows (review R12-03)
+            raise core.ProtocolError('unreadable_path', f'--repo-dir {shown} could not be inspected') from None
+        if not is_directory:
+            raise core.ProtocolError('not_directory', f'--repo-dir {shown} is not a directory')
+        try:
+            core.require_worktree_root(directory)
+        except core.ProtocolError as exc:
+            if exc.code != 'git_error':
+                raise
+            raise core.ProtocolError('not_checkout', f'--repo-dir {shown} is not a Git checkout Git could read') from None
         core.require_safe_config(directory)
         head = report['head'] = core.current_head(directory)
         try:
@@ -206,8 +226,8 @@ def local_issue_references(directory, repository, base):
                     commits.append(sha)
         report.update(commits_scanned=len(entries),
                       issues=[{'number': number, 'commits': commits} for number, commits in sorted(referenced.items())])
-    except core.ProtocolError as exc:
-        report['errors'].append(str(exc))
+    except core.ProtocolError as exc:  # fatal: the history was not read (dogfood 4 N8)
+        report['errors'].append(LOCAL_UNREAD + str(exc))
     report['complete'] = not report['errors']
     return report
 
@@ -230,9 +250,18 @@ def _raw_messages(directory, shas):
         yield expected, body.partition(b'\n\n')[2]
 
 
+# Dogfood 4 N4 and review R12: a commit closes issue N only through a whole message line that is exactly
+# '<keyword> #N' or '<keyword> owner/repo#N' for the source repository: a GitHub closing keyword (any case, optional
+# colon) and one space. Lists, inline mentions, quotes and Markdown are never interpreted; conservative by design,
+# since under-counting only means an issue is not demoted.
+TRAILER = re.compile(r'(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):? '
+                     r'(?:([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}))?#([1-9][0-9]{0,9})')
+
+
 def _issue_refs(text, repository):
-    qualified = re.compile(r'(?<![A-Za-z0-9_.\-/])([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99})#([1-9][0-9]{0,9})(?![0-9A-Za-z_])')
-    numbers = {int(number) for name, number in qualified.findall(text) if name.casefold() == repository.casefold()}
-    bare = qualified.sub('', text)
-    numbers.update(int(n) for n in re.findall(r'(?<![A-Za-z0-9_/#&])#([1-9][0-9]{0,9})(?![0-9A-Za-z_])', bare))
+    numbers = set()
+    for line in text.split('\n'):
+        trailer = TRAILER.fullmatch(line.strip(' \t\r\f\v'))  # ASCII whitespace only
+        if trailer and (trailer.group(1) is None or trailer.group(1).casefold() == repository.casefold()):
+            numbers.add(int(trailer.group(2)))
     return numbers

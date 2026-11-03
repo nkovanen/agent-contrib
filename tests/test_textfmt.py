@@ -150,6 +150,21 @@ class TextFormatTests(unittest.TestCase):
         self.assertNotIn('Responsiveness', plain)
         self.assertNotIn('Local work', plain)
 
+    def test_discovery_lines_mark_known_bad_issues(self):
+        # Dogfood 4 N4: text did not say why an issue had moved down.
+        base = {'reference': 'acme/photos#1', 'untrusted_title': 'T', 'approval': {'status': 'candidate'},
+                'exclusions': [], 'duplicates': [], 'number': 1}
+        issues = [dict(base, signals={'score': 2, 'local_work': {'value': 'referenced', 'commits': ['a' * 40, 'b' * 40]}}),
+                  dict(base, reference='acme/photos#2', number=2, signals={'score': 2},
+                       top_check={'demotions': ['assigned to alice'], 'errors': [], 'complete': True, 'reads': 2}),
+                  dict(base, reference='acme/photos#3', number=3, signals={'score': 2, 'local_work': {'value': 'none'}})]
+        text = textfmt.render('discover', {'complete': True, 'errors': [], 'issues': issues})
+        self.assertIn('  acme/photos#1 [candidate] overlaps 0, excluded no, score 2: T -- '
+                      'demoted: closed by 2 local commit(s)\n', text)
+        self.assertIn('  acme/photos#2 [candidate] overlaps 0, excluded no, score 2: T -- '
+                      'demoted: assigned to alice\n', text)
+        self.assertIn('  acme/photos#3 [candidate] overlaps 0, excluded no, score 2: T\n', text)
+
     def test_inspect_summary(self):
         result = core.inspect_issue('acme/photos#12', FakeGitHub(prs=[
             {'number': 30, 'title': 'x', 'body': 'Fixes #12', 'html_url': 'https://github.com/acme/photos/pull/30', 'head': None}]))
