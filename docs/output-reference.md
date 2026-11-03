@@ -68,6 +68,47 @@ One of `audit_report`, `audit_unread`.
 | `provenance` | `authorization_provenance` |  |
 | `api_budget` | `api_budget` (optional) |  |
 
+### `dependencies`
+
+`agent-contrib schema dependencies` · Offline report of explicit GitHub dependency URLs; candidates grant no authority.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `schema_version` | "0.1" |  |
+| `complete` | boolean |  |
+| `resolution_complete` | boolean |  |
+| `sources` | object[] |  |
+| `sources[].path` | string |  |
+| `sources[].sha256` | string |  |
+| `unsupported_files` | string[] |  |
+| `repositories` | string[] |  |
+| `dependencies` | object[] |  |
+| `dependencies[].package` | string |  |
+| `dependencies[].ecosystem` | "npm" \| "python" |  |
+| `dependencies[].source_file` | string |  |
+| `dependencies[].field` | string |  |
+| `dependencies[].status` | "github" \| "unresolved" \| "unsupported" |  |
+| `dependencies[].reason` | string |  |
+| `dependencies[].repository` | string or null |  |
+| `dependencies[].revision` | string or null |  |
+| `dependencies[].subdirectory` | string or null |  |
+| `dependencies[].installed` | object (optional) |  |
+| `dependencies[].installed.status` | "github" \| "unresolved" \| "unsupported" |  |
+| `dependencies[].installed.reason` | string |  |
+| `dependencies[].installed.source_file` | string or null |  |
+| `dependencies[].installed.sha256` | string or null |  |
+| `dependencies[].installed.name` | string or null |  |
+| `dependencies[].installed.version` | string or null |  |
+| `dependencies[].installed.field` | string or null |  |
+| `dependencies[].installed.repository` | string or null |  |
+| `dependencies[].installed.revision` | string or null |  |
+| `dependencies[].installed.subdirectory` | string or null |  |
+| `warning` | string |  |
+| `installed` | object (optional) |  |
+| `installed.max_packages` | 100 |  |
+| `installed.examined` | integer |  |
+| `installed.complete` | boolean |  |
+
 ### `discover`
 
 `agent-contrib schema discover` · Ranked open issues of one repository, or of 2-20 repositories (discover_multi). Remote text is untrusted data.

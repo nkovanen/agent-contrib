@@ -10,8 +10,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import (audit, authrequest, budget, cache, ci, core, drift, feedback, multi, onboarding, outputs, ownership, policy,
-               prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
+from . import (audit, authrequest, budget, cache, ci, core, dependencies, drift, feedback, multi, onboarding, outputs,
+               ownership, policy, prbody, remote, signals, signatures, textfmt, tipjar, workspace, __version__)
 
 
 HOST_INPUT_TIMEOUT = 5.0
@@ -49,7 +49,7 @@ def read_host_context_stdin():
 
 GLOBAL_OPTIONS = ('--format', '--report-budget', '--min-remaining', '--cache')
 # Commands that never read GitHub; GitHub-only global options are refused on them alike.
-OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check')
+OFFLINE_COMMANDS = ('instructions', 'schema', 'skill', 'lint', 'scope-check', 'evidence', 'init', 'jar-check', 'dependencies')
 AI_POLICY_NOTICE = ('agent-contrib: --ai-policy is deprecated and ignored; '
                     'inspect always adds repository_policy')
 
@@ -195,6 +195,11 @@ def main(argv=None):
             sub.add_argument('--output', required=True, help='New file for the draft contract; never overwritten')
             sub.add_argument('--schema-version', choices=('0.1', '0.2'), default='0.1',
                              help='Task schema (default 0.1; 0.2 is the same-repository candidate route)')
+    sub = commands.add_parser('dependencies', help='Offline GitHub give-back candidates from explicit dependency URLs')
+    sub.add_argument('path', help='Project directory or package.json, package-lock.json or requirements.txt')
+    sub.add_argument('--installed', action='store_true',
+                     help='Also read up to 100 direct registry packages from existing node_modules metadata; no links or installs')
+    sub.add_argument('--output', help='Optional new JSON report file; never overwritten')
     sub = commands.add_parser('jar', help='Inspect the pinned root Tipjar invitation; inspection only, grants no authority',
                               description='Pinned root invitation inspection only; grants no approval or authority.')
     sub.add_argument('repository', help='GitHub owner/repo to inspect directly, without parent tracker resolution')
@@ -285,7 +290,12 @@ def main(argv=None):
             before = budget.snapshot()
             if args.min_remaining is not None:
                 budget.require_remaining(before, args.min_remaining)
-        if args.command == 'instructions':
+        if args.command == 'dependencies':
+            result = dependencies.report(args.path, installed=args.installed)
+            if args.output:
+                write_new_json(args.output, result)
+            code = 0
+        elif args.command == 'instructions':
             result = {'cli_version': __version__, 'supported_schema_versions': list(core.SUPPORTED_SCHEMA_VERSIONS),
                       'supported_host_context_versions': list(core.HOST_CONTEXT_VERSIONS),
                       'host_authorization': ('host-asserted; actual human event must be retained outside worker control; '

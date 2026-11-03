@@ -29,6 +29,7 @@ RESOURCE_PATHS = (
     "schemas/host-context/0.2.schema.json",
     "schemas/output/1/audit.schema.json",
     "schemas/output/1/authorization-request.schema.json",
+    "schemas/output/1/dependencies.schema.json",
     "schemas/output/1/discover.schema.json",
     "schemas/output/1/drift.schema.json",
     "schemas/output/1/error.schema.json",
@@ -166,6 +167,29 @@ def installed_check(source):
     assert json.loads(run([tipjar, "instructions"], cwd=Path.cwd(), env=env)) == instructions
     assert "COMMAND" in run([tipjar, "--help"], cwd=Path.cwd(), env=env)
 
+    # Offline dependency discovery must work without git, gh or a package resolver.
+    manifest = Path.cwd() / "package.json"
+    manifest.write_text('{"dependencies":{"example":"git+https://github.com/example/library.git#v1"}}',
+                        encoding="utf-8")
+    if hasattr(os, "O_NOFOLLOW") and os.open in os.supports_dir_fd:
+        dependency_report = json.loads(run([tipjar, "dependencies", manifest], cwd=Path.cwd(), env=env))
+        assert dependency_report["repositories"] == ["example/library"]
+        assert dependency_report["dependencies"][0]["revision"] == "v1"
+        assert dependency_report["resolution_complete"] is True
+        manifest.write_text('{"dependencies":{"ordinary":"^1"}}', encoding="utf-8")
+        metadata = Path.cwd() / "node_modules" / "ordinary" / "package.json"
+        metadata.parent.mkdir(parents=True)
+        metadata.write_text('{"name":"ordinary","version":"1.2.3",'
+                            '"repository":{"url":"https://github.com/example/library.git"}}', encoding="utf-8")
+        installed_report = json.loads(run([tipjar, "dependencies", manifest, "--installed"],
+                                          cwd=Path.cwd(), env=env))
+        assert installed_report["repositories"] == ["example/library"]
+        observed = installed_report["dependencies"][0]["installed"]
+        assert (observed["name"], observed["version"]) == ("ordinary", "1.2.3")
+    else:
+        refused = json.loads(run([tipjar, "dependencies", manifest], cwd=Path.cwd(), env=env, expected=1))
+        assert refused["error"]["code"] == "dependency_input"
+
     # Exercise real installed entry points, including small buffered JSON errors.
     for name, entrypoint in (
             ("console", [console]),
@@ -282,6 +306,7 @@ def main():
                     "tools/benchmark/README.md",
                     "actions/verify/action.yml", "actions/verify/report.py", "docs/examples/agent-contrib-verify.yml",
                     "docs/examples/release-pypi.yml", "docs/output-reference.md",
+                    "tests/fixtures/dependencies/requirements.txt",
                     ".github/workflows/ci.yml"}
         expected.update(str(file.relative_to(source)) for file in (source / "tests").rglob("*")
                         if file.is_file() and file.suffix in (".py", ".json") and "__pycache__" not in file.parts)

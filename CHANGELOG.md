@@ -42,6 +42,13 @@ channel or runtime model provider is added.
   validates bounded local bytes through the packaged parser without echoing
   manifest text. Both report exact byte hashes, reject GitHub-only flags and
   grant no approval or execution/publication authority.
+- `tipjar dependencies PATH`: offline GitHub give-back candidates from npm
+  manifests/lockfiles and Python requirements direct references, with source
+  hashes and declaration provenance. Explicit `--installed` resolves ordinary
+  direct npm registry dependencies from bounded existing node_modules repository
+  metadata with observed versions; symlinks are refused. No registry lookup or project execution;
+  unsupported sources stay visible and candidates grant no authority. See the
+  [give-back workflow](docs/dependencies.md).
 
 - Portable bounded `verify --host-context-stdin` transport (#25), using a fixed
   isolated Python child that is terminated and reaped on timeout. Strict UTF-8
